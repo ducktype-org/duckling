@@ -104,6 +104,17 @@ Tests:
         Output:
           String: "Program panicked!\n"
 
+  # `duckc run` also runs a `.dk` file with a `main`. A frame whose call is a statement of its own
+  # (`store(4);`) or initializes a `var` shows the line of that call, not the line after it.
+  panic_stack_trace_dk:
+    folder: "panic_stack_trace_dk"
+    Cases:
+      direct:
+        mode: direct
+        Run: "@{expect_output} --expect-exit 1 --err-regex \"(?s)DVM stack trace [(]most recent call first[)]:.*#2 readPastEnd at [^ ]*panic_stack_trace_dk[.]dk:3\n.*#3 store at [^ ]*panic_stack_trace_dk[.]dk:7\n.*#4 main at [^ ]*panic_stack_trace_dk[.]dk:12\n\" -- @{duckc_path} run @{folder}/@{Name}.dk --custom-std-artifacts-path @{case_std_artifacts}"
+        Output:
+          String: "Program panicked!\n"
+
   const_ternary:
     folder: "const_ternary"
     Cases:

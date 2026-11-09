@@ -44,9 +44,9 @@ namespace vm::api {
 		/**
 		 * @brief The source line of the instruction at `instruction_index`, in the code collection.
 		 * @details Debug info gives a line only to the first instruction of each positioned
-		 * compiler instruction. The ones without a line, like a call, mostly compute a value for
-		 * the next positioned one, so an instruction without its own line takes the line of the
-		 * first entry after it, or of the last entry when there is none after it.
+		 * compiler instruction, so an instruction without its own line (like the `call` of a call
+		 * expression) takes the line of the last entry at or before it. Before the first entry,
+		 * it takes the first one. This is the same rule the debugger uses.
 		 * @return Nothing when the function has no instruction lines.
 		 */
 		[[nodiscard]] base::Optional<SourceLine> lineOfInstruction(u64 instruction_index) const;

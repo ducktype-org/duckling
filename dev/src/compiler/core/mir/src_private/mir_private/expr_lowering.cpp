@@ -1818,7 +1818,9 @@ namespace compiler::mir {
 			hole.fillNop(scope);
 			data.instr.output.emplace(target);
 			data.instr.flags.insert(data.instr.flags.end(), flags.begin(), flags.end());
-			data.instr.metadata = metadata;
+			// A store without a position (e.g. into the return value) must not erase the
+			// position the instruction already has, or a call there has no line of its own.
+			if (metadata.position.has_value()) data.instr.metadata = metadata;
 			data.hole.fill(data.instr);
 			value = target;
 		};

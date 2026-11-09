@@ -45,7 +45,7 @@ public:
 		TESTER_ADD_TEST(panicPrintsStackTrace);
 		TESTER_ADD_TEST(panicStackTracePrintsSourceNames);
 		TESTER_ADD_TEST(panicStackTracePrintsSourceLines);
-		TESTER_ADD_TEST(lineOfInstructionPrefersTheNextLine);
+		TESTER_ADD_TEST(lineOfInstructionTakesTheLastLineBefore);
 		TESTER_ADD_TEST(formatStackTraceDescribesEachFrame);
 		TESTER_ADD_TEST(stackTraceRoundTripsThroughJson);
 		TESTER_ADD_TEST(debugInfoNextToBytecodeIsFoundAndRead);
@@ -193,12 +193,14 @@ private:
 		divide.position      = lineIn("math.dk", 1);
 		debug_info.functions.put("divideByZero", std::move(divide));
 
-		// The call has no line of its own, so it takes the line of the instruction after it.
+		// Like the compiler emits it: the call's line sits on its argument setup (index 1), before
+		// the call itself, and the next statement (line 8) starts after it.
 		debug_info::FunctionMetadata forward;
-		forward.function_name = "forward";
-		forward.position      = lineIn("math.dk", 5);
-		forward.instr_offsets_to_metadata
-			= { { 0, { lineIn("math.dk", 6) } }, { 4, { lineIn("math.dk", 7) } } };
+		forward.function_name             = "forward";
+		forward.position                  = lineIn("math.dk", 5);
+		forward.instr_offsets_to_metadata = { { 0, { lineIn("math.dk", 6) } },
+			                                  { 1, { lineIn("math.dk", 7) } },
+			                                  { 4, { lineIn("math.dk", 8) } } };
 		debug_info.functions.put("forward", std::move(forward));
 
 		debug_info::FunctionMetadata main;
@@ -230,7 +232,7 @@ private:
 		);
 	}
 
-	void lineOfInstructionPrefersTheNextLine() {
+	void lineOfInstructionTakesTheLastLineBefore() {
 		const auto at = [](u64 line) {
 			return vm::api::SourceLine{ .file = base::StrID("a.dk"), .line = line };
 		};
@@ -238,11 +240,12 @@ private:
 		ASSERT_TRUE(!info.lineOfInstruction(0).has_value());
 
 		info.instruction_lines = { { 2, at(10) }, { 5, at(11) } };
+		// Before the first entry, the first line is the only one left.
 		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(0).value().line);
 		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(2).value().line);
-		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(3).value().line);
+		// A `call` after its argument setup still belongs to the line of that setup.
+		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(4).value().line);
 		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(5).value().line);
-		// Past the last entry, the last line is the only one left.
 		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(9).value().line);
 	}
 

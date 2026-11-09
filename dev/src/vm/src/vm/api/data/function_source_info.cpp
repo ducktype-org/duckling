@@ -32,15 +32,15 @@ namespace vm::api {
 	base::Optional<SourceLine> FunctionSourceInfo::lineOfInstruction(u64 instruction_index) const {
 		if (instruction_lines.empty()) return {};
 
-		// The first entry at or after the instruction.
-		auto it = std::ranges::lower_bound(
+		// The first entry after the instruction.
+		auto it = std::ranges::upper_bound(
 			instruction_lines, instruction_index, {}, &std::pair<u64, SourceLine>::first
 		);
-		// An instruction without an entry is usually a step of the next one with an entry, e.g. a
-		// call whose result the next instruction stores. So that next one tells its line.
-		if (it != instruction_lines.end()) return it->second;
-		// After the last entry, only the one before it is left.
-		return std::prev(it)->second;
+		// An instruction without an entry belongs to the last positioned one before it, e.g. the
+		// `call` of a call expression comes after the argument setup that carries its line.
+		if (it != instruction_lines.begin()) return std::prev(it)->second;
+		// Before the first entry, only the first one is left.
+		return it->second;
 	}
 
 	void addFunctionSourceInfo(FunctionSourceInfos& infos, const debug_info::DebugInfo& info) {
