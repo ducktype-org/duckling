@@ -60,7 +60,7 @@ pub fn check_certificate(
                 encountered_accept = true;
             }
             accept::AcceptResult::Rejected => {
-                warn!(target: "duck::git", ?path, ?entry, "rejected certificate");
+                trace!(target: "duck::git", ?path, ?entry, "rejected certificate");
             }
             accept::AcceptResult::Revoked => {
                 warn!(target: "duck::git", ?path, ?entry, "revoked certificate");

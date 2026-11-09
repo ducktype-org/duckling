@@ -32,6 +32,13 @@ pub(super) enum AcceptResult {
     Unsupported,
 }
 
+/// A simplified version of [`AcceptResult`], for internal use.
+enum AcceptResultInner {
+    Accepted,
+    Rejected,
+    NotMatched,
+}
+
 impl KnownHostEntry {
     /// Check whether this [`KnownHostEntry`] accepts the host.
     pub(super) fn accept(
@@ -40,27 +47,20 @@ impl KnownHostEntry {
         hostkey: &[u8],
         host_type: SshHostKeyType,
     ) -> AcceptResult {
-        if self.marker == Some(Marker::Revoked) {
-            return AcceptResult::Revoked;
-        }
         if self.marker == Some(Marker::CA) {
             return AcceptResult::Unsupported;
         }
         let mut matched = false;
 
         for host in &self.hosts {
-            let result = host.accept(hostname);
-            match result {
-                AcceptResult::Accepted => matched = true,
+            match host.accept(hostname) {
+                AcceptResultInner::Accepted => matched = true,
 
-                AcceptResult::Rejected
-                | AcceptResult::Revoked
-                | AcceptResult::KeyMismatch
-                | AcceptResult::Unsupported => {
-                    return result;
+                AcceptResultInner::Rejected => {
+                    return AcceptResult::Rejected;
                 }
 
-                AcceptResult::NotMatched => {}
+                AcceptResultInner::NotMatched => {}
             }
         }
 
@@ -68,12 +68,12 @@ impl KnownHostEntry {
             return AcceptResult::NotMatched;
         }
 
-        if self.key_type != host_type.name() {
+        if self.key_type != host_type.name() || self.key != hostkey {
             return AcceptResult::KeyMismatch;
         }
 
-        if self.key != hostkey {
-            return AcceptResult::KeyMismatch;
+        if self.marker == Some(Marker::Revoked) {
+            return AcceptResult::Revoked;
         }
 
         AcceptResult::Accepted
@@ -81,7 +81,7 @@ impl KnownHostEntry {
 }
 
 impl Hostname {
-    fn accept(&self, hostname: &str) -> AcceptResult {
+    fn accept(&self, hostname: &str) -> AcceptResultInner {
         match self {
             Hostname::Hashed(hashed) => hashed.accept(hostname),
             Hostname::Normal(normal) => normal.accept(hostname),
@@ -90,23 +90,23 @@ impl Hostname {
 }
 
 impl NormalHostname {
-    fn accept(&self, hostname: &str) -> AcceptResult {
+    fn accept(&self, hostname: &str) -> AcceptResultInner {
         if !wildcard_matches(&self.pattern, hostname) {
-            return AcceptResult::NotMatched;
+            return AcceptResultInner::NotMatched;
         }
 
         if self.is_negated {
-            AcceptResult::Rejected
+            AcceptResultInner::Rejected
         } else {
-            AcceptResult::Accepted
+            AcceptResultInner::Accepted
         }
     }
 }
 
 impl HashedHostname {
-    fn accept(&self, hostname: &str) -> AcceptResult {
+    fn accept(&self, hostname: &str) -> AcceptResultInner {
         let Ok(mut mac) = Hmac::<Sha1>::new_from_slice(&self.salt) else {
-            return AcceptResult::NotMatched;
+            return AcceptResultInner::NotMatched;
         };
 
         mac.update(hostname.as_bytes());
@@ -114,9 +114,9 @@ impl HashedHostname {
         let result = mac.finalize().into_bytes();
 
         if result.as_slice() == self.host.as_slice() {
-            AcceptResult::Accepted
+            AcceptResultInner::Accepted
         } else {
-            AcceptResult::NotMatched
+            AcceptResultInner::NotMatched
         }
     }
 }
