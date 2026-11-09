@@ -13,14 +13,14 @@
 #include <variant>
 #include <vector>
 
+MAKE_STRINGIFYABLE_ENUM(compiler::helios::code, u32, ControlFlowKind, If, While, For, Block)
+
 namespace compiler::helios::defgen {
 	struct ImplementationOf_QueryImplicitClassConstructor;
 }
 
 namespace compiler::helios::code {
 	class HoutStmtVisitor;
-
-	enum class ControlFlowKind { If, While, For, Block };
 
 	struct NearestLoop {};
 
@@ -267,8 +267,12 @@ namespace compiler::helios::code {
 	};
 
 	struct BlockStmt final: public Stmt {
-		CodeBlock                       body;
-		base::Optional<SymID>           control_flow_id;
+		CodeBlock             body;
+		base::Optional<SymID> control_flow_id;
+		// Preserves the original control-flow kind after lowering to a block.
+		// For example, `if const` becomes a BlockStmt
+		// but must remain an `If` target for `break if` and `continue if`.
+		// Empty for blocks that do not introduce a control-flow target.
 		base::Optional<ControlFlowKind> control_flow_kind;
 
 		BlockStmt(

@@ -4,7 +4,7 @@ class Res {
     id: i64 = 0;
 
     Res.destroy() = {
-        builtin_output_i64(id);
+        print(id);
     }
 }
 
