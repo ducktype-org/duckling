@@ -99,6 +99,8 @@ enum KnownHostsLine {
     Comment,
     /// This line contains pattern to match against.
     Entry(KnownHostEntry),
+    /// Failed to parse the line.
+    Failed(parse::ParseError),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -202,16 +204,15 @@ fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKno
             }
         }
     };
-    let parsed = match parse::parse_known_hosts_file(&text) {
-        Ok(parsed) => parsed,
-        Err(err) => {
-            error!(target: "duck::git", ?err, ?path, "failed to parse known_hosts, file, ignoring...");
-            return;
-        }
-    };
-    let parsed = parsed.into_iter().filter_map(|entry| match entry {
-        KnownHostsLine::Comment => None,
-        KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, path)),
-    });
+    let parsed = parse::parse_known_hosts_file(&text)
+        .into_iter()
+        .filter_map(|entry| match entry {
+            KnownHostsLine::Comment => None,
+            KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, path)),
+            KnownHostsLine::Failed(err) => {
+                error!(target: "duck::git", %err, ?path, "failed to parse a known_hosts line, ignoring...");
+                None
+            }
+        });
     buffer.extend(parsed);
 }

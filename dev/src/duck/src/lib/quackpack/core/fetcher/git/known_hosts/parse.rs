@@ -94,12 +94,17 @@ impl fmt::Display for KnownHostField {
 }
 
 /// Parse a `known_hosts` file.
-pub fn parse_known_hosts_file(file: &str) -> ParseResult<Vec<KnownHostsLine>> {
-    file.lines().map(parse_known_hosts_line).collect()
+pub fn parse_known_hosts_file(file: &str) -> Vec<KnownHostsLine> {
+    file.lines()
+        .map(|line| match parse_known_hosts_line(line) {
+            Ok(line) => line,
+            Err(err) => KnownHostsLine::Failed(err),
+        })
+        .collect()
 }
 
 /// Parse a single `known_hosts` line.
-pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
+fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let line = line.trim_ascii();
     trace!(target: "duck::git", ?line, "parsing line");
     // Lines starting with ‘#’ and empty lines are ignored as comments.
@@ -421,7 +426,7 @@ example.com {KEY_TYPE} {KEY}
 
         assert_eq!(
             parse_known_hosts_file(&file),
-            Ok(vec![
+            vec![
                 KnownHostsLine::Comment,
                 KnownHostsLine::Comment,
                 entry(None, vec![normal("example.com", false)], KEY_TYPE, DUCKLING),
@@ -437,13 +442,13 @@ example.com {KEY_TYPE} {KEY}
                     KEY_TYPE,
                     DUCKLING,
                 ),
-            ])
+            ]
         );
     }
 
     #[test]
     fn empty_file() {
-        assert_eq!(parse_known_hosts_file(""), Ok(vec![]));
+        assert_eq!(parse_known_hosts_file(""), vec![]);
     }
 
     #[test]
@@ -515,7 +520,7 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
 
         assert_eq!(
             parse_known_hosts_file(&file),
-            Ok(vec![
+            vec![
                 KnownHostsLine::Comment,
                 entry(
                     None,
@@ -545,7 +550,7 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
                     KEY_TYPE,
                     DUCKLING,
                 ),
-            ])
+            ]
         );
     }
 }
