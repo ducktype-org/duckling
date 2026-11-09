@@ -3,9 +3,7 @@ import core.primitive_io as io;
 
 #{
     Print functions for various types.
-#}
-
-fun print(v: str) -> i64 = io.writeStr(v);
+#} fun print(v: str) -> i64 = io.writeStr(v);
 
 fun print(v: ref containers.String) -> i64 = io.writeString(v);
 
@@ -28,9 +26,7 @@ fun print(b: byte) -> i64 = {
     result = result + io.writeChar(c2);
     return result;
 }
-#}
-
-fun print(v: i64) -> i64 = io.writeI64(v);
+#} fun print(v: i64) -> i64 = io.writeI64(v);
 fun print(v: i32) -> i64 = io.writeI64(v);
 fun print(v: i16) -> i64 = io.writeI64(v);
 fun print(v: i8) -> i64 = io.writeI64(v);

@@ -1,6 +1,4 @@
-class T {}
-
-var uninit_global: i32;
+class T {} var uninit_global: i32;
 
 fun foo() -> i32 = {
 	var a: i32 = in_n as i32;
@@ -31,7 +29,7 @@ fun foo() -> i32 = {
 const abc: i64 = 123;
 
 namespace N {
-    # @TODO: #1412 fix dealias
+	# @TODO: #1412 fix dealias
 	# class Q {}
 	const in_n: i64 = 0;
 }

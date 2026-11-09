@@ -3,17 +3,17 @@ import core.builtins.*;
 # A class with a user-defined destructor. Its temporaries in the constant initializers below are
 # destroyed by the compile-time DVM, which prints to the compiler's stderr.
 class Res {
-    id: i64 = 0;
+	id: i64 = 0;
 
-    Res.destroy() = {
-        print("dtor ");
-        builtin_output_i64(id);
-    }
+	Res.destroy () = {
+		print("dtor ");
+		builtin_output_i64(id);
+	}
 }
 
 class Point {
-    x: i64 = 0;
-    y: i64 = 0;
+	x: i64 = 0;
+	y: i64 = 0;
 }
 
 fun mkPoint(x: i64, y: i64) -> Point = Point(x = x, y = y);
@@ -21,19 +21,19 @@ fun mkRes(id: i64) -> Res = Res(id);
 fun idOf(r: Res) -> i64 = r.id;
 
 fun makeArray() -> i64[3] = {
-    var arr: i64[3];
-    arr[0] = 10;
-    arr[1] = 20;
-    arr[2] = 30;
-    return arr;
+	var arr: i64[3];
+	arr[0] = 10;
+	arr[1] = 20;
+	arr[2] = 30;
+	return arr;
 }
 
 fun two() -> i64 = 2;
 fun code(c: char) -> i64 = c as i64;
 fun sumPair(p: (i64, i64)) -> i64 = p._1 + p._2;
 fun pickBigger(v: i64 | bool) -> i64 = match (v) {
-    case x : i64 = x;
-    case _ = -1i64;
+	case x: i64 = x;
+	case _ = -1i64;
 };
 fun pair(t: type) -> (type, type) = (t, t);
 fun second(t: (type, type)) -> type = t._2;
@@ -48,8 +48,8 @@ const PAIR_SUM: i64 = sumPair((7, 8));
 # Match on a variant built at compile time.
 fun mkVariant() -> i64 | bool = 42i64;
 const MATCHED: i64 = match (mkVariant()) {
-    case x : i64 = x;
-    case _ = 0i64;
+	case x: i64 = x;
+	case _ = 0i64;
 };
 const MATCHED_CALL: i64 = pickBigger(mkVariant());
 
@@ -75,25 +75,25 @@ const SECOND_OF_CALL: type = second(pair(i16));
 const SECOND_SIZES: i64 = size_of(SECOND_OF_LITERAL) * 10 + size_of(SECOND_OF_CALL);
 
 fun main() -> i64 = {
-    builtin_output_i64(POINT_X);
-    builtin_output_i64(ARRAY_ELEM);
-    builtin_output_i64(TUPLE_ELEM);
-    builtin_output_i64(ARRAY_PLUS_TUPLE);
-    builtin_output_i64(PAIR_SUM);
-    builtin_output_i64(MATCHED);
-    builtin_output_i64(MATCHED_CALL);
-    builtin_output_i64(CHAR_CODE);
-    builtin_output_i64(TERNARY);
-    builtin_output_i64(TERNARY_OF_CLASSES);
-    builtin_output_i64(CONST_TERNARY);
-    builtin_output_i64(if CHAIN then 1 else 0);
-    builtin_output_i64(if CHAIN_FALSE then 1 else 0);
-    builtin_output_i64(RES_FIELD);
-    builtin_output_i64(RES_IN_TUPLE);
-    builtin_output_i64(RES_ARG);
-    builtin_output_i64(RES_TERNARY);
-    builtin_output_i64((PAIR_VAR._1 + PAIR_VAR._2) as i64);
-    builtin_output_i64(PAIR_SIZE);
-    builtin_output_i64(SECOND_SIZES);
-    return 0;
+	builtin_output_i64(POINT_X);
+	builtin_output_i64(ARRAY_ELEM);
+	builtin_output_i64(TUPLE_ELEM);
+	builtin_output_i64(ARRAY_PLUS_TUPLE);
+	builtin_output_i64(PAIR_SUM);
+	builtin_output_i64(MATCHED);
+	builtin_output_i64(MATCHED_CALL);
+	builtin_output_i64(CHAR_CODE);
+	builtin_output_i64(TERNARY);
+	builtin_output_i64(TERNARY_OF_CLASSES);
+	builtin_output_i64(CONST_TERNARY);
+	builtin_output_i64(if CHAIN then 1 else 0);
+	builtin_output_i64(if CHAIN_FALSE then 1 else 0);
+	builtin_output_i64(RES_FIELD);
+	builtin_output_i64(RES_IN_TUPLE);
+	builtin_output_i64(RES_ARG);
+	builtin_output_i64(RES_TERNARY);
+	builtin_output_i64((PAIR_VAR._1 + PAIR_VAR._2) as i64);
+	builtin_output_i64(PAIR_SIZE);
+	builtin_output_i64(SECOND_SIZES);
+	return 0;
 }

@@ -2,7 +2,9 @@
 # the lifetime flags.
 class R {
 	a: i32 = 0;
-	R.destroy() = { var t: i32 = a; }
+	R.destroy () = {
+		var t: i32 = a;
+	}
 }
 
 # The local is moved into the variant, so the variant is the only owner left.
@@ -17,8 +19,8 @@ fun matchOutOfVariant() -> i32 = {
 	var payload: R;
 	var v: R | i32 = move payload;
 	return match (move v) {
-		case r : R = r.a;
-		case n : i32 = n;
+		case r: R = r.a;
+		case n: i32 = n;
 	};
 }
 
@@ -28,7 +30,7 @@ fun dropInMatch() -> i32 = {
 	var payload: R;
 	var v: R | i32 = move payload;
 	return match (move v) {
-		case _ : R = 1i32;
-		case n : i32 = n;
+		case _: R = 1i32;
+		case n: i32 = n;
 	};
 }

@@ -20,11 +20,11 @@ const sm2_v: i64 = sm2.my_value;
 const cyclic_final: i64 = c1.a6;
 
 
-import submodule_2.NS as ns;              # a namespace of another module, renamed
-import submodule_2.NS.INNER as inner;     # a namespace nested in that one
-import submodule_2.NS.in_ns as ns_value;  # all the way down to a constant
-import submodule_2.NS;                    # no new name: enters as `NS`
-import submodule_2.NS.INNER.*;            # everything the nested namespace holds
+import submodule_2.NS as ns; # a namespace of another module, renamed
+import submodule_2.NS.INNER as inner; # a namespace nested in that one
+import submodule_2.NS.in_ns as ns_value; # all the way down to a constant
+import submodule_2.NS; # no new name: enters as `NS`
+import submodule_2.NS.INNER.*; # everything the nested namespace holds
 
 const imported_ns_v: i64 = ns.in_ns;
 const imported_inner_v: i64 = inner.in_inner;

@@ -4,13 +4,15 @@
 # the used types are not implemented.
 
 # ========== Helpers ==========
-class T {}
-class U {}
-
-# A class with a non-trivial layout: i8 at offset 0, i64 (align 8) at offset 8,
+class T {} class U {} # A class with a non-trivial layout: i8 at offset 0, i64 (align 8) at offset
+# 8,
 # i16 at offset 16 -> 18 bytes of payload rounded up to the 8-byte alignment,
 # so size 24 bytes, alignment 8 bytes.
-class Mixed { a: i8; b: i64; c: i16; }
+class Mixed {
+	a: i8;
+	b: i64;
+	c: i16;
+}
 
 fun createUnit() -> type = ();
 fun createBox(t: type) -> type = box t;
@@ -22,7 +24,13 @@ fun createSlice(t: type) -> type = slice t;
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 fun createTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
 fun createShortTuple(a: type, b: type) -> type = (a, b);
-fun createMegaType(a: type) -> type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
+fun createMegaType(a: type) -> type = (
+	createUnit(),
+	createBox(a),
+	i32,
+	(i16, f16),
+	i64 | (f64, f128)
+);
 fun createInt() -> type = i32;
 fun createBigInt() -> type = i64;
 fun getT() -> type = T;
@@ -32,21 +40,21 @@ fun typesEqual(a: type, b: type) -> bool = a == b;
 fun typesNotEqual(a: type, b: type) -> bool = a != b;
 
 fun getTuple(order: i32, a: type, b: type) -> type = {
-    if (order == 1) {
-        return (a, b, createRef(a));
-    } else {
-        return (a, b, createRef(b));
-    }
+	if (order == 1) {
+		return (a, b, createRef(a));
+	} else {
+		return (a, b, createRef(b));
+	}
 }
 
 # A variant tells its alternatives apart by their underlying type alone, so the branches
 # differ in which type is referenced rather than in the reference kind of `a` or `b`.
 fun getVariant(order: i32, a: type, b: type) -> type = {
-    if (order == 1) {
-        return a | b | createRef(Mixed);
-    } else {
-        return a | b | createRef(i32);
-    }
+	if (order == 1) {
+		return a | b | createRef(Mixed);
+	} else {
+		return a | b | createRef(i32);
+	}
 }
 
 # ========== Simple Types ==========
@@ -76,8 +84,8 @@ const MIXED_ALIGN: i64 = alignment_of(Mixed);
 const T_TYPE = T;
 const U_TYPE = U;
 const T2_TYPE = getT();
-const T_ARRAY = getT()[5];      # T[5]
-const T_LIST = List[getT()];   # List[T]
+const T_ARRAY = getT()[5]; # T[5]
+const T_LIST = List[getT()]; # List[T]
 const T_IN_TUPLE: type = (i32, T, T, U);
 const T_IN_TUPLE_MANUAL: type = (i32, getT(), getT(), getU());
 
@@ -125,51 +133,126 @@ const CMP37 = size_of(i32) == 4;
 const CMP38 = alignment_of(i64) == 8;
 
 fun main() -> i64 = {
-    if (not CMP1) { builtin_output_i64(1); }
-    if (not CMP2) { builtin_output_i64(2); }
-    if (not CMP3) { builtin_output_i64(3); }
-    if (not CMP4) { builtin_output_i64(4); }
-    if (not CMP5) { builtin_output_i64(5); }
-    if (not CMP6) { builtin_output_i64(6); }
-    if (not CMP7) { builtin_output_i64(7); }
-    if (not CMP8) { builtin_output_i64(8); }
-    if (not CMP9) { builtin_output_i64(9); }
-    if (not CMP10) { builtin_output_i64(10); }
-    if (not CMP11) { builtin_output_i64(11); }
-    if (not CMP12) { builtin_output_i64(12); }
-    if (not CMP13) { builtin_output_i64(13); }
-    if (not CMP14) { builtin_output_i64(14); }
-    if (not CMP15) { builtin_output_i64(15); }
-    if (not CMP16) { builtin_output_i64(16); }
-    if (not CMP17) { builtin_output_i64(17); }
-    if (not CMP18) { builtin_output_i64(18); }
-    if (not CMP19) { builtin_output_i64(19); }
-    if (not CMP20) { builtin_output_i64(20); }
-    if (not CMP21) { builtin_output_i64(21); }
-    if (not CMP22) { builtin_output_i64(22); }
-    if (not CMP23) { builtin_output_i64(23); }
-    if (not CMP24) { builtin_output_i64(24); }
+	if (not CMP1) {
+		builtin_output_i64(1);
+	}
+	if (not CMP2) {
+		builtin_output_i64(2);
+	}
+	if (not CMP3) {
+		builtin_output_i64(3);
+	}
+	if (not CMP4) {
+		builtin_output_i64(4);
+	}
+	if (not CMP5) {
+		builtin_output_i64(5);
+	}
+	if (not CMP6) {
+		builtin_output_i64(6);
+	}
+	if (not CMP7) {
+		builtin_output_i64(7);
+	}
+	if (not CMP8) {
+		builtin_output_i64(8);
+	}
+	if (not CMP9) {
+		builtin_output_i64(9);
+	}
+	if (not CMP10) {
+		builtin_output_i64(10);
+	}
+	if (not CMP11) {
+		builtin_output_i64(11);
+	}
+	if (not CMP12) {
+		builtin_output_i64(12);
+	}
+	if (not CMP13) {
+		builtin_output_i64(13);
+	}
+	if (not CMP14) {
+		builtin_output_i64(14);
+	}
+	if (not CMP15) {
+		builtin_output_i64(15);
+	}
+	if (not CMP16) {
+		builtin_output_i64(16);
+	}
+	if (not CMP17) {
+		builtin_output_i64(17);
+	}
+	if (not CMP18) {
+		builtin_output_i64(18);
+	}
+	if (not CMP19) {
+		builtin_output_i64(19);
+	}
+	if (not CMP20) {
+		builtin_output_i64(20);
+	}
+	if (not CMP21) {
+		builtin_output_i64(21);
+	}
+	if (not CMP22) {
+		builtin_output_i64(22);
+	}
+	if (not CMP23) {
+		builtin_output_i64(23);
+	}
+	if (not CMP24) {
+		builtin_output_i64(24);
+	}
 
-    let sum: createInt() = 2147483647;
-    let sum2: A = 2147483647;
+	let sum: createInt() = 2147483647;
+	let sum2: A = 2147483647;
 
-    # If a correct type was evaluated this should be an overflow. So the result should be < 0.
-    if (not (sum + 1 < 0)) { builtin_output_i64(25); }
-    if (not (sum2 + 1 < 0)) { builtin_output_i64(26); }
+	# If a correct type was evaluated this should be an overflow. So the result should be < 0.
+	if (not (sum + 1 < 0)) {
+		builtin_output_i64(25);
+	}
+	if (not (sum2 + 1 < 0)) {
+		builtin_output_i64(26);
+	}
 
-    if (not CMP27) { builtin_output_i64(27); }
-    if (not CMP28) { builtin_output_i64(28); }
-    if (not CMP29) { builtin_output_i64(29); }
-    if (not CMP30) { builtin_output_i64(30); }
-    if (not CMP31) { builtin_output_i64(31); }
-    if (not CMP32) { builtin_output_i64(32); }
-    if (not CMP33) { builtin_output_i64(33); }
-    if (not CMP34) { builtin_output_i64(34); }
-    if (not CMP35) { builtin_output_i64(35); }
-    if (not CMP36) { builtin_output_i64(36); }
-    if (not CMP37) { builtin_output_i64(37); }
-    if (not CMP38) { builtin_output_i64(38); }
+	if (not CMP27) {
+		builtin_output_i64(27);
+	}
+	if (not CMP28) {
+		builtin_output_i64(28);
+	}
+	if (not CMP29) {
+		builtin_output_i64(29);
+	}
+	if (not CMP30) {
+		builtin_output_i64(30);
+	}
+	if (not CMP31) {
+		builtin_output_i64(31);
+	}
+	if (not CMP32) {
+		builtin_output_i64(32);
+	}
+	if (not CMP33) {
+		builtin_output_i64(33);
+	}
+	if (not CMP34) {
+		builtin_output_i64(34);
+	}
+	if (not CMP35) {
+		builtin_output_i64(35);
+	}
+	if (not CMP36) {
+		builtin_output_i64(36);
+	}
+	if (not CMP37) {
+		builtin_output_i64(37);
+	}
+	if (not CMP38) {
+		builtin_output_i64(38);
+	}
 
-    return 0;
+	return 0;
 }
-

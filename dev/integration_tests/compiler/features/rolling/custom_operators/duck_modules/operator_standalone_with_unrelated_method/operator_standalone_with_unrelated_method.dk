@@ -1,25 +1,25 @@
 # We check that overload resolution works well between methods and standalone functions.
 
 class L {
-    v: i64 = 0;
+	v: i64 = 0;
 
-    L.copy(other: ref L) = {
-        return L(other.v);
-    }
+	L.copy (other: ref L) = {
+		return L(other.v);
+	}
 
-    fun +(rhs: L) -> L = {
-        return L(self.v + rhs.v);
-    }
+	fun +(rhs: L) -> L = {
+		return L(self.v + rhs.v);
+	}
 }
 
 fun +(lhs: L, rhs: i64) -> L = {
-    return L(lhs.v + rhs);
+	return L(lhs.v + rhs);
 }
 
 fun makeL() -> L = L(40);
 
 fun main() -> i64 = {
-    let r = makeL() + 2;
-    builtin_output_i64(r.v);  # 42
-    return 0;
+	let r = makeL() + 2;
+	builtin_output_i64(r.v); # 42
+	return 0;
 }
