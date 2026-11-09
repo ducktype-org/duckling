@@ -446,8 +446,10 @@ namespace compiler::mir {
 		}
 
 		void visitBlockStmt(const hc::BlockStmt& stmt) override {
-			auto                            block_scope  = function.newScope(parent_scope);
-			auto                            body_targets = targets;
+			auto block_scope  = function.newScope(parent_scope);
+			auto body_targets = targets;
+			// Create the continue target before lowering the body, so continue statements
+			// can already refer to it. Connect it to the body's beginning afterwards.
 			base::Optional<BlockBuilderRef> entry;
 			auto                            body_continuation = continuation;
 			if (stmt.control_flow_kind.has_value()) {
