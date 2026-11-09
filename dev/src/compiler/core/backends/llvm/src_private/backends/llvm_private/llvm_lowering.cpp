@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <backends/llvm_private/abi_converter.hpp>
+#include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <concepts>
@@ -22,6 +23,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
@@ -233,6 +235,16 @@ namespace compiler::backend_llvm {
 
 				CORE_ASSERT(not v1, "failed to initialize llvm (1)");
 				CORE_ASSERT(not v2, "failed to initialize llvm (2)");
+
+				using AssemblySyntax = global_state::BackendOptions::LLVMBackend::AssemblySyntax;
+				if (global_state::getBackendOptions()->llvm_backend->asm_syntax
+				    == AssemblySyntax::Intel) {
+					// Set LLVM's process-wide syntax option before creating x86 target machines.
+					constexpr auto option_name = "x86-asm-syntax";
+					auto*          option = llvm::cl::getRegisteredOptions().lookup(option_name);
+					if (!option || option->addOccurrence(0, option_name, "intel"))
+						CORE_PANIC("LLVM error: unable to select Intel assembly syntax");
+				}
 			});
 		}
 

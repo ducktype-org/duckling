@@ -15,8 +15,10 @@ namespace global_state {
 
 		struct LLVMBackend {
 			enum class LLVMOptimizationLevel { O0, O1, O2, O3, Os, Oz };
+			enum class AssemblySyntax { Att, Intel };
 
 			LLVMOptimizationLevel llvm_optimization_level{ LLVMOptimizationLevel::O0 };
+			AssemblySyntax        asm_syntax{ AssemblySyntax::Att };
 		};
 
 		// /**

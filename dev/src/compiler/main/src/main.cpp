@@ -33,6 +33,7 @@
 #include <time_stats/time_stats.hpp>
 #include <version/version.hpp>
 
+#include <base/config/target_info.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/ranges_utils.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -189,6 +190,26 @@ namespace {
 		    .build();
 	}
 
+	clah::Parameter getAsmSyntaxParam() {
+		return clah::ParamBuilder::ofValue(
+				   clah::CategoryParser::make("dialect", std::vector<std::string>{ "att", "intel" })
+		)
+		    .addLongName("asm-syntax")
+		    .addShortDesc("Set the x86 assembly dump syntax.")
+		    .addLongDesc(
+				"Possible values are: att (default), intel.\n"
+				"See https://llvm.org/docs/CommandGuide/llc.html#intel-ia-32-specific-options"
+			)
+		    .build();
+	}
+
+	std::vector<clah::Parameter> getLlvmCodegenParams() {
+		std::vector<clah::Parameter> params;
+		params.push_back(getLlvmOptLevelParam());
+		if constexpr (base::IS_TARGET_ARCH_X86) params.push_back(getAsmSyntaxParam());
+		return params;
+	}
+
 	global_state::BackendOptions getBackendOptionsFromClah(const clah::ParsingResult& parsing_result
 	) {
 		using LLVMOptimizationLevel
@@ -201,9 +222,17 @@ namespace {
 			parsing_result.getValue<std::string>("llvm-opt").copyValueOr("0")
 		);
 
+		using AssemblySyntax = global_state::BackendOptions::LLVMBackend::AssemblySyntax;
+		auto asm_syntax      = AssemblySyntax::Att;
+		if constexpr (base::IS_TARGET_ARCH_X86) {
+			if (parsing_result.getValue<std::string>("asm-syntax").copyValueOr("att") == "intel")
+				asm_syntax = AssemblySyntax::Intel;
+		}
+
 		return global_state::BackendOptions{
 		.llvm_backend = global_state::BackendOptions::LLVMBackend{
 			.llvm_optimization_level = llvm_optimization_level,
+			.asm_syntax              = asm_syntax,
 		},
 	};
 	}
@@ -647,7 +676,7 @@ namespace {
 		    .addSubcommand(
 				clah::Clah("compile_module", "Compile one module into backend object artifacts.")
 					.addPositional(clah::FileParser::make("module", true))
-					.add(getLlvmOptLevelParam())
+					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
@@ -737,7 +766,7 @@ namespace {
 				)
 					.addPositional(clah::FileParser::make("module"))
 					.setDefaultValueParser(clah::FileParser::make("module"))
-					.add(getLlvmOptLevelParam())
+					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
@@ -957,7 +986,7 @@ namespace {
 						clah::FileParser::make("path", true),
 						"Path to the root module of the package or the root module file."
 					)
-					.add(getLlvmOptLevelParam())
+					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
@@ -1125,7 +1154,7 @@ namespace {
 		    .addSubcommand(
 				clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 					.addPositional(clah::FileParser::make("manifest"))
-					.add(getLlvmOptLevelParam())
+					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
@@ -1242,7 +1271,7 @@ namespace {
 					"Compile a .dks script into backend objects, a .dbc package, or an executable."
 				)
 					.addPositional(clah::FileParser::make("script"))
-					.add(getLlvmOptLevelParam())
+					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
 					.add(getClahLinkingOptions())
 					.add(getClahStdLibOptions())
