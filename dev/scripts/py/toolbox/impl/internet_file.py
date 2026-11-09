@@ -6,11 +6,8 @@
 
 import http
 import http.client
-import os
 import pathlib
 import sys
-import time
-import urllib.parse
 
 import requests
 import math
@@ -19,30 +16,7 @@ from .helpers import (
     bash_command,
     exit_with_error,
     log_info,
-    log_warning,
 )
-
-# GitHub answers release downloads with a 5xx from time to time (most often 504), and those clear up
-# within seconds. So we try a few times before failing. 429 is GitHub's rate limit.
-RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
-DOWNLOAD_ATTEMPTS = 5
-RETRY_BASE_DELAY_SECONDS = 5
-
-# Hosts that get the token from `GITHUB_TOKEN` (or `GH_TOKEN`). Authenticated requests get a higher
-# limit than anonymous ones. `requests` drops the header itself when GitHub redirects the download
-# to another host (its CDN), so the token never leaves github.com.
-GITHUB_HOSTS = {"github.com", "api.github.com"}
-
-
-def github_auth_headers(url: str) -> dict[str, str]:
-    """
-    The `Authorization` header for a github.com URL when `GITHUB_TOKEN` or
-    `GH_TOKEN` is set, otherwise no header (an anonymous request).
-    """
-    if urllib.parse.urlparse(url).hostname not in GITHUB_HOSTS:
-        return {}
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 class InternetFile:
@@ -58,7 +32,7 @@ class InternetFile:
         if force or not self.path.exists():
             try:
                 log_info(f"Downloading {self.path}...")
-                res = self._get_with_retries()
+                res = requests.get(self.resource_url, stream=True, auth=self.auth)
 
                 if res.status_code != 200:
                     exit_with_error(
@@ -122,41 +96,6 @@ class InternetFile:
                 exit_with_error(e)
         else:
             log_info(f"File {self.path} already exits. Skipped.")
-
-    def _get_with_retries(self) -> requests.Response:
-        """
-        GETs the resource, retrying on connection errors and on the status codes
-        in RETRY_STATUS_CODES. Returns the last response; raises the last
-        connection error when no attempt got a response at all.
-        """
-        # An explicit `auth` (user, password) wins over the GitHub token.
-        headers = {} if self.auth else github_auth_headers(self.resource_url)
-        for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
-            last_attempt = attempt == DOWNLOAD_ATTEMPTS
-            try:
-                res = requests.get(
-                    self.resource_url,
-                    stream=True,
-                    auth=self.auth,
-                    headers=headers,
-                    timeout=60,
-                )
-            except (requests.ConnectionError, requests.Timeout) as e:
-                if last_attempt:
-                    raise
-                problem = type(e).__name__
-            else:
-                if res.status_code not in RETRY_STATUS_CODES or last_attempt:
-                    return res
-                problem = f"status_code = {res.status_code}"
-                res.close()
-
-            delay = RETRY_BASE_DELAY_SECONDS * 2 ** (attempt - 1)
-            log_warning(
-                f"Download of {self.resource_url} failed ({problem}), "
-                f"retrying in {delay} s (attempt {attempt}/{DOWNLOAD_ATTEMPTS})..."
-            )
-            time.sleep(delay)
 
 
 def callback_unTAR(res: InternetFile):
