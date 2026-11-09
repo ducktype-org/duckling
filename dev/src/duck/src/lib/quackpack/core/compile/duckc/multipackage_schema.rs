@@ -276,7 +276,7 @@ mod tests {
       "strategy": "native",
       "output_file": "out.exe",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "-lfoo"
         ],
         "link_c_standard_library": true
@@ -627,7 +627,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app2",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a"
         ],
         "link_c_standard_library": true
@@ -638,7 +638,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a",
           "build/lib_b.a",
           "build/lib_c.a"
@@ -651,7 +651,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3_alias",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a",
           "build/lib_b.a",
           "build/lib_c.a"
