@@ -4,8 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <frontend/pst_parser/parsed_pst.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>

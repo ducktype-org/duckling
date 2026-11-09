@@ -5,10 +5,12 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Main logic for solving dependencies.
-//! Contains [`SolverEngine`] struct, which transforms the problem into an integer linear programming instance and solves it.
+//! Contains [`SolverEngine`] struct, which transforms the problem into
+//! the constraints of [`SolverModel`].
 use std::collections::{HashMap, HashSet};
 use std::iter::once;
 
+use itertools::iproduct;
 use russcip::ProblemCreated;
 
 use crate::quackpack::core::identity::Identity;
@@ -62,10 +64,10 @@ impl<'a> SolverEngine<'a> {
         }
 
         // Root has to be present in the solution with all its requested features.
-        self.model.require_package(main_pkg.0)?;
+        self.model.require_root_package(main_pkg.0)?;
         for feature in main_pkg.1.iter() {
             self.model
-                .require_package_with_feature(main_pkg.0, *feature)?;
+                .require_root_package_feature(main_pkg.0, *feature)?;
         }
         self.force_features_expansion()?;
         self.force_singular_versions()?;
@@ -97,11 +99,11 @@ impl<'a> SolverEngine<'a> {
             // We could not translate the manifest entry into an identity of the dependency,
             // so there are no possible realizations and we must forbid the dependency.
             // This can happen due to merciful mode (we failed to fetch any realizations).
-            return self.forbid_dependency(parent, manifest_dependency);
+            return self.forbid_dependency_because_no_realization(parent, manifest_dependency);
         };
 
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
-        let Some(realization) = parent_data.dependency_preexists(edge.manifest_child_name) else {
+        let Some(realization) = parent_data.dependency_preexists(edge.dep_ename) else {
             return self.add_constraints_for_edge(edge, manifest_dependency);
         };
         // Below we assume that the dependency was realized in the previous freeze.
@@ -111,41 +113,50 @@ impl<'a> SolverEngine<'a> {
         // not present in the previous freeze.
         // We try to add them to the chosen realization.
 
-        // Mapping not-preexisting parent feature -> realization features forced by it.
-        let mut forcing = vec![];
-        let realization_features = &realization_data.features();
+        let realization_features = realization_data.features();
         for parent_feature in parent_data.features().iter().copied() {
             if parent_data.feature_preexists(parent_feature) {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
+                // Note: for the root package all its features are marked as preexistent.
+                // This is not a problem though, because if the root package's dependency is realized,
+                // then indeed those features were taken care of.
                 continue;
             }
             let forced = manifest_dependency.enabled_features(&[parent_feature].into());
+            if forced.is_empty() {
+                continue;
+            }
             if forced
                 .iter()
                 .any(|feature| !realization_features.contains(feature))
             {
-                // (*) Previously chosen realization of the dependency does not support some of the forced flags.
+                // Previously chosen realization of the dependency does not support some of the forced flags.
                 // This means that we should choose another realization,
                 // but doing so would result in the realization being in 2 or more versions.
                 // Thus we explicitly forbid parent with the feature.
                 // Note that this edge case can happen only in the merciful mode.
-                return self
-                    .model
-                    .forbid_package_with_feature(parent, parent_feature);
+                self.model
+                    .forbid_preexistent_package_feature_because_forces(
+                        parent,
+                        realization,
+                        parent_feature,
+                    )?;
             } else {
-                forcing.push((parent_feature, forced));
+                self.model.require_forced_features_for_preexisting(
+                    parent,
+                    parent_feature,
+                    realization,
+                    forced,
+                )?;
             }
         }
-        // If (*) never happened, we just add conditions that parent feature forces some new realization features.
-        self.model
-            .require_satisfying_dep_feature_for_preexisting(parent, realization, forcing)
+        Ok(())
     }
 
     /// Creates all standard constraints for a dependency edge:
     /// 1. If parent is present then this specific dependency has to have a realization chosen.
-    /// 2. If parent is present (without or with features) then this dependency may force some features.
-    /// 3. If for this dependency a realization was chosen, then the package of realization has to be present.
-    /// 4. If some forced features were determined, then the realization has to be present with them.
+    /// 2. If parent is present (without or with features) and a realization is chosen,
+    ///    then this dependency may force some features of the realization.
     fn add_constraints_for_edge(
         &mut self,
         edge: DependencyEdge,
@@ -157,95 +168,110 @@ impl<'a> SolverEngine<'a> {
             &self.input.source_to_origin_resolver,
         )?;
 
-        self.create_dependency_version_realization_conditions(
+        self.create_dependency_feature_realization_conditions(
             edge,
             manifest_dependency,
             &possible_realizations,
         )?;
-        self.create_dependency_feature_realization_conditions(edge, manifest_dependency)?;
-        self.model.require_substantiate_dep(edge)?;
-        self.model
-            .require_substantiate_dep_features(edge, &possible_realizations)?;
+        self.create_dependency_version_realization_conditions(
+            edge,
+            manifest_dependency,
+            possible_realizations,
+        )?;
         Ok(())
     }
 
-    /// Creates version realization constraints and necessary variables for a single dependency.
+    /// Creates version realization constraints for a single dependency.
     fn create_dependency_version_realization_conditions(
+        &mut self,
+        edge: DependencyEdge,
+        manifest_dependency: &Dependency,
+        possible_realizations: Vec<PackageId>,
+    ) -> QuackResult<()> {
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
+        if is_dep_forced_default {
+            self.model
+                .require_dep_realization(edge, None, possible_realizations)?;
+        } else {
+            for dep_forcing_feature in manifest_dependency.enabling_features() {
+                self.model.require_dep_realization(
+                    edge,
+                    Some(*dep_forcing_feature),
+                    possible_realizations.clone(),
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Creates feature realization constraints for a single dependency.
+    /// We look at pairs <enabling feature, forcing feature>,
+    /// the first one enables the dependency, the second forces some features of realization.
+    /// So if both are present, forced features have to be present as well.
+    fn create_dependency_feature_realization_conditions(
         &mut self,
         edge: DependencyEdge,
         manifest_dependency: &Dependency,
         possible_realizations: &[PackageId],
     ) -> QuackResult<()> {
-        for realization in possible_realizations {
-            self.model
-                .add_dependency_version_realization_var(edge, realization.version());
-        }
-
-        let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
-        if is_dep_forced_default {
-            self.model.require_satisfying_dep_version(edge, None)?;
-        } else {
-            for dep_forcing_feature in manifest_dependency.enabling_features() {
-                self.model
-                    .require_satisfying_dep_version(edge, Some(*dep_forcing_feature))?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Creates feature realization constraints and necessary variables for a single dependency.
-    fn create_dependency_feature_realization_conditions(
-        &mut self,
-        edge: DependencyEdge,
-        manifest_dependency: &Dependency,
-    ) -> QuackResult<()> {
-        let parent_features = parent_features_to_consider(self.input, edge);
-
-        let enabled_always = HashSet::from_iter(manifest_dependency.enabled_features(&[].into()));
-        let mut tmp_hash_set;
-        for parent_feature in parent_features {
-            // Features forced by the parent feature but not forced by default,
-            // or features forced by default if parent_feature is None.
-            let forced = match parent_feature {
-                None => &enabled_always,
-                Some(feature) => {
-                    // We use this trick so that forced is a reference and we do not need to clone `enabled_always`.
-                    tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features(&[feature].into()))
-                            .difference(&enabled_always)
-                            .copied()
-                            .collect();
-                    &tmp_hash_set
-                }
-            };
-            if forced.is_empty() {
+        let parent_features: Vec<Option<FeatureName>> =
+            parent_features_to_consider(self.input, edge).collect();
+        for (enabling, forcing) in iproduct!(parent_features.iter(), parent_features.iter()) {
+            if !manifest_dependency.is_enabled_for(&enabling.iter().copied().collect()) {
                 continue;
             }
-            for feature in forced.iter() {
-                self.model
-                    .add_dependency_feature_realization_var(edge, *feature);
+            let forcing_features = forcing.iter().copied().collect();
+            // Features forced by the parent feature or features forced by default if parent_feature is None.
+            let forced = manifest_dependency.enabled_features(&forcing_features);
+            if forced.is_empty() {
+                // Nothing to do.
+                continue;
             }
-            self.model
-                .require_satisfying_dep_feature(edge, parent_feature, forced)?;
+            for realization in possible_realizations {
+                // Check if realization has all forced features.
+                let realization_features = self.input.package_data(*realization)?.features();
+                if forced.iter().all(|f| realization_features.contains(f)) {
+                    self.model.require_forced_features(
+                        edge,
+                        *enabling,
+                        *forcing,
+                        realization.version(),
+                        forced.clone(),
+                    )?;
+                } else {
+                    self.model.forbid_package_feature_because_forces(
+                        edge.parent,
+                        *enabling,
+                        *forcing,
+                        *realization,
+                    )?;
+                }
+            }
         }
         Ok(())
     }
 
-    /// Assure that this dependency is never realized.
-    fn forbid_dependency(
+    /// Assure that this dependency is never realized, because it has no possible realization.
+    fn forbid_dependency_because_no_realization(
         &mut self,
-        parent: PackageId,
+        pkg: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
-            // The dependency is enabled by default, so `parent` can never be chosen.
-            self.model.forbid_package(parent)?;
+            // The dependency is enabled by default, so `dep.parent` can never be chosen.
+            self.model.forbid_package_because_no_realization(
+                pkg,
+                manifest_dependency.diagnostic_name(),
+            )?;
         } else {
             // Forbid features of `parent` which enable this dependency.
-            for dep_forcing_feature in manifest_dependency.enabling_features() {
-                self.model
-                    .forbid_package_with_feature(parent, *dep_forcing_feature)?;
+            for forcing_feature in manifest_dependency.enabling_features() {
+                self.model.forbid_package_feature_because_no_realization(
+                    pkg,
+                    *forcing_feature,
+                    manifest_dependency.diagnostic_name(),
+                )?;
             }
         }
         Ok(())
@@ -273,8 +299,11 @@ impl<'a> SolverEngine<'a> {
                     })?;
                 expanded.remove(feature);
                 if !expanded.is_empty() {
-                    self.model
-                        .require_features_expansion(*pkg, *feature, expanded)?;
+                    self.model.require_features_expansion(
+                        *pkg,
+                        *feature,
+                        expanded.into_iter().collect(),
+                    )?;
                 }
             }
         }
@@ -300,8 +329,8 @@ impl<'a> SolverEngine<'a> {
                         .map(|version| PackageId::new(*full_identity, version)),
                 );
         }
-        for package_versions in packages_for_identity.into_values() {
-            self.force_singular_version(package_versions)?;
+        for (identity, package_versions) in packages_for_identity {
+            self.force_singular_version(identity, package_versions)?;
         }
         Ok(())
     }
@@ -312,7 +341,11 @@ impl<'a> SolverEngine<'a> {
     /// This has a different workflow, depending on whether any version is preexisting.
     /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
     /// so we can't just always add a constraint that many versions are prohibited.
-    fn force_singular_version(&mut self, package_versions: Vec<PackageId>) -> QuackResult<()> {
+    fn force_singular_version(
+        &mut self,
+        identity: Identity,
+        package_versions: Vec<PackageId>,
+    ) -> QuackResult<()> {
         let mut preexistent_version = None;
         for pkg in package_versions.iter() {
             if self.input.preexists(*pkg) {
@@ -321,33 +354,38 @@ impl<'a> SolverEngine<'a> {
             }
         }
         if let Some(preexistent_version) = preexistent_version {
-            self.forbid_versions_not_preexisting(package_versions, preexistent_version)
+            self.forbid_versions_not_preexisting(identity, package_versions, preexistent_version)
         } else {
-            self.forbid_more_than_one_version(package_versions)
+            self.forbid_more_than_one_version(identity, package_versions)
         }
     }
 
     /// Forbid a package being chosen in more than one version.
     fn forbid_more_than_one_version(
         &mut self,
+        identity: Identity,
         package_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
-        self.model.forbid_more_that_one_version(package_versions)
+        self.model
+            .forbid_more_that_one_version(identity, package_versions)
     }
 
     /// Forbid a package in all versions except a single preexisting one.
     fn forbid_versions_not_preexisting(
         &mut self,
+        identity: Identity,
         package_versions: Vec<PackageId>,
         preexistent_version: PackageId,
     ) -> QuackResult<()> {
-        for pkg in package_versions {
-            if pkg == preexistent_version {
-                continue;
-            }
-            self.model.forbid_package(pkg)?;
-        }
-        Ok(())
+        let different_versions = package_versions
+            .into_iter()
+            .filter(|pkg| *pkg != preexistent_version)
+            .collect();
+        self.model.forbid_versions_different_from_preexisting(
+            identity,
+            preexistent_version,
+            different_versions,
+        )
     }
 }
 
@@ -451,7 +489,7 @@ metadata:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_b,
-                    manifest_child_name: StrId::new("b"),
+                    dep_ename: StrId::new("b"),
                 },
                 Version::new(2, 0, 0)
             )])
@@ -524,7 +562,7 @@ dependencies:
                     DependencyEdge {
                         parent: pkg_a,
                         dep_identity: identity_b,
-                        manifest_child_name: StrId::new("b"),
+                        dep_ename: StrId::new("b"),
                     },
                     Version::new(2, 0, 0)
                 ),
@@ -532,7 +570,7 @@ dependencies:
                     DependencyEdge {
                         parent: pkg_b,
                         dep_identity: identity_a,
-                        manifest_child_name: StrId::new("a"),
+                        dep_ename: StrId::new("a"),
                     },
                     Version::new(1, 0, 0)
                 ),
@@ -829,7 +867,7 @@ features:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_b,
-                    manifest_child_name: StrId::new("b"),
+                    dep_ename: StrId::new("b"),
                 },
                 Version::new(2, 0, 0)
             )])

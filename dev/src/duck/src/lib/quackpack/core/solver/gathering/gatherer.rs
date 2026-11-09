@@ -394,10 +394,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             request.id.name,
             FullOrigin::for_git(url, cloned_pkg.commit_hash),
         );
-        if !self.git_access.is_stored(url, &cloned_pkg.commit_hash)
-            && let Err(e) =
-                self.git_access
-                    .store(url, &cloned_pkg.commit_hash, path_where_cloned.path())
+        let package_id = PackageId::new(answer_identity, manifest.version());
+        if !self.git_access.is_stored(package_id)
+            && let Err(e) = self.git_access.store(package_id, path_where_cloned.path())
         {
             debug!(target: "duck::git", error = %e, "failed to store the cloned repository");
             errors.borrow_mut().log(e);
@@ -456,10 +455,18 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         errors: &mut ErrorsLogger,
     ) -> Option<NotPinnedSuccess> {
         if let GitReference::Rev(commit) = reference
-            && let Some(path) = self.git_access.path_if_stored(url, &commit)
+            && let origin = FullOrigin::for_git(url, commit)
+            && let identity = FullIdentity::new(request.id.name, origin)
+            && let version = request
+                .versions
+                .as_deref()
+                .unwrap_or_default()
+                .first()
+                .copied()
+                .unwrap_or_default()
+            && let package_id = PackageId::new(identity, version)
+            && let Some(path) = self.git_access.path_if_stored(package_id)
         {
-            let answer_identity =
-                FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
             let source = match Source::for_local(&path) {
                 Ok(source) => source,
                 Err(e) => {
@@ -483,7 +490,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             if let FetchResponse::Success(FetchSuccess::NotPinned(success)) = stored_git_manifest
                 && let Some(manifest) = success.fetched_manifests.into_values().next()
             {
-                let pkg = PackageId::new(answer_identity, manifest.version());
+                let pkg = PackageId::new(identity, manifest.version());
                 return Some(NotPinnedSuccess {
                     origin_id: request.id,
                     fetched_manifests: [(pkg, manifest)].into(),

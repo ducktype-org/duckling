@@ -41,9 +41,10 @@ namespace compiler::helios::defgen {
 	 * fields with a default value (which may mean a call to another constructor); returns the
 	 * initialized static array value.
 	 *
-	 * - `Copy`: the compiler-generated default copy constructor. It takes a single `const ref T`
-	 *   source and returns a new `T` that copies each member (trivially-copyable members are
-	 *   byte-copied, non-trivially-copyable members are copied via their own copy constructor).
+	 * - `Copy`: the compiler-generated default copy constructor. It takes a single read-only
+	 *   `ref T` source and returns a new `T` that copies each member (trivially-copyable members
+	 *   are byte-copied, non-trivially-copyable members are copied via their own copy
+	 *   constructor).
 	 */
 	struct Constructor final {
 		enum class Kind {
