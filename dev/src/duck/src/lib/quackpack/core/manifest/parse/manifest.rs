@@ -236,13 +236,11 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
     };
     let dvm_bytecode = input.dvm_bytecode;
     let incremental = input.incremental;
-    let c_std = input.c_std;
     let inherits = input.inherits.clone().map(Into::into);
     Ok(Profile {
         opt_level,
         dvm_bytecode,
         incremental,
-        c_std,
         inherits,
     })
 }

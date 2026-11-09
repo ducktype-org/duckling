@@ -141,8 +141,6 @@ pub struct Profile {
     pub dvm_bytecode: Option<bool>,
     /// Whether to use incremental compilation.
     pub incremental: Option<bool>,
-    /// Whether to link C STD.
-    pub c_std: Option<bool>,
     /// Whether this profile inherits other profile.
     pub inherits: Option<String>,
 }

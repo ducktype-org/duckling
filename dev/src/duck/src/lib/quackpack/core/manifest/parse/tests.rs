@@ -985,7 +985,6 @@ profiles:
                         opt_level: Some(OptLevel::S),
                         dvm_bytecode: Some(true),
                         incremental: None,
-                        c_std: None,
                         inherits: None
                     }
                 ),
@@ -995,7 +994,6 @@ profiles:
                         opt_level: None,
                         dvm_bytecode: None,
                         incremental: None,
-                        c_std: None,
                         inherits: Some("prof1".into())
                     }
                 )
