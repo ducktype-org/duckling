@@ -4,10 +4,10 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "  external-libs: [lib1]
+  echo "  external-libs: [found]
     external-lib-paths: [empty, libs]" >> foo/quackconfig.yaml
-  mkdir -p foo/empty foo/libs && touch foo/libs/liblib1.a
-  echo "  external-libs: [lib2, lib3]" >> bar/quackconfig.yaml
+  mkdir -p foo/empty foo/libs && touch foo/libs/libfound.a
+  echo "  external-libs: [duck-not-installed-1, duck-not-installed-2]" >> bar/quackconfig.yaml
   @{duck-exe} -C foo add --local ../bar bar
 
 Tests:

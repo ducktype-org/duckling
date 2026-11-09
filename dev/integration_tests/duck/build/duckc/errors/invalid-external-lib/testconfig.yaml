@@ -14,6 +14,6 @@ Tests:
             echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
 
               Caused by:
-                invalid external library name \`libs/libsqlite.a\` in \`metadata.external-libs\`
+                invalid external library name \`libs/libsqlite.a\` in \`metadata.external-libs\`: it looks like a path
 
-            hint: use the bare library name (e.g. \`sqlite3\`) and put its directory in \`metadata.external-lib-paths\`"
+            hint: use the bare library name (e.g. \`sqlite3\` for \`libsqlite3.a\`) and put its directory in \`metadata.external-lib-paths\`"

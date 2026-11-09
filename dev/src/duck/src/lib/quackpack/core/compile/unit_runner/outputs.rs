@@ -15,7 +15,9 @@ use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::{CompilationInput, GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit::{Unit, UnitType};
 use crate::quackpack::core::compile::unit_runner::CompilationOutput;
-use crate::quackpack::core::compile::unit_runner::external_libs::gather_external_libraries;
+use crate::quackpack::core::compile::unit_runner::external_libs::{
+    ExternalLibrary, ExternalLibraryKind, gather_external_libraries,
+};
 
 /// Get the output of this [`run`] pass.
 ///
@@ -100,7 +102,7 @@ pub fn get_linker_options(
     let args = outputs
         .into_iter()
         .map(|output| output.display().to_string())
-        .chain(external_libs)
+        .chain(external_libs.iter().flat_map(native_linker_args))
         .collect::<Vec<_>>();
     debug!(?args, "raw linker args");
     if args.is_empty() {
@@ -109,6 +111,27 @@ pub fn get_linker_options(
     Ok(Some(multipackage_schema::LinkerOptions::RawLinkerArgs(
         args,
     )))
+}
+
+/// The native linker arguments for one external library.
+///
+/// A found library is passed by its path; a shared one also gets an `rpath` entry, so the binary
+/// finds it at runtime. A library that was not found falls back to `-l<name>`, which leaves the
+/// search to the linker.
+fn native_linker_args(lib: &ExternalLibrary) -> Vec<String> {
+    match &lib.kind {
+        ExternalLibraryKind::NotFound => vec![format!("-l{}", lib.name)],
+        ExternalLibraryKind::Static { path } => vec![path.display().to_string()],
+        ExternalLibraryKind::Shared { path } => {
+            let mut args = vec![path.display().to_string()];
+            if cfg!(unix)
+                && let Some(dir) = path.parent()
+            {
+                args.push(format!("-Wl,-rpath,{}", dir.display()));
+            }
+            args
+        }
+    }
 }
 
 /// Collect outputs of dependencies (direct and transitive) of this `unit`.

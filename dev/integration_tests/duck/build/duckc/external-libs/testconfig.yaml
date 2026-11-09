@@ -3,12 +3,22 @@
 PostCase: "@{cleanup_tmp_env}"
 
 PreCase: |+
-  cp answer.c src.dk "$DIT_TMP_DIR"
   @{cd-tmp-dir}
   @{duck-exe} init foo
   mkdir -p foo/libs
+  echo 'int duck_answer(void) { return 42; }' > answer.c
   cc -c answer.c -o answer.o && ar rcs foo/libs/libanswer.a answer.o
-  cp src.dk foo/src/src.dk
+  cat <<'EOF' > foo/src/src.dk
+  import core.builtins.*;
+
+  extern("C") {
+      fundecl duck_answer() -> i32;
+  }
+
+  fun main() = {
+      return duck_answer();
+  }
+  EOF
   echo "  external-libs: [answer]
     external-lib-paths: [libs]" >> foo/quackconfig.yaml
 Tests:

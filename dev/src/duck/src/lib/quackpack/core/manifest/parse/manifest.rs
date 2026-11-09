@@ -279,20 +279,45 @@ fn parse_build_options(input: &MetadataSchema) -> QuackResult<BuildOptions> {
         .map(StrId::from)
         .collect::<Vec<_>>();
     for lib in &external_libs {
-        if lib.as_str().is_empty() || lib.as_str().contains(['/', '\\']) {
-            let mut err =
-                qp_err!("invalid external library name `{lib}` in `metadata.external-libs`");
-            err.add_hint(
-                "use the bare library name (e.g. `sqlite3`) and put its directory in `metadata.external-lib-paths`",
-            );
-            qp_bail!(err);
-        }
+        validate_external_lib_name(lib.as_str())?;
     }
     let external_lib_paths = input.external_lib_paths.clone().unwrap_or_default();
     Ok(BuildOptions {
         external_libs,
         external_lib_paths,
     })
+}
+
+/// File name extensions that do not belong in an external library's name.
+const EXTERNAL_LIB_EXTENSIONS: [&str; 5] = [".a", ".so", ".dylib", ".dll", ".lib"];
+
+/// Check that `name` is a bare library name, like `sqlite3`: not empty, not a path, and without
+/// the `lib` prefix or a file extension, because those are added when the library is searched for.
+fn validate_external_lib_name(name: &str) -> QuackResult<()> {
+    let problem = if name.is_empty() {
+        Some("it is empty")
+    } else if name.chars().any(std::path::is_separator) {
+        Some("it looks like a path")
+    } else if name.starts_with("lib") {
+        Some("it starts with `lib`")
+    } else if EXTERNAL_LIB_EXTENSIONS
+        .iter()
+        .any(|extension| name.ends_with(extension))
+        || name.contains(".so.")
+    {
+        Some("it ends with a file extension")
+    } else {
+        None
+    };
+    let Some(problem) = problem else {
+        return Ok(());
+    };
+    let mut err =
+        qp_err!("invalid external library name `{name}` in `metadata.external-libs`: {problem}");
+    err.add_hint(
+        "use the bare library name (e.g. `sqlite3` for `libsqlite3.a`) and put its directory in `metadata.external-lib-paths`",
+    );
+    qp_bail!(err)
 }
 
 /// Parse [`LintsSchema`] from the schema.

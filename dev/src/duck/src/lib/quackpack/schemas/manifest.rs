@@ -88,9 +88,10 @@ pub struct Metadata {
     /// Names of the external libraries to link against, e.g. `sqlite3` (for `libsqlite3.a`).
     pub external_libs: Option<Vec<String>>,
     /// Directories searched for [`Metadata::external_libs`] before the system ones.
-    /// Relative paths are relative to the package's root.
+    /// Paths are relative to the package's root.
     pub external_lib_paths: Option<Vec<PathBuf>>,
     /// The old name of `external-libs`; only kept to report a helpful error.
+    // @TODO: #3999 remove this field in a future release.
     pub links: Option<de::IgnoredAny>,
 }
 

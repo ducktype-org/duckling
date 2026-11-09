@@ -1863,3 +1863,95 @@ lints:
         )
     );
 }
+
+#[test]
+fn external_libs_and_paths() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  external-libs: [sqlite3, python3.12, sqlite3]
+  external-lib-paths: [libs, /opt/foo/lib]
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert_eq!(
+        build_options.external_libs,
+        [
+            StrId::from("sqlite3"),
+            StrId::from("python3.12"),
+            StrId::from("sqlite3")
+        ]
+    );
+    assert_eq!(
+        build_options.external_lib_paths,
+        [PathBuf::from("libs"), PathBuf::from("/opt/foo/lib")]
+    );
+}
+
+#[test]
+fn external_libs_default_to_empty() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert!(build_options.external_libs.is_empty());
+    assert!(build_options.external_lib_paths.is_empty());
+}
+
+#[test]
+fn old_links_field_is_an_error() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  links: sqlite3
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("`metadata.links` is no longer supported"),
+        "{err}"
+    );
+}
+
+#[test]
+fn invalid_external_lib_names() {
+    let cases = [
+        ("''", "it is empty"),
+        ("libs/foo", "it looks like a path"),
+        ("libsqlite3", "it starts with `lib`"),
+        ("sqlite3.a", "it ends with a file extension"),
+        ("sqlite3.so", "it ends with a file extension"),
+        ("sqlite3.so.0", "it ends with a file extension"),
+        ("sqlite3.dylib", "it ends with a file extension"),
+    ];
+    for (name, problem) in cases {
+        let (_dir, manifest_path) = prepare_manifest(&format!(
+            "metadata:\n  name: foo\n  version: '1'\n  external-libs: [{name}]\n"
+        ));
+        let ctx = DuckContext::default();
+        let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+        let message = err.to_string();
+        assert!(
+            message.contains("invalid external library name"),
+            "{message}"
+        );
+        assert!(
+            message.contains(&format!(": {problem}\n")),
+            "{name}: {message}"
+        );
+    }
+}
