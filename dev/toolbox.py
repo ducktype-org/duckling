@@ -20,6 +20,7 @@ from scripts.py.toolbox.commands.docs import docs
 from scripts.py.toolbox.commands.download_binaries import download_binaries
 from scripts.py.toolbox.commands.download_llvm import download_llvm
 from scripts.py.toolbox.commands.duck_linter import duck_linter
+from scripts.py.toolbox.commands.duckling_formatter import duckling_formatter
 from scripts.py.toolbox.commands.fix_coverage import fix_coverage
 from scripts.py.toolbox.commands.header_checker import header_checker
 from scripts.py.toolbox.commands.init import init
@@ -50,6 +51,7 @@ cli.add_command(docs)
 cli.add_command(download_binaries)
 cli.add_command(download_llvm)
 cli.add_command(duck_linter)
+cli.add_command(duckling_formatter)
 cli.add_command(fix_coverage)
 cli.add_command(header_checker)
 cli.add_command(init)

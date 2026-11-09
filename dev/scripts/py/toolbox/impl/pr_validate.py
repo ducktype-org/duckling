@@ -11,6 +11,7 @@ from .helpers import (
     log_good,
 )
 from .duck_linter import duck_linter_impl
+from .duckling_formatter import duckling_formatter_impl
 from .cpp_linter import cpp_linter_impl
 from .header_checker import header_checker_impl
 from .issue_checker import issue_checker_impl
@@ -80,6 +81,12 @@ def pr_validate_impl(
         f"cmake --build {build_dir} -- -j {thread_count} all build_all_tests build_all_playgrounds"
     )
     log_good("Everything has been built successfully")
+
+    # Duckling formatting, here because it needs the duckfmt that was just built
+    if not duckling_formatter_impl(build_dir=build_dir, auto_fix=auto_fix, no_fix=no_fix):
+        exit_with_error(
+            "Duckling formatting check failed. Please run `./scripts/formatting/format_repo_duckling.sh`."
+        )
 
     # test
     test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
