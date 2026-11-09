@@ -271,18 +271,15 @@
     "functionDeclarations": {
       "patterns": [
         {
-          "match": "\\b(fun|fundecl)\\b(?:\\s+(mut)\\b)?(?:\\s+(prefix|suffix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\`]))?(?:\\s+([_\\p{L}][\\w]*))?",
+          "match": "\\b(fun|fundecl)\\b(?:\\s+(prefix|suffix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\`]))?(?:\\s+([_\\p{L}][\\w]*))?",
           "captures": {
             "1": {
               "name": "storage.type.function.duckling"
             },
             "2": {
-              "name": "storage.modifier.mut.duckling"
-            },
-            "3": {
               "name": "storage.modifier.fixity.duckling"
             },
-            "4": {
+            "3": {
               "name": "entity.name.function.duckling"
             }
           }

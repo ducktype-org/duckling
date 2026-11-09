@@ -11,16 +11,16 @@
 #include <diagnostic/message.hpp>
 
 namespace pst {
-	class FunMutOutsideClassError final: public dia::MessageWithCodeFragmentAndCause {
+	class MutFunOutsideClassError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
-				     .name          = "fun_mut_outside_class" };
+				     .name          = "mut_fun_outside_class" };
 		}
 
 	public:
-		FunMutOutsideClassError(dia::SourcePosition pos):
+		MutFunOutsideClassError(dia::SourcePosition pos):
 			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 

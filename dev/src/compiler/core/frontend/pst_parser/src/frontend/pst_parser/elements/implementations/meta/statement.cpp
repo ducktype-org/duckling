@@ -124,6 +124,14 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief Number of tokens before the `fun` keyword of a function starting `at` tokens
+		 * ahead.
+		 */
+		i64 tokensBeforeFun(LangParserState& state, i64 at) {
+			return state[at].is(Keyword::Mut) && state[at + 1].is(Keyword::Fun) ? 1 : 0;
+		}
+
 		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 
@@ -144,13 +152,28 @@ namespace pst {
 			 * @brief For function like definitions we have to consider code block vs an expression.
 			 */
 			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
-				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(base + 1);
+				const i64 head           = 1 + tokensBeforeFun(state, base);
+				u64       initial_length = base::safeIntConv<u64>(head)
+				                   + state.ctokens().countUntil<isAssignOrEnd>(base + head);
 				if (!state[base + base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
 					return initial_length;
 				initial_length++;
 				i64 body = base + base::safeIntConv<i64>(initial_length);
 				if (Conditions::isBlockGroup(state.ctokens(), body)) return initial_length + 1;
 				return initial_length + state.ctokens().countUntil<isInnerExprEnd>(body);
+			}
+		};
+
+		/**
+		 * @brief A method can start with `mut fun`, and `fun` always starts a statement, so the
+		 * search for the end of the statement starts after both keywords.
+		 */
+		template<>
+		struct StmtFinder<Method> {
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				const i64 head = 1 + tokensBeforeFun(state, base);
+				return base::safeIntConv<u64>(head)
+				     + state.ctokens().countUntil<StmtClassifiers<Method>::isStmtEnd>(base + head);
 			}
 		};
 
@@ -172,6 +195,9 @@ namespace pst {
 				return visitor.template operator()<TemplateStmt>();
 			case Keyword::If:
 				return visitor.template operator()<If>();
+			case Keyword::Mut:
+				if (state[at + 1].is(Keyword::Fun)) return visitor.template operator()<Fun>();
+				break;
 			case Keyword::Fun:
 				return visitor.template operator()<Fun>();
 			case Keyword::FunDecl:
@@ -224,6 +250,9 @@ namespace pst {
 			switch (state[at].asKeyword()) {
 			case Keyword::Template:
 				return visitor.template operator()<TemplateStmt>();
+			case Keyword::Mut:
+				if (state[at + 1].is(Keyword::Fun)) return visitor.template operator()<Method>();
+				break;
 			case Keyword::Fun:
 				return visitor.template operator()<Method>();
 			// These are statements that are not class-specific when adding new ones be careful

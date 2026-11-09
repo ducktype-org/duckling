@@ -15,10 +15,10 @@ namespace pst {
 	MBox<Method> Method::parse(LangParserState& state) {
 		auto out = makeBox<Method>(state);
 
+		if (PARSE().tryEat(Keyword::Mut)) out->is_mut = true;
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		PARSE().all(Keyword::Fun);
-		if (PARSE().tryEat(Keyword::Mut)) out->is_mut = true;
 		out->operator_fixity = parseOperatorFixity(state);
 		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);

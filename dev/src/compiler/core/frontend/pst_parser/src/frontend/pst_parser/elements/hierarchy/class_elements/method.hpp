@@ -56,7 +56,7 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Whether the method is declared with `fun mut`, so `self` is mutable.
+		 * @brief Whether the method is declared with `mut fun`, so `self` is mutable.
 		 */
 		[[nodiscard]]
 		bool isMut() const {
