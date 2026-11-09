@@ -135,16 +135,22 @@ Tests:
         ExitCode: 0
 
   compile-module-asm-syntax:
+    Enabled: '[ "$(uname -m)" = x86_64 ]'
     PreCase: "@{copy_std_artifacts}"
+    assembly: "@{case_build}/duck_debug_artifacts/syntax.inferred_name.s"
+    Run: >-
+      @{duckc_path} compile_module ./duck_modules/inferred_name/inferred_name.dk
+      --name syntax -a @{case_build} --no-incremental --dump-ir asm --asm-syntax @{dialect}
+      --custom-std-artifacts-path @{case_std_artifacts}
+      && test -s "@{assembly}"
+      && test "$(grep -Fc '.intel_syntax noprefix' "@{assembly}")" -eq @{intel_directives}
     Cases:
       intel:
-        Enabled: '[ "$(uname -m)" = x86_64 ]'
-        Run: >-
-          @{duckc_path} compile_module ./duck_modules/inferred_name/inferred_name.dk
-          --name intel -a @{case_build} --no-incremental --dump-ir asm --asm-syntax intel
-          --custom-std-artifacts-path @{case_std_artifacts}
-          && grep -Fq '.intel_syntax noprefix' "@{case_build}/duck_debug_artifacts/intel.inferred_name.s"
-        ExitCode: 0
+        dialect: intel
+        intel_directives: "1"
+      att:
+        dialect: att
+        intel_directives: "0"
 
   compile-script-dump-ir:
     # Compile once per backend and check every dump plus the linked output.
