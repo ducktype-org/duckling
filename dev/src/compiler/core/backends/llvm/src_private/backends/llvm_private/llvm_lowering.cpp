@@ -240,9 +240,9 @@ namespace compiler::backend_llvm {
 				if (global_state::getBackendOptions()->llvm_backend->asm_syntax
 				    == AssemblySyntax::Intel) {
 					// Set LLVM's process-wide syntax option before creating x86 target machines.
-					constexpr auto option_name = "x86-asm-syntax";
-					auto*          option = llvm::cl::getRegisteredOptions().lookup(option_name);
-					if (!option || option->addOccurrence(0, option_name, "intel"))
+					constexpr auto OPTION_NAME = "x86-asm-syntax";
+					auto*          option = llvm::cl::getRegisteredOptions().lookup(OPTION_NAME);
+					if (!option || option->addOccurrence(0, OPTION_NAME, "intel"))
 						CORE_PANIC("LLVM error: unable to select Intel assembly syntax");
 				}
 			});
