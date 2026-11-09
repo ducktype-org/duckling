@@ -1,13 +1,13 @@
 import core.builtins.*;
 
 class SimpleClass {
-    var x: i64;
+    x: i64;
 }
 
 template(T: type, Q: type)
 class Pair {
-    var t: T;
-    var q: Q;
+    t: T;
+    q: Q;
 }
 
 fun main() -> i64 = {

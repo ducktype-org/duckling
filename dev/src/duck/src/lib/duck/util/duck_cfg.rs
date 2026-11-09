@@ -8,13 +8,13 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use tracing::trace;
-use url::Url;
 
 use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases};
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::fetcher;
 use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
-use crate::util::once_lock_ext::OnceLockExt;
+use crate::quackpack::util::interned_url::InternedUrl;
+use crate::util::once_ext::OnceExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
 
@@ -100,7 +100,7 @@ impl DuckCfg {
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<Alias>> {
         self.inner
             .deserialize_optional(&format!("aliases.{key}"))
-            .with_context(|| format!("when trying to get the alias expansions of `{key}`"))
+            .with_context(|| format!("failed to get the alias expansions of `{key}`"))
     }
 
     /// Get the underlying [`YamlConfig`].
@@ -118,9 +118,9 @@ impl DuckCfg {
     }
 
     /// Get the default registry url.
-    pub fn registry_url(&self) -> QuackResult<Url> {
-        let url = self.registry()?.url.clone();
-        let url = url.unwrap_or_else(|| fetcher::DEFAULT_REGISTRY_URL.clone());
+    pub fn registry_url(&self) -> QuackResult<InternedUrl> {
+        let url = self.registry()?.url;
+        let url = url.unwrap_or_else(|| *fetcher::DEFAULT_REGISTRY_URL);
         Ok(url)
     }
 

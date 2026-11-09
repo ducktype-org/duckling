@@ -776,8 +776,10 @@ private:
 					check_meta_function(fun, MK::CreateManyPtr, 1);
 				} else if (fun->declaration->original_name.str() == "createSlice") {
 					check_meta_function(fun, MK::CreateSlice, 1);
-				} else if (fun->declaration->original_name.str() == "createConst") {
-					check_meta_function(fun, MK::CreateConst, 1);
+				} else if (fun->declaration->original_name.str() == "createMut") {
+					check_meta_function(fun, MK::CreateMut, 1);
+				} else if (fun->declaration->original_name.str() == "createImm") {
+					check_meta_function(fun, MK::CreateImm, 1);
 				} else if (fun->declaration->original_name.str() == "createVariant") {
 					check_meta_function(fun, MK::CreateVariant, 4);
 				} else if (fun->declaration->original_name.str() == "createTuple") {

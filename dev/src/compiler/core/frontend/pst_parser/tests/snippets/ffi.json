@@ -88,7 +88,7 @@
 										"sourceStart": 32,
 										"sourceEnd": 33
 									},
-									"function parameter list": []
+									"parameter list": []
 								},
 								"return": {
 									"position": {
@@ -325,7 +325,7 @@
 						"sourceStart": 132,
 						"sourceEnd": 139
 					},
-					"function parameter list": [
+					"parameter list": [
 						{
 							"position": {
 								"sourceStart": 133,

@@ -185,15 +185,15 @@ fn check_if_overwrites(
         }
     };
     if replaces {
-        let mut error = QuackError::hint("use `--overwrite` to force an overwrite");
         let same_ids_message = format!("the packages share the same name `{id}`");
-        error = error.context(MessageError::new(same_ids_message));
+        let mut error = QuackError::message(same_ids_message);
+        error.add_hint("use `--overwrite` to force an overwrite");
         if let Some(context) = context {
-            error = error.context(MessageError::new(context));
+            error.context(MessageError::new(context));
         }
         let tried_to_override_message =
             "tried to overwrite an existing virtual environment from another location";
-        error = error.context(MessageError::new(tried_to_override_message));
+        error.context(MessageError::new(tried_to_override_message));
         Err(error)
     } else {
         Ok(())
@@ -232,9 +232,9 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Creates [`Solver`] and runs it.
-fn get_solver_answer(
-    pcx: &PackageContext<'_>,
-    fetcher: &Fetcher<'_>,
+fn get_solver_answer<'duck>(
+    pcx: &PackageContext<'duck>,
+    fetcher: &Fetcher<'duck>,
     git_access: StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,

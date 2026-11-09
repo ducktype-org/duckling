@@ -16,7 +16,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -1066,11 +1066,11 @@ private:
 				const auto& cctor
 					= ctx.query<QueryDefaultCopyConstructor>(trivial_type)->valueOrThrow();
 
-				// `(const ref Trivial) -> Trivial`.
+				// `(ref Trivial) -> Trivial`.
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(trivial_type, param_type.getType());
 				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
 
@@ -1256,11 +1256,11 @@ private:
 
 				const auto& cctor = dump_cctor("i32 | HasBox", variant_type);
 
-				// `(const ref V) -> V`.
+				// `(ref V) -> V`.
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(variant_type, param_type.getType());
 				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
 

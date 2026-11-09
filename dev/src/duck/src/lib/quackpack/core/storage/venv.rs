@@ -166,11 +166,12 @@ impl VenvData {
             .into());
         }
         serde_json::from_str(data).map_err(|e| {
-            let err = QuackError::from(e);
+            let mut err = QuackError::from(e);
             err.context(CorruptedVenvError {
                 reason: CorruptedVenvReason::Other,
                 path: path.to_path_buf(),
-            })
+            });
+            err
         })
     }
 

@@ -12,7 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
@@ -49,6 +49,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
@@ -76,6 +77,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testConstTernary);
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
@@ -179,7 +181,7 @@ private:
 		};
 	}
 
-	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::SymbolType<> stImm(const compiler::tsh::AbstractType abstract_type) {
 		return st(abstract_type).withMutability(Immutable);
 	}
 
@@ -240,10 +242,10 @@ private:
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
-				auto simple_const
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
-				auto expected = stConst(i64_type);
-				ASSERT_EQUAL(expected, simple_const);
+				auto simple_imm
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_IMM", root_scope);
+				auto expected = stImm(i64_type);
+				ASSERT_EQUAL(expected, simple_imm);
 			}
 			{
 				auto simple_variant
@@ -266,6 +268,10 @@ private:
 				ASSERT_EQUAL(cmp_1, true);
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
+				auto cmp_3 = getConstValueAs<bool>("CMP_3", root_scope);
+				ASSERT_EQUAL(cmp_3, true);
+				auto cmp_4 = getConstValueAs<bool>("CMP_4", root_scope);
+				ASSERT_EQUAL(cmp_4, true);
 			}
 		}
 
@@ -288,7 +294,7 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = stConst(i32_type);
+				auto expected = stImm(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
@@ -928,7 +934,7 @@ private:
 		const auto meta_type  = compiler::tsh::getMetaType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = stConst(int32_type);
+		const auto int32_immut_symbol_type = stImm(int32_type);
 
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
@@ -1003,6 +1009,17 @@ private:
 		// expression must not be evaluated, otherwise these evaluations would fail.
 		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
+	}
+
+	/**
+	 * @brief `if const ... then ... else ...` is evaluated at compile time and only the taken
+	 * branch is compiled. The branch that is not taken may contain code that would not compile.
+	 */
+	void testConstTernary() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/const_ternary")));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("CT1", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i32>("CT2", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i32>("CT3", root_scope));
 	}
 
 	/**
@@ -1460,7 +1477,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = stConst(bool_type);
+		const auto const_bool_type = stImm(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -3343,13 +3360,13 @@ private:
 				);
 			};
 
-			const auto meta_st     = stConst(compiler::tsh::getMetaType());
-			const auto unit_st     = stConst(compiler::tsh::getUnitType());
-			const auto int_st      = stConst(compiler::tsh::getIntegralType(ctx, 32, Signed));
-			const auto tuple_ii_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+			const auto meta_st     = stImm(compiler::tsh::getMetaType());
+			const auto unit_st     = stImm(compiler::tsh::getUnitType());
+			const auto int_st      = stImm(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
 				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
 			));
-			const auto tuple_tt_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+			const auto tuple_tt_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
 				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
 			));
 
@@ -3504,7 +3521,7 @@ private:
 			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
 			ASSERT_EQUAL(
 				number_signature.parameters.at(0).type,
-				stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
+				stImm(compiler::tsh::getIntegralType(ctx, 64, Signed))
 			);
 
 			// Baking the same template symbol with equal arguments must return

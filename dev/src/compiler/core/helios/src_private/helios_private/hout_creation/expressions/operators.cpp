@@ -113,11 +113,11 @@ namespace {
 		switch (op) {
 		case IntegerPow: {
 			if (!isLanguagePrimitivePresent(ctx, LanguagePrimitive::PowInt)) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
 					base::enumToStr(LanguagePrimitive::PowInt),
 					"' language primitive, but no such primitive was found."
-				)));
+				));
 				return query::Failed();
 			}
 			auto callee = bakeLanguagePrimitiveWithTypes(
@@ -137,18 +137,18 @@ namespace {
 			}();
 			if_opt_none(lang_primitive) {
 				// @TODO: #1498 handle other float types
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat("Float exponentiation on unhandled type. Only `f32` and `f64` "
 				                    "are handled for now.")
-				));
+				);
 				return query::Failed();
 			}
 			if (!isLanguagePrimitivePresent(ctx, lang_primitive.value())) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
 					base::enumToStr(lang_primitive.value()),
 					"' language primitive, but no such primitive was found."
-				)));
+				));
 				return query::Failed();
 			}
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
@@ -531,7 +531,8 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(Keyword::ManyPtr), { meta_t }, meta_t, ManyPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::CPtr), { meta_t }, meta_t, CPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::Slice), { meta_t }, meta_t, Slice, Prefix);
-			builtin_op(keywordToStr(Keyword::Const), { meta_t }, meta_t, Const, Prefix);
+			builtin_op(keywordToStr(Keyword::Mut), { meta_t }, meta_t, Mut, Prefix);
+			builtin_op(keywordToStr(Keyword::Imm), { meta_t }, meta_t, Imm, Prefix);
 
 			/// Meta comparisons ///
 			builtin_op(base::StrID("=="), { meta_t, meta_t }, bool_t, MetaEq, Infix);

@@ -92,6 +92,14 @@ namespace compiler::driver {
 	}
 
 	namespace {
+		base::Optional<std::filesystem::path> getOptimizedLLVMOutputPath(base::StrID module_name) {
+			if (!dump_ir_options.dump_llvm_opt) return {};
+			auto artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+				base::StrID(base::strConcat(module_name.strView(), ".opt.ll"))
+			);
+			return artifact.file.getFilePath().getPath();
+		}
+
 		/**
 		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
 		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
@@ -278,7 +286,9 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+						code_output.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object,
+						getOptimizedLLVMOutputPath(lir_data.module_id_human)
 					);
 				}
 				break;
@@ -646,7 +656,8 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 					llvm_module.compile(
 						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
+						backend_llvm::CompilationOutputType::Object,
+						getOptimizedLLVMOutputPath(script_lir->module_id)
 					);
 				}
 

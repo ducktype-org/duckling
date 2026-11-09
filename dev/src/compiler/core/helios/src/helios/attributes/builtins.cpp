@@ -53,6 +53,13 @@ namespace compiler::helios {
 			};
 			return mapping;
 		}
+
+		/**
+		 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
+		 */
+		base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
+			return builtinNameMapping().atMaybeCopy(name.strView());
+		}
 	}
 
 	base::StrID builtinKindToStr(BuiltinKind type) {
@@ -89,21 +96,14 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
-	 */
-	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
-		return builtinNameMapping().atMaybeCopy(name.strView());
-	}
-
 	BuiltinKind parseBuiltinAttr(
 		query::Context& ctx, base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	) {
 		if_opt_none(args) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Attribute 'builtin' expects exactly one argument, got 0.",
 				base::Optional<dia::StablePosition>{}
-			));
+			);
 			query::throwFailed();
 		}
 
@@ -112,31 +112,31 @@ namespace compiler::helios {
 			                                                              arg_list->end() };
 
 		if (holders.size() != 1) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(
 					"Attribute 'builtin' expects exactly one argument, got ", holders.size(), "."
 				),
 				arg_list->getStablePosition()
-			));
+			);
 			query::throwFailed();
 		}
 
 		auto holder  = holders.front().unlock(ctx);
 		auto str_lit = holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 		if_opt_none(str_lit) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Attribute 'builtin' expects a string literal naming the builtin.",
 				holder->getStablePosition()
-			));
+			);
 			query::throwFailed();
 		}
 
 		auto builtin = builtinKindFromStr(str_lit.value()->getValue().value);
 		if_opt_none(builtin) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Unknown builtin '", str_lit.value()->getValue().value.str(), "'."),
 				holder->getStablePosition()
-			));
+			);
 			query::throwFailed();
 		}
 
