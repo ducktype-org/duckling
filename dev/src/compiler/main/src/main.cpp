@@ -204,6 +204,17 @@ namespace {
 		    .build();
 	}
 
+	clah::VerificationResult verifyAsmSyntax(const clah::ParsingResult& parsing_result) {
+		if (parsing_result.isParam("asm-syntax")) {
+			const auto categories = parsing_result.getValue<std::vector<std::string>>("dump-ir");
+			if (!categories || std::ranges::find(*categories, "asm") == categories->end())
+				return std::unexpected<std::string>(
+					"--asm-syntax requires --dump-ir to include asm."
+				);
+		}
+		return clah::VerificationPassed{};
+	}
+
 	std::vector<clah::Parameter> getLlvmCodegenParams() {
 		std::vector<clah::Parameter> params;
 		params.push_back(getLlvmOptLevelParam());
@@ -679,6 +690,7 @@ namespace {
 					.addPositional(clah::FileParser::make("module", true))
 					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
+					.addCustomVerification(verifyAsmSyntax)
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
 					.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
@@ -769,6 +781,7 @@ namespace {
 					.setDefaultValueParser(clah::FileParser::make("module"))
 					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
+					.addCustomVerification(verifyAsmSyntax)
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
 					.add(getClahLinkingOptions())
@@ -989,6 +1002,7 @@ namespace {
 					)
 					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
+					.addCustomVerification(verifyAsmSyntax)
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
 					.add(getClahLinkingOptions())
@@ -1157,6 +1171,7 @@ namespace {
 					.addPositional(clah::FileParser::make("manifest"))
 					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
+					.addCustomVerification(verifyAsmSyntax)
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
 					.add(getClahArtifactLocationParameter())
@@ -1274,6 +1289,7 @@ namespace {
 					.addPositional(clah::FileParser::make("script"))
 					.add(getLlvmCodegenParams())
 					.add(debug_options::getClahDebugParameters())
+					.addCustomVerification(verifyAsmSyntax)
 					.add(getClahLinkingOptions())
 					.add(getClahStdLibOptions())
 					.addCustomVerification(verifyStdLibOptions)
