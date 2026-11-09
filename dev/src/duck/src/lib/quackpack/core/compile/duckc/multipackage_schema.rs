@@ -157,7 +157,10 @@ pub struct ComplexLinkerOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub linker: Option<PathBuf>,
     /// Pass additional linker arguments.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "additional_link_options",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub additional_linking_options: Option<Vec<String>>,
     #[serde(
         rename = "link_c_standard_library",

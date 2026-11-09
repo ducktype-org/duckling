@@ -105,7 +105,7 @@ pub fn get_linker_options(
         .chain(external_libs)
         .collect::<Vec<_>>();
     debug!(?args, "raw linker args");
-    if args.is_empty() {
+    if args.is_empty() && bcx.profile.c_std {
         return Ok(None);
     }
     let linker_options = if bcx.profile.c_std {
