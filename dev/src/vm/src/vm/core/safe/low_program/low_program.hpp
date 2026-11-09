@@ -283,6 +283,7 @@ namespace vm::low {
 			return global_data;
 		}
 
+		[[nodiscard]]
 		const base::StableHashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return method_name_pool;
 		}
