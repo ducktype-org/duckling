@@ -70,7 +70,7 @@ pub enum ParseError {
 pub enum KnownHostField {
     /// Salt of hashed hostname
     HashedSalt,
-    /// Salt of hashed hostname
+    /// Host of hashed hostname
     HashedHost,
     /// Hostnames (patterns)
     Hostnames,

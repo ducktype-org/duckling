@@ -4,6 +4,13 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! Logic for [`RemoteCallbacks::certificate_check`].
+//!
+//! It performs parsing ([`parse`]), checking whether a line accepts a host ([`accept`]), and
+//! checking common known hosts.
+//!
+//! [`RemoteCallbacks::certificate_check`]: git2::RemoteCallbacks::certificate_check
+
 use std::path::{Path, PathBuf};
 use std::{fmt, fs, io};
 
@@ -91,25 +98,36 @@ pub fn check_certificate(
     }
 }
 
-#[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-/// A single line in `known_hosts` file.
-enum KnownHostsLine {
-    /// This line is a comment.
-    Comment,
-    /// This line contains pattern to match against.
-    Entry(KnownHostEntry),
-    /// Failed to parse the line.
-    Failed(parse::ParseError),
+/// A single entry (line) in the `known_hosts` file.
+struct KnownHostEntry {
+    /// Marker of the entry.
+    marker: Option<Marker>,
+    /// List of patterns to match against.
+    hosts: Vec<Hostname>,
+    /// Keytype.
+    key_type: String,
+    /// Base64 decoded key.
+    key: Vec<u8>,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-/// Optional marker of the line.
-enum Marker {
-    /// This line is certification authority key.
-    CA,
-    /// This line contains a revoked key.
-    Revoked,
+impl fmt::Debug for KnownHostEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KnownHostEntry")
+            .field("marker", &self.marker)
+            .field("hosts", &self.hosts)
+            .field("key_type", &self.key_type)
+            .field("key", &"...")
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+/// A single hostname pattern.
+enum Hostname {
+    Hashed(HashedHostname),
+    Normal(NormalHostname),
 }
 
 #[derive(Debug)]
@@ -146,34 +164,23 @@ impl fmt::Debug for HashedHostname {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-/// A single hostname pattern.
-enum Hostname {
-    Hashed(HashedHostname),
-    Normal(NormalHostname),
+/// A single line in `known_hosts` file.
+enum KnownHostsLine {
+    /// This line is a comment.
+    Comment,
+    /// This line contains pattern to match against.
+    Entry(KnownHostEntry),
+    /// Failed to parse the line.
+    Failed(parse::ParseError),
 }
 
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// A single entry (line) in the `known_hosts` file.
-struct KnownHostEntry {
-    /// Marker of the entry.
-    marker: Option<Marker>,
-    /// List of patterns to match against.
-    hosts: Vec<Hostname>,
-    /// Keytype.
-    key_type: String,
-    /// Base64 decoded key.
-    key: Vec<u8>,
-}
-
-impl fmt::Debug for KnownHostEntry {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("KnownHostEntry")
-            .field("marker", &self.marker)
-            .field("hosts", &self.hosts)
-            .field("key_type", &self.key_type)
-            .field("key", &"...")
-            .finish()
-    }
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// Optional marker of the line.
+enum Marker {
+    /// This line is certification authority key.
+    CA,
+    /// This line contains a revoked key.
+    Revoked,
 }
 
 type TrackedKnownHostEntry<'a> = (KnownHostEntry, &'a Path);
@@ -192,6 +199,7 @@ fn get_known_hosts_files(ctx: &DuckContext) -> Vec<PathBuf> {
     system_wide_config
 }
 
+/// Parse a single known_hosts file, and append its results to `buffer`.
 fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKnownHostEntry<'a>>) {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
