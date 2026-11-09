@@ -236,12 +236,12 @@ namespace compiler::helios::defgen {
 			const bool accepts_equality = kind == ComparisonKind::Equal
 			                           || kind == ComparisonKind::LesserEqual
 			                           || kind == ComparisonKind::GreaterEqual;
-			out_body.push_back(s.ret(s.litBool(accepts_equality)));
+			out_body.emplace_back(s.ret(s.litBool(accepts_equality)));
 			return;
 		}
 
 		// Otherwise, compare normally.
-		out_body.push_back(s.ret(getSubComparison(
+		out_body.emplace_back(s.ret(getSubComparison(
 			ctx,
 			s.ident(decl.parameters.at(0).helios_symbol),
 			s.ident(decl.parameters.at(1).helios_symbol),
