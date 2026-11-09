@@ -17,9 +17,9 @@
  */
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
@@ -125,7 +125,7 @@ namespace vm {
 		};
 
 		/// State and the change counter of every VMThread registered in the process.
-		base::StableHashMap<api::ThreadID, ThreadEntry> threads;
+		base::HashMap<api::ThreadID, ThreadEntry> threads;
 
 		/// Set when a stop of the whole process was requested (an API `Stop`, or the first panic
 		/// of any thread). Makes the aggregate state `Stopping`/`Stopped` regardless of the states

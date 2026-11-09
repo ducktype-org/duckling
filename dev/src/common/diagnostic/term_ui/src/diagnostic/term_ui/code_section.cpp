@@ -6,7 +6,7 @@
 
 #include "code_section.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/term_ui/code_line.hpp>
@@ -42,11 +42,11 @@ namespace term_ui {
 		 * the highlight
 		 */
 		HighlightResult renderHighlightAndMoveToNextState(
-			Line&                                                              str,
-			Highlight                                                          highlight,
-			u64                                                                line_no,
-			const base::StableHashMap<u64, dia::term_ui_view::PointerMessage>& pointers,
-			const base::StableHashMap<u64, std::pair<u64, u64>>& last_pointer_message_occurence
+			Line&                                                        str,
+			Highlight                                                    highlight,
+			u64                                                          line_no,
+			const base::HashMap<u64, dia::term_ui_view::PointerMessage>& pointers,
+			const base::HashMap<u64, std::pair<u64, u64>>& last_pointer_message_occurence
 		) {
 			auto [priority, beg, end, group, idx, lowering] = highlight;
 			u64         len                                 = end - beg;
@@ -94,8 +94,8 @@ namespace term_ui {
 
 	void print(const dia::term_ui_view::CodeSection& section, std::ostream& out) {
 		// Preprocessing
-		base::StableHashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
-		u64                                           tab_space = 0;
+		base::HashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
+		u64                                     tab_space = 0;
 
 		// for (auto x : section.pointers) {
 		// 	std::cout << "Pointer " << x.first << ": " << x.second.text << "\n";

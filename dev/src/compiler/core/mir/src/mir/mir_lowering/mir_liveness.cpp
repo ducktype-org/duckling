@@ -12,7 +12,7 @@
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -242,9 +242,9 @@ namespace compiler::mir {
 	}
 
 	MoveStateData MoveStateData::calculateGlobalInMoveStateMap(
-		const Function&                                           fun,
-		const base::StableHashMap<BlockID, std::vector<BlockID>>& block_predecessors,
-		const LocalsByScopeMap&                                   locals_by_scope
+		const Function&                                     fun,
+		const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
+		const LocalsByScopeMap&                             locals_by_scope
 	) {
 		if (fun.block_order.empty()) return {};
 		CORE_DEV_LOG(Compiler, "Calculating global move-state map for function `", fun.name, "`.\n");
@@ -263,8 +263,8 @@ namespace compiler::mir {
 		}
 
 
-		base::StableHashMap<BlockID, LocalMoveStateMap> out_status;
-		base::StableHashMap<BlockID, LocalMoveStateMap> in_status;
+		base::HashMap<BlockID, LocalMoveStateMap> out_status;
+		base::HashMap<BlockID, LocalMoveStateMap> in_status;
 
 		auto entry = fun.block_order.front();
 

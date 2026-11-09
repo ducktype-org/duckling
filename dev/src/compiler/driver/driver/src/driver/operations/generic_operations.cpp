@@ -40,9 +40,9 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -993,9 +993,9 @@ namespace compiler::driver {
 		// same modules. Mixing .o (LLVM) and .dbc (DVM) artifacts in one vector
 		// would feed the DVM linker .o files (and vice versa), so the maps are
 		// keyed separately by backend.
-		base::StableHashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			llvm_objects_by_root_module;
-		base::StableHashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			dvm_objects_by_root_module;
 
 		auto collect_modules = [&](this const auto&   self,
@@ -1081,7 +1081,7 @@ namespace compiler::driver {
 			}
 		}
 
-		base::StableHashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
 			debug_info_artifacts_by_root_module;
 
 		for (auto [module, handle]: debug_info_handles) {

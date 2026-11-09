@@ -11,8 +11,8 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <string_view>
@@ -108,12 +108,12 @@ namespace compiler::mir {
 	 */
 	struct FunctionBuilder final {
 	private:
-		base::Optional<base::StrID>                                   name;
-		base::StableVector<BlockBuilder>                              blocks;
-		base::Optional<BlockBuilderRef>                               entry_block;
-		base::StableVector<MIRLocal>                                  local_list;
-		base::StableHashMap<helios::code::HOUTExprID, MIRLocalMutRef> reusable_expr_locals;
-		tsh::FunctionAbstractType                                     function_type;
+		base::Optional<base::StrID>                             name;
+		base::StableVector<BlockBuilder>                        blocks;
+		base::Optional<BlockBuilderRef>                         entry_block;
+		base::StableVector<MIRLocal>                            local_list;
+		base::HashMap<helios::code::HOUTExprID, MIRLocalMutRef> reusable_expr_locals;
+		tsh::FunctionAbstractType                               function_type;
 
 		/// Local id does not use global counter, since we want to keep the same id's
 		/// in tests and in single run of the compiler (and in tests if global counter
