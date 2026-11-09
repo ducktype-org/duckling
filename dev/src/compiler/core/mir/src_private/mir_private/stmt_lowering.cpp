@@ -21,7 +21,11 @@ namespace compiler::mir {
 			helios::code::ControlFlowKind kind;
 			base::Optional<helios::SymID> id;
 
+			// Destination after leaving the construct with `break`.
 			BlockBuilderRef break_target;
+
+			// Destination for `continue`: condition evaluation for if/while,
+			// iteration step for for, or body entry for block/if const.
 			BlockBuilderRef continue_target;
 		};
 
@@ -59,6 +63,8 @@ namespace compiler::mir {
 		 */
 		ScopeRef parent_scope;
 
+		// Stack of enclosing break/continue targets, with the innermost target last.
+		// Searched in reverse to select the nearest matching construct.
 		ControlFlowTargets targets;
 
 		StmtBlockVisitor(
