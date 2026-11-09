@@ -13,6 +13,7 @@
 #pragma once
 #include "parameter.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/misc/anycast.hpp>

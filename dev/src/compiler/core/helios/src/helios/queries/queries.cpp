@@ -32,6 +32,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -384,14 +385,17 @@ namespace compiler::helios {
 			base::StrID                                      original_name,
 			dia::StablePosition                              stable_pos
 		) {
-			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
-			if (inserted) return false;
+			auto entry = seen_declarations.find(key_name);
+			if (entry == seen_declarations.end()) {
+				seen_declarations.put(key_name, stable_pos);
+				return false;
+			}
 
 			auto error = makeBox<dia::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
 			// Point the user at the previous declaration.
 			error->addAttachedMessage(
-				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
+				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->value)
 			);
 
 			ctx.log(std::move(error));
@@ -562,7 +566,7 @@ namespace compiler::helios {
 
 			for (auto submodule: *submodules) {
 				auto sub_hout
-					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
+					= ctx.query<QueryModuleHOUTRecursively>(submodule.value).valueOrThrow();
 				total_elements += sub_hout.size();
 
 				sub_results.emplace_back(std::move(sub_hout));

@@ -6,6 +6,7 @@
 
 #include "code_section.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/term_ui/code_line.hpp>
