@@ -390,10 +390,8 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         {
             return Ok(emitted_response_because_depends);
         }
-        let answer_identity = FullIdentity::new(
-            request.id.name,
-            FullOrigin::for_git(url, cloned_pkg.commit_hash),
-        );
+        let answer_identity =
+            FullIdentity::new(request.id.name, FullOrigin::for_git(url, cloned_pkg.commit));
         let package_id = PackageId::new(answer_identity, manifest.version());
         if !self.git_access.is_stored(package_id)
             && let Err(e) = self.git_access.store(package_id, path_where_cloned.path())
