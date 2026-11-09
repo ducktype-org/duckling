@@ -19,6 +19,8 @@
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/placeholder.hpp>
 #include <diagnostic/source_position.hpp>
@@ -66,9 +68,9 @@ namespace compiler::helios {
 		 * @param elem PST element of the original type identifier in the parse tree.
 		 */
 		void checkForAliases(
-			query::Context&                                    ctx,
-			base::HashMap<std::string, Box<dia::MessageBase>>& linked_messages,
-			pst::Access<pst::LangElement>                      elem
+			query::Context&                                          ctx,
+			base::StableHashMap<std::string, Box<dia::MessageBase>>& linked_messages,
+			pst::Access<pst::LangElement>                            elem
 		) {
 			auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
 			if (!ident_opt.has_value()) return;

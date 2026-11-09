@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <tester/tester.hpp>
@@ -21,7 +22,7 @@ public:
 
 private:
 	void testMapAtMaybe() {
-		base::HashMap<int, std::string> m;
+		base::StableHashMap<int, std::string> m;
 		m.put(1, "one");
 		m.put(2, "two");
 		ASSERT_EQUAL(true, m.contains(1));

@@ -15,6 +15,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 
@@ -70,7 +71,7 @@ namespace compiler::frontend {
 	 */
 	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
 
-	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
+	using QuerySubmodules_Result = CRef<base::StableHashMap<base::StrID, ModuleID>>;
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.

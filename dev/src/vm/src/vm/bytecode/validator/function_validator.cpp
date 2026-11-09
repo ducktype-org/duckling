@@ -9,6 +9,7 @@
 #include "errors.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -267,16 +268,16 @@ public:
  * stack operations. Throws subclasses of ValidationError.
  */
 class FunctionValidator {
-	const valid_type::ValidTypeMap&                  types_ctx;
-	const ObjIdNameMap<GlobalData>&                  globals;
-	const base::HashMap<base::StrID, FuncSignature>& signatures;
-	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
-	const ObjIdNameMap<FFIFunction>&                 ffi_signatures;
-	const Function&                                  function;
+	const valid_type::ValidTypeMap&                        types_ctx;
+	const ObjIdNameMap<GlobalData>&                        globals;
+	const base::StableHashMap<base::StrID, FuncSignature>& signatures;
+	const ObjIdNameMap<ExternalCFunction>&                 ext_c_signatures;
+	const ObjIdNameMap<FFIFunction>&                       ffi_signatures;
+	const Function&                                        function;
 
-	std::vector<base::Optional<StackStateID>>            stack_before_instr;
-	base::HashMap<base::StrID, usize>                    index_of_label;
-	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
+	std::vector<base::Optional<StackStateID>>                  stack_before_instr;
+	base::StableHashMap<base::StrID, usize>                    index_of_label;
+	base::StableHashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
@@ -567,7 +568,7 @@ class FunctionValidator {
 								if constexpr (requires { t.inheritance_metadata; }) {
 									if_opt_some(t.inheritance_metadata, inh_meta) {
 										for (const auto& vmethod: inh_meta.available_methods)
-											if (vmethod.first == method_name) valid = true;
+											if (vmethod.key == method_name) valid = true;
 									}
 								}
 							},
@@ -1800,16 +1801,16 @@ class FunctionValidator {
 
 	void preprocessLabels() {
 		auto register_jump = [&](const auto& instr) {
-			jumps_to_label.try_emplace(instr.label.label_name);
+			if (!jumps_to_label.contains(instr.label.label_name))
+				jumps_to_label.put(instr.label.label_name);
 			jumps_to_label.at(instr.label.label_name).push_back(instr);
 		};
 
 		for (usize index = 0; index < function.body.size(); index++) {
 			instr_match(function.body[index]) {
 				instr_case(Op_label, instr) {
-					auto [_, added]
-						= index_of_label.insert_or_assign(instr.label.label_name, index);
-					if (!added) throw DuplicatedLabelError(instr.label);
+					if (!index_of_label.maybePut(instr.label.label_name, index))
+						throw DuplicatedLabelError(instr.label);
 				}
 				instr_case(Op_jmp_label, instr) { register_jump(instr); }
 				instr_case(Op_jmpIf_label, instr) { register_jump(instr); }
@@ -1979,12 +1980,12 @@ class FunctionValidator {
 
 public:
 	FunctionValidator(
-		const valid_type::ValidTypeMap&                  types_ctx,
-		const ObjIdNameMap<GlobalData>&                  globals,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
-		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
-		const Function&                                  function
+		const valid_type::ValidTypeMap&                        types_ctx,
+		const ObjIdNameMap<GlobalData>&                        globals,
+		const base::StableHashMap<base::StrID, FuncSignature>& signatures,
+		const ObjIdNameMap<ExternalCFunction>&                 ext_c_signatures,
+		const ObjIdNameMap<FFIFunction>&                       ffi_signatures,
+		const Function&                                        function
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
@@ -2014,13 +2015,13 @@ public:
 };
 
 vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReachableCode(
-	const valid_type::ValidTypeMap&                  types,
-	const ObjIdNameMap<GlobalData>&                  globals_map,
-	const base::HashMap<base::StrID, FuncSignature>& signatures,
-	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
-	const FlagContext&                               flag_context,
-	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
-	const Function&                                  function
+	const valid_type::ValidTypeMap&                        types,
+	const ObjIdNameMap<GlobalData>&                        globals_map,
+	const base::StableHashMap<base::StrID, FuncSignature>& signatures,
+	const ObjIdNameMap<ExternalCFunction>&                 ext_c_signatures,
+	const FlagContext&                                     flag_context,
+	const ObjIdNameMap<FFIFunction>&                       ffi_signatures,
+	const Function&                                        function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 

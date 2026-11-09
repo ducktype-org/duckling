@@ -6,6 +6,8 @@
 
 #include "flag_context.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <vm/bytecode/validator/errors.hpp>
 
 #include <queue>
@@ -21,10 +23,10 @@ namespace vm::code {
 			return result;
 		}
 
-		base::HashMap<base::StrID, std::vector<base::StrID>> getCallGraph(
+		base::StableHashMap<base::StrID, std::vector<base::StrID>> getCallGraph(
 			const std::vector<Function>& new_functions
 		) {
-			base::HashMap<base::StrID, std::vector<base::StrID>> result;
+			base::StableHashMap<base::StrID, std::vector<base::StrID>> result;
 
 			for (const auto& func: new_functions) {
 				std::vector<base::StrID> called_funcs;
@@ -60,10 +62,10 @@ namespace vm::code {
 		/// edge caller -> callee becomes callee -> caller. This lets flag propagation walk from a
 		/// callee up to every (transitive) caller, so a flag found in a callee is attributed to all
 		/// functions that may reach it.
-		base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
-			const base::HashMap<base::StrID, std::vector<base::StrID>>& call_graph
+		base::StableHashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
+			const base::StableHashMap<base::StrID, std::vector<base::StrID>>& call_graph
 		) {
-			base::HashMap<base::StrID, std::vector<base::StrID>> result;
+			base::StableHashMap<base::StrID, std::vector<base::StrID>> result;
 
 			for (const auto& [caller, callees]: call_graph) {
 				if (!result.contains(caller)) result.put(caller, {});
@@ -137,10 +139,11 @@ namespace vm::code {
 		const auto transpose_call_graph = transposeCallGraph(call_graph);
 
 		// Computing direct flags, i.e. flags without propagation
-		base::HashMap<base::StrID, InstructionFlag> direct_flags;
+		base::StableHashMap<base::StrID, InstructionFlag> direct_flags;
 		for (const auto& new_func: new_functions) {
-			direct_flags.put(
-				new_func.name.str, collectFlagsForFunction(new_func, globals, ext_c_functions)
+			direct_flags.maybePut(
+				base::StrID(new_func.name.str),
+				collectFlagsForFunction(new_func, globals, ext_c_functions)
 			);
 		}
 		for (const auto& [func_name, _]: transpose_call_graph)
@@ -151,7 +154,7 @@ namespace vm::code {
 			}
 
 		// Prepare helper result structure
-		base::HashMap<base::StrID, InstructionFlag> flags_in_new_functions;
+		base::StableHashMap<base::StrID, InstructionFlag> flags_in_new_functions;
 		for (const auto& new_func: new_function_names) flags_in_new_functions.put(new_func, {});
 
 		// Iterate over flags to propagate them
@@ -185,7 +188,7 @@ namespace vm::code {
 
 		// Finally, save the result
 		for (const auto& [new_func, flags]: flags_in_new_functions) {
-			flags_in_functions.put(new_func, flags);
+			flags_in_functions.maybePut(base::StrID(new_func), InstructionFlag(flags));
 
 			verifyFlagsAgainstConfig(flags, config, new_func);
 		}

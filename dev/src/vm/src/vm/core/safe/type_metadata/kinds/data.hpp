@@ -10,6 +10,7 @@
 #include "../inheritance_metadata.hpp"
 
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -26,8 +27,8 @@ namespace vm::kind {
 		// @todo: change to strongly typed when it will be in utils
 		using FieldID = u64;
 
-		base::HashMap<base::StrID, FieldID> field_name_map;
-		std::vector<FieldDesc>              fields;
+		base::StableHashMap<base::StrID, FieldID> field_name_map;
+		std::vector<FieldDesc>                    fields;
 
 		base::Optional<InheritanceMetadata> inheritance_metadata;
 	};
