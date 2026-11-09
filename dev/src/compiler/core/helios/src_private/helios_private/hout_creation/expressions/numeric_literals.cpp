@@ -11,6 +11,8 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <diagnostic/stable_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -20,8 +22,73 @@
 #include <string_view>
 #include <system_error>
 
+
+// Below are includes needed for parseF64 (see its doc comment for more information)
+// Remove them when `std::from_chars` for `f64` becomes available on all supported macOS versions.
+// @TODO: #3988 Remove the includes.
+
+// clang-format off
+
+#include <cctype>
+#include <cerrno>
+#include <clocale>
+#include <cmath>
+#include <cstdlib>
+
+#include <base/config/target_info.hpp>
+
+#if BASE_TARGET_OS_MACOS
+	#include <xlocale.h>
+#endif
+
+// clang-format on
+
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief Mimics `std::from_chars(first, last, out)` for an `f64` in the default (general)
+		 * format
+		 *
+		 * Floating-point `std::from_chars` on macOS is only available from 26.0.
+		 * We want to compile on macOS 15, to support all supported macOS versions.
+		 *
+		 * @TODO: #3988 This function will likely be deleted in fall of 2027,
+		 * when support for macOS 15 is dropped and `std::from_chars` for `f64` becomes available on
+		 * all supported macOS versions.
+		 */
+		std::from_chars_result parseF64(std::string_view value, f64& out) {
+			const char* const first = value.data();
+
+			// What strtod accepts but from_chars does not: leading whitespace and '+'.
+			if (value.empty() || value.front() == '+'
+			    || std::isspace(static_cast<unsigned char>(value.front())))
+				return { .ptr = first, .ec = std::errc::invalid_argument };
+
+			// Hexadecimal floats: from_chars (general format) reads only the "0" before the 'x'.
+			const usize sign = value.front() == '-' ? 1 : 0;
+			if (value.substr(sign).starts_with("0x") || value.substr(sign).starts_with("0X")) {
+				out = sign ? -0.0 : 0.0;
+				return { .ptr = first + sign + 1, .ec = std::errc() };
+			}
+
+			static const locale_t c_locale = newlocale(LC_ALL_MASK, "C", nullptr);
+			CORE_ASSERT(c_locale != nullptr, "newlocale(\"C\") failed");
+			const std::string terminated(value);  // strtod needs a NUL-terminated string.
+
+			char* end          = nullptr;
+			errno              = 0;
+			const f64   parsed = strtod_l(terminated.c_str(), &end, c_locale);
+			const char* ptr    = first + (end - terminated.c_str());
+			if (ptr == first) return { .ptr = first, .ec = std::errc::invalid_argument };
+
+			// Overflow (inf) and underflow to zero are out of range; subnormal results are not.
+			if (errno == ERANGE && (std::isinf(parsed) || parsed == 0.0))
+				return { .ptr = ptr, .ec = std::errc::result_out_of_range };
+
+			out = parsed;
+			return { .ptr = ptr, .ec = std::errc() };
+		}
+
 		/**
 		 * @brief Checks the given `from_chars_result` and logs compiler errors in case of errors.
 		 * @return True `from_chars` succeeded, false if an error occurred, an appropriate compiler
@@ -94,7 +161,7 @@ namespace compiler::helios::code {
 			std::string_view value, const dia::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
-			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
+			auto result       = parseF64(value, parsed_value);
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			// @note: No need to check with fitsIn, since casting to smaller types is always okay.
@@ -123,7 +190,7 @@ namespace compiler::helios::code {
 			std::string_view value, const dia::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
-			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
+			auto result       = parseF64(value, parsed_value);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}

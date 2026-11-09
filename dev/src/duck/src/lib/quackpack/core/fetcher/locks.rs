@@ -5,10 +5,13 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Manager of fetcher specific file locks.
+//!
+//! Each package is locked by `locks/<host>-<hash>/<name>-<version>.lock`.
 
 use tracing::trace;
 
 use super::types;
+use crate::quackpack::core::short_name_for_host;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
@@ -19,8 +22,8 @@ pub struct Locks {
 }
 
 impl Locks {
-    /// Filename of the per-package lock.
-    const PER_PACKAGE_LOCK: &'static str = ".duck.package.lock";
+    /// Extension of the per-package lock.
+    const EXTENSION: &'static str = ".lock";
 
     /// Create a new [`Locks`].
     pub fn new(root: FileLockManager) -> QuackResult<Self> {
@@ -32,11 +35,16 @@ impl Locks {
     }
 
     /// Try to get a package's lock.
-    pub fn lock(&self, package: types::Package, ctx: &DuckContext) -> QuackResult<LockedFile> {
+    pub fn lock(
+        &self,
+        package: types::PackageWithUrl,
+        ctx: &DuckContext,
+    ) -> QuackResult<LockedFile> {
+        let id = short_name_for_host(&package.url);
+        let filename = format!("{}-{}{}", package.name, package.version, Self::EXTENSION);
         self.root
-            .join(package.name)
-            .join(package.version.to_string())
-            .open_exclusive(Self::PER_PACKAGE_LOCK, ctx)
+            .join(id)
+            .open_exclusive(filename, ctx)
             .with_context(|| {
                 format!(
                     "failed to acquire a lock for `{}` version {}",
