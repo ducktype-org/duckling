@@ -6,6 +6,8 @@
 
 #include "local_stack_database_builder.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 using ls_db_bld = vm::code::LocalStackDbBuilder;
 
 ls_db_bld::NameStackID ls_db_bld::TreeNode::emplaceChild(const Child& child, NameStackID new_id) {
@@ -156,7 +158,7 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 		for (auto& [child, next_node]: tree[node_id].children) {
 			CORE_ASSERT(!names.contains(child.name), "we should never have repeating names");
 
-			names.emplace(child.name, next_node);
+			names.put(child.name, next_node);
 
 			auto next_lifetime = self(self, next_node, names);
 

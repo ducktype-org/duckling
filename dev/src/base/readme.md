@@ -9,6 +9,7 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - argument_splitter.hpp
 - [exceptions.hpp](@ref base/exceptions.hpp)
 - flag.hpp
+- hashmap.hpp
 - init_guard.hpp
 - ints.hpp
 - floats.hpp
@@ -17,7 +18,6 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - raw_view.hpp
 - smart_pointers.hpp
 - stable_container.hpp
-- stable_hashmap.hpp
 - str_utils.hpp
 - string_id.hpp
 - stringifyable_enum.hpp

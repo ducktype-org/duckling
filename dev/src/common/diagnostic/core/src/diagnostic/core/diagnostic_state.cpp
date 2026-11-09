@@ -6,6 +6,8 @@
 
 #include "diagnostic_state.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <unordered_set>
 
 namespace dia::state {

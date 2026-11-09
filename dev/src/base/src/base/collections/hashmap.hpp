@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 /**
- * @file stable_hashmap.hpp
+ * @file hashmap.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
@@ -16,14 +16,16 @@
 #include <base/pointers/box.hpp>
 
 #include <concepts>
+#include <initializer_list>
 #include <iterator>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
 namespace base {
 
 	/**
-	 * Custom, Stable hash map implementation.
+	 * Custom hash map implementation with stable references.
 	 * Its performance is similar or better than std::unordered_map, while keeping references always
 	 * stable (what std::unordered_map does as well).
 	 *
@@ -35,7 +37,7 @@ namespace base {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
-	class StableHashMap final {
+	class HashMap final {
 	public:
 		/**
 		 * Key Value pair stored in the map.
@@ -73,7 +75,7 @@ namespace base {
 
 		[[nodiscard]]
 		u64 hashToBucket(KeyHash hash) const RELEASE_NOEXCEPT {
-			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
+			CORE_ASSERT(!buckets.empty(), "No buckets in HashMap");
 			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
@@ -151,7 +153,7 @@ namespace base {
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
 				not this->containsAssumingHash(new_node->key_value.key, key_hash),
-				"Key already exists in StableHashMap"
+				"Key already exists in HashMap"
 			);
 
 			addToBucket(hashToBucket(key_hash), new_node);
@@ -277,11 +279,25 @@ namespace base {
 
 
 	public:
-		StableHashMap(): buckets(INITIAL_BUCKETS) {}
+		HashMap(): buckets(INITIAL_BUCKETS) {}
 
-		StableHashMap(const StableHashMap&) = delete;
+		/**
+		 * @brief Builds the map from a braced list of key-value pairs.
+		 * Panics if a key repeats.
+		 */
+		HashMap(std::initializer_list<std::pair<const KEY_T, DATA_T>> init):
+			  buckets(INITIAL_BUCKETS) {
+			for (const auto& [key, value]: init) put(key, value);
+		}
 
-		StableHashMap(StableHashMap&& other) noexcept:
+		/**
+		 * @brief Deep-copies every key-value pair of @p other.
+		 */
+		HashMap(const HashMap& other): buckets(INITIAL_BUCKETS) {
+			for (const auto& [key, value]: other) put(key, value);
+		}
+
+		HashMap(HashMap&& other) noexcept:
 			  buckets(std::move(other.buckets)),
 			  node_allocator(std::move(other.node_allocator)),
 			  element_count(other.element_count) {
@@ -289,7 +305,7 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
-		~StableHashMap() {
+		~HashMap() {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
@@ -298,6 +314,26 @@ namespace base {
 					current_node = next_node;
 				}
 			}
+		}
+
+		/**
+		 * @brief Replaces the contents with a deep copy of @p other.
+		 */
+		HashMap& operator=(const HashMap& other) {
+			if (this == &other) return *this;
+			clear();
+			for (const auto& [key, value]: other) put(key, value);
+			return *this;
+		}
+
+		/**
+		 * @brief Destroys the current contents and takes over the contents of @p other.
+		 */
+		HashMap& operator=(HashMap&& other) noexcept {
+			if (this == &other) return *this;
+			std::destroy_at(this);
+			std::construct_at(this, std::move(other));
+			return *this;
 		}
 
 		/**
@@ -338,7 +374,7 @@ namespace base {
 				  buckets_size(buckets_size) {}
 
 
-			friend class StableHashMap;
+			friend class HashMap;
 
 		public:
 			using iterator_category = std::forward_iterator_tag;
@@ -394,11 +430,26 @@ namespace base {
 
 		using IteratorT      = Iterator<KeyValuePair>;
 		using ConstIteratorT = Iterator<const KeyValuePair>;
+		using iterator       = IteratorT;
+		using const_iterator = ConstIteratorT;
+		using key_type       = KEY_T;
+		using mapped_type    = DATA_T;
+		using value_type     = KeyValuePair;
 
 		static_assert(std::forward_iterator<IteratorT>, "IteratorT must be a forward iterator");
 		static_assert(
 			std::forward_iterator<ConstIteratorT>, "ConstIteratorT must be a forward iterator"
 		);
+
+		/**
+		 * Inserts key->DATA_T{} into the container.
+		 * Panics if key already exists.
+		 * @returns A reference to the inserted key-value pair.
+		 */
+		template<typename K = KEY_T>
+		Ref<KeyValuePair> put(K&& key) RELEASE_NOEXCEPT {
+			return put(std::forward<K>(key), DATA_T{});
+		}
 
 		/**
 		 * Inserts key->value into the container.
@@ -459,11 +510,11 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		CRef<DATA_T> at(const KEY_T& key) const {
-			return *atMaybe(key);
+		const DATA_T& at(const KEY_T& key) const {
+			return **atMaybe(key);
 		}
 
-		Ref<DATA_T> at(const KEY_T& key) { return *atMaybe(key); }
+		DATA_T& at(const KEY_T& key) { return **atMaybe(key); }
 
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
@@ -474,6 +525,18 @@ namespace base {
 		DATA_T& operator[](const KEY_T& key) { return **atMaybe(key); }
 
 		const DATA_T& operator[](const KEY_T& key) const { return **atMaybe(key); }
+
+		/**
+		 * Inserts key->value, or overwrites the value if the key already exists.
+		 * @returns A reference to the inserted or updated key-value pair.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		Ref<KeyValuePair> insertOrAssign(K&& key, D&& value) RELEASE_NOEXCEPT {
+			auto it = find(key);
+			if (it == end()) return put(std::forward<K>(key), std::forward<D>(value));
+			it->value = std::forward<D>(value);
+			return &*it;
+		}
 
 		[[nodiscard]]
 		bool contains(const KEY_T& key) const RELEASE_NOEXCEPT {
@@ -538,6 +601,58 @@ namespace base {
 		[[nodiscard]]
 		usize size() const {
 			return element_count;
+		}
+
+		/**
+		 * Check if the container is empty.
+		 * @return Whether the container is empty.
+		 */
+		[[nodiscard]]
+		bool empty() const {
+			return element_count == 0;
+		}
+
+		/**
+		 * Check if the container holds at least one pair.
+		 * @return Whether the container is not empty.
+		 */
+		[[nodiscard]]
+		bool notEmpty() const {
+			return element_count != 0;
+		}
+
+		/**
+		 * Looks up the pair stored under @p key.
+		 * @returns An iterator to the pair, or end() if the key is not in the map.
+		 */
+		[[nodiscard]]
+		IteratorT find(const KEY_T& key) RELEASE_NOEXCEPT {
+			u64        bucket_index = keyToBucket(key);
+			MRef<Node> current_node = buckets.at(bucket_index);
+			while (current_node) {
+				if (current_node->key_value.key == key)
+					return IteratorT(bucket_index, current_node, buckets.data(), buckets.size());
+				current_node = current_node->next;
+			}
+			return end();
+		}
+
+		/**
+		 * Looks up the pair stored under @p key.
+		 * @returns An iterator to the pair, or end() if the key is not in the map.
+		 */
+		[[nodiscard]]
+		ConstIteratorT find(const KEY_T& key) const RELEASE_NOEXCEPT {
+			u64        bucket_index = keyToBucket(key);
+			MRef<Node> current_node = buckets.at(bucket_index);
+			while (current_node) {
+				if (current_node->key_value.key == key)
+					return ConstIteratorT(
+						bucket_index, current_node, buckets.data(), buckets.size()
+					);
+				current_node = current_node->next;
+			}
+			return end();
 		}
 
 		IteratorT begin() RELEASE_NOEXCEPT {

@@ -63,7 +63,8 @@ const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::Valid
 void vm::code::ValidProgram::insertCode(
 	const CodeCollection& collection, api::ExecutionConfig config
 ) {
-	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
+	for (const auto& func: collection.functions)
+		function_signatures.maybePut(base::StrID(func.name), func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);

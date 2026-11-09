@@ -20,6 +20,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>

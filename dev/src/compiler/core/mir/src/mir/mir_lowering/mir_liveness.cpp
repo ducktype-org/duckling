@@ -12,6 +12,7 @@
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -288,7 +289,7 @@ namespace compiler::mir {
 		worklist.push(entry);
 		while (not worklist.empty()) {
 			auto block_id = worklist.pop();
-			auto block    = fun.blocks.at(block_id);
+			auto block    = CRef<Block>(&fun.blocks.at(block_id));
 			auto new_in   = compute_in(block);
 			auto new_out  = transferBlock(*block, new_in, locals_by_scope);
 
@@ -315,7 +316,7 @@ namespace compiler::mir {
 			if (prev_out && prev_out.value()->hasSameDataFlowState(new_out)) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
 
-			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))
+			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id).terminator))
 				worklist.push(succ);
 		}
 
@@ -426,8 +427,8 @@ namespace compiler::mir {
 			if (not in) continue;  // unreachable block, not part of the fixpoint result.
 
 			LocalMoveStateMap map = *in.value();
-			for (const auto& instr: fun.blocks.at(block_id)->instructions) check_instr(instr, map);
-			check_instr(fun.blocks.at(block_id)->terminator, map);
+			for (const auto& instr: fun.blocks.at(block_id).instructions) check_instr(instr, map);
+			check_instr(fun.blocks.at(block_id).terminator, map);
 		}
 
 		if (failed) query::throwFailed();
