@@ -121,12 +121,12 @@ impl<'duck> GitClient<'duck> {
             fetch_options.depth(1);
         }
 
-        fetch_options.remote_callbacks(self.callbacks());
+        fetch_options.remote_callbacks(self.callbacks(url.port()));
         fetch_options
     }
 
     /// Create callbacks for authentication.
-    fn callbacks(&self) -> RemoteCallbacks<'_> {
+    fn callbacks(&self, port: Option<u16>) -> RemoteCallbacks<'_> {
         let attempts = std::cell::RefCell::new(0);
         let mut callbacks = RemoteCallbacks::new();
         callbacks.credentials(move |_url, username_from_url, cred_types| {
@@ -148,16 +148,8 @@ impl<'duck> GitClient<'duck> {
                 Err(git2::Error::from_str("unsupported authentication method"))
             }
         });
-        callbacks.certificate_check(|cert, host| {
-            match known_hosts::check_certificate(self.ctx, cert, host) {
-                Ok(status) => Ok(status),
-                Err(e) => {
-                    warn!(target: "duck::git", "failed to check certificates: {e}");
-                    Err(git2::Error::from_str(
-                        "failed to parse ssh known hosts file",
-                    ))
-                }
-            }
+        callbacks.certificate_check(move |cert, host| {
+            Ok(known_hosts::check_certificate(self.ctx, cert, host, port))
         });
         callbacks
     }
