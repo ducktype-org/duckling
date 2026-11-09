@@ -32,10 +32,16 @@
 //! Code layout:
 //! ------------
 //! - [`pipeline`] — the [`Solver`] itself: runs the steps above in order and handles the retry,
-//! - `root` — `SolverRoot`, what the solver needs to know about the root package,
+//! - [`root`] — [`SolverRoot`](root::SolverRoot), what the solver needs to know about the root package,
 //! - [`solver_freeze`] — steps 2, 3, 6 and 7 (freeze diagnosis, new freeze generation and trimming),
 //! - [`gathering`] — step 4,
 //! - [`solving`] — step 5.
+//!
+//! Helpers shared by the steps:
+//! - [`dependency_edge`] — [`DependencyEdge`](dependency_edge::DependencyEdge), one dependency of a package on a package identity,
+//! - [`git_access`] — the [`GitAccess`](git_access::GitAccess) trait, the solver's view of where git packages are stored,
+//! - [`solver_mode`] — [`SolverMode`](solver_mode::SolverMode), the solver options (e.g. `--frozen`),
+//! - [`util`] — matching manifest dependencies against known package versions and building manifest requests.
 pub mod dependency_edge;
 pub mod gathering;
 pub mod git_access;
