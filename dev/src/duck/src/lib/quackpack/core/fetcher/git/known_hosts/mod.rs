@@ -49,19 +49,22 @@ pub fn check_certificate(
         }
         buffer
     };
+    let mut encountered_accept = false;
+    let mut encountered_revoked = false;
     for entry in entries {
         let (entry, path) = entry;
         let result = entry.accept(&host, hostkey, host_type);
         match result {
             accept::AcceptResult::Accepted => {
                 info!(target: "duck::git", ?path, ?entry, "accepted certificate");
-                return CertificateCheckStatus::CertificateOk;
+                encountered_accept = true;
             }
             accept::AcceptResult::Rejected => {
                 warn!(target: "duck::git", ?path, ?entry, "rejected certificate");
             }
             accept::AcceptResult::Revoked => {
                 warn!(target: "duck::git", ?path, ?entry, "revoked certificate");
+                encountered_revoked = true;
             }
             accept::AcceptResult::NotMatched => {
                 trace!(target: "duck::git", ?path, ?entry, "not matched");
@@ -71,7 +74,13 @@ pub fn check_certificate(
             }
         }
     }
-    CertificateCheckStatus::CertificatePassthrough
+    if encountered_revoked {
+        CertificateCheckStatus::CertificatePassthrough
+    } else if encountered_accept {
+        CertificateCheckStatus::CertificateOk
+    } else {
+        CertificateCheckStatus::CertificatePassthrough
+    }
 }
 
 #[derive(Debug)]
