@@ -264,7 +264,7 @@ namespace dia::template_file {
 	};
 
 	struct ExploreLink final {
-		Box<Component>                        content;
+		Box<Component>                              content;
 		base::StableHashMap<std::string, Parameter> params;
 
 		ExploreLink(Box<Component> content, base::StableHashMap<std::string, Parameter> params):
@@ -288,12 +288,12 @@ namespace dia::template_file {
 	};
 
 	struct CommonTemplate {
-		Metadata                                   metadata;
+		Metadata                                         metadata;
 		base::StableHashMap<std::string, Parameter>      params;
 		base::StableHashMap<std::string, Box<Component>> macros;
 
 		CommonTemplate(
-			Metadata                                   metadata,
+			Metadata                                         metadata,
 			base::StableHashMap<std::string, Parameter>      params,
 			base::StableHashMap<std::string, Box<Component>> macros
 		):
@@ -305,15 +305,15 @@ namespace dia::template_file {
 	};
 
 	struct MessageTemplate: public CommonTemplate {
-		Box<Component>                             header_message;
-		base::MBox<Component>                      description;
+		Box<Component>                                   header_message;
+		base::MBox<Component>                            description;
 		base::StableHashMap<std::string, ExploreLink>    explore_links;
 		base::StableHashMap<std::string, PointerMessage> pointer_messages;
 
 		MessageTemplate(
-			CommonTemplate                             common,
-			Box<Component>                             header_message,
-			base::MBox<Component>                      description,
+			CommonTemplate                                   common,
+			Box<Component>                                   header_message,
+			base::MBox<Component>                            description,
 			base::StableHashMap<std::string, ExploreLink>    explore_links,
 			base::StableHashMap<std::string, PointerMessage> pointer_messages
 		):

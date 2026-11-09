@@ -322,7 +322,7 @@ namespace dia::dia_args {
 	};
 
 	struct ExploreLink final {
-		std::string                                name;
+		std::string                                      name;
 		base::StableHashMap<std::string, Box<Component>> params;
 
 		[[nodiscard]] json toJson() const;
@@ -331,10 +331,10 @@ namespace dia::dia_args {
 	};
 
 	struct Message final {
-		Metadata                                   metadata;
+		Metadata                                         metadata;
 		base::StableHashMap<std::string, Box<Component>> arguments;
-		std::vector<ExploreLink>                   explore_links;
-		std::vector<MessageID>                     attached_messages;
+		std::vector<ExploreLink>                         explore_links;
+		std::vector<MessageID>                           attached_messages;
 
 		[[nodiscard]] json toJson() const;
 
@@ -342,7 +342,7 @@ namespace dia::dia_args {
 	};
 
 	struct Diagnostic final {
-		Message                           main_message;
+		Message                                 main_message;
 		base::StableHashMap<MessageID, Message> linked_messages;
 
 		[[nodiscard]] json toJson() const;

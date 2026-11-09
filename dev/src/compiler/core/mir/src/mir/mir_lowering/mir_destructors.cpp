@@ -4,7 +4,6 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
 #include "mir_destructors.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
@@ -13,6 +12,8 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <algorithm>
 
@@ -239,9 +240,9 @@ namespace compiler::mir {
 			} else {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
-				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
-				base::Optional<ScopeRef>                      first_path_begin_scope;
-				bool                                          paths_identical = true;
+				base::Optional<std::vector<ScopeRef>>               first_path_ending_scopes;
+				base::Optional<ScopeRef>                            first_path_begin_scope;
+				bool                                                paths_identical = true;
 				base::StableHashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
 
 				for (auto succ: successors) {

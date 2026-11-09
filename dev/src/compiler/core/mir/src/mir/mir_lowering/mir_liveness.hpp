@@ -6,9 +6,10 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/stable_position.hpp>
 
@@ -142,9 +143,9 @@ namespace compiler::mir {
 		 * @brief Calculate the MoveStateData of the function.
 		 */
 		static MoveStateData calculateGlobalInMoveStateMap(
-			const Function&                                     fun,
+			const Function&                                           fun,
 			const base::StableHashMap<BlockID, std::vector<BlockID>>& block_predecessors,
-			const LocalsByScopeMap&                             locals_by_scope
+			const LocalsByScopeMap&                                   locals_by_scope
 		);
 		void debugPrint(std::ostream& out);
 	};

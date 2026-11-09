@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <base/collections/stable_hashmap.hpp>
+
 #include <diagnostic/core/term_ui_view.hpp>
 #include <diagnostic/term_ui/printers.hpp>
 #include <tester/tester.hpp>

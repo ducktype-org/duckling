@@ -31,7 +31,7 @@ namespace vm::code {
 		 * @note After an exception is thrown, the TypeContext's state is undefined.
 		 */
 		void insertAndValidate(
-			const std::vector<TypeOfData>&                   new_types,
+			const std::vector<TypeOfData>&                         new_types,
 			const base::StableHashMap<base::StrID, FuncSignature>& function_signatures
 		);
 

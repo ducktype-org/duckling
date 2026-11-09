@@ -7,8 +7,8 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -41,9 +41,9 @@ namespace vm {
 		std::unordered_set<TypeID> inherits_from;
 
 		InheritanceMetadata(
-			TypeCRef                                type,
-			Kind                                    kind,
-			std::unordered_set<TypeCRef>            implements,
+			TypeCRef                                      type,
+			Kind                                          kind,
+			std::unordered_set<TypeCRef>                  implements,
 			base::StableHashMap<base::StrID, TypeCRef>    available_methods,
 			base::StableHashMap<base::StrID, base::StrID> vtable
 		):

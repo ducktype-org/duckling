@@ -14,8 +14,8 @@
 #include <frontend/pst_parser/pst/parsed_pst.hpp>
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
 

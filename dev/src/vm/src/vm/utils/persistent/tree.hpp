@@ -7,8 +7,8 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
@@ -311,7 +311,7 @@ namespace vm::persistent::detail {
 		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
 
 		base::StableHashMap<NodeID, BranchEntry> branch_info{};
-		NodeID                             next_node_id = NodeID{ 1 };
+		NodeID                                   next_node_id = NodeID{ 1 };
 
 	public:
 		/**

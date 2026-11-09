@@ -4,8 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
 #include "code_line.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 namespace term_ui {
 
@@ -19,10 +20,10 @@ namespace term_ui {
 	}
 
 	std::vector<Highlight> printAndCalculateHighlights(
-		const dia::term_ui_view::CodeLine&                           line,
-		u64                                                          tab_space,
+		const dia::term_ui_view::CodeLine&                                 line,
+		u64                                                                tab_space,
 		const base::StableHashMap<u64, dia::term_ui_view::PointerMessage>& ctx,
-		std::ostream&                                                out
+		std::ostream&                                                      out
 	) {
 		if_opt_some(line.line_no, number) { printLineStart(tab_space, number, out); }
 		if_opt_none(line.line_no) { printLineStart(tab_space, out); }

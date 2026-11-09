@@ -89,7 +89,7 @@ namespace vm::loader::compiler::safe::detail {
 
 		base::StableHashMap<usize, usize>       label_id_to_offset{};
 		base::StableHashMap<base::StrID, usize> label_name_to_id{};
-		usize                             next_instruction_index = 0;
+		usize                                   next_instruction_index = 0;
 
 		low::MicroBytecode result;
 

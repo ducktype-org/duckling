@@ -6,20 +6,21 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include "mir_destructors.hpp"
 #include "mir_liveness.hpp"
 
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::mir {
 
 	struct LifetimePassArgs {
-		LocalsByScopeMap                             locals_by_scope;
-		MoveStateData                                move_states;
+		LocalsByScopeMap                                   locals_by_scope;
+		MoveStateData                                      move_states;
 		base::StableHashMap<BlockID, std::vector<BlockID>> block_predecessors;
 	};
 

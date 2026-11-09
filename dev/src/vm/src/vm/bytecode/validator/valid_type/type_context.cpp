@@ -4,8 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
 #include "type_context.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -117,7 +118,7 @@ namespace {
 }
 
 void TypeContext::insertAndValidate(
-	const std::vector<TypeOfData>&                   new_types,
+	const std::vector<TypeOfData>&                         new_types,
 	const base::StableHashMap<base::StrID, FuncSignature>& function_signatures
 ) {
 	// Simple check for duplicates and forward declarations.

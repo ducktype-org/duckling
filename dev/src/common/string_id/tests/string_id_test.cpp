@@ -56,7 +56,7 @@ private:
 		assertTrue(map.empty(), "Map is not empty");
 
 		base::StableHashMap<int, A> map2;
-		A                     a(4, this);
+		A                           a(4, this);
 		map2.put(5, a);
 		map2.put(3, A(3, this));
 

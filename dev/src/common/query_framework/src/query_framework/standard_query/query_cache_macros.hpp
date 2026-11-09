@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include <concurrent/base/collections/hash_map.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 /**
  * @brief Macro defining typical hash based cache.
@@ -37,7 +38,8 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::StableHashMap and returns directly constructed QResults on cache hit.
+ * It caches PResults using base::StableHashMap and returns directly constructed QResults on cache
+ * hit.
  * @note Should not be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \

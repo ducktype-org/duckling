@@ -41,8 +41,8 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>

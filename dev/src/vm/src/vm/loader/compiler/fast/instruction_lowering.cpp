@@ -103,7 +103,7 @@ namespace {
 	 */
 	void translateLabels(
 		std::vector<vm::fast::reloc::Instruction>& new_instructions,
-		const base::StableHashMap<i64, usize>&           label_id_to_offset
+		const base::StableHashMap<i64, usize>&     label_id_to_offset
 	) {
 		// Now, change label IDs to offsets.
 		// These macros detect if an instruction uses a label argument, and if so, replaces the

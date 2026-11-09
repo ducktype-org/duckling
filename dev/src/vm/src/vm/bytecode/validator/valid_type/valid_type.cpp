@@ -6,8 +6,8 @@
 
 #include "valid_type.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -340,9 +340,7 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			fields.emplace_back(new_field.name, new_field.type);
 		// Virtual methods
 		for (const auto& new_virtual_method: new_virtual_methods)
-			imd.available_methods.insertOrAssign(
-				new_virtual_method.key, new_virtual_method.value
-			);
+			imd.available_methods.insertOrAssign(new_virtual_method.key, new_virtual_method.value);
 		// Vtable
 		for (const auto& impl: implementations) imd.vtable.insertOrAssign(impl.key, impl.value);
 

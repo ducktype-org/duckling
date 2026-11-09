@@ -6,8 +6,6 @@
 
 #include "dia_interactive_elements.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
-
 #include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -20,6 +18,8 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/placeholder.hpp>
@@ -68,9 +68,9 @@ namespace compiler::helios {
 		 * @param elem PST element of the original type identifier in the parse tree.
 		 */
 		void checkForAliases(
-			query::Context&                                    ctx,
+			query::Context&                                          ctx,
 			base::StableHashMap<std::string, Box<dia::MessageBase>>& linked_messages,
-			pst::Access<pst::LangElement>                      elem
+			pst::Access<pst::LangElement>                            elem
 		) {
 			auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
 			if (!ident_opt.has_value()) return;

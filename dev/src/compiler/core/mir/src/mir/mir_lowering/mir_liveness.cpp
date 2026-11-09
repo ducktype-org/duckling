@@ -242,9 +242,9 @@ namespace compiler::mir {
 	}
 
 	MoveStateData MoveStateData::calculateGlobalInMoveStateMap(
-		const Function&                                     fun,
+		const Function&                                           fun,
 		const base::StableHashMap<BlockID, std::vector<BlockID>>& block_predecessors,
-		const LocalsByScopeMap&                             locals_by_scope
+		const LocalsByScopeMap&                                   locals_by_scope
 	) {
 		if (fun.block_order.empty()) return {};
 		CORE_DEV_LOG(Compiler, "Calculating global move-state map for function `", fun.name, "`.\n");

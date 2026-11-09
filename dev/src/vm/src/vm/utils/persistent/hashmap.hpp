@@ -7,8 +7,8 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
@@ -130,8 +130,9 @@ namespace vm::persistent {
 				const auto val_id = iter.getValue();
 				const auto idx    = iter.getIdx();
 
-				const auto [_, success]
-					= ans.emplace(held_keys.atRight(idx), held_values.atRight(val_id));
+				const bool success = static_cast<bool>(
+					ans.maybePut(held_keys.atRight(idx), held_values.atRight(val_id))
+				);
 
 				CORE_ASSERT(success, "I need the value to be successfully emplaced");
 

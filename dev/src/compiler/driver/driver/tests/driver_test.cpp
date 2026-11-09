@@ -4,7 +4,6 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -18,6 +17,8 @@
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -115,10 +116,10 @@ private:
 		};
 
 		// Build parent map: for each node, list nodes that have it as a child (dependency)
-		auto build_parent_map
-			= [](const query::internal::QueryGraph& graph
-		      ) -> base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> {
-			base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> parents;
+		auto build_parent_map = [](const query::internal::QueryGraph& graph)
+			-> base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> {
+			base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>>
+				parents;
 
 			for (const auto& node: graph.getAllNodes())
 				parents.put(node, std::vector<query::internal::NodeID>{});

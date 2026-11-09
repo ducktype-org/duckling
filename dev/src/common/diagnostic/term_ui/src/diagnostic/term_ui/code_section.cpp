@@ -42,9 +42,9 @@ namespace term_ui {
 		 * the highlight
 		 */
 		HighlightResult renderHighlightAndMoveToNextState(
-			Line&                                                        str,
-			Highlight                                                    highlight,
-			u64                                                          line_no,
+			Line&                                                              str,
+			Highlight                                                          highlight,
+			u64                                                                line_no,
 			const base::StableHashMap<u64, dia::term_ui_view::PointerMessage>& pointers,
 			const base::StableHashMap<u64, std::pair<u64, u64>>& last_pointer_message_occurence
 		) {
@@ -95,7 +95,7 @@ namespace term_ui {
 	void print(const dia::term_ui_view::CodeSection& section, std::ostream& out) {
 		// Preprocessing
 		base::StableHashMap<u64, std::pair<u64, u64>> last_pointer_message_positions;
-		u64                                     tab_space = 0;
+		u64                                           tab_space = 0;
 
 		// for (auto x : section.pointers) {
 		// 	std::cout << "Pointer " << x.first << ": " << x.second.text << "\n";

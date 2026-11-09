@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <base/collections/stable_hashmap.hpp>
+
 #include <diagnostic/core/template_file.hpp>
 #include <diagnostic/core/utils.hpp>
 

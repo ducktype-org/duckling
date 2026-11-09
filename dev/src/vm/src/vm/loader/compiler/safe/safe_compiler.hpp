@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include "../ivm_compiler.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
@@ -149,7 +150,7 @@ namespace vm::loader::compiler::safe {
 		template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
 		u64 lowerArgument(
 			const vm::loader::compiler::detail::FunctionStackContext& local_ctx,
-			base::StableHashMap<base::StrID, usize>&                        label_id_map,
+			base::StableHashMap<base::StrID, usize>&                  label_id_map,
 			const FromType&                                           opcode_arg,
 			code::StackStateID                                        stack_state_id
 		);

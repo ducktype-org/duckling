@@ -4,8 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
 #include <yaml-cpp/yaml.h>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/core/diagnostic_state.hpp>
@@ -83,7 +84,8 @@ pointer_messages: {}
 	void evaluateComplexComponentTemplate() {
 		// Register templates
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::StableHashMap<std::string, std::string>{ { "error/type_check/no_match_2op_new", R"(
+			base::StableHashMap<std::string, std::string>{
+				{ "error/type_check/no_match_2op_new", R"(
 metadata:
   template_type: message
   type: error
@@ -133,7 +135,7 @@ pointer_messages:
     content:
         - "used here"
 )" },
-		                                             { "component/general/type_with_alias", R"yaml(
+				{ "component/general/type_with_alias", R"yaml(
 metadata:
   template_type: component
   type: component
@@ -350,7 +352,7 @@ explore_links:
 
 pointer_messages: {}
 )yaml" },
-		                                             { "note/overload/candidate", R"yaml(
+		                                                   { "note/overload/candidate", R"yaml(
 metadata:
   template_type: message
   type: note
@@ -387,7 +389,7 @@ pointer_messages:
     type: "error"
     content: []
 )yaml" },
-		                                             { "note/overload/no_conversion", R"yaml(
+		                                                   { "note/overload/no_conversion", R"yaml(
 metadata:
   template_type: pointer_message
   type: note

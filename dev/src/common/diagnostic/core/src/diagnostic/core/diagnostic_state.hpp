@@ -241,19 +241,19 @@ namespace dia::state {
 
 	class Message final {
 	public:
-		template_file::Metadata                         metadata;
-		Box<Component>                                  header;
-		MBox<Component>                                 description;
+		template_file::Metadata                               metadata;
+		Box<Component>                                        header;
+		MBox<Component>                                       description;
 		base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages;
 		/// Kept as a list, because a single edge class can have any number of edges.
 		std::vector<ExploreEdge> explore_links;
 
 		Message(
-			template_file::Metadata                         metadata,
-			Box<Component>                                  header,
-			MBox<Component>                                 description,
+			template_file::Metadata                               metadata,
+			Box<Component>                                        header,
+			MBox<Component>                                       description,
 			base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages,
-			std::vector<ExploreEdge>                        explore_links
+			std::vector<ExploreEdge>                              explore_links
 		);
 
 		/**

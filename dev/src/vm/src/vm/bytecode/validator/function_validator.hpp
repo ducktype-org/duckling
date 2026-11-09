@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include "flag_context.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
@@ -19,12 +20,12 @@ namespace vm::code::detail {
 	 * @brief Performs function code validation in the given context and extracts reachable code.
 	 */
 	valid_function::ValidFunction validateAndExtractReachableCode(
-		const valid_type::ValidTypeMap&                  types,
-		const ObjIdNameMap<GlobalData>&                  globals_map,
+		const valid_type::ValidTypeMap&                        types,
+		const ObjIdNameMap<GlobalData>&                        globals_map,
 		const base::StableHashMap<base::StrID, FuncSignature>& signatures,
-		const ObjIdNameMap<ExternalCFunction>&           ext_c_functions,
-		const FlagContext&                               flag_context,
-		const ObjIdNameMap<FFIFunction>&                 ffi_functions,
-		const Function&                                  function
+		const ObjIdNameMap<ExternalCFunction>&                 ext_c_functions,
+		const FlagContext&                                     flag_context,
+		const ObjIdNameMap<FFIFunction>&                       ffi_functions,
+		const Function&                                        function
 	);
 }

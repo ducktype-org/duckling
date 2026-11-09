@@ -6,13 +6,14 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include "dvm_value.hpp"
 
 #include <backends/dvm/repl_lowering_snapshot.hpp>
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 

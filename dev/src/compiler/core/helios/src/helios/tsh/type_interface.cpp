@@ -9,8 +9,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <query_framework/context/context.hpp>
 

@@ -46,8 +46,8 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	  ) {}
 
 CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
-	auto type_name      = typeName(dvm_type);
-	auto kv = type_storage.dvm_types.maybePut(type_name, std::move(dvm_type));
+	auto type_name = typeName(dvm_type);
+	auto kv        = type_storage.dvm_types.maybePut(type_name, std::move(dvm_type));
 	if (kv) lowered_type_order.push_back(type_name);
 	return &type_storage.dvm_types.at(type_name);
 }
@@ -189,7 +189,7 @@ const DVMPlace& ProgramLoweringContext::declareGlobal(
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::defineGlobal(vm::code::GlobalData global_data) {
-	auto name           = global_data.name;
+	auto name = global_data.name;
 	if (global_name_to_dvm_data.maybePut(base::StrID(name), std::move(global_data)))
 		lowered_global_order.push_back(name);
 	return global_name_to_dvm_data.at(name);

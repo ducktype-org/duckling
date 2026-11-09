@@ -365,7 +365,7 @@ namespace dia {
 		if (has_been_built) CORE_PANIC("Message can only be built once!");
 		has_been_built = true;
 
-		Box<dia_args::Diagnostic>                     thread = makeBox<dia_args::Diagnostic>();
+		Box<dia_args::Diagnostic> thread = makeBox<dia_args::Diagnostic>();
 		base::StableHashMap<std::string, dia_args::Message> additional_messages;
 
 		thread->main_message    = buildMessages(additional_messages);

@@ -4,10 +4,11 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
 #include "safe_compiler.hpp"
 
 #include "instruction_lowering.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <vm/bytecode/validator/ffi_type_builder.hpp>
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
@@ -36,7 +37,7 @@ namespace vm::loader::compiler::safe {
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
-			[[maybe_unused]] base::StableHashMap<base::StrID, usize>&                        label_id_map, \
+			[[maybe_unused]] base::StableHashMap<base::StrID, usize>&                  label_id_map, \
 			const FromType&                                                            opcode_arg,   \
 			code::StackStateID stack_state_id                                                        \
 		) {                                                                                          \
@@ -50,7 +51,7 @@ namespace vm::loader::compiler::safe {
 		static u64 lower(                                                                            \
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
-			[[maybe_unused]] base::StableHashMap<base::StrID, usize>&                        label_id_map, \
+			[[maybe_unused]] base::StableHashMap<base::StrID, usize>&                  label_id_map, \
 			const HIGH_FROM_TYPE&                                                      opcode_arg,   \
 			[[maybe_unused]] code::StackStateID stack_state_id                                       \
 		) {                                                                                          \
@@ -147,7 +148,7 @@ namespace vm::loader::compiler::safe {
 	template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
 	u64 SafeCompiler::lowerArgument(
 		const vm::loader::compiler::detail::FunctionStackContext& ctx,
-		base::StableHashMap<base::StrID, usize>&                        label_id_map,
+		base::StableHashMap<base::StrID, usize>&                  label_id_map,
 		const FromType&                                           opcode_arg,
 		code::StackStateID                                        stack_state
 	) {

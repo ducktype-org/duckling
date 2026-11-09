@@ -16,8 +16,8 @@
 #include <yaml-cpp/yaml.h>
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 

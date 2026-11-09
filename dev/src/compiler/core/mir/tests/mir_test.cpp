@@ -8,7 +8,6 @@
  * @file mir_tests.cpp
  */
 
-#include <base/collections/stable_hashmap.hpp>
 #include "utils/test_utils.hpp"
 
 #include <ctv/ctv.hpp>
@@ -22,6 +21,8 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
@@ -106,8 +107,8 @@ private:
 			base::StableHashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
-				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator))
-				{
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator
+				     )) {
 					preds.maybePut(succ, std::vector<compiler::mir::BlockID>{});
 					preds.at(succ).push_back(block_id);
 				}
@@ -162,8 +163,8 @@ private:
 			base::StableHashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
-				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator))
-				{
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator
+				     )) {
 					preds.maybePut(succ, std::vector<compiler::mir::BlockID>{});
 					preds.at(succ).push_back(block_id);
 				}

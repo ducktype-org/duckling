@@ -57,8 +57,10 @@ namespace dia {
 	class MessageEvaluationContext final {
 	private:
 		// This is part of the result
-		base::StableHashMap<dia_args::PointerMessage, state::PointerMessageID> pointer_message_mapping;
-		base::StableHashMap<state::PointerMessageID, state::PointerMessage>    evaluated_pointer_messages;
+		base::StableHashMap<dia_args::PointerMessage, state::PointerMessageID>
+			pointer_message_mapping;
+		base::StableHashMap<state::PointerMessageID, state::PointerMessage>
+			evaluated_pointer_messages;
 
 	public:
 		DiagnosticEvaluationContext& thread_ctx;
@@ -87,7 +89,7 @@ namespace dia {
 			pointer_messages;
 
 		MessageEvaluationContext(
-			DiagnosticEvaluationContext&                                     thread_ctx,
+			DiagnosticEvaluationContext&                                           thread_ctx,
 			const base::StableHashMap<std::string, Box<dia_args::Component>>&      arguments,
 			const base::StableHashMap<std::string, template_file::Parameter>&      parameters,
 			const base::StableHashMap<std::string, Box<template_file::Component>>& macros,

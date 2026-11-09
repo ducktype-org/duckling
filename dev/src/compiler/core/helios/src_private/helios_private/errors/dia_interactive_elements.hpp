@@ -24,10 +24,10 @@ namespace compiler::helios {
 	 * i.e. the same way the user wrote it in the source code.
 	 */
 	class InteractiveType: public dia::InteractiveElement {
-		tsh::SymbolType<>                                 symbol_type;
-		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
+		tsh::SymbolType<>                                       symbol_type;
+		base::Optional<pst::Access<pst::LangElement>>           pst_expr;
 		base::StableHashMap<std::string, Box<dia::MessageBase>> linked_messages;
-		std::string                                       displayed_name;
+		std::string                                             displayed_name;
 
 		Box<dia::dia_args::Component> getValue(dia::MessageBase& msg) final;
 
@@ -47,10 +47,10 @@ namespace compiler::helios {
 	 * It will support methods as well in the future.
 	 */
 	class InteractiveFunction final: public dia::InteractiveElement {
-		SymID                                             function_symbol;
-		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
+		SymID                                                   function_symbol;
+		base::Optional<pst::Access<pst::LangElement>>           pst_expr;
 		base::StableHashMap<std::string, Box<dia::MessageBase>> linked_messages;
-		std::string                                       displayed_name;
+		std::string                                             displayed_name;
 
 		Box<dia::dia_args::Component> getValue(dia::MessageBase& msg) final;
 

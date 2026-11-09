@@ -40,7 +40,7 @@ namespace dia {
 
 	class TemplateRegistryFilesystemProvider final: public TemplateRegistryProvider {
 		base::StableHashMap<std::string, std::string> templates;
-		std::string                             templates_root;
+		std::string                                   templates_root;
 
 	public:
 		TemplateRegistryFilesystemProvider(std::string templates_root):

@@ -178,8 +178,8 @@ namespace vm {
 				name_to_id.put(name, id);
 			}
 
-			ContainerT                        values{};
-			std::vector<base::StrID>          id_to_name{};
+			ContainerT                              values{};
+			std::vector<base::StrID>                id_to_name{};
 			base::StableHashMap<base::StrID, ObjID> name_to_id{};
 		};
 	}

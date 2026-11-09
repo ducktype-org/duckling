@@ -9,8 +9,8 @@
 #include "../definitions.hpp"
 #include "../inheritance_metadata.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -28,7 +28,7 @@ namespace vm::kind {
 		using FieldID = u64;
 
 		base::StableHashMap<base::StrID, FieldID> field_name_map;
-		std::vector<FieldDesc>              fields;
+		std::vector<FieldDesc>                    fields;
 
 		base::Optional<InheritanceMetadata> inheritance_metadata;
 	};

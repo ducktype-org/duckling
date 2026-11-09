@@ -6,14 +6,14 @@
 
 #include "mir_lifetimes.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
-
 #include "../mir_structure/mir_structure.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <algorithm>
 #include <set>
@@ -256,7 +256,7 @@ namespace compiler::mir {
 		// context is unused, but left since it might be useful in the future.
 		// preserving block order is important, because of how MIR BlockIDs works
 
-		auto&                                         locals_by_scope = args.locals_by_scope;
+		auto&                                               locals_by_scope = args.locals_by_scope;
 		base::StableHashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
 
 

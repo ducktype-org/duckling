@@ -34,7 +34,8 @@ namespace compiler::helios::comptime_ops {
 			}
 		};
 
-		base::StableHashMap<tsh::SymbolType<>, Box<tsh::SymbolType<>>, SymbolTypeHasher> allocated_types;
+		base::StableHashMap<tsh::SymbolType<>, Box<tsh::SymbolType<>>, SymbolTypeHasher>
+			allocated_types;
 		MetaTypeMemoryManager() = default;
 
 	public:

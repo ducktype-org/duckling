@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/stable_hashmap.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
@@ -25,8 +26,8 @@ namespace vm::code::detail {
 	 * classes.
 	 */
 	void validateTypes(
-		const ObjIdNameMap<TypeOfData>&                  tod_types,
-		const std::vector<usize>&                        new_types_id,
+		const ObjIdNameMap<TypeOfData>&                        tod_types,
+		const std::vector<usize>&                              new_types_id,
 		const base::StableHashMap<base::StrID, FuncSignature>& functions
 	);
 }

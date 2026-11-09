@@ -9,8 +9,8 @@
 #include "styles.hpp"
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/core/term_ui_view.hpp>
 
@@ -31,9 +31,9 @@ namespace term_ui {
 	 * @return std::vector<Highlight>
 	 */
 	std::vector<Highlight> printAndCalculateHighlights(
-		const dia::term_ui_view::CodeLine&                           line,
-		u64                                                          tab_space,
+		const dia::term_ui_view::CodeLine&                                 line,
+		u64                                                                tab_space,
 		const base::StableHashMap<u64, dia::term_ui_view::PointerMessage>& ctx,
-		std::ostream&                                                out
+		std::ostream&                                                      out
 	);
 }

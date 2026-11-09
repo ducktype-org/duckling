@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include "stable_position.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic/location.hpp>

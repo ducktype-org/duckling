@@ -10,8 +10,8 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -508,7 +508,7 @@ namespace query::internal {
 		// First create Map NodeID -> usize to optimize future algorithms that can operate on usize
 		// IDs and work on plain vectors instead of hash maps
 		base::StableHashMap<NodeID, LocalNodeID> node_to_idx;
-		std::vector<NodeID>                idx_to_node;
+		std::vector<NodeID>                      idx_to_node;
 
 		for (const auto& [node, _]: *node_deps) {
 			node_to_idx.put(node, idx_to_node.size());

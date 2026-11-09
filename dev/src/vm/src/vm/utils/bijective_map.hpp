@@ -85,7 +85,9 @@ namespace vm::persistent::detail {
 			return (size() == 0);
 		}
 
-		base::StableHashMap<L, R, HashL>::const_iterator begin() const { return left_right.begin(); }
+		base::StableHashMap<L, R, HashL>::const_iterator begin() const {
+			return left_right.begin();
+		}
 
 		base::StableHashMap<L, R, HashL>::const_iterator end() const { return left_right.end(); }
 	};

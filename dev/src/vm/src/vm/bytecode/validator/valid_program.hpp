@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
 #include "flag_context.hpp"
+
+#include <base/collections/stable_hashmap.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>

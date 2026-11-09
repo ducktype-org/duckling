@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/stable_hashmap.hpp>
+
 #include <vm/api/data/execution_config.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/flags.hpp>

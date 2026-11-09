@@ -346,11 +346,11 @@ namespace compiler::helios {
 		 * @return `true` if `sym_id` duplicates an earlier definition.
 		 */
 		static bool reportIfDuplicate(
-			query::Context&                                  ctx,
+			query::Context&                                        ctx,
 			base::StableHashMap<base::StrID, dia::StablePosition>& seen_declarations,
-			SymID                                            sym_id,
-			base::StrID                                      original_name,
-			dia::StablePosition                              stable_pos
+			SymID                                                  sym_id,
+			base::StrID                                            original_name,
+			dia::StablePosition                                    stable_pos
 		) {
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
@@ -379,11 +379,11 @@ namespace compiler::helios {
 		 * @return `true` if an earlier definition already used @p key_name.
 		 */
 		static bool reportIfNameTaken(
-			query::Context&                                  ctx,
+			query::Context&                                        ctx,
 			base::StableHashMap<base::StrID, dia::StablePosition>& seen_declarations,
-			base::StrID                                      key_name,
-			base::StrID                                      original_name,
-			dia::StablePosition                              stable_pos
+			base::StrID                                            key_name,
+			base::StrID                                            original_name,
+			dia::StablePosition                                    stable_pos
 		) {
 			auto entry = seen_declarations.find(key_name);
 			if (entry == seen_declarations.end()) {
@@ -454,7 +454,7 @@ namespace compiler::helios {
 			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
 		) {
 			base::StableHashMap<base::StrID, dia::StablePosition> seen_declarations;
-			bool                                            found_duplicate = false;
+			bool                                                  found_duplicate = false;
 
 			for (const auto& func: unit.functions) {
 				if_opt_some(func->origin.getStablePosition(), stable_pos) {

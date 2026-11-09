@@ -64,9 +64,9 @@ namespace {
 	template<FieldableTypeConcept FieldableType>
 	void insertFieldsRecursive(
 		base::StableHashMap<base::StrID, base::StrID>& fields,
-		const FieldableType&                     fieldable,
-		const TypeOfData&                        error_context,
-		const vm::ObjIdNameMap<TypeOfData>&      tod_types
+		const FieldableType&                           fieldable,
+		const TypeOfData&                              error_context,
+		const vm::ObjIdNameMap<TypeOfData>&            tod_types
 	) {
 		if constexpr (std::is_same_v<FieldableType, ClassType>) {
 			if (fieldable.extends) {
@@ -92,9 +92,9 @@ namespace {
 	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
 	void insertVirtualMethodsRecursive(
 		base::StableHashMap<base::StrID, base::StrID>& virtual_methods,
-		const InheritableType&                   inh,
-		const ErrorContextType&                  error_context_inh,
-		const vm::ObjIdNameMap<TypeOfData>&      tod_types
+		const InheritableType&                         inh,
+		const ErrorContextType&                        error_context_inh,
+		const vm::ObjIdNameMap<TypeOfData>&            tod_types
 	) {
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(tod_types, interface_name, inh, [&]() {
@@ -128,11 +128,12 @@ namespace {
 	template<InheritableTypeConcept InheritableType, TypeOfDataConcept ErrorContextType>
 	void insertImplementationsRecursive(
 		base::StableHashMap<base::StrID, base::StrID>& implementations,
-		const InheritableType&                   inh,
-		const ErrorContextType&                  error_context_inh,
-		const vm::ObjIdNameMap<TypeOfData>&      tod_types
+		const InheritableType&                         inh,
+		const ErrorContextType&                        error_context_inh,
+		const vm::ObjIdNameMap<TypeOfData>&            tod_types
 	) {
-		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
+		for (const auto& impl: inh.implementations)
+			implementations.maybePut(base::StrID(impl.name), base::StrID(impl.type));
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
 				tod_types,
@@ -237,9 +238,9 @@ namespace {
 	 */
 	template<InheritableTypeConcept InheritableType>
 	void validateImplementations(
-		const InheritableType&                           inh,
+		const InheritableType&                                 inh,
 		const base::StableHashMap<base::StrID, base::StrID>&   virtual_methods,
-		const vm::ObjIdNameMap<TypeOfData>&              tod_types,
+		const vm::ObjIdNameMap<TypeOfData>&                    tod_types,
 		const base::StableHashMap<base::StrID, FuncSignature>& functions
 	) {
 		base::StableHashMap<base::StrID, base::StrID> implementations;
@@ -270,9 +271,9 @@ namespace {
 	 * whole inheritance path.
 	 */
 	void validateAllMethodsImplemented(
-		const ClassType&                               clazz,
+		const ClassType&                                     clazz,
 		const base::StableHashMap<base::StrID, base::StrID>& virtual_methods,
-		const vm::ObjIdNameMap<TypeOfData>&            tod_types
+		const vm::ObjIdNameMap<TypeOfData>&                  tod_types
 	) {
 		base::StableHashMap<base::StrID, base::StrID> implementations;
 		insertImplementationsRecursive(implementations, clazz, clazz, tod_types);
@@ -313,8 +314,8 @@ namespace {
 	 * @brief Throws a builder error if type is invalid in current context.
 	 */
 	void validateType(
-		const TypeOfData&                                type,
-		const vm::ObjIdNameMap<TypeOfData>&              tod_types,
+		const TypeOfData&                                      type,
+		const vm::ObjIdNameMap<TypeOfData>&                    tod_types,
 		const base::StableHashMap<base::StrID, FuncSignature>& functions
 	) {
 		variant_match(type) {
@@ -542,8 +543,8 @@ namespace {
 }
 
 void vm::code::detail::validateTypes(
-	const ObjIdNameMap<TypeOfData>&                  tod_types,
-	const std::vector<usize>&                        new_types_id,
+	const ObjIdNameMap<TypeOfData>&                        tod_types,
+	const std::vector<usize>&                              new_types_id,
 	const base::StableHashMap<base::StrID, FuncSignature>& functions
 ) {
 	validateTypeIntegrity(tod_types);
