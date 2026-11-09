@@ -103,3 +103,19 @@ Tests:
         Run: "@{expect_output} --expect-exit 1 --err-regex \"(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#1 panic at [^ ]*panicking[.]dk:[0-9]+\n.*#2 readPastEnd at [^ ]*panic_stack_trace[.]dks:3\n.*#3 forward at [^ ]*panic_stack_trace[.]dks:7\n\" -- @{duckc_path} run @{folder}/@{Name}.dks --custom-std-artifacts-path @{case_std_artifacts}"
         Output:
           String: "Program panicked!\n"
+
+  const_ternary:
+    folder: "const_ternary"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "1\n2\n3\n4\n"
+      vm:
+        mode: vm
+        Output:
+          String: "1\n2\n3\n4\n"
+      exe:
+        mode: exe
+        Output:
+          String: "1\n2\n3\n4\n"
