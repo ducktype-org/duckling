@@ -9,6 +9,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <ranges>
 #include <utility>
@@ -22,9 +23,9 @@ namespace compiler::mir {
 
 			BlockBuilderRef break_target;
 			BlockBuilderRef continue_target;
-			bool*           continue_target_used = nullptr;
 		};
 
+		/* Enclosing control-flow targets, with the innermost target stored last. */
 		using ControlFlowTargets = std::vector<ControlFlowTarget>;
 
 		StmtLowerRes lowerStmtWithControlFlowTargets(
@@ -81,18 +82,20 @@ namespace compiler::mir {
 		[[nodiscard]] const ControlFlowTarget* findTarget(
 			const hc::ControlFlowTargetSelector& selector
 		) const {
-			const auto* named   = std::get_if<hc::NamedTarget>(&selector);
-			const auto* by_kind = std::get_if<hc::KindTarget>(&selector);
 			for (const auto& target: targets | std::views::reverse) {
-				if (named != nullptr) {
-					if (!target.id.has_value() || target.id.value() != named->id) continue;
-				} else if (by_kind != nullptr) {
-					if (target.kind != by_kind->kind) continue;
-				} else if (target.kind != hc::ControlFlowKind::While
-				           && target.kind != hc::ControlFlowKind::For) {
-					continue;
+				variant_match(selector) {
+					variant_case(hc::NamedTarget, named) {
+						if (target.id.has_value() && target.id.value() == named.id) return &target;
+					}
+					variant_case(hc::KindTarget, by_kind) {
+						if (target.kind == by_kind.kind) return &target;
+					}
+					variant_case_novalue(hc::NearestLoop) {
+						if (target.kind == hc::ControlFlowKind::While
+						    || target.kind == hc::ControlFlowKind::For)
+							return &target;
+					}
 				}
-				return &target;
 			}
 			return nullptr;
 		}
@@ -166,15 +169,12 @@ namespace compiler::mir {
 			auto lowered_condition
 				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			// The target stack is copied during recursive lowering, so share this local flag.
-			bool continue_target_used = false;
-			auto branch_targets       = targets;
+			auto branch_targets = targets;
 			branch_targets.push_back(ControlFlowTarget{
-				.kind                 = helios::code::ControlFlowKind::If,
-				.id                   = stmt.control_flow_id,
-				.break_target         = continuation,
-				.continue_target      = lowered_condition.begin,
-				.continue_target_used = &continue_target_used,
+				.kind            = helios::code::ControlFlowKind::If,
+				.id              = stmt.control_flow_id,
+				.break_target    = continuation,
+				.continue_target = lowered_condition.begin,
 			});
 
 			// I'm not sure if we need these scopes,
@@ -236,17 +236,13 @@ namespace compiler::mir {
 				{ stmt.getPosition() },
 			});
 
-			if (continue_target_used) {
-				// Earlier statements may be inserted into this entry during reverse lowering.
-				// Keep it separate from the condition used by continue if.
-				auto entry_block = function.newBlock("if.entry");
-				entry_block->setTerminator(
-					{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
-				);
-				output({ entry_block });
-			} else {
-				output({ lowered_condition.begin });
-			}
+			// Earlier statements may be inserted into this entry during reverse lowering.
+			// Keep it separate from the condition used by continue if.
+			auto entry_block = function.newBlock("if.entry");
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
+			);
+			output({ entry_block });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -359,7 +355,6 @@ namespace compiler::mir {
 		void visitContinueStmt(const hc::ContinueStmt& stmt) override {
 			auto target = findTarget(stmt.target_selector);
 			CORE_ASSERT(target != nullptr, "Continue statement has no enclosing target.");
-			if (target->continue_target_used != nullptr) *target->continue_target_used = true;
 
 			auto continue_block = function.newBlock("continue");
 			continue_block->setTerminator({

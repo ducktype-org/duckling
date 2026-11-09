@@ -224,7 +224,8 @@ private:
 					    && block.debug_name.value() == base::StrID("if.entry"))
 						if_entry_count++;
 				}
-				ASSERT_EQUAL(i == 1 ? 1u : 0u, if_entry_count);
+				// Each runtime if has an entry; if const lowers to a block instead.
+				ASSERT_EQUAL(i == 4 ? 0u : 1u, if_entry_count);
 				auto targets = jump_targets(function, i == 2 ? "break" : "continue");
 				ASSERT_EQUAL(i == 1 || i == 3 ? 2u : 1u, targets.size());
 				base::StrID expected_name = [&] {
@@ -402,7 +403,7 @@ private:
 				    && block.debug_name.value() == base::StrID("if.entry"))
 					has_if_entry = true;
 			}
-			ASSERT_TRUE(!has_if_entry);
+			ASSERT_TRUE(has_if_entry);
 			ASSERT_EQUAL(foo4_mir.block_order.size(), 2);
 
 			// This doesn't test much other then that the code doesn't crash/throw exceptions.
@@ -671,13 +672,13 @@ private:
 				);
 			};
 
-			// `foo` is two `if`s in a row, so it only has condition/then/else blocks plus the one
+			// `foo` is two `if`s in a row, with entry/condition/then/else blocks plus the one
 			// holding `FunctionEnd`.
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 			const auto foo_names = collect_names(foo_mir);
 			for (const std::string_view expected:
-			     { "function_end", "if.cond", "if.then", "if.else" })
+			     { "function_end", "if.entry", "if.cond", "if.then", "if.else" })
 				assert_has_name(foo_names, expected, "foo");
 
 			// Nothing but the lowering creates blocks here, so every block of `foo` is named.
