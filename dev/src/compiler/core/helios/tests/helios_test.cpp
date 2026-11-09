@@ -77,6 +77,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testConstTernary);
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
@@ -1008,6 +1009,17 @@ private:
 		// expression must not be evaluated, otherwise these evaluations would fail.
 		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
+	}
+
+	/**
+	 * @brief `if const ... then ... else ...` is evaluated at compile time and only the taken
+	 * branch is compiled. The branch that is not taken may contain code that would not compile.
+	 */
+	void testConstTernary() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/const_ternary")));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("CT1", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i32>("CT2", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i32>("CT3", root_scope));
 	}
 
 	/**
