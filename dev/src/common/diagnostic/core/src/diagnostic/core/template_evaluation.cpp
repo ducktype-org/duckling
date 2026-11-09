@@ -112,8 +112,10 @@ namespace dia {
 		 */
 		state::PointerMessageID evaluatePointerMessage(const dia_args::PointerMessage& pm);
 
-		const base::StableHashMap<state::PointerMessageID, state::PointerMessage>& getEvaluatedPointerMessages(
-		) const {
+		[[nodiscard]]
+		const base::StableHashMap<
+			state::PointerMessageID,
+			state::PointerMessage>& getEvaluatedPointerMessages() const {
 			return evaluated_pointer_messages;
 		}
 	};
