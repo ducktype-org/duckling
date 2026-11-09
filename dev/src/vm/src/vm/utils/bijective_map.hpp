@@ -6,8 +6,8 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 
 #include <functional>
 #include <stdexcept>
@@ -24,8 +24,8 @@ namespace vm::persistent::detail {
 	 */
 	template<typename L, typename R, typename HashL = std::hash<L>, typename HashR = std::hash<R>>
 	class BijectiveMap final {
-		base::StableHashMap<L, R, HashL> left_right;
-		base::StableHashMap<R, L, HashR> right_left;
+		base::HashMap<L, R, HashL> left_right;
+		base::HashMap<R, L, HashR> right_left;
 
 	public:
 		base::Optional<R> atLeftOpt(const L& left) const { return left_right.atMaybeCopy(left); }
@@ -71,9 +71,9 @@ namespace vm::persistent::detail {
 			return { true, right_left[rght] };
 		}
 
-		const base::StableHashMap<L, R, HashL>& leftToRight() const { return left_right; }
+		const base::HashMap<L, R, HashL>& leftToRight() const { return left_right; }
 
-		const base::StableHashMap<R, L, HashR>& rightToLeft() const { return right_left; }
+		const base::HashMap<R, L, HashR>& rightToLeft() const { return right_left; }
 
 		void clear() {
 			left_right.clear();
@@ -85,10 +85,8 @@ namespace vm::persistent::detail {
 			return (size() == 0);
 		}
 
-		base::StableHashMap<L, R, HashL>::const_iterator begin() const {
-			return left_right.begin();
-		}
+		base::HashMap<L, R, HashL>::const_iterator begin() const { return left_right.begin(); }
 
-		base::StableHashMap<L, R, HashL>::const_iterator end() const { return left_right.end(); }
+		base::HashMap<L, R, HashL>::const_iterator end() const { return left_right.end(); }
 	};
 }

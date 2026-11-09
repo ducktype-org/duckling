@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 /**
- * @file stable_hashmap.hpp
+ * @file hashmap.hpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
@@ -25,7 +25,7 @@
 namespace base {
 
 	/**
-	 * Custom, Stable hash map implementation.
+	 * Custom hash map implementation with stable references.
 	 * Its performance is similar or better than std::unordered_map, while keeping references always
 	 * stable (what std::unordered_map does as well).
 	 *
@@ -37,7 +37,7 @@ namespace base {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
-	class StableHashMap final {
+	class HashMap final {
 	public:
 		/**
 		 * Key Value pair stored in the map.
@@ -75,7 +75,7 @@ namespace base {
 
 		[[nodiscard]]
 		u64 hashToBucket(KeyHash hash) const RELEASE_NOEXCEPT {
-			CORE_ASSERT(!buckets.empty(), "No buckets in StableHashMap");
+			CORE_ASSERT(!buckets.empty(), "No buckets in HashMap");
 			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
@@ -153,7 +153,7 @@ namespace base {
 			// Note that this can in theory have some observable side effects:
 			CORE_ASSERT(
 				not this->containsAssumingHash(new_node->key_value.key, key_hash),
-				"Key already exists in StableHashMap"
+				"Key already exists in HashMap"
 			);
 
 			addToBucket(hashToBucket(key_hash), new_node);
@@ -279,13 +279,13 @@ namespace base {
 
 
 	public:
-		StableHashMap(): buckets(INITIAL_BUCKETS) {}
+		HashMap(): buckets(INITIAL_BUCKETS) {}
 
 		/**
 		 * @brief Builds the map from a braced list of key-value pairs.
 		 * Panics if a key repeats.
 		 */
-		StableHashMap(std::initializer_list<std::pair<const KEY_T, DATA_T>> init):
+		HashMap(std::initializer_list<std::pair<const KEY_T, DATA_T>> init):
 			  buckets(INITIAL_BUCKETS) {
 			for (const auto& [key, value]: init) put(key, value);
 		}
@@ -293,11 +293,11 @@ namespace base {
 		/**
 		 * @brief Deep-copies every key-value pair of @p other.
 		 */
-		StableHashMap(const StableHashMap& other): buckets(INITIAL_BUCKETS) {
+		HashMap(const HashMap& other): buckets(INITIAL_BUCKETS) {
 			for (const auto& [key, value]: other) put(key, value);
 		}
 
-		StableHashMap(StableHashMap&& other) noexcept:
+		HashMap(HashMap&& other) noexcept:
 			  buckets(std::move(other.buckets)),
 			  node_allocator(std::move(other.node_allocator)),
 			  element_count(other.element_count) {
@@ -305,7 +305,7 @@ namespace base {
 			other.buckets.resize(1, nullptr);
 		}
 
-		~StableHashMap() {
+		~HashMap() {
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
 				while (current_node) {
@@ -319,7 +319,7 @@ namespace base {
 		/**
 		 * @brief Replaces the contents with a deep copy of @p other.
 		 */
-		StableHashMap& operator=(const StableHashMap& other) {
+		HashMap& operator=(const HashMap& other) {
 			if (this == &other) return *this;
 			clear();
 			for (const auto& [key, value]: other) put(key, value);
@@ -329,7 +329,7 @@ namespace base {
 		/**
 		 * @brief Destroys the current contents and takes over the contents of @p other.
 		 */
-		StableHashMap& operator=(StableHashMap&& other) noexcept {
+		HashMap& operator=(HashMap&& other) noexcept {
 			if (this == &other) return *this;
 			std::destroy_at(this);
 			std::construct_at(this, std::move(other));
@@ -374,7 +374,7 @@ namespace base {
 				  buckets_size(buckets_size) {}
 
 
-			friend class StableHashMap;
+			friend class HashMap;
 
 		public:
 			using iterator_category = std::forward_iterator_tag;

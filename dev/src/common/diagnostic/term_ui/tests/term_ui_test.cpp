@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <diagnostic/core/term_ui_view.hpp>
 #include <diagnostic/term_ui/printers.hpp>
@@ -20,7 +20,7 @@ constexpr dia::CodeLocation SAMPLE_LOCATION{
 };
 
 Message sample1() {
-	auto ptrs = base::StableHashMap<u64, PointerMessage>();
+	auto ptrs = base::HashMap<u64, PointerMessage>();
 	ptrs.put(
 		0, PointerMessage{ .text = "value moved here", .type = StyleType::Note, .priority = 0 }
 	);
@@ -57,7 +57,7 @@ Message sample1() {
 }
 
 Message sample2() {
-	auto ptrs = base::StableHashMap<u64, PointerMessage>();
+	auto ptrs = base::HashMap<u64, PointerMessage>();
 	ptrs.put(
 		0, PointerMessage{ .text = "first underline", .type = StyleType::Warning, .priority = 0 }
 	);
@@ -103,7 +103,7 @@ Message sample2() {
 }
 
 Message sample3() {
-	auto ptrs = base::StableHashMap<u64, PointerMessage>();
+	auto ptrs = base::HashMap<u64, PointerMessage>();
 	ptrs.put(
 		0, PointerMessage{ .text = "message goes here", .type = StyleType::Hint, .priority = 0 }
 	);
@@ -129,7 +129,7 @@ Message sample3() {
 }
 
 Message sample4() {
-	auto ptrs = base::StableHashMap<u64, PointerMessage>();
+	auto ptrs = base::HashMap<u64, PointerMessage>();
 	ptrs.put(
 		0, PointerMessage{ .text = "first underline", .type = StyleType::Error, .priority = 0 }
 	);
@@ -157,7 +157,7 @@ Message sample4() {
 }
 
 Message sample5() {
-	auto ptrs = base::StableHashMap<u64, PointerMessage>();
+	auto ptrs = base::HashMap<u64, PointerMessage>();
 	ptrs.put(0, PointerMessage{ .text = "first underline", .type = StyleType::Docs, .priority = 0 });
 	ptrs.put(
 		1, PointerMessage{ .text = "second underline", .type = StyleType::Docs, .priority = 0 }

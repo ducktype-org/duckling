@@ -22,7 +22,7 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
@@ -104,7 +104,7 @@ private:
 			ASSERT_HAS_VALUE(a_id);
 
 			// Build predecessor lists, same as constructLifetimePassArgs does.
-			base::StableHashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator
@@ -160,7 +160,7 @@ private:
 
 			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
 
-			base::StableHashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
 				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator

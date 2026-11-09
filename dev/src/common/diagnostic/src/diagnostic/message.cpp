@@ -4,8 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/location.hpp>
@@ -331,7 +331,7 @@ namespace dia {
 	}
 
 	dia_args::Message MessageBase::buildMessages(
-		base::StableHashMap<std::string, dia_args::Message>& additional_messages
+		base::HashMap<std::string, dia_args::Message>& additional_messages
 	) {
 		dia_args::Message msg;
 		msg.metadata = getMetadata();
@@ -365,8 +365,8 @@ namespace dia {
 		if (has_been_built) CORE_PANIC("Message can only be built once!");
 		has_been_built = true;
 
-		Box<dia_args::Diagnostic> thread = makeBox<dia_args::Diagnostic>();
-		base::StableHashMap<std::string, dia_args::Message> additional_messages;
+		Box<dia_args::Diagnostic>                     thread = makeBox<dia_args::Diagnostic>();
+		base::HashMap<std::string, dia_args::Message> additional_messages;
 
 		thread->main_message    = buildMessages(additional_messages);
 		thread->linked_messages = std::move(additional_messages);

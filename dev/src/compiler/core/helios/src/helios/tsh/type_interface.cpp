@@ -9,17 +9,17 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 
 #include <query_framework/context/context.hpp>
 
 namespace compiler::tsh {
 	namespace {
-		base::StableHashMap<base::StrID, std::vector<InterfaceElement>> groupElementsByName(
+		base::HashMap<base::StrID, std::vector<InterfaceElement>> groupElementsByName(
 			const std::vector<InterfaceElement>& elements
 		) {
-			base::StableHashMap<base::StrID, std::vector<InterfaceElement>> result{};
+			base::HashMap<base::StrID, std::vector<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
 				base::StrID name = compiler::helios::name(element.getSymbol());
 				if (!result.contains(name)) result.put(name, {});
@@ -28,10 +28,10 @@ namespace compiler::tsh {
 			return result;
 		}
 
-		base::StableHashMap<MemberSpecialKind, InterfaceElement> groupElementBySpecialKind(
+		base::HashMap<MemberSpecialKind, InterfaceElement> groupElementBySpecialKind(
 			const std::vector<InterfaceElement>& elements
 		) {
-			base::StableHashMap<MemberSpecialKind, InterfaceElement> result{};
+			base::HashMap<MemberSpecialKind, InterfaceElement> result{};
 			for (const InterfaceElement& element: elements) {
 				auto special_kind = element.specialKind();
 				if (special_kind == MemberSpecialKind::None) continue;
@@ -69,7 +69,7 @@ namespace compiler::tsh {
 		return {};
 	}
 
-	const base::StableHashMap<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(
+	const base::HashMap<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(
 	) const {
 		return elements_by_name;
 	}

@@ -6,7 +6,7 @@
 
 #include "diagnostic_state.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <unordered_set>
 
@@ -180,11 +180,11 @@ namespace dia::state {
 	}
 
 	Message::Message(
-		template_file::Metadata                               metadata,
-		Box<Component>                                        header,
-		MBox<Component>                                       description,
-		base::StableHashMap<PointerMessageID, PointerMessage> pointer_messages,
-		std::vector<ExploreEdge>                              explore_links
+		template_file::Metadata                         metadata,
+		Box<Component>                                  header,
+		MBox<Component>                                 description,
+		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
+		std::vector<ExploreEdge>                        explore_links
 	):
 		  metadata(std::move(metadata)),
 		  header(std::move(header)),

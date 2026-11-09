@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/shared_box.hpp>
@@ -137,8 +137,8 @@ namespace vm {
 				SharedBox<IVMValueRef> value;
 			};
 
-			std::vector<FieldDesc>                  fields;
-			base::StableHashMap<base::StrID, usize> field_name_map;
+			std::vector<FieldDesc>            fields;
+			base::HashMap<base::StrID, usize> field_name_map;
 		};
 
 		struct Variant final {

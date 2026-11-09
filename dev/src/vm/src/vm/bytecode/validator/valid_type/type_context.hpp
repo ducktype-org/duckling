@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -31,8 +31,8 @@ namespace vm::code {
 		 * @note After an exception is thrown, the TypeContext's state is undefined.
 		 */
 		void insertAndValidate(
-			const std::vector<TypeOfData>&                         new_types,
-			const base::StableHashMap<base::StrID, FuncSignature>& function_signatures
+			const std::vector<TypeOfData>&                   new_types,
+			const base::HashMap<base::StrID, FuncSignature>& function_signatures
 		);
 
 		[[nodiscard]] const valid_type::ValidTypeMap& getCurrentTypes() const;
