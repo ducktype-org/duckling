@@ -164,6 +164,11 @@ namespace vm {
 
 	PID IVMProcess::getPID() const { return my_pid; }
 
+	base::Optional<std::string> IVMProcess::getFunctionSourceName(base::StrID mangled_name) const {
+		std::scoped_lock lock(function_source_names_lock);
+		return function_source_names.atMaybeCopy(mangled_name);
+	}
+
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
 		const api::RequestVariant& request
 	) {
@@ -310,6 +315,12 @@ namespace vm {
 
 			variant_case(api::request::SetExecutionConfig, request) {
 				return setExecutionConfig(request.config);
+			}
+
+			variant_case(api::request::SetFunctionSourceNames, request) {
+				std::scoped_lock lock(function_source_names_lock);
+				function_source_names = request.names;
+				return api::Response(api::response::Empty());
 			}
 
 			variant_default { return api::Response(api::response::Empty()); }

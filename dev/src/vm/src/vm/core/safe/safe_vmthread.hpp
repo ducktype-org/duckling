@@ -194,7 +194,9 @@ namespace vm {
 		 * a runtime error escapes the interpreter.
 		 * @details In tail-call mode the current frame lives only in registers, so the stack is
 		 * read from the frames themselves: `ret` resets every frame it pops, which makes the live
-		 * frames exactly those with a function set. A caller frame resumes after its call, so its
+		 * frames exactly those with a function set. A function is named by its Duck source name
+		 * when the process has one (`api::setFunctionSourceNames`), else by its mangled name. A
+		 * caller frame resumes after its call, so its
 		 * position is the call site. The innermost frame has no saved position, so only its
 		 * function is named.
 		 */

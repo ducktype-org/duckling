@@ -14,6 +14,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/data/function_source_names.hpp>
 #include <vm/api/data/process_info.hpp>
 #include <vm/api/data/process_options.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -61,6 +62,25 @@ int cli(
 						  return vm::api::loadCode(pid, libs);
 					  })
 		              .and_then([&] { return vm::api::loadFiles(pid, files); })
+		              .and_then([&] {
+						  // A panic's stack trace prints the Duck names of the functions, when
+			              // the compiler left debug info next to the bytecode. The names only
+			              // make the trace nicer, so a broken debug info file is ignored.
+						  vm::api::FunctionSourceNames function_source_names;
+						  for (const auto& file: files) {
+							  if_opt_some(
+								  vm::api::findDebugInfoNextToBytecode(file.getFilePath().string()),
+								  debug_info_path
+							  ) {
+								  (void) vm::api::addFunctionSourceNamesFromFile(
+									  function_source_names, debug_info_path
+								  );
+							  }
+						  }
+						  return vm::api::setFunctionSourceNames(
+							  pid, std::move(function_source_names)
+						  );
+					  })
 		              .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 		              .and_then([&] { return vm::api::runAwait(pid, args); })
 		              .transform([](vm::api::ExitValue vm_values) {

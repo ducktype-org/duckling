@@ -803,6 +803,23 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
+			// The Duck names of the functions, so that a panic's stack trace can print them
+			// instead of the mangled names. The standard library's come from its debug info.
+			vm::api::FunctionSourceNames function_source_names;
+			for (const auto& lir_function: script_lir->lir_unit.lir_functions) {
+				if_opt_some(lir_function->metadata.source_code_name, source_name) {
+					function_source_names.put(lir_function->mangled_name, source_name.str());
+				}
+			}
+			if (load_stdlib) {
+				for (const auto& art: getStdLibDebugInfoArtifacts()) {
+					// The names only make the stack trace nicer, so a broken file is not an error.
+					(void) vm::api::addFunctionSourceNamesFromFile(
+						function_source_names, art.file.getFilePath()
+					);
+				}
+			}
+
 			auto run_result
 				= vm::api::spawn()
 			          .and_then(
@@ -821,6 +838,11 @@ namespace compiler::driver {
 							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
+				                  .and_then([&] {
+									  return vm::api::setFunctionSourceNames(
+										  pid, std::move(function_source_names)
+									  );
+								  })
 				                  .and_then([&] {
 									  return vm::api::attach(pid, std::cin, std::cout);
 								  })

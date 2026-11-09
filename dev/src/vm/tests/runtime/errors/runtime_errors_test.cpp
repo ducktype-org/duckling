@@ -4,10 +4,12 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <debug_info/debug_info.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <tester/tester.hpp>
 
+#include <vm/api/data/function_source_names.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/exceptions.hpp>
 
@@ -36,6 +38,7 @@ public:
 		// Arithmetic
 		TESTER_ADD_TEST(checkZeroDivision);
 		TESTER_ADD_TEST(panicPrintsStackTrace);
+		TESTER_ADD_TEST(panicStackTracePrintsSourceNames);
 
 		// Memory
 		TESTER_ADD_TEST(localLeakTest);
@@ -117,6 +120,45 @@ private:
 		);
 		assertTrue(
 			!stderr_output.contains("#3"), "The start function is not listed: " + stderr_output
+		);
+	}
+
+	void panicStackTracePrintsSourceNames() {
+		// Debug info names two of the three functions. `main` has no entry, so it keeps its
+		// bytecode name, and so does a function whose metadata has no name.
+		const auto metadata_named = [](base::Optional<std::string> name) {
+			debug_info::FunctionMetadata metadata;
+			metadata.function_name = std::move(name);
+			return metadata;
+		};
+		debug_info::DebugInfo debug_info;
+		debug_info.functions.put("divideByZero", metadata_named("divide"));
+		debug_info.functions.put("forward", metadata_named("passOn"));
+		debug_info.functions.put("main", metadata_named(std::nullopt));
+		vm::api::FunctionSourceNames names;
+		vm::api::addFunctionSourceNames(names, debug_info);
+		ASSERT_EQUAL(usize{ 2 }, names.size());
+
+		const auto pid = spawnAndLoad("arithmetic/zero_division_nested.dbc");
+		assertSucceeded(vm::api::setFunctionSourceNames(pid, names), "setFunctionSourceNames");
+
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		auto              run           = runTestOnVmGetResult(pid);
+		std::cerr.rdbuf(original_cerr);
+
+		assertExecutionPanickedWithAndKill(run, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+
+		const std::string stderr_output = captured.str();
+		assertTrue(
+			stderr_output.contains("DVM stack trace (most recent call first):\n"
+		                           "  #0 divide\n"
+		                           "  #1 passOn at "),
+			"Functions with a source name are printed by it: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains("  #2 main at "),
+			"A function without a source name keeps its bytecode name: " + stderr_output
 		);
 	}
 

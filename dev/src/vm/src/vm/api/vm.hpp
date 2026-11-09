@@ -13,6 +13,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/execution_config.hpp>
+#include <vm/api/data/function_source_names.hpp>
 #include <vm/api/data/process_options.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/thread_id.hpp>
@@ -46,6 +47,15 @@ namespace vm::api {
 	 * @return Nothing if the config was set successfully or an API error otherwise.
 	 */
 	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);
+
+	/**
+	 * @brief Gives a process the Duck source names of its functions, e.g. read from debug info.
+	 * The stack trace of a panic then prints a function's source name instead of its mangled name.
+	 * Functions without an entry keep their mangled name.
+	 * @note Replaces the names set by an earlier call. Allowed in any state.
+	 * @return Nothing if the names were set successfully or an API error otherwise.
+	 */
+	std::expected<void, ApiError> setFunctionSourceNames(PID pid, FunctionSourceNames names);
 
 	/**
 	 * @brief Load the code from given files into a specified process on DVM.

@@ -620,7 +620,9 @@ namespace vm {
 
 			const Frame& frame = *frames[frames.size() - 1 - depth];
 			const auto&  func  = *frame.current_function;
-			out << "  #" << depth << " " << func.name.strView();
+			// Prefer the Duck name of the function, when the process was given one.
+			out << "  #" << depth << " "
+				<< safe_process.getFunctionSourceName(func.name).copyValueOr(func.name.str());
 
 			// The innermost frame has no saved position.
 			if (depth == 0) {

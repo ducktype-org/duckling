@@ -23,6 +23,8 @@
 #include <vm/core/thread/thread_state.hpp>
 
 #include <expected>
+#include <mutex>
+#include <string>
 #include <variant>
 
 namespace vm {
@@ -70,6 +72,11 @@ namespace vm {
 		ProcessStateManager state_manager{ api::MAIN_THREAD_ID };
 
 		api::ExecutionConfig execution_config;
+
+		/// Set by `api::setFunctionSourceNames`. Read by a panicking thread, so it has its own lock
+		/// instead of the process's API lock.
+		api::FunctionSourceNames function_source_names;
+		mutable std::mutex       function_source_names_lock;
 
 		IVMProcess(PID my_pid);
 
@@ -368,6 +375,13 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
+
+		/**
+		 * @brief The Duck source name of the function called `mangled_name` in the bytecode, when
+		 * one was set with `api::setFunctionSourceNames`.
+		 */
+		[[nodiscard]] base::Optional<std::string> getFunctionSourceName(base::StrID mangled_name
+		) const;
 
 		/**
 		 * @brief Creates an empty VMValue of a given type and registers it in this VMProcess.
