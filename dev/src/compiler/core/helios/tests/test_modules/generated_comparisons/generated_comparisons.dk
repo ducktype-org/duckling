@@ -7,7 +7,7 @@ class Ratio {
     num: i64 = 0;
     den: i64 = 1;
 
-    fun ==(rhs: const ref Ratio) -> bool = {
+    fun ==(rhs: ref Ratio) -> bool = {
         return num * rhs.den == rhs.num * den;
     }
 }

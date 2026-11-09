@@ -7,11 +7,11 @@ class Fraction {
     num: i64 = 0;
     den: i64 = 1;
 
-    fun ==(rhs: const ref Fraction) -> bool = {
+    fun ==(rhs: ref Fraction) -> bool = {
         return num * rhs.den == rhs.num * den;
     }
 
-    fun <(rhs: const ref Fraction) -> bool = {
+    fun <(rhs: ref Fraction) -> bool = {
         return num * rhs.den < rhs.num * den;
     }
 }

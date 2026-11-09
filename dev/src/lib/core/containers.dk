@@ -205,7 +205,7 @@ class String {
         Strings are equal when they hold the same characters. This replaces the
         generated comparison, which would compare the buffers instead.
     #}
-    fun ==(rhs: const ref String) -> bool = {
+    fun ==(rhs: ref String) -> bool = {
         if (len != rhs.len) return false;
         var i = 0i64;
         while (i < len) {
@@ -219,7 +219,7 @@ class String {
         Orders strings lexicographically by their characters. A proper prefix
         comes before the longer string.
     #}
-    fun <(rhs: const ref String) -> bool = {
+    fun <(rhs: ref String) -> bool = {
         var i = 0i64;
         while (i < len and i < rhs.len) {
             if (pointer[i] != rhs.pointer[i]) return pointer[i] < rhs.pointer[i];
@@ -232,19 +232,19 @@ class String {
         The remaining comparisons are defined in terms of `==` and `<`. The
         generated ones would compare the buffers instead.
     #}
-    fun !=(rhs: const ref String) -> bool = {
+    fun !=(rhs: ref String) -> bool = {
         return not (self == rhs);
     }
 
-    fun <=(rhs: const ref String) -> bool = {
+    fun <=(rhs: ref String) -> bool = {
         return not (rhs < self);
     }
 
-    fun >(rhs: const ref String) -> bool = {
+    fun >(rhs: ref String) -> bool = {
         return rhs < self;
     }
 
-    fun >=(rhs: const ref String) -> bool = {
+    fun >=(rhs: ref String) -> bool = {
         return not (self < rhs);
     }
 
