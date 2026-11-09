@@ -377,14 +377,14 @@ namespace vm {
 		[[nodiscard]] PID getPID() const;
 
 		/**
-		 * @brief The Duck source name of the function called `mangled_name` in the bytecode, when
-		 * one was set with `api::setFunctionSourceInfo`.
+		 * @brief The Duckling source name of the function called `mangled_name` in the bytecode,
+		 * when one was set with `api::setFunctionSourceInfo`.
 		 */
 		[[nodiscard]] base::Optional<std::string> getFunctionSourceName(base::StrID mangled_name
 		) const;
 
 		/**
-		 * @brief The Duck source line where the function called `mangled_name` is defined, when
+		 * @brief The Duckling source line where the function called `mangled_name` is defined, when
 		 * one was set with `api::setFunctionSourceInfo`.
 		 */
 		[[nodiscard]] base::Optional<api::SourceLine> getFunctionDefinitionLine(
@@ -392,7 +392,7 @@ namespace vm {
 		) const;
 
 		/**
-		 * @brief The Duck source line of the instruction at `instruction_index` (in the code
+		 * @brief The Duckling source line of the instruction at `instruction_index` (in the code
 		 * collection) of the function called `mangled_name`, when one was set with
 		 * `api::setFunctionSourceInfo`.
 		 */

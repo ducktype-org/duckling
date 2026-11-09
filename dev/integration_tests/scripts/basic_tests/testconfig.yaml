@@ -91,9 +91,9 @@ Tests:
         Output:
           String: "1\n2\n"
 
-  # `duckc run` names the functions of a panic's stack trace as in the Duck source, both the
+  # `duckc run` names the functions of a panic's stack trace as in the Duckling source, both the
   # script's own (`readPastEnd`, `forward`) and the standard library's (`panic`), instead of
-  # their mangled names, and shows the Duck file and line of each call: the script's lines are
+  # their mangled names, and shows the Duckling file and line of each call: the script's lines are
   # lines of the `.dks` file. `(?s)` lets `.` cross the line breaks.
   panic_stack_trace:
     folder: "panic_stack_trace"

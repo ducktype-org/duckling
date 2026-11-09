@@ -26,6 +26,7 @@
 
 #include <vm/api/data/function_source_info.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/stack_trace.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
@@ -43,7 +44,6 @@
 #include <vm/utils/interpret.hpp>
 
 #include <ranges>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -597,7 +597,7 @@ namespace vm {
 
 	// executeFunction end
 
-	std::string SafeVMThread::getVMStackTrace(const Frame* start_frame) const {
+	api::StackTrace SafeVMThread::getVMStackTrace(const Frame* start_frame) const {
 		// Live frames sit right above the start frame, outermost first.
 		std::vector<const Frame*> frames;
 		for (const Frame* frame = start_frame + 1;
@@ -605,60 +605,52 @@ namespace vm {
 		     frame++)
 			frames.push_back(frame);
 
-		if (frames.empty()) return "";
+		// A stack overflow leaves thousands of frames, so only both ends of the stack are kept.
+		constexpr usize KEPT_FRAMES_PER_END = 16;
 
-		// A stack overflow leaves thousands of frames, so only both ends of the stack are shown.
-		constexpr usize SHOWN_FRAMES_PER_END = 16;
-
-		std::stringstream out;
-		out << "DVM stack trace (most recent call first):\n";
+		api::StackTrace trace;
 		for (usize depth = 0; depth < frames.size(); depth++) {
-			if (frames.size() > 2 * SHOWN_FRAMES_PER_END && depth == SHOWN_FRAMES_PER_END) {
-				const usize omitted = frames.size() - 2 * SHOWN_FRAMES_PER_END;
-				out << "  ... " << omitted << " frames omitted ...\n";
-				depth += omitted - 1;
-				continue;
-			}
-
-			const Frame& frame = *frames[frames.size() - 1 - depth];
-			const auto&  func  = *frame.current_function;
-			// Prefer the Duck name of the function, when the process was given one.
-			out << "  #" << depth << " "
-				<< safe_process.getFunctionSourceName(func.name).copyValueOr(func.name.str());
-			out << describeFramePosition(frame, depth == 0) << "\n";
+			if (frames.size() > 2 * KEPT_FRAMES_PER_END && depth == KEPT_FRAMES_PER_END)
+				depth = frames.size() - KEPT_FRAMES_PER_END;
+			trace.frames.push_back(getStackFrame(*frames[frames.size() - 1 - depth], depth));
 		}
-		return out.str();
+		return trace;
 	}
 
-	std::string SafeVMThread::describeFramePosition(const Frame& frame, bool innermost) const {
+	api::StackFrame SafeVMThread::getStackFrame(const Frame& frame, u64 depth) const {
 		const auto& func = *frame.current_function;
 
-		const auto format_line = [](const api::SourceLine& line) {
-			return base::strConcat(line.file.str(), ":", line.line);
-		};
-		// Used when nothing better is known: at least where the function is.
-		const auto definition = [&]() -> std::string {
-			if_opt_some(safe_process.getFunctionDefinitionLine(func.name), line) {
-				return base::strConcat(" (defined at ", format_line(line), ")");
-			}
-			return "";
+		const auto to_location = [](const api::SourceLine& line) {
+			return api::SourceLocation{ .file = line.file.str(), .line = line.line, .column = {} };
 		};
 
+		api::StackFrame result{
+			.depth         = depth,
+			.function_name = func.name,
+			.source_name   = safe_process.getFunctionSourceName(func.name),
+			.call_site     = {},
+			.definition    = {},
+		};
+		if_opt_some(safe_process.getFunctionDefinitionLine(func.name), line) {
+			result.definition = to_location(line);
+		}
+
 		// The innermost frame has no saved position.
-		if (innermost) return definition();
+		if (depth == 0) return result;
 
 		// `instr` rests on the return address, one past the call.
 		const auto* begin = func.bc.data();
-		if (frame.instr <= begin || frame.instr > begin + func.bc.size()) return definition();
+		if (frame.instr <= begin || frame.instr > begin + func.bc.size()) return result;
 		const low::LowCodePosition low_position{
 			.function          = &func,
 			.instruction_index = static_cast<u64>(frame.instr - begin - 1),
 		};
 
-		// The Duck source line of the call, when the process has debug info for the function.
+		// The Duckling source line of the call, when the process has debug info for the function.
 		if_opt_some(safe_process.mapToCodeCollectionIndex(low_position), instruction_index) {
 			if_opt_some(safe_process.getInstructionSourceLine(func.name, instruction_index), line) {
-				return base::strConcat(" at ", format_line(line));
+				result.call_site = to_location(line);
+				return result;
 			}
 		}
 
@@ -667,9 +659,13 @@ namespace vm {
 		if_opt_some(code_position.source_position, position) {
 			const auto [line, column] = position.getStartLineColumn();
 			const auto file           = position.getSource()->getFile().getFilePath();
-			return base::strConcat(" at ", file.strView(), ":", line, ":", column);
+			result.call_site          = api::SourceLocation{
+						 .file   = std::string(file.strView()),
+						 .line   = static_cast<u64>(line),
+						 .column = static_cast<u64>(column),
+			};
 		}
-		return definition();
+		return result;
 	}
 
 	void SafeVMThread::resetFramesAbove(Frame* start_frame) {

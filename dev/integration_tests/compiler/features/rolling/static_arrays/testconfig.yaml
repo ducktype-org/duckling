@@ -82,8 +82,8 @@ Tests:
         Output:
           String: "Program panicked!\n"
   # A DVM panic prints the call stack of the panicking thread, innermost call first. The
-  # callers carry the Duck file and line of their call; `(?s)` lets `.` cross the line breaks.
-  # Functions are named as in the Duck source (`readPastEnd`, not its mangled name): `VM run`
+  # callers carry the Duckling file and line of their call; `(?s)` lets `.` cross the line breaks.
+  # Functions are named as in the Duckling source (`readPastEnd`, not its mangled name): `VM run`
   # reads the names and lines from the debug info next to the bytecode.
   array_out_of_bounds_stack_trace:
     Cases:

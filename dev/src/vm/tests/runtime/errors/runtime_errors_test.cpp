@@ -10,6 +10,7 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/data/function_source_info.hpp>
+#include <vm/api/data/stack_trace.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/core/safe/exceptions.hpp>
 
@@ -41,6 +42,8 @@ public:
 		TESTER_ADD_TEST(panicStackTracePrintsSourceNames);
 		TESTER_ADD_TEST(panicStackTracePrintsSourceLines);
 		TESTER_ADD_TEST(lineOfInstructionPrefersTheNextLine);
+		TESTER_ADD_TEST(formatStackTraceDescribesEachFrame);
+		TESTER_ADD_TEST(stackTraceRoundTripsThroughJson);
 
 		// Memory
 		TESTER_ADD_TEST(localLeakTest);
@@ -218,7 +221,7 @@ private:
 		                           "  #0 divide (defined at math.dk:1)\n"
 		                           "  #1 forward at math.dk:7\n"
 		                           "  #2 main at main.dk:12\n"),
-			"Each frame shows its Duck file and line: " + stderr_output
+			"Each frame shows its Duckling file and line: " + stderr_output
 		);
 	}
 
@@ -236,6 +239,61 @@ private:
 		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(5).value().line);
 		// Past the last entry, the last line is the only one left.
 		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(9).value().line);
+	}
+
+	/**
+	 * @brief A stack trace with one frame of each kind, and a gap where frames were left out.
+	 */
+	static vm::api::StackTrace sampleStackTrace() {
+		using vm::api::StackFrame;
+		const auto at = [](std::string file, u64 line, base::Optional<u64> column = {}) {
+			return vm::api::SourceLocation{ .file   = std::move(file),
+				                            .line   = line,
+				                            .column = column };
+		};
+		vm::api::StackTrace trace;
+		trace.frames = {
+			StackFrame{ .depth         = 0,
+			            .function_name = base::StrID("_Q_divide"),
+			            .source_name   = "divide",
+			            .call_site     = {},
+			            .definition    = at("math.dk", 1) },
+			StackFrame{ .depth         = 1,
+			            .function_name = base::StrID("_Q_forward"),
+			            .source_name   = {},
+			            .call_site     = at("math.dbc", 19, 5),
+			            .definition    = at("math.dk", 5) },
+			StackFrame{ .depth         = 5,
+			            .function_name = base::StrID("main"),
+			            .source_name   = {},
+			            .call_site     = {},
+			            .definition    = {} },
+		};
+		return trace;
+	}
+
+	void formatStackTraceDescribesEachFrame() {
+		ASSERT_EQUAL(std::string(), vm::api::formatStackTrace({}));
+
+		// A source name wins over the mangled one, a call site over the definition, and the
+		// depths skipped between two frames are counted.
+		ASSERT_EQUAL(
+			std::string("DVM stack trace (most recent call first):\n"
+		                "  #0 divide (defined at math.dk:1)\n"
+		                "  #1 _Q_forward at math.dbc:19:5\n"
+		                "  ... 3 frames omitted ...\n"
+		                "  #5 main\n"),
+			vm::api::formatStackTrace(sampleStackTrace())
+		);
+	}
+
+	void stackTraceRoundTripsThroughJson() {
+		const auto           trace = sampleStackTrace();
+		const nlohmann::json json  = trace;
+		ASSERT_EQUAL(std::string("divide"), json["frames"][0]["source_name"].get<std::string>());
+		ASSERT_TRUE(json["frames"][0]["call_site"].is_null());
+		ASSERT_TRUE(json["frames"][1]["call_site"]["column"] == 5);
+		ASSERT_TRUE(json.get<vm::api::StackTrace>() == trace);
 	}
 
 	// Memory

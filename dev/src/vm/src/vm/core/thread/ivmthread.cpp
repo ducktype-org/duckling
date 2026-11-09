@@ -10,6 +10,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
+#include <vm/api/data/stack_trace.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/process_state_manager.hpp>
 #include <vm/core/safe/exceptions.hpp>
@@ -102,7 +103,8 @@ namespace vm {
 		} catch (const KillProcessException& e) {
 			applyEvent(te::Kill{});
 		} catch (const exceptions::VMRuntimeException& e) {
-			std::cerr << "VMThread has panicked: " << e.what() << "\n" << e.getVMStackTrace();
+			std::cerr << "VMThread has panicked: " << e.what() << "\n";
+			if_opt_some(e.getVMStackTrace(), trace) { std::cerr << api::formatStackTrace(trace); }
 			applyEvent(te::Panic{ e.what() });
 		} catch (const std::exception& e) {
 			std::cerr << "VMThread has panicked with an unexpected error: " << e.what() << "\n";

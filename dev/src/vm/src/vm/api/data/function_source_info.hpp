@@ -22,7 +22,7 @@
 
 namespace vm::api {
 	/**
-	 * @brief A line in a Duck source file.
+	 * @brief A line in a Duckling source file.
 	 */
 	struct SourceLine final {
 		base::StrID file;
@@ -30,11 +30,11 @@ namespace vm::api {
 	};
 
 	/**
-	 * @brief What the Duck source says about one function of the bytecode. The VM uses it to print
-	 * readable stack traces when a thread panics.
+	 * @brief What the Duckling source says about one function of the bytecode. The VM uses it to
+	 * print readable stack traces when a thread panics.
 	 */
 	struct FunctionSourceInfo final {
-		/// The name the function has in the Duck source.
+		/// The name the function has in the Duckling source.
 		base::Optional<std::string> name;
 		/// Where the function is defined.
 		base::Optional<SourceLine> definition;
@@ -53,8 +53,8 @@ namespace vm::api {
 	};
 
 	/**
-	 * @brief Maps the name of a function in the bytecode (its mangled name) to what the Duck source
-	 * says about it.
+	 * @brief Maps the name of a function in the bytecode (its mangled name) to what the Duckling
+	 * source says about it.
 	 */
 	using FunctionSourceInfos = base::Map<base::StrID, FunctionSourceInfo>;
 

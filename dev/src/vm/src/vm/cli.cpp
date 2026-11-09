@@ -63,7 +63,7 @@ int cli(
 					  })
 		              .and_then([&] { return vm::api::loadFiles(pid, files); })
 		              .and_then([&] {
-						  // A panic's stack trace prints the Duck names of the functions, when
+						  // A panic's stack trace prints the Duckling names of the functions, when
 			              // the compiler left debug info next to the bytecode. The names only
 			              // make the trace nicer, so a broken debug info file is ignored.
 						  vm::api::FunctionSourceInfos function_source_info;

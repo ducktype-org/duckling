@@ -49,9 +49,9 @@ namespace vm::api {
 	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);
 
 	/**
-	 * @brief Gives a process what the Duck source says about its functions (their names and
+	 * @brief Gives a process what the Duckling source says about its functions (their names and
 	 * source lines), e.g. read from debug info. The stack trace of a panic then prints a function's
-	 * source name instead of its mangled name, and the Duck file and line of each frame.
+	 * source name instead of its mangled name, and the Duckling file and line of each frame.
 	 * Functions without an entry keep their mangled name and bytecode position.
 	 * @note Replaces the info set by an earlier call. Allowed in any state.
 	 * @return Nothing if the info was set successfully or an API error otherwise.

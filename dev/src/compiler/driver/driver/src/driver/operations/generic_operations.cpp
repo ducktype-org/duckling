@@ -868,8 +868,8 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
-			// The Duck names and source lines of the functions, so that a panic's stack trace can
-			// print them instead of the mangled names and bytecode positions. The standard
+			// The Duckling names and source lines of the functions, so that a panic's stack trace
+			// can print them instead of the mangled names and bytecode positions. The standard
 			// library's come from its debug info files.
 			vm::api::FunctionSourceInfos function_source_info;
 			for (const auto& lir_function: script_lir->lir_unit.lir_functions) {
