@@ -1,7 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <frontend/pst_parser/pst.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -26,11 +32,11 @@ public:
 
 private:
 	base::Optional<pst::AccessLocked<pst::Stmt>> extract(std::string_view code) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 
 		base::Optional<pst::AccessLocked<pst::Stmt>> result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			result = pst::extractSingleDefinition(ctx, pst.getRootElement());
+			result = pst::extractSingleDefinition(ctx, pst->getRootElement());
 		});
 		return result;
 	}
@@ -41,11 +47,11 @@ private:
 	void checkSelectorDecl(
 		std::string_view code, pst::DeclKind expected_kind, std::string_view expected_name = ""
 	) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
-		assertFalse(pst.hasErrors(), base::strConcat("Unexpected parse error in: ", code));
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+		assertFalse(pst->hasErrors(), base::strConcat("Unexpected parse error in: ", code));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto stmt_opt = pst::extractSingleStatement(ctx, pst.getRootElement());
+			auto stmt_opt = pst::extractSingleStatement(ctx, pst->getRootElement());
 			ASSERT_HAS_VALUE(stmt_opt, base::strConcat("Expected one statement in: ", code));
 			auto stmt = stmt_opt.value().unlock(ctx);
 
@@ -103,7 +109,7 @@ private:
 	void testSingleFunctionDefinition() {
 		ASSERT_HAS_VALUE(extract("fun foo() = {}"), "Function declaration should be returned");
 		ASSERT_HAS_VALUE(
-			extract("fun bar(x: i32): i32 = { x + 1 }"),
+			extract("fun bar(x: i32) -> i32 = { x + 1 }"),
 			"Function with parameters and body should be returned"
 		);
 		ASSERT_HAS_VALUE(
@@ -114,11 +120,10 @@ private:
 
 	void testSingleClassDefinition() {
 		ASSERT_HAS_VALUE(extract("class Foo {}"), "Class declaration should be returned");
+		ASSERT_HAS_VALUE(extract("class Bar { x: i32; }"), "Class with members should be returned");
 		ASSERT_HAS_VALUE(
-			extract("class Bar { var x: i32; }"), "Class with members should be returned"
-		);
-		ASSERT_HAS_VALUE(
-			extract("class Baz<T> { fun method() = {} }"), "Generic class should be returned"
+			extract("template(T: type) class Baz { fun method() = {} }"),
+			"Generic class should be returned"
 		);
 	}
 

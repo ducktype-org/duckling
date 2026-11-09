@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file helios_stmt_compilation_test.cpp
  * @brief Unit tests for compileSingleStatement (hout_stmt_compilation.cpp).
@@ -9,6 +15,7 @@
 #include <../src_private/helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
@@ -102,7 +109,7 @@ private:
 		// Navigate to its PST body
 		auto fun_pst = getSymRef(fun_sym)->stmtCast(ctx).value().dynamicCast<pst::Fun>().value();
 
-		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody());
+		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody().unlock(ctx));
 		CORE_ASSERT(!body_stmts.empty(), "Function body must have at least one statement");
 
 		// Compile the first body statement in isolation
@@ -112,10 +119,7 @@ private:
 																tsh::ReferenceKind::Direct,
 																tsh::Mutability::Mutable,
 															};
-		body_stmts.at(stmt_index)
-			.illegalAccess()
-			.value()
-			->debugPrint(std::cerr);  // value().elementType()();
+		body_stmts.at(stmt_index)->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 

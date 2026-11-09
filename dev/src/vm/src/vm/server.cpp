@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "server.hpp"
 
 #include <base/misc/int_conv.hpp>
@@ -23,23 +29,23 @@ namespace {
 			nlohmann::json(api_error),
 		};
 	}
-}  // namespace
 
-template<class T, class E>
-crow::response toResponse(const std::expected<T, E>& x) {
-	static auto convert = []([[maybe_unused]]
-	                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
+	template<class T, class E>
+	crow::response toResponse(const std::expected<T, E>& x) {
+		static auto convert = []([[maybe_unused]]
+		                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
 
-	if (x.has_value()) return convert(x.value());
-	return convertError(x.error());
-}
+		if (x.has_value()) return convert(x.value());
+		return convertError(x.error());
+	}
 
-template<class E>
-crow::response toResponse(const std::expected<void, E>& x) {
-	static auto convert = []() { return crow::response(200, "{}"); };
+	template<class E>
+	crow::response toResponse(const std::expected<void, E>& x) {
+		static auto convert = []() { return crow::response(200, "{}"); };
 
-	if (x.has_value()) return convert();
-	return convertError(x.error());
+		if (x.has_value()) return convert();
+		return convertError(x.error());
+	}
 }
 
 void server(i32 port) {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "function_queries.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -9,7 +15,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
@@ -68,7 +74,7 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition()));
+				ctx.log<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition());
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}
@@ -101,7 +107,7 @@ namespace compiler::helios {
 					"This should not happen"
 				);
 
-				auto output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+				auto output_body = compileCodeOfCodeBlock(ctx, unlocked_body, decl.return_type);
 
 				const bool ends_with_return
 					= !output_body->statements.empty()
@@ -147,9 +153,9 @@ namespace compiler::helios {
 			}
 
 			void visitConstructor(pst::Access<pst::Constructor>) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"Support for user defined constructors will be deleted."
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -184,11 +190,11 @@ namespace compiler::helios {
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
 				if (decl.parameters.size() != 1) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"A copy constructor must declare exactly one parameter: a reference to "
 						"the object being copied.",
 						params_source
-					));
+					);
 					query::throwFailed();
 				}
 
@@ -198,10 +204,10 @@ namespace compiler::helios {
 					= other_type.getType().getKind() == tsh::Kind::Class
 				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
 				          == class_type.getSymbol();
-				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
-				// resolves to an immutable reference.
+				// @TODO: #2104 Require the reference to be read-only once read-only references are
+				// enforced.
 				if (!is_reference || !is_matching_class) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
 							"A copy constructor's parameter must be a reference to its own "
 							"class `",
@@ -209,7 +215,7 @@ namespace compiler::helios {
 							"`."
 						),
 						params_source
-					));
+					);
 					query::throwFailed();
 				}
 			}
@@ -303,7 +309,7 @@ namespace compiler::helios {
 					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
 				}
 				variant_case(defgen::ReplInputWrapper, input) {
-					return repl::getReplInputFunction(ctx, input);
+					return repl::getReplInputFunction(ctx, key, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "abstract_type_impl.hpp"
 
 #include "queries.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
@@ -23,80 +29,97 @@
 #include <utility>
 
 namespace compiler::tsh {
-	/**
-	 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
-	 * every type, such as `toString`.
-	 * @param ctx Query context for generating symbols.
-	 * @param type The type for which to get the default interface, needed e.g. for method types.
-	 * @return The default interface for the given type.
-	 */
-	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
-		using helios::defgen::generatedCopyConstructorSymForType;
-		using helios::defgen::generatedDestructSymForType;
-		using helios::defgen::generatedToStringSymForType;
+	namespace {
+		/**
+		 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
+		 * every type, such as `toString`.
+		 * @param ctx Query context for generating symbols.
+		 * @param type The type for which to get the default interface, needed e.g. for method types.
+		 * @return The default interface for the given type.
+		 */
+		TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+			using helios::defgen::generatedCopyConstructorSymForType;
+			using helios::defgen::generatedDestructSymForType;
+			using helios::defgen::generatedToStringSymForType;
 
-		// The generated `toString` returns a `String`, which lives in `core.containers`. It only
-		// exists when a standard library is available, so skip it otherwise (e.g. no-std builds) —
-		// resolving its type would fail to find the `String` language primitive.
-		const bool string_type_present = isStringTypePresent(ctx);
+			// The generated `toString` returns a `String`, which lives in `core.containers`. It
+			// only exists when a standard library is available, so skip it otherwise (e.g. no-std
+			// builds) — resolving its type would fail to find the `String` language primitive.
+			const bool string_type_present = isStringTypePresent(ctx);
 
-		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
-		if (not type.carriesInformation(ctx)) {
-			if (type.getKind() == Kind::Unit && string_type_present) {
-				// The unit type has a `toString` method, even though it doesn't carry information,
-				// because it is a simple type and it's passed by value.
-				return TypeInterface{ std::vector{ InterfaceElement{
+			// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
+			if (not type.carriesInformation(ctx)) {
+				if (type.getKind() == Kind::Unit && string_type_present) {
+					// The unit type has a `toString` method, even though it doesn't carry
+					// information, because it is a simple type and it's passed by value.
+					return TypeInterface{ std::vector{ InterfaceElement{
+						generatedToStringSymForType(ctx, type),
+						type,
+						0,
+						InterfaceElement::InterfaceElementKind::Method,
+						MemberVisibility::Public,
+						MemberSpecialKind::ToString,
+					} } };
+				}
+				return {};
+			}
+
+			std::vector<InterfaceElement> elements;
+
+			// Every type has a `toString` method (when a standard library provides `String`).
+			if (string_type_present) {
+				elements.emplace_back(
 					generatedToStringSymForType(ctx, type),
 					type,
 					0,
 					InterfaceElement::InterfaceElementKind::Method,
 					MemberVisibility::Public,
-					MemberSpecialKind::ToString,
-				} } };
+					MemberSpecialKind::ToString
+				);
 			}
-			return {};
+
+			if (not type.isTriviallyDestructible(ctx)) {
+				elements.emplace_back(
+					generatedDestructSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					MemberVisibility::Public,
+					MemberSpecialKind::Destructor
+				);
+			}
+
+			// A trivially copyable type is copied by copying its bytes, so it needs no copy
+			// constructor. A type that declares its own one keeps it, because the declared
+			// interface wins over the default one for every special kind.
+			if (not type.isTriviallyCopyable(ctx)) {
+				elements.emplace_back(
+					generatedCopyConstructorSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::StaticMethod,
+					MemberVisibility::Public,
+					MemberSpecialKind::CopyConstructor
+				);
+			}
+
+			return TypeInterface(elements);
 		}
 
-		std::vector<InterfaceElement> elements;
+		/**
+		 * @brief Creates a human-readable string representation of a vector of symbol types.
+		 * @param types Vector of symbol types to stringify.
+		 * @return A human-readable string representing a sequence of symbol types.
+		 */
+		std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
+			std::stringstream res;
+			res << "(";
+			if (!types.empty()) res << types[0].toString();
+			for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
+			res << ")";
 
-		// Every type has a `toString` method (when a standard library provides `String`).
-		if (string_type_present) {
-			elements.emplace_back(
-				generatedToStringSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::Method,
-				MemberVisibility::Public,
-				MemberSpecialKind::ToString
-			);
+			return res.str();
 		}
-
-		if (not type.isTriviallyDestructible(ctx)) {
-			elements.emplace_back(
-				generatedDestructSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::Method,
-				MemberVisibility::Public,
-				MemberSpecialKind::Destructor
-			);
-		}
-
-		// A trivially copyable type is copied by copying its bytes, so it needs no copy
-		// constructor. A type that declares its own one keeps it, because the declared interface
-		// wins over the default one for every special kind.
-		if (not type.isTriviallyCopyable(ctx)) {
-			elements.emplace_back(
-				generatedCopyConstructorSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::StaticMethod,
-				MemberVisibility::Public,
-				MemberSpecialKind::CopyConstructor
-			);
-		}
-
-		return TypeInterface(elements);
 	}
 
 	/**
@@ -169,84 +192,10 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeInterface)
 
-	/**
-	 * @brief Creates a human-readable string representation of a vector of symbol types.
-	 * @param types Vector of symbol types to stringify.
-	 * @return A human-readable string representing a sequence of symbol types.
-	 */
-	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
-		std::stringstream res;
-		res << "(";
-		if (!types.empty()) res << types[0].toString();
-		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
-		res << ")";
-
-		return res.str();
-	}
-
-	bool UnitAbstractTypeImpl::isImplicitlyCoercible(const AbstractType target, query::Context&)
-		const {
-		// The unit type can be coerced to the meta type
-		// because unit values can be interpreted as unit types.
-		return target.getKind() == Kind::Meta;
-	}
-
 	CRef<TypeInterface> UnitAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
-	}
-
-	bool PointerAbstractTypeImpl::isImplicitlyCoercible(const AbstractType, query::Context&) const {
-		// The pointers are generally not the main tool for the job
-		// in our language, but we may in the future allow
-		// implicit coercions to bool to check against null pointer.
-		return false;
-	}
-
-	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context& ctx
-	) const {
-		// Implicit coercions are allowed to other tuples of the same size,
-		// where each component can be coerced independently.
-		//
-		// Additionally, tuples can be coerced to Meta type if
-		// all their components can be coerced to Meta type.
-
-		if (target.getKind() == Kind::Tuple) {
-			const TupleAbstractType target_tuple = target;
-
-			const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
-			if (target_components.size() != components.size()) return false;
-
-			for (usize i = 0; i < components.size(); i++) {
-				SymbolType component = components[i];
-				if (const SymbolType target_component = target_components[i];
-				    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
-						component,
-						target_component,
-					}))
-					return false;
-			}
-
-			return true;
-		}
-
-		if (target.getKind() == Kind::Meta) {
-			// Tuples can be coerced to the Meta type if and only if their components
-			// can all be coerced to Meta type. Note that the components can have additional
-			// indirection and mutability specifiers (the component types are symbol
-			// types), but that's OK, we need only to check the abstract types underneath.
-			for (const auto& component: components)
-				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({
-						component.getType(),
-						target,  //< target is the Meta type.
-					}))
-					return false;
-			return true;
-		}
-
-		return false;
 	}
 
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
@@ -258,46 +207,35 @@ namespace compiler::tsh {
 		std::vector<SymbolType<>> parameter_types,
 		const SymbolType<>        result_type,
 		const bool                pure,
-		const bool                free
+		const FunctionKind        function_kind
 	):
 		  parameter_types(std::move(parameter_types)),
 		  result_type(result_type),
 		  pure(pure),
-		  free(free) {
-		representation = "Function " + stringifyTypeVector(this->parameter_types) + " -> ("
+		  function_kind(function_kind) {
+		representation = (function_kind == FunctionKind::Closure ? "" : "Function ")
+		               + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";
 	}
 
-	bool FunctionAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context& context
-	) const {
-		// A function type is coercible to another function type if and only if
-		// the return type is coercible to the other return type and
-		// the other parameter types are coercible to the parameter types,
-		// similar to the rules of function subtyping.
-		//
-		// Additionally, only a pure function can be coerced to a pure function,
-		// and only a free function can be coerced to a free function.
-
-		if (target.getKind() != Kind::Function) return false;
-		const FunctionAbstractType target_function = target;
-		if ((!pure && target_function.isPure()) || (!free && target_function.isFree())
-		    || parameter_types.size() != target_function.getParameterTypes().size()) {
-			return false;
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(
+		query::Context&                  ctx,
+		const std::vector<SymbolType<>>& variant_types,
+		const bool                       represents_optional
+	):
+		  underlying_types(variant_types),
+		  represents_optional(represents_optional) {
+		if (represents_optional) {
+			const AbstractType none_type = helios::getOptionalNoneType(ctx).getType();
+			CORE_ASSERT(
+				variant_types.size() == 2 and variant_types.front().getType() != none_type
+					and variant_types.back().getType() == none_type,
+				"An optional type has to consist of exactly one value type and the None type."
+			);
+			representation = "?" + getOptionalValueType().toString();
+			return;
 		}
 
-		for (usize i = 0; i < parameter_types.size(); i++)
-			if (!context.query<QueryImplicitCoercibilityOnSymbolType>(
-					{ target_function.getParameterTypes()[i], parameter_types[i] }
-				))
-				return false;
-		return context.query<QueryImplicitCoercibilityOnSymbolType>(
-			{ result_type, target_function.getResultType() }
-		);
-	}
-
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
-		  underlying_types(variant_types) {
 		// Variants are unordered; canonicalize the alternative order so that the runtime tag
 		// (= index into getUnderlyingTypes()) does not depend on construction order.
 		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
@@ -406,7 +344,11 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Function type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+		if (representsOptionalType())
+			return &ctx.query<QueryInterfaceOfOptional>(toAbstractType().as<VariantAbstractType>())
+			            ->valueOrThrow();
+
 		// A variant declares nothing of its own: it is reached through its alternatives, so its
 		// whole interface is the default one.
 		static TypeInterface empty{};
@@ -488,14 +430,6 @@ namespace compiler::tsh {
 
 	bool ClassAbstractTypeImpl::carriesInformation(query::Context& ctx) const {
 		return classSymbolData(ctx)->carries_information;
-	}
-
-	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
-		return false;
-	}
-
-	bool SliceAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
-		return false;
 	}
 
 	bool StaticArrayAbstractTypeImpl::isTriviallyDestructible(query::Context& ctx) const {

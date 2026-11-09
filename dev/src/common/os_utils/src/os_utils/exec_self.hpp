@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <string>
@@ -25,5 +31,5 @@ namespace os_utils {
 	 *         On Windows, returns the exit code of the spawned process.
 	 *         On error, returns error details.
 	 */
-	ExecSelfResult execSelf(std::vector<std::string>& g_argv);
+	ExecSelfResult execSelf(const std::vector<std::string>& g_argv);
 }

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 pub mod setup;
 use std::collections::{HashMap, HashSet};
 
@@ -52,15 +58,15 @@ fn creates_valid_initial_graph() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -288,7 +294,7 @@ fn errors_with_nonexistent_features() {
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
-        "while expanding features of the direct dependency `foo`
+        "failed to expand the features of the direct dependency `foo`
 there is no such feature as `nonexistent`"
     );
 }
@@ -333,7 +339,7 @@ fn removes_inactive_deps1() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
@@ -398,11 +404,11 @@ fn removes_inactive_deps2() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
@@ -473,15 +479,15 @@ fn removes_inactive_deps3() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),
@@ -558,15 +564,15 @@ fn removes_inactive_deps4() {
         HashMap::from_iter([
             (
                 mock_local_identity(root.path(), "root").into(),
-                DependencyNode::new(vec![mock_registry_identity("foo").into()])
+                DependencyNode::new(vec![("foo".into(), mock_registry_identity("foo").into())])
             ),
             (
                 mock_registry_identity("foo").into(),
-                DependencyNode::new(vec![mock_registry_identity("bar").into()])
+                DependencyNode::new(vec![("bar".into(), mock_registry_identity("bar").into())])
             ),
             (
                 mock_registry_identity("bar").into(),
-                DependencyNode::new(vec![mock_registry_identity("baz").into()])
+                DependencyNode::new(vec![("baz".into(), mock_registry_identity("baz").into())])
             ),
             (
                 mock_registry_identity("baz").into(),

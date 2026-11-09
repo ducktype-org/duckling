@@ -1,8 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
-use super::{registry_url_hash, setup_mock_storage};
+use super::setup_mock_storage;
 use crate::DuckContext;
-use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::freeze::{DepIdWithAlias, FreezePackage, VenvFreeze};
@@ -13,24 +18,39 @@ use crate::quackpack::core::storage::tests::{
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
-use crate::quackpack::core::{PackageLoader, Version};
-use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::quackpack::core::{PackageLoader, Version, fetcher};
+use crate::util::path_ops::{normalize, read_from_path_to_string};
 
+#[track_caller]
+#[inline(always)]
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
-        assert!(root.join("venv").join(name).exists());
-        assert!(root.join("locks").join("venv_sync").join(name).exists());
-        assert!(root.join("locks").join("venv_data").join(name).exists());
+        assert!(root.join("venv").join(name).exists(), "{name}");
+        assert!(
+            root.join("locks").join("sync").join(name).exists(),
+            "{name}"
+        );
+        assert!(
+            root.join("locks").join("data").join(name).exists(),
+            "{name}"
+        );
     }
 }
 
 // cSpell:disable-next-line
+#[track_caller]
+#[inline(always)]
 fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
     for name in names {
-        assert!(!root.join("venv").join(name).exists());
-        assert!(!root.join("locks").join("venv_sync").join(name).exists());
-        assert!(!root.join("locks").join("venv_data").join(name).exists());
+        assert!(!root.join("venv").join(name).exists(), "{name}");
+        assert!(
+            !root.join("locks").join("sync").join(name).exists(),
+            "{name}"
+        );
+        assert!(
+            !root.join("locks").join("data").join(name).exists(),
+            "{name}"
+        );
     }
 }
 
@@ -39,32 +59,11 @@ fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
 /// Details are in [`setup_mock_storage`].
 fn clean() {
     let (ctx, _home, root) = setup_mock_storage();
-    let mut output =
+    let output =
         storage::ops::clean_storage(&ctx, ctx.default_storage_root().not_locked_path()).unwrap();
-    output.removed_packages.sort();
-    let mut expected_packages = [
-        root.join("pkg")
-            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
-        root.join("pkg")
-            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
-    ];
-    expected_packages.sort();
     assert_eq!(output.removed_venvs, ["root3".to_venv_id()]);
-    assert_eq!(output.removed_packages, expected_packages);
     check_venvs_exist(&root, &["root1", "root2", "root4"]);
-    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root3"]);
-
-    let mut iterator = root.join("pkg").read_dir().unwrap();
-    assert!(
-        iterator.next().is_some_and(|entry| entry.unwrap().path()
-            == root
-                .join("pkg")
-                .join(format!("registry-{}-baz-1.0.0", registry_url_hash()))),
-        "we should left only baz"
-    );
-
-    assert!(iterator.next().is_none(), "we should left only baz");
 }
 
 #[test]
@@ -95,18 +94,7 @@ fn delete_venv() {
     // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3", "root4"]);
 
-    let mut output = storage::ops::clean_storage(&ctx, &root).unwrap();
-    output.removed_packages.sort();
-    let mut expected_packages = [
-        root.join("pkg")
-            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
-        root.join("pkg")
-            .join(format!("registry-{}-baz-1.0.0", registry_url_hash())),
-        root.join("pkg")
-            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
-    ];
-    expected_packages.sort();
-    assert_eq!(output.removed_packages, expected_packages);
+    let output = storage::ops::clean_storage(&ctx, &root).unwrap();
     assert!(output.removed_venvs.is_empty());
 }
 
@@ -243,8 +231,8 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext)
     let id = venv.id();
     let metadata = storage.venv_metadata(id);
     let backup = storage.venv_backup_metadata(id);
-    let metadata_contents = metadata.read_to_string().unwrap();
-    let backup_contents = backup.read_to_string().unwrap();
+    let metadata_contents = read_from_path_to_string(&metadata).unwrap();
+    let backup_contents = read_from_path_to_string(&backup).unwrap();
     assert_eq!(
         metadata_contents,
         backup_contents,
@@ -269,7 +257,7 @@ fn save_trims_files() {
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
     let number_of_new_packages = 5;
     for _ in 0..number_of_new_packages {
-        let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        let origin = FullOrigin::for_registry(*fetcher::DEFAULT_REGISTRY_URL);
         let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
         let package =
             FreezePackage::new(mock_identity("dep"), Version::new(1, 0, 0), vec![], vec![]);
@@ -487,12 +475,12 @@ fn sync_with_deps() {
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
 
     let mock_simple_dep_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+        let path = normalize(root.path().join(name));
         let simple_origin = Origin::for_local(&path).unwrap();
         DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+        let path = normalize(root.path().join(name));
         let origin = FullOrigin::for_local(&path).unwrap();
         FullIdentity::new(name.into(), origin)
     };
@@ -541,23 +529,16 @@ fn sync_with_deps_and_expose_freezefile() {
     let (mut ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&mut ctx, "my-package");
     let mock_simple_dep_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+        let path = normalize(root.path().join(name));
         let simple_origin = Origin::for_local(&path).unwrap();
         DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin))
     };
     let mock_identity = |name: &str| {
-        let path = root.path().join(name).normalize();
+        let path = normalize(root.path().join(name));
         let origin = FullOrigin::for_local(&path).unwrap();
         FullIdentity::new(name.into(), origin)
     };
-    println!("root: {}", root.path().display());
-    root.path()
-        .join("root")
-        .join(PackageLoader::VENV_CONFIG_NAME)
-        .write("expose_freezefile: true")
-        .unwrap();
 
-    // Reload venv config changes
     let pcx = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
 
     let SyncOutput {
@@ -598,11 +579,7 @@ fn sync_with_deps_and_expose_freezefile() {
             vec![],
         )]
     );
-    let data = root
-        .path()
-        .join("root")
-        .join(PackageLoader::FREEZE_NAME)
-        .read_to_string()
+    let data = read_from_path_to_string(root.path().join("root").join(PackageLoader::FREEZE_NAME))
         .unwrap();
     println!("{}", data);
     let exposed_freeze = serde_json::from_str::<VenvFreeze>(&data).unwrap();

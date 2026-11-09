@@ -1,10 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include "../../elements/elements_list.hpp"
-#include "../../lang_parser_element.hpp"
-#include "../../pst_state_forward.hpp"
-#include "../elements_common.hpp"
-#include "../lang_state_unmethods.hpp"
+#include "../../base_element/lang_parser_element.hpp"
+#include "../../elements/common/elements_list.hpp"
+#include "../../state/lang_state_unmethods.hpp"
+#include "../../state/pst_state_forward.hpp"
+#include "../common/elements_common.hpp"
 #include "stmt_kind_fd.hpp"
 
 #include <diagnostic/source_position.hpp>
@@ -29,7 +35,7 @@ namespace pst {
 		ELEMENT_CLONE_DECL(NotStmt);
 
 	public:
-		explicit NotStmt(const LangParserState& state): LangElement(state) {}
+		explicit NotStmt(LangElementConstructionData state): LangElement(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -54,6 +60,12 @@ namespace pst {
 		None,
 		Symbol,
 		Transparent,
+	};
+
+	enum class OperatorFixity {
+		None,
+		Prefix,
+		Suffix,
 	};
 
 	enum class StmtKind : int {
@@ -123,7 +135,7 @@ namespace pst {
 		Prefixes prefixes;
 		bool     implicit_return{};
 
-		Stmt(StmtKind kind, const LangParserState& state): LangElement(state), kind(kind) {}
+		Stmt(StmtKind kind, LangElementConstructionData state): LangElement(state), kind(kind) {}
 
 		static PrefixBoxes collectPrefixes(LangParserState& state);
 
@@ -150,6 +162,7 @@ namespace pst {
 		}
 
 		static MBox<Stmt> parse(LangParserState& state);
+		static MBox<Stmt> parseSimpleExpr(LangParserState& state);
 		bool              trailingSemicolon() override;
 		void              acceptVisitor(PstVisitor& visitor) const override = 0;
 
@@ -235,9 +248,9 @@ namespace pst {
 		}
 	};
 
-#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                         \
-	class_name(const LangParserState& state): Stmt(StmtKind::class_name, state) { \
-		this->element_kind = element_kind_;                                       \
+#define STMT_CHILD_CONSTRUCTOR(class_name, element_kind_)                              \
+	class_name(LangElementConstructionData state): Stmt(StmtKind::class_name, state) { \
+		this->element_kind = element_kind_;                                            \
 	}
 }
 

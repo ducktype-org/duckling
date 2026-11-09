@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file scopes.hpp
  * @brief This file defines Queries responsible for creation of Scopes and operations on them.
@@ -20,7 +26,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/generic_query_key.hpp>
+#include <frontend/pst_parser/pst_query/generic_pst_query_key.hpp>
 #include <helios/scope_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 
@@ -129,43 +135,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<query::QResult<std::vector<SymID>>>, ({}));
 
-	/**
-	 * @brief Value type for the QueryScopesInModule query.
-	 * See the QueryScopesInModule query for details.
-	 */
-	struct QueryScopesInModuleValue final {
-		struct Success final {
-			std::vector<ScopeID> scopes;
-		};
-
-		struct Failure final {
-			std::vector<ScopeID> partial_scopes;
-		};
-
-		std::variant<Success, Failure> value;
-	};
-
-	/**
-	 * @brief Query all scopes defined in a given module.
-	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or
-	 * a partial list of scopes that where possible to obtain despite some other failures. The
-	 * semantics of this failed state are the same as of a failed QResult (i.e. errors were already
-	 * reported), but we still want to return the scopes that we managed to obtain. This is because
-	 * this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
-	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
-	 *
-	 * \query_thread_safe_if_cache
-	 *
-	 * @TODO: #3080 consider making it internal helper of query module hout. This query is no longer
-	 * a trivial walk-over-PST to get all of the scopes in the module.
-	 */
-	DECLARE_QUERY(
-		QueryScopesInModule,
-		frontend::ModuleID,
-		CRef<QueryScopesInModuleValue>,
-		({ .uses_qresult = false })
-	);
-
 
 	/**
 	 * @brief Root scope of main module file.
@@ -177,4 +146,34 @@ namespace compiler::helios {
 	 * @return ScopeID
 	 */
 	ScopeID queryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
+
+	/**
+	 * @brief A way helios creates scope for given pst element.
+	 */
+	enum class ElementScopeKind {
+		// Has standard scope:
+		Standard,
+
+		// Inherits scope from its parent:
+		Transparent,
+
+		// Gets parent scope of what transparent scope would be.
+		// This is used for expand expressions, where the lookup should happen higher than the
+		// expand statement itself.
+		ParentTransparent,
+
+		// Does not have a scope:
+		Invalid,
+
+		// In the future we might introduce:
+		// * TransparentInvalid -- transparent for implementation, but invalid for user
+		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
+		// elements that don't have it.
+		// For examples namespaces don't have primary scopes (which can be counterintuitive)
+	};
+
+	/**
+	 * Determines scope kind for given PST element.
+	 */
+	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement>);
 }

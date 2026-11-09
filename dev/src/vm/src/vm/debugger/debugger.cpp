@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debugger.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -75,7 +81,9 @@ namespace vm::debugger {
 		return api::getExecutionStatus(pid)
 		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
 				variant_match(status) {
-					variant_case_novalue(api::ExecutionCompleted) { return api::join(pid); }
+					variant_case_novalue(api::ExecutionCompleted) {
+						return api::join(pid).transform([](const api::ExitValue&) {});
+					}
 					variant_case_novalue(api::NotStarted) { return {}; }
 					variant_default {
 						return std::unexpected(api::ApiError{ api::OtherError{

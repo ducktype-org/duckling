@@ -522,8 +522,9 @@ dependencies = [
 
 [[package]]
 name = "duck"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
+ "base64",
  "chrono",
  "clap",
  "clap_complete",

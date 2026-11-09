@@ -1,6 +1,10 @@
-#pragma once
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/except/exceptions.hpp>
+#pragma once
 
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/utils/query_hash.hpp>

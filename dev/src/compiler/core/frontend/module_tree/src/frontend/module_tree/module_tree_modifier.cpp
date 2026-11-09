@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "module_tree_modifier.hpp"
 
 #include "module_flags/module_flags.hpp"
@@ -23,7 +29,8 @@ namespace compiler::frontend {
 			!module->m_main_source_file.has_value(),
 			"Main source file is already set, remove it first"
 		);
-		module->m_main_source_file = SourceFile::create(file, ModuleID(module));
+		module->m_main_source_file = SourceFile::create(file, module);
+		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -116,6 +123,7 @@ namespace compiler::frontend {
 		// Remove SourceFile from storage. This invalidates the SourceFile instance!
 		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
 		module->m_main_source_file = {};
+		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
@@ -168,7 +176,7 @@ namespace compiler::frontend {
 		auto  parent     = module->m_parent.value();
 		auto& submodules = parent->m_submodules;
 		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-            return pair.second == module;
+            return pair.value == module;
         });
 		CORE_ASSERT(
 			it != submodules.end(),
@@ -179,7 +187,7 @@ namespace compiler::frontend {
 				parent->getName().strView()
 			)
 		);
-		submodules.erase(it);
+		submodules.erase(base::StrID(it->key));
 
 		module->m_parent = {};
 
@@ -225,7 +233,7 @@ namespace compiler::frontend {
 			// Remove the submodule from the parent's submodules
 			auto& submodules = parent.value()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
+                return pair.value == module;
             });
 			CORE_ASSERT(
 				it != submodules.end(),
@@ -233,12 +241,12 @@ namespace compiler::frontend {
 					"Submodule with Name ",
 					module->getName(),
 					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash(),
+					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(base::StrID(it->key));
 		}
 
 		// Change the parent of all submodules to the parent of the removed module
@@ -269,7 +277,7 @@ namespace compiler::frontend {
 		if (parent.has_value()) {
 			auto& submodules = parent.value()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
+                return pair.value == module;
             });
 			CORE_ASSERT(
 				it != submodules.end(),
@@ -277,12 +285,12 @@ namespace compiler::frontend {
 					"Submodule with Name ",
 					module->getName(),
 					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash(),
+					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
 					" does not exist in parent module ",
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(base::StrID(it->key));
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {

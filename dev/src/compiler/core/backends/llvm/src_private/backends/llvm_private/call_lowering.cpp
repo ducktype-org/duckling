@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "call_lowering.hpp"
 
 #include "abi_converter.hpp"
@@ -240,6 +246,9 @@ namespace compiler::backend_llvm {
 
 			for (const auto& [idx, attr]: attributes) function->addParamAttr(idx, attr);
 			for (const auto& attr: return_attributes) function->addRetAttr(attr);
+
+			// Lets LLVM drop everything after a call to e.g. `panic` and treat the path as cold.
+			if (function_literal.never_returns) function->addFnAttr(llvm::Attribute::NoReturn);
 		}
 
 		return callee;

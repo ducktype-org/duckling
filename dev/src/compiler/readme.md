@@ -4,6 +4,9 @@
 
 Duckling compiler module.
 
+The CLI artifact and compile-only conventions are documented in the
+[compiler CLI guide](./main/readme.md).
+
 More information about files and directories can be found in the Doxygen documentation.
 
 # Module overview:

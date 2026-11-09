@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "attributes.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
@@ -5,7 +11,9 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
@@ -33,13 +41,16 @@ namespace compiler::helios {
 		 * @brief Helper for attributes that take no arguments.
 		 */
 		Attribute expectNoArgs(query::Context& ctx, Attribute attr, AttrArgs args) {
-			if (args.has_value() && args.value().unlock(ctx)->size() > 0) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+			if_opt_none(args) return attr;
+
+			auto arg_list = args.value().unlock(ctx);
+			if (arg_list->size() > 0) {
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat(
 						"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
 					),
-					args.value().unlock(ctx)->getStablePosition()
-				));
+					arg_list->getStablePosition()
+				);
 				query::throwFailed();
 			}
 			return attr;
@@ -51,9 +62,9 @@ namespace compiler::helios {
 		 */
 		u64 parseU64(query::Context& ctx, AttrArgs args, std::string_view error_msg) {
 			if_opt_none(args) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					std::string(error_msg), base::Optional<dia::StablePosition>{}
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -62,23 +73,24 @@ namespace compiler::helios {
 				                                                              arg_list->end() };
 
 			if (holders.size() != 1) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					std::string(error_msg), arg_list->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 
-			auto holder      = holders.front().unlock(ctx);
-			auto elem        = code::subExprFromPST(ctx, holder->getExpr()).valueOrThrow();
+			auto holder = holders.front().unlock(ctx);
+			auto elem
+				= code::subExprFromPST(ctx, unlockOrFail(ctx, holder->getExpr())).valueOrThrow();
 			auto numeric_opt = dynamic_cast<code::LiteralNumericExpr*>(elem.get());
 
 			base::Optional<i64> value{};
 			if (numeric_opt != nullptr) value = numeric_opt->value.coerceTo<i64>();
 
 			if (not value.has_value() or value.value() < 0) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					std::string(error_msg), arg_list->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 			return base::safeIntConv<u64>(value.value());
@@ -106,9 +118,9 @@ namespace compiler::helios {
 				= "Attribute 'c_symbol_name' expects exactly one string literal argument.";
 
 			if_opt_none(args) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					std::string(ERROR_MSG), base::Optional<dia::StablePosition>{}
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -117,18 +129,16 @@ namespace compiler::helios {
 				                                                              arg_list->end() };
 
 			if (holders.size() != 1) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					std::string(ERROR_MSG), arg_list->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 
 			auto holder  = holders.front().unlock(ctx);
 			auto str_lit = holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 			if_opt_none(str_lit) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					std::string(ERROR_MSG), holder->getStablePosition()
-				));
+				ctx.log<dia::PlaceholderError>(std::string(ERROR_MSG), holder->getStablePosition());
 				query::throwFailed();
 			}
 
@@ -137,14 +147,14 @@ namespace compiler::helios {
 			// `variant`) still links with LLVM but is rejected by the DVM backend.
 			auto name = str_lit.value()->getValue().value;
 			if (not isCIdentifier(name.strView())) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat(
 						"Attribute 'c_symbol_name' expects a valid C identifier, got '",
 						name.str(),
 						"'."
 					),
 					holder->getStablePosition()
-				));
+				);
 				query::throwFailed();
 			}
 			return name;
@@ -218,9 +228,11 @@ namespace compiler::helios {
 	template base::Optional<CRef<attr>> getAttrInVector<attr>(const std::vector<Attribute>& attrs);
 	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
-	template<typename Attr>
-	bool hasAttrInVector(const std::vector<Attribute>& attrs) {
-		return getAttrInVector<Attr>(attrs).has_value();
+	namespace {
+		template<typename Attr>
+		bool hasAttrInVector(const std::vector<Attribute>& attrs) {
+			return getAttrInVector<Attr>(attrs).has_value();
+		}
 	}
 
 	std::expected<std::monostate, std::string> validateAttributes(

@@ -11,7 +11,7 @@ Tests:
     Description: deps with empty versions list should be reused by solver
     Cases:
       dep-with-empty-versions-list:
-        test-cmd: duck -C foo sync
+        test-cmd: duck --verbose -C foo sync
         alias_bar: ""
         Output:
           # This checks two things:
@@ -27,7 +27,7 @@ Tests:
             info: successfully synchronized venv \`foo\`"
       alias:
         # Aliases are stored in storage freeze and recovered by solver.
-        test-cmd: duck -C foo sync
+        test-cmd: duck --verbose -C foo sync
         alias_bar: --alias alias
         Output:
           Run: |+

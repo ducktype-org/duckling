@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <artifacts/artifacts.hpp>
@@ -13,6 +19,11 @@ namespace compiler::archiver {
 		 * @brief Path to the archiver executable (for example, "ar" or "llvm-ar").
 		 */
 		base::Optional<std::string> archiver_path;
+
+		/**
+		 * @brief Skip archive creation and keep compiler object artifacts.
+		 */
+		bool no_link = false;
 	};
 
 	/**

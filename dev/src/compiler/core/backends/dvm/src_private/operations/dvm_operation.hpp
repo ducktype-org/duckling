@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../dvm_value.hpp"
@@ -31,6 +37,16 @@ namespace compiler::backend_vm::internal {
 		 */
 		static FunctionCallInfo fromLirFunction(
 			const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
+		);
+
+		/**
+		 * @brief Creates call info for a call through the function value held in @p callee, with
+		 * the signature from @p call_params.
+		 */
+		static FunctionCallInfo fromIndirectCall(
+			const lir::IndirectCallParameters& call_params,
+			DVMPlace                           callee,
+			ProgramLoweringContext&            program_context
 		);
 
 		/**

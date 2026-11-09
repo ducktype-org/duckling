@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -19,25 +25,20 @@ use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
+    fn git_path(&self, _package: PackageId) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
+    fn is_stored(&self, _package: PackageId) -> bool {
         unimplemented!()
     }
 
-    fn store(
-        &self,
-        _url: InternedUrl,
-        _commit: &str,
-        _source_path: &std::path::Path,
-    ) -> crate::QuackResult<()> {
+    fn store(&self, _package: PackageId, _source_path: &std::path::Path) -> crate::QuackResult<()> {
         unimplemented!()
     }
 }
@@ -64,9 +65,9 @@ fn setup_duck_ctx() -> (DuckContext, TempDir) {
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
-    manifest.touch().unwrap();
-    manifest.write(contents).unwrap();
-    dir.path().try_fsync_dir().unwrap();
+    touch(&manifest).unwrap();
+    write_file(&manifest, contents).unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }
 
@@ -83,7 +84,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -97,7 +98,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -111,7 +112,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };

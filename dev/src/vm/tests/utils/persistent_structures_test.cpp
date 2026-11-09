@@ -1,3 +1,10 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
@@ -21,6 +28,10 @@
 #include <utility>
 #include <vector>
 
+/**
+ * @brief What belongs here: the VM's persistent data structures (vector, hash map, segment tree,
+ * memory, bijective map). No program is run.
+ */
 class PersistentStlTester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester
@@ -520,7 +531,7 @@ public:
 			HashMapStateView state_view(map, state);
 			ASSERT_EQUAL(expected.size(), state_view.size());
 			base::HashMap<std::string, std::string> iterated;
-			for (const auto& [k, v]: state_view) iterated.emplace(k, v);
+			for (const auto& [k, v]: state_view) iterated.put(k, v);
 			ASSERT_EQUAL(expected.size(), iterated.size());
 
 			for (auto& [key, val]: expected) {
@@ -597,7 +608,7 @@ public:
 		for (usize i = 0; i < 20; i++) {
 			auto k = "k_" + std::to_string(i);
 			auto v = "v_" + std::to_string(i);
-			bulk_expected.emplace(k, v);
+			bulk_expected.put(k, v);
 			bulk_map = map.insert(bulk_map, k, v);
 		}
 		checker(bulk_map, bulk_expected);

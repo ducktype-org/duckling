@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
@@ -24,13 +30,6 @@ namespace vm {
 	class IVMValue {
 	public:
 		virtual ~IVMValue() = default;
-
-		/**
-		 * @brief Frees the data of the value (deinitializes the blocks in the memory module).
-		 * This function has to be called when using values created with the
-		 * `IVMProcess::createOwnedVMValue()` function.
-		 */
-		virtual void freeData() = 0;
 
 		/** @brief Returns the high-level (compiler) type of the value. */
 		[[nodiscard]] virtual base::CRef<code::valid_type::ValidType> getType() const = 0;

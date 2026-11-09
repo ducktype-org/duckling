@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
@@ -49,7 +55,6 @@ impl From<SolverPackageFreeze> for PreexistenceData {
 impl SolverInput {
     /// Creates the [`SolverInput`], based on the previous freeze, its packages' manifests
     /// and information gathered in the gathering phase.
-    #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         mut prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
@@ -140,6 +145,14 @@ impl SolverInput {
         self.packages_data.get(&pkg).with_context_internal(|| {
             format!("package {pkg:?} not present in packages to package data map")
         })
+    }
+
+    pub fn all_versions(&self, identity: FullIdentity) -> QuackResult<&HashSet<Version>> {
+        self.versions_for_identity
+            .get(&identity)
+            .with_context_internal(|| {
+                format!("identity {identity:?} not present in identities to versions map")
+            })
     }
 }
 

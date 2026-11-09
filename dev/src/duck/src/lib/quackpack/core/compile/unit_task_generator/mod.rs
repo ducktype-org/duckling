@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! [`UnitTaskGenerator`] describes which [`Unit`]s to compile and creates appropriate [`Task`]s for them.
 //!
 //! [`Task`]: multipackage_schema::PackageCompilationTask
@@ -13,6 +19,7 @@ use super::duckc::multipackage_schema;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
 use crate::QuackResult;
+use crate::quackpack::core::compile::unit::graph::GraphNodeId;
 
 /// A generic duckc driver.
 pub trait UnitTaskGenerator: Debug {
@@ -32,6 +39,7 @@ pub trait UnitTaskGenerator: Debug {
     fn create_tasks(
         &self,
         unit: &Unit,
+        unit_id_in_graph: GraphNodeId,
         graph: &UnitGraph,
         layout: &dyn ProfileLayout,
         bcx: &BuildContext<'_, '_>,

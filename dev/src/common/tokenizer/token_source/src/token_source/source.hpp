@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/misc/shared_view.hpp>
@@ -9,6 +15,7 @@
 #include <filesystem/file.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/char.hpp>
+#include <lexer/lex_options.hpp>
 #include <lexer/token.hpp>
 #include <token_source/forward.hpp>  // IWYU pragma: keep
 
@@ -118,7 +125,13 @@ namespace tokenizer {
 
 		void countLines();
 
-		void runLexer();
+		void runLexer(const lexer::LexOptions& options = {});
+
+		/**
+		 * @brief Sets token data without tokens, only with the sentinels at the start of the
+		 * source. Used when the source cannot be decoded, so the token data is always available.
+		 */
+		void emplaceEmptyTokenData();
 
 		/**
 		 * @brief Run the whole lexer and change the keyword mode
@@ -126,17 +139,21 @@ namespace tokenizer {
 		 * call to this function, because we need the same keyword mode
 		 * for tokenizing and parsing.
 		 *
+		 * @param options Options forwarded to the lexer.
 		 * @return If tokenizing process run without errors.
 		 */
 		template<
 			lang_def::KeywordMode keyword_mode = lang_def::KeywordMode::DucklingSource,
 			fs::Encoding          encoding     = fs::Encoding::UTF8>
-		bool tokenize() {
+		bool tokenize(const lexer::LexOptions& options = {}) {
 			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
-			if (int_log.hasErrors()) return false;
+			if (int_log.hasErrors()) {
+				emplaceEmptyTokenData();
+				return false;
+			}
 			countLines();
-			runLexer();
+			runLexer(options);
 			return not int_log.hasErrors();
 		}
 	};

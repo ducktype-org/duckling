@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "for.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_any_statement.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
@@ -68,12 +75,12 @@ namespace compiler::helios::desugaring {
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
 			if (kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
 					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
-				));
+				);
 				return {};
 			}
 
@@ -172,26 +179,25 @@ namespace compiler::helios::desugaring {
 
 			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
 			auto element_sym_type = raw_element->expression_type.getSymbolType();
-			auto element_expr     = coerceFromBox(
+			auto element_expr     = coercions::coerceFromBox(
                 ctx.ctx,
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
                 {},
-                CoercionErrorOverrides{
-						.incompatible_types =
-                        [&](query::Context& error_ctx) {
-                            error_ctx.logInt(makeBox<dia::PlaceholderError>(
-                                base::strConcat(
-                                    "Cannot coerce collection element type '",
-                                    element_sym_type.toString(),
-                                    "' to iterator type '",
-                                    iter_type.toString(),
-                                    "'."
-                                ),
-                                iter_pst_pos
-                            ));
-                        },
+                coercions::CoercionErrorOverrides{
+						.incompatible_types = [&] -> Box<dia::MessageBase> {
+                        return makeBox<dia::PlaceholderError>(
+                            base::strConcat(
+                                "Cannot coerce collection element type '",
+                                element_sym_type.toString(),
+                                "' to iterator type '",
+                                iter_type.toString(),
+                                "'."
+                            ),
+                            iter_pst_pos
+                        );
+                    },
                 }
             );
 			if (element_expr.hasFailed()) return {};
@@ -294,7 +300,7 @@ namespace compiler::helios::desugaring {
 
 		// Desugar the loop.
 		// var __index : i64 = 0i64;
-		// var __len: const i64 = <constant> / len <iterable_reusable>;
+		// var __len: imm i64 = <constant> / len <iterable_reusable>;
 		// while(__idx < __len) {
 		// 		let <iter> = <iterable_reusable>[__idx];
 		// 		<body>;

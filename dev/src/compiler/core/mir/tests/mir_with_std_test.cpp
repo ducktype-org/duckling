@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file mir_tests.cpp
  */
@@ -38,6 +44,7 @@ public:
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(boxesTest);
+		TESTER_ADD_TEST(optionalMetaTest);
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(generatedLocalShadowingTest);
 	}
@@ -64,8 +71,19 @@ private:
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
 			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
-			// This 4 blocks are from the conditions for the slice access bounds check
-			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 5);
+			// 4 blocks per slice access are from the conditions of its bounds check
+			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 9);
+
+			// `panic` never returns, so each failed bounds check must end the control flow
+			// instead of jumping back to the access.
+			usize unreachable_after_panic = 0;
+			for (const auto& [id, block]: mir_unit.mir_functions[0]->blocks) {
+				if (block.terminator.operation != compiler::mir::Operation::Unreachable) continue;
+				if (block.instructions.empty()) continue;
+				if (block.instructions.back().operation == compiler::mir::Operation::Call)
+					unreachable_after_panic++;
+			}
+			ASSERT_EQUAL_PRINT(unreachable_after_panic, usize(2));
 		});
 	}
 
@@ -163,6 +181,28 @@ private:
 			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
+	}
+
+	/**
+	 * `?t` on a runtime type value lowers to a single `CreateOptional` meta operation.
+	 */
+	void optionalMetaTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/optional_meta")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(0) })
+			                    ->valueOrThrow();
+
+			const auto& instr = mir_fun.blocks[mir_fun.block_order[0]].instructions[0];
+			ASSERT_TRUE(instr.operation == compiler::mir::Operation::MetaTypeOperation);
+			ASSERT_TRUE(
+				std::get<compiler::mir::MetaParameters>(instr.extra_params).kind
+				== compiler::mir::MetaKind::CreateOptional
+			);
+			ASSERT_EQUAL(instr.arguments.size(), 1);
+			ASSERT_TRUE(instr.arguments[0].isLocal());
+		});
 	}
 
 	void boxesTest() {

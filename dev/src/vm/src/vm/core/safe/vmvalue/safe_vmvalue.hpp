@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <vm/api/data/process_info.hpp>
@@ -23,12 +29,14 @@ namespace vm {
 	 * 1) with `SafeVMProcess::createVMValue()` - the value is owned by the process (kept alive in
 	 * its list of owned values) and its data is freed automatically when the process is
 	 * deinitialized. 2) with `SafeVMProcess::createOwnedVMValue()` - ownership is transferred to
-	 * the caller, who is responsible for freeing the data by calling `freeData()` (the destructor
-	 * does not free it).
+	 * the caller, who is responsible for freeing the data (the destructor does not free it).
+	 * Outside of the VM that is done with `api::freeVMValue`.
 	 */
 	class SafeVMValue final: public IVMValue {
 	private:
 		friend class SafeVMProcess;
+		// @note: This is because we call freeData() in `call_builtinfunc` opcode implementation.
+		friend class OpFuns;
 
 		/**
 		 * @brief Creates an empty SafeVMValue of the specified type.
@@ -45,13 +53,9 @@ namespace vm {
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
 
-	public:
-		SafeVMValue(const SafeVMValue&)            = delete;
-		SafeVMValue(SafeVMValue&&)                 = default;
-		SafeVMValue& operator=(const SafeVMValue&) = delete;
-		SafeVMValue& operator=(SafeVMValue&&)      = default;
-
-		~SafeVMValue() override;
+		/// True when the VMValue is owned by the process (i.e. function return values). The process
+		/// frees them on it's own.
+		bool owned_by_process = false;
 
 		/**
 		 * @brief Frees the data of the SafeVMValue (deinitializes the blocks in the memory module).
@@ -61,8 +65,19 @@ namespace vm {
 		 * @note At first glance, one could wonder why do you have to manually call freeData()
 		 * instead of putting the free'ing logic into the destructor. The answer is - freeing blocks
 		 * in the memory module isn't exception free.
+		 *
+		 * @note Private, because it is not synchronized with the process. Only the VM internals
+		 * can call it directly, everyone else frees a value with `api::freeVMValue`.
 		 */
-		void freeData() override;
+		void freeData();
+
+	public:
+		SafeVMValue(const SafeVMValue&)            = delete;
+		SafeVMValue(SafeVMValue&&)                 = default;
+		SafeVMValue& operator=(const SafeVMValue&) = delete;
+		SafeVMValue& operator=(SafeVMValue&&)      = default;
+
+		~SafeVMValue() override;
 
 		/** @brief Copies the value's data into the safe VM memory pointed to by `dst`. */
 		void exportData(Pointer dst) const;

@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -123,8 +130,9 @@ namespace vm::persistent {
 				const auto val_id = iter.getValue();
 				const auto idx    = iter.getIdx();
 
-				const auto [_, success]
-					= ans.emplace(held_keys.atRight(idx), held_values.atRight(val_id));
+				const bool success = static_cast<bool>(
+					ans.maybePut(held_keys.atRight(idx), held_values.atRight(val_id))
+				);
 
 				CORE_ASSERT(success, "I need the value to be successfully emplaced");
 

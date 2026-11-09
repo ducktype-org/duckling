@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file version.hpp
  * @brief Version and build information shared by every Duckling binary.
@@ -23,7 +29,7 @@ namespace version {
 	using ExtraField = std::pair<std::string_view, std::string_view>;
 
 	/**
-	 * @brief The full semantic version, including the pre-release suffix, e.g. "0.0.2-alpha".
+	 * @brief The full semantic version, including the pre-release suffix, e.g. "0.3-alpha".
 	 */
 	[[nodiscard]]
 	std::string_view semver();
@@ -104,7 +110,7 @@ namespace version {
 	 * @brief Renders the single line printed by `--version`.
 	 *
 	 * The shape is `<tool_name> <semver> (<commit hash> <commit date>)`, for example
-	 * `duckc 0.0.2-alpha (1d3bb3942 2026-09-15)`.
+	 * `duckc 0.3-alpha (1d3bb3942 2026-09-15)`.
 	 *
 	 * @param tool_name The name of the binary, e.g. "duckc".
 	 * @return The rendered line, without a trailing newline.

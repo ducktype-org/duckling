@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 #include <base/except/exceptions.hpp>
 
@@ -23,6 +29,11 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMPanicException, "Program panicked");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
 	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");
+	VM_RUNTIME_EXCEPTION(VMNullFunctionCallException, "Calling a null function value");
+	VM_RUNTIME_EXCEPTION(
+		VMInvalidFunctionValueException,
+		"Calling a function value which does not reference a function"
+	);
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
 	VM_RUNTIME_EXCEPTION(VMDoubleFreeException, "Data was already freed");

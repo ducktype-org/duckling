@@ -1,26 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"
 
 #include "preamble.hpp"
 
 namespace pst {
 	CLONE_SUB_ELEMENTS_DEF(CodeBlockOrStmt, code_block, stmt);
-
-	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state) {
-		auto out = makeBox<CodeBlockOrStmt>(state);
-		if (state[0].isBracketGroup(Token::BracketType::Curly)) {
-			MBox<CodeBlock> block;
-			PARSE().one(&block);
-			if (!block) return nullptr;
-			PARSE().assign(&out->code_block, std::move(block));
-		} else {
-			MBox<Stmt> stmt;
-			PARSE().one(&stmt);
-			if (!stmt) return nullptr;
-			PARSE().assign(&out->stmt, std::move(stmt));
-		}
-
-		PST_RETURN out;
-	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {
 		if (code_block)

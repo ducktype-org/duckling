@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Managing a single dependency abstraction.
 use std::collections::HashSet;
 use std::fmt;
 
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::quackpack::core::{FeatureName, Source, Version};
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -53,9 +60,11 @@ impl DependencyKind {
 
 impl fmt::Display for DependencyKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Trailing space is important, as it's used as `"{kind}dependency"`, which makes normal
+        // deps format like `"dependency"`, but dev ones still are `"dev dependency"`.
         match self {
-            Self::Normal => write!(f, "normal"),
-            Self::Dev => write!(f, "dev"),
+            Self::Normal => write!(f, ""),
+            Self::Dev => write!(f, "dev "),
         }
     }
 }
@@ -205,6 +214,14 @@ impl Dependency {
         self.alias.unwrap_or(self.name)
     }
 
+    /// Get the name used to refer to this dependency in user-facing messages.
+    ///
+    /// It is equal to [`Self::effective_name`], because it is unique among the dependencies
+    /// of a package.
+    pub fn diagnostic_name(&self) -> StrId {
+        self.effective_name()
+    }
+
     /// Get [`DependencyKind`] of this dependency.
     pub fn kind(&self) -> DependencyKind {
         self.kind
@@ -213,6 +230,16 @@ impl Dependency {
     /// Get the [`Conditions`] of this dependency.
     pub fn conditions(&self) -> Option<&Conditions> {
         self.conditions.as_ref()
+    }
+
+    /// Get the [`Identity`] of this [`Dependency`].
+    ///
+    /// This helper exists, because [`Identity`] is unambiguous, unlike [`FullIdentity`],
+    /// which requires git commit.
+    ///
+    /// [`FullIdentity`]: crate::quackpack::core::full_identity::FullIdentity
+    pub fn identity(&self) -> Identity {
+        Identity::new(self.name(), self.source.into())
     }
 }
 

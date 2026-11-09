@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../meta.hpp"
@@ -11,8 +17,13 @@ namespace pst {
 	/**
 	 * @brief Code Block or Statement.
 	 */
-	class CodeBlockOrStmt final: public NotStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CodeBlockOrStmt, NotStmt);
+	class CodeBlockOrStmt: public NotStmt {
+	public:
+		ELEMENT_CLONE_DECL(CodeBlockOrStmt);
+
+	private:
+		THIS_CLASS(CodeBlockOrStmt);
+		PARENT_CLASS(NotStmt);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -22,12 +33,10 @@ namespace pst {
 	public:
 		enum class Type { SingleStmt, CodeBlock };
 
-		explicit CodeBlockOrStmt(const LangParserState& state): NotStmt(state) {
+		explicit CodeBlockOrStmt(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlockOrStmt;
 		}
 
-		static MBox<CodeBlockOrStmt> parse(LangParserState& state);
-		~CodeBlockOrStmt() final = default;
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 

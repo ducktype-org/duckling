@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file stmts_from_aggregate.hpp
  * @brief Functions that perform some walks over PST
@@ -10,8 +16,11 @@
 #include <vector>
 
 namespace compiler::helios {
+	/**
+	 * @brief List of (already unlocked) statements.
+	 */
 	template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-	using StmtList = std::vector<pst::AccessLocked<Stmt>>;
+	using StmtList = std::vector<pst::Access<Stmt>>;
 
 	/**
 	 * @brief Returns all children statements of given LangElement
@@ -24,8 +33,9 @@ namespace compiler::helios {
 	 *  * For other it panics
 	 *
 	 * @note It expands and handles macros.
+	 * @note All returned statements are already unlocked (the function has to unlock them anyway).
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
+	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::Access<pst::LangElement>);
 }

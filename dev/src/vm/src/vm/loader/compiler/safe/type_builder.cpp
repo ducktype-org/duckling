@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "type_builder.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -38,10 +45,10 @@ namespace {
 
 				base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
 				for (auto& method: prev_imd.available_methods)
-					virtual_methods.put(method.first, get_type_cref(method.second));
+					virtual_methods.put(method.key, get_type_cref(method.value));
 
 				base::HashMap<base::StrID, base::StrID> vtable;
-				for (auto& impl: prev_imd.vtable) vtable.put(impl.first, impl.second);
+				for (auto& impl: prev_imd.vtable) vtable.put(impl.key, impl.value);
 
 				vm::InheritanceMetadata::Kind kind;
 				variant_match(prev_imd.kind) {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file symbol_id.hpp
  * @brief This file contains the definition of the SymbolID structure,
@@ -5,14 +11,15 @@
  */
 #pragma once
 
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/elements/elements_list.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/elements/common/elements_list.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/symbol_type.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <hashing/add_to_hash.hpp>
@@ -54,8 +61,6 @@ namespace compiler::helios {
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct defgen::ImplementationOf_QueryGeneratedSymbol;
-		friend struct ImplementationOf_QueryLookupInSymbol;
-		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;
 	};
 }
@@ -74,13 +79,6 @@ namespace std {
 }
 
 namespace compiler::helios {
-	/**
-	 * @return is given symbol a wildcard symbol (e.g. using a.*)
-	 */
-	bool isWildcard(SymID);
-
-	bool isAlias(SymID);
-
 	/**
 	 * @return name of the symbol
 	 */

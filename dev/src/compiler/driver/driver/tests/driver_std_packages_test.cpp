@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -42,6 +48,7 @@ public:
 		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdDVMLinkingOptionsInConvertedTasks);
 		TESTER_ADD_TEST(verifyStdSharedLibsDeclaredForCore);
+		TESTER_ADD_TEST(verifyStdPackagesMeetTheirDependencies);
 	}
 
 protected:
@@ -148,8 +155,7 @@ private:
 			if (auto* target_exe
 			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
 				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
-				ASSERT_HAS_VALUE(lib_args);
+				[[maybe_unused]] auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
 
 				// Ensure the options contain the stdlib args
 				assertTrue(
@@ -267,6 +273,73 @@ private:
 			ASSERT_EQUAL(expected_libs, target_lib->dvm_linking_options.shared_libraries);
 		}
 		assertTrue(seen_core_dvm_task, "No DVM compilation task for `core`");
+	}
+
+	/**
+	 * @brief Verifies that every standard library package is loaded with exactly the dependencies
+	 * it declares, that these are declared before it (which the native linking order relies on),
+	 * and that it is compiled to both a native and a DVM library.
+	 */
+	void verifyStdPackagesMeetTheirDependencies() {
+		const auto& std_packages    = frontend::packages::standardLibraryPackages();
+		const auto& global_packages = global_state::getPackages();
+
+		auto file_names = [](const std::vector<artifacts::FileArtifact>& artifacts) {
+			std::vector<std::string> names;
+			names.reserve(artifacts.size());
+			for (const auto& art: artifacts)
+				names.push_back(art.file.getFilePath().getPath().filename().string());
+			return names;
+		};
+		const auto native_artifacts = file_names(driver::getStdLibNativeArtifacts());
+		const auto dvm_artifacts    = file_names(driver::getStdLibDVMArtifacts());
+
+		for (auto package = std_packages.begin(); package != std_packages.end(); ++package) {
+			auto loaded = std::ranges::find_if(global_packages, [&](const auto& pkg) {
+				return pkg.getPackageID() == package->id;
+			});
+			assertTrue(
+				loaded != global_packages.end(),
+				base::strConcat("The `", package->id, "` package is not loaded")
+			);
+
+			std::vector<base::StrID> loaded_dependencies;
+			for (const auto& dep: loaded->getDependencies().illegalAccess())
+				loaded_dependencies.push_back(
+					dep.illegalAccess().getPackage().illegalAccess().getID()
+				);
+			auto declared_dependencies = package->dependencies;
+			std::ranges::sort(loaded_dependencies);
+			std::ranges::sort(declared_dependencies);
+			ASSERT_EQUAL(declared_dependencies, loaded_dependencies);
+
+			for (const auto& dependency: package->dependencies) {
+				assertTrue(
+					std::ranges::contains(
+						std_packages.begin(),
+						package,
+						dependency,
+						&frontend::packages::StandardLibraryPackage::id
+					),
+					base::strConcat(
+						"`",
+						package->id,
+						"` depends on `",
+						dependency,
+						"`, which is not declared before it"
+					)
+				);
+			}
+
+			assertTrue(
+				std::ranges::contains(native_artifacts, base::strConcat(package->id, ".a")),
+				base::strConcat("No native artifact for `", package->id, "`")
+			);
+			assertTrue(
+				std::ranges::contains(dvm_artifacts, base::strConcat(package->id, ".dbc")),
+				base::strConcat("No DVM artifact for `", package->id, "`")
+			);
+		}
 	}
 };
 

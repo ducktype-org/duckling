@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -521,6 +527,9 @@ namespace vm::code {
 	);
 	DEFINE_INSTRUCTION_ERROR(
 		CPointerTypeMismatchError, "C pointer type does not match the expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		FunctionTypeMismatchError, "Function type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
 		CPtrNotDereferenceableError,

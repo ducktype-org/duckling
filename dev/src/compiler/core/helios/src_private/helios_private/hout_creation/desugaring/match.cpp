@@ -1,12 +1,19 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "match.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/patterns/patterns.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/coercions/value_source.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -14,6 +21,7 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -31,23 +39,23 @@ namespace compiler::helios::desugaring {
 	namespace {
 		template<typename... MsgParts>
 		void logNYI(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(std::forward<MsgParts>(what)...), position
-			));
+			);
 		}
 
 		template<typename... MsgParts>
 		void logError(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(std::forward<MsgParts>(what)...), position
-			));
+			);
 		}
 
 		template<typename... MsgParts>
 		void logWarning(query::Context& ctx, dia::StablePosition position, MsgParts&&... what) {
-			ctx.logInt(makeBox<dia::PlaceholderWarning>(
+			ctx.log<dia::PlaceholderWarning>(
 				base::strConcat(std::forward<MsgParts>(what)...), position
-			));
+			);
 		}
 
 		class MatchSubject final {
@@ -81,7 +89,9 @@ namespace compiler::helios::desugaring {
 			// The coercion into the subject's own type looks like a no-op, but it is the check that
 			// makes `match (v)` on an owning variant report "use `copy` or `move`" if the type is
 			// not trivially copyable.
-			UNPACK_QRESULT_MOVE(auto return_expr =, coerceFromBox(ctx, std::move(expr), type, pos));
+			UNPACK_QRESULT_MOVE(
+				auto return_expr =, coercions::coerceFromBox(ctx, std::move(expr), type, pos)
+			);
 
 			bool moves_ownership                  = type.getRefKind() == tsh::ReferenceKind::Direct;
 			tsh::VariantAbstractType variant_type = type.getType();
@@ -103,12 +113,12 @@ namespace compiler::helios::desugaring {
 		) {
 			if (not match_subject.moves_ownership
 			    and constraint.getRefKind() == tsh::ReferenceKind::Box) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"This `match` only borrows its subject, so a case cannot take a `box` payload "
 					"out of it.",
 					pos,
 					"Bind it with `ref` instead, or hand the variant over with `move`."
-				));
+				);
 				return query::Failed();
 			}
 
@@ -144,7 +154,7 @@ namespace compiler::helios::desugaring {
 							"You can also pass the expression by reference by adding `&` prefix.",
 							match_subject.expr->origin.getStablePosition()
 						));
-					ctx.logInt(std::move(error_msg));
+					ctx.log(std::move(error_msg));
 				} else {
 					logError(
 						ctx,
@@ -176,15 +186,16 @@ namespace compiler::helios::desugaring {
 			if (not match_subject.moves_ownership)
 				source_type = source_type.withReferenceKind(tsh::ReferenceKind::Ref);
 
-			tsh::ExpressionType<> expr_type{
-				source_type, match_subject.expr->expression_type.getValueCategory()
-			};
-
-			UNPACK_QRESULT(auto coercion =, canCoerce(ctx, expr_type, constraint));
-			if (coercion.isInvalid()) {
-				logCoercionFailure(ctx, coercion, pos, {});
-				return query::Failed();
-			}
+			const auto coercion = coercions::validCoercionOf(
+				ctx,
+				tsh::coercions::ValueSource::singleValueSource({
+					source_type,
+					match_subject.expr->expression_type.getValueCategory(),
+				}),
+				constraint,
+				pos
+			);
+			if (coercion.hasFailed()) return query::Failed();
 			return index;
 		}
 
@@ -207,7 +218,9 @@ namespace compiler::helios::desugaring {
 		const auto      match_position = match_expr->getStablePosition();
 		auto            subject_pst    = match_expr->getValueToMatch().unlock(ctx);
 
-		UNPACK_QRESULT_MOVE(auto subject_hout =, code::subExprFromPST(ctx, subject_pst->getExpr()));
+		UNPACK_QRESULT_MOVE(
+			auto subject_hout =, code::subExprFromPST(ctx, unlockOrFail(ctx, subject_pst->getExpr()))
+		);
 		UNPACK_QRESULT_MOVE(
 			auto subject =,
 			validateMatchSubject(ctx, std::move(subject_hout), subject_pst->getStablePosition())
@@ -221,9 +234,10 @@ namespace compiler::helios::desugaring {
 		bool                                has_wildcard = false;
 		base::Optional<dia::StablePosition> wildcard_position;
 
-		for (auto match_case: match_expr->getCases()) {
-			const auto case_position = match_case.unlock(ctx)->getStablePosition();
-			auto       flow          = match_case.unlock(ctx)->getPattern().unlock(ctx);
+		for (auto match_case_locked: match_expr->getCases()) {
+			const auto match_case    = match_case_locked.unlock(ctx);
+			const auto case_position = match_case->getStablePosition();
+			auto       flow          = match_case->getPattern().unlock(ctx);
 
 			// The wildcard always matches, so the lowering enters it unconditionally and never
 			// reaches whatever is listed after it.
@@ -234,7 +248,7 @@ namespace compiler::helios::desugaring {
 					"This `case` is never entered, because the wildcard `case _` above it always "
 					"matches. The wildcard has to be the last case."
 				);
-				ctx.logInt(makeBox<dia::PlaceholderNote>("The wildcard case is here.", position));
+				ctx.log<dia::PlaceholderNote>("The wildcard case is here.", position);
 			}
 
 			if (flow->getAsIdentifier().has_value()) {
@@ -242,7 +256,7 @@ namespace compiler::helios::desugaring {
 				return query::Failed();
 			}
 
-			auto branches = match_case.unlock(ctx)->getBranches();
+			auto branches = match_case->getBranches();
 			if (branches.size() != 1 || branches.front().condition.has_value()) {
 				logNYI(ctx, case_position, "Guarded match case branches (`case ... if ...`).");
 				return query::Failed();
@@ -316,7 +330,7 @@ namespace compiler::helios::desugaring {
 				};
 				if (subject.moves_ownership) {
 					if_opt_some(not_covered_with_destructor(), alternative) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
 								"A bare `case _` binds nothing, so the payload it covers would "
 								"never be destroyed, and the alternative `",
@@ -329,13 +343,15 @@ namespace compiler::helios::desugaring {
 								alternative.toString(),
 								"`."
 							)
-						));
+						);
 						return query::Failed();
 					}
 				}
 			}
 			auto result_holder = branches.front().result.unlock(ctx);
-			UNPACK_QRESULT_MOVE(auto result =, code::subExprFromPST(ctx, result_holder->getExpr()));
+			UNPACK_QRESULT_MOVE(
+				auto result =, code::subExprFromPST(ctx, unlockOrFail(ctx, result_holder->getExpr()))
+			);
 
 			// A match yields one value, so every case has to agree on its type. There is no
 			// common-type inference, so anything else is an error the user has to resolve.
@@ -360,7 +376,7 @@ namespace compiler::helios::desugaring {
 
 			UNPACK_QRESULT_MOVE(
 				result =,
-				coerceFromBox(
+				coercions::coerceFromBox(
 					ctx, std::move(result), result_type, result_holder->getStablePosition()
 				)
 			);
@@ -374,7 +390,7 @@ namespace compiler::helios::desugaring {
 
 		const auto covered_count = static_cast<usize>(std::ranges::count(covered, true));
 		if (!has_wildcard && covered_count < subject.num_alternatives) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(
 					"`match` is not exhaustive: it covers ",
 					covered_count,
@@ -383,7 +399,7 @@ namespace compiler::helios::desugaring {
 					" alternatives and has no wildcard (`case _`)."
 				),
 				match_position
-			));
+			);
 			return query::Failed();
 		}
 
@@ -398,8 +414,9 @@ namespace compiler::helios::desugaring {
 		for (auto& lowered: lowered_cases) {
 			auto result = std::move(lowered.result);
 			if (result->expression_type.getSymbolType() != common_type.value()) {
-				auto coerced
-					= coerceFromBox(ctx, std::move(result), common_type.value(), lowered.position);
+				auto coerced = coercions::coerceFromBox(
+					ctx, std::move(result), common_type.value(), lowered.position
+				);
 				CORE_ASSERT(coerced.hasValue(), "Coercion from void should always succeed.");
 				result = std::move(coerced).valueOrThrow();
 			}

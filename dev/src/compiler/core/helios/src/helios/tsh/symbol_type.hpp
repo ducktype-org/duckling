@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "abstract_type.hpp"
@@ -364,7 +370,7 @@ namespace compiler::tsh {
 			return base::strConcat(
 				uniqueness == Uniqueness::Unique ? "unique " : "",
 				leakage == Leakage::Leaking ? "leaking " : "",
-				mutability == Mutability::Mutable ? "" : "const ",
+				mutability == Mutability::Mutable ? "" : "imm ",
 				reference_kind == Direct ? ""
 				: reference_kind == Box  ? "box "
 										 : "ref ",

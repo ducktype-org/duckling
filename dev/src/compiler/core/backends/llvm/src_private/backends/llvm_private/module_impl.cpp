@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -25,25 +31,27 @@ namespace compiler::backend_llvm {
 		this->module->setTargetTriple(target_machine->getTargetTriple().getTriple());
 	}
 
-	/**
-	 * @brief Convert our OptimizationLevel enum to LLVM's CodeGenOptLevel for machine code gen.
-	 */
-	llvm::CodeGenOptLevel toLLVMCodeGenOptLevel(const LLVMOptimizationLevel level) {
-		switch (level) {
-		case LLVMOptimizationLevel::O0:
-			return llvm::CodeGenOptLevel::None;
-		case LLVMOptimizationLevel::O1:
-			return llvm::CodeGenOptLevel::Less;
-		case LLVMOptimizationLevel::O2:
-			return llvm::CodeGenOptLevel::Default;
-		case LLVMOptimizationLevel::O3:
-			return llvm::CodeGenOptLevel::Aggressive;
-		case LLVMOptimizationLevel::Os:
-			return llvm::CodeGenOptLevel::Default;
-		case LLVMOptimizationLevel::Oz:
-			return llvm::CodeGenOptLevel::Default;
+	namespace {
+		/**
+		 * @brief Convert our OptimizationLevel enum to LLVM's CodeGenOptLevel for machine code gen.
+		 */
+		llvm::CodeGenOptLevel toLLVMCodeGenOptLevel(const LLVMOptimizationLevel level) {
+			switch (level) {
+			case LLVMOptimizationLevel::O0:
+				return llvm::CodeGenOptLevel::None;
+			case LLVMOptimizationLevel::O1:
+				return llvm::CodeGenOptLevel::Less;
+			case LLVMOptimizationLevel::O2:
+				return llvm::CodeGenOptLevel::Default;
+			case LLVMOptimizationLevel::O3:
+				return llvm::CodeGenOptLevel::Aggressive;
+			case LLVMOptimizationLevel::Os:
+				return llvm::CodeGenOptLevel::Default;
+			case LLVMOptimizationLevel::Oz:
+				return llvm::CodeGenOptLevel::Default;
+			}
+			CORE_UNREACHABLE();
 		}
-		CORE_UNREACHABLE();
 	}
 
 	Ref<llvm::TargetMachine> ModuleImpl::setTargetMachine(const std::string& target_triple) {

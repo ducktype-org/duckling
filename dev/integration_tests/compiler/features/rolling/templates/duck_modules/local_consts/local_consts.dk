@@ -6,7 +6,7 @@ template(i: i64)
 fun foo(j: i64) -> i64 = {
     const LocalConstInTmpl: i64 = i;
 
-    return i + j + GlobalTmplConst:{1} + LocalConstInTmpl;
+    return i + j + GlobalTmplConst[1] + LocalConstInTmpl;
 }
 
 namespace Name {
@@ -16,7 +16,7 @@ namespace Name {
     fun foo(j: i64) -> i64 = {
         const LocalConstInTmpl: i64 = i + ConstInNamespace;
 
-        return i + j + GlobalTmplConst:{1} + LocalConstInTmpl;
+        return i + j + GlobalTmplConst[1] + LocalConstInTmpl;
     }
 }
 
@@ -24,19 +24,19 @@ namespace Name {
 fun main() -> i64 = {
     const LocalConst: i64 = 42;
 
-    builtin_output_i64(GlobalTmplConst:{1});
-    builtin_output_i64(GlobalTmplConst:{2});
-    builtin_output_i64(GlobalTmplConst:{1});
+    builtin_output_i64(GlobalTmplConst[1]);
+    builtin_output_i64(GlobalTmplConst[2]);
+    builtin_output_i64(GlobalTmplConst[1]);
 
-    builtin_output_i64(foo:{1}(1));
-    builtin_output_i64(foo:{2}(2));
-    builtin_output_i64(foo:{1}(1));
+    builtin_output_i64(foo[1](1));
+    builtin_output_i64(foo[2](2));
+    builtin_output_i64(foo[1](1));
 
     builtin_output_i64(Name.ConstInNamespace);
 
-    builtin_output_i64(Name.foo:{1}(1));
-    builtin_output_i64(Name.foo:{2}(2));
-    builtin_output_i64(Name.foo:{1}(1));
+    builtin_output_i64(Name.foo[1](1));
+    builtin_output_i64(Name.foo[2](2));
+    builtin_output_i64(Name.foo[1](1));
 
     builtin_output_i64(LocalConst);
 

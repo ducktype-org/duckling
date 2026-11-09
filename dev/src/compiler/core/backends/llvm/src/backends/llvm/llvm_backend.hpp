@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "module_impl_fd.hpp"
@@ -5,6 +11,7 @@
 #include <ctv/ctv_fd.hpp>
 #include <lir/lir_structure/lir_structure_fd.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/types/ok_bad.hpp>
 
@@ -130,8 +137,13 @@ namespace compiler::backend_llvm {
 		 *
 		 * @param output_file Path where the output file will be saved.
 		 * @param output_type Type of the output file.
+		 * @param llvm_opt_output Optional LLVM IR dump after optimization, before code generation.
 		 */
-		void compile(const std::filesystem::path& output_file, CompilationOutputType output_type);
+		void compile(
+			const std::filesystem::path&                 output_file,
+			CompilationOutputType                        output_type,
+			const base::Optional<std::filesystem::path>& llvm_opt_output = {}
+		);
 
 		/**
 		 * Returns the number of functions in the module.

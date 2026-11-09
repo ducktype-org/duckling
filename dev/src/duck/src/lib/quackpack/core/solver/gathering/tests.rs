@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -17,25 +23,20 @@ use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
+    fn git_path(&self, _package: PackageId) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
+    fn is_stored(&self, _package: PackageId) -> bool {
         unimplemented!()
     }
 
-    fn store(
-        &self,
-        _url: InternedUrl,
-        _commit: &str,
-        _source_path: &std::path::Path,
-    ) -> crate::QuackResult<()> {
+    fn store(&self, _package: PackageId, _source_path: &std::path::Path) -> crate::QuackResult<()> {
         unimplemented!()
     }
 }
@@ -62,8 +63,9 @@ fn setup_duck_ctx() -> (DuckContext, TempDir) {
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join("x");
-    manifest.touch().unwrap();
-    manifest.write(contents).unwrap();
+    touch(&manifest).unwrap();
+    write_file(&manifest, contents).unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }
 
@@ -97,7 +99,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![foo_bar_dep],
+        dependencies: registry::Dependencies(vec![foo_bar_dep]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -111,7 +113,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -125,7 +127,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -139,7 +141,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -176,7 +178,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [("dx".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -190,7 +192,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![dx_xd_dep],
+        dependencies: registry::Dependencies(vec![dx_xd_dep]),
         features: [("root".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -239,7 +241,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![a_c_dep],
+        dependencies: registry::Dependencies(vec![a_c_dep]),
         features: [("f".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -253,7 +255,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -267,7 +269,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![b_a_dep],
+        dependencies: registry::Dependencies(vec![b_a_dep]),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -281,7 +283,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [].into(),
         profiles: HashMap::new(),
     };
@@ -330,7 +332,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![u_v_dep],
+        dependencies: registry::Dependencies(vec![u_v_dep]),
         features: [("v".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -344,7 +346,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![v_u_dep],
+        dependencies: registry::Dependencies(vec![v_u_dep]),
         features: [("u".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -376,7 +378,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![n_m_dep],
+        dependencies: registry::Dependencies(vec![n_m_dep]),
         features: [
             ("expandable".into(), vec!["expanded".into()]),
             ("expanded".into(), vec![]),
@@ -394,7 +396,7 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             links: None,
         },
-        dependencies: vec![],
+        dependencies: registry::Dependencies::default(),
         features: [].into(),
         profiles: HashMap::new(),
     };

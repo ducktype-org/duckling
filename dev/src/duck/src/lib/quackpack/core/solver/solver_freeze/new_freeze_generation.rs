@@ -1,6 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::solver::solving::FoundSolution;
@@ -12,7 +18,7 @@ impl SolverFreeze {
     /// Generates a new freeze from the previous one and the solution found by solver.
     /// Trims the resulting freeze to contain only the necessary packages and features.
     /// The new freeze assumes that the main package is compiled with all its manifest-listed features.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub fn new_freeze(
         mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
@@ -52,7 +58,7 @@ impl SolverFreeze {
                 )
             };
             parent.dependencies_realization.insert(
-                dependency_edge.manifest_child_name,
+                dependency_edge.dep_ename,
                 PackageId::new(dependency_edge.dep_identity, destination),
             );
         }
@@ -64,7 +70,7 @@ impl SolverFreeze {
     /// This can be used to either generate:
     ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub fn find_minimal_dep_solution(
         self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
@@ -102,20 +108,20 @@ impl SolverFreeze {
         let base_pkg_features = self
             .current_pkg_features(new_pkg_freezes, base_pkg)?
             .clone();
-        debug!(?base_pkg);
+        trace!(target: "duck::solver", ?base_pkg);
 
         for dependency in base_manifest
             .dependencies()
             .select(&Selector::EnabledBy(&base_pkg_features))
         {
-            let dep_name = dependency.effective_name();
-            let realization = self.get_realization(base_pkg, dep_name)?;
+            let dep_ename = dependency.effective_name();
+            let realization = self.get_realization(base_pkg, dep_ename)?;
             let Some(dep_manifest) = manifests.get(&realization) else {
                 qp_bail_internal!(
                     "freeze package `{realization:?}` with no manifest: {manifests:#?}"
                 )
             };
-            Self::add_realization(new_pkg_freezes, base_pkg, dep_name, realization)?;
+            Self::add_realization(new_pkg_freezes, base_pkg, dep_ename, realization)?;
             let enabled_features = dependency.enabled_features(&base_pkg_features);
             let forced_features = dep_manifest
                 .features()
@@ -157,15 +163,15 @@ impl SolverFreeze {
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
     /// Finds how a dependency is realized.
-    fn get_realization(&self, pkg: PackageId, dep_name: StrId) -> QuackResult<PackageId> {
+    fn get_realization(&self, pkg: PackageId, dep_ename: StrId) -> QuackResult<PackageId> {
         let Some(pkg) = self.package_freezes.get(&pkg) else {
             qp_bail_internal!(
                 "current package `{pkg:?}` does not appear in the freeze: {:#?}",
                 self.package_freezes
             )
         };
-        let Some(realization) = pkg.dependencies_realization.get(&dep_name) else {
-            qp_bail_internal!("no realisation for `{dep_name}` in {:#?}", pkg)
+        let Some(realization) = pkg.dependencies_realization.get(&dep_ename) else {
+            qp_bail_internal!("no realisation for `{dep_ename}` in {:#?}", pkg)
         };
         Ok(*realization)
     }
@@ -175,7 +181,7 @@ impl SolverFreeze {
     fn add_realization(
         new_pkg_freezes: &mut HashMap<PackageId, SolverPackageFreeze>,
         pkg: PackageId,
-        dep_name: StrId,
+        dep_ename: StrId,
         realization: PackageId,
     ) -> QuackResult<()> {
         let Some(pkg) = new_pkg_freezes.get_mut(&pkg) else {
@@ -184,7 +190,7 @@ impl SolverFreeze {
             )
         };
         pkg.dependencies_realization
-            .entry(dep_name)
+            .entry(dep_ename)
             .or_insert(realization);
         Ok(())
     }
@@ -203,15 +209,15 @@ mod test {
     use crate::quackpack::core::solver::solving::FoundSolution;
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops::{touch, try_fsync_dir, write_file};
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
+        touch(&manifest).unwrap();
+        write_file(&manifest, contents).unwrap();
+        try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
     }
 
@@ -284,7 +290,7 @@ metadata:
                 DependencyEdge {
                     parent: pkg_a,
                     dep_identity: identity_c,
-                    manifest_child_name: StrId::new("c"),
+                    dep_ename: StrId::new("c"),
                 },
                 Version::new(3, 0, 0),
             )]),

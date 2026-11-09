@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Module for loading (and firstly downloading if absent) packages of the freeze generated during `sync`.
 use std::cell::RefCell;
 use std::fs::File;
@@ -7,7 +13,7 @@ use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::{StreamExt, stream};
 use tar::Archive;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
@@ -19,8 +25,8 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::Pluralize;
 use crate::util::error::ErrorsLogger;
-use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
+use crate::util::path_ops::try_fsync_dir;
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
 
 // We want at most 3 calls, therefore we retry 2 times.
 /// The maximal number of retries when trying to download a package blob from registry.
@@ -55,18 +61,18 @@ pub struct LoadedFreezePackages {
 /// Note
 /// ----
 /// We use [`ErrorsLogger`] to delay bailing, downloading as many dependencies as possible.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(level = "debug", skip_all)]
 pub fn load_packages_in_freeze(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkgs: Vec<PackageId>,
 ) -> QuackResult<LoadedFreezePackages> {
     if pkgs.is_empty() {
-        warn!("requested to load 0 packages");
+        debug!("nothing to load");
         return Ok(LoadedFreezePackages::default());
     }
     let count = pkgs.len();
-    fetcher.ctx().info(format!(
+    fetcher.ctx().info_verbose(format!(
         "starting loading {count} package{}",
         count.s_if_plural()
     ))?;
@@ -118,14 +124,13 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
 
 /// Helper for [`load_packages_in_freeze`].
 /// Loads a package, downloading it if not present and loading it from storage (except for local packages).
-#[tracing::instrument(skip_all, fields(?pkg_id))]
+#[tracing::instrument(level = "debug", skip_all, fields(name = %pkg_id.name(), version = %pkg_id.version()))]
 async fn load_package(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
     pkg_id: PackageId,
     logger: &RefCell<ErrorsLogger>,
 ) -> Option<SuccessfullyLoadedPackage> {
-    debug!("fetching package");
     // Logs a result into the `logger`.
     macro_rules! log {
         ($e:expr) => {
@@ -141,7 +146,7 @@ async fn load_package(
             if result.is_err() {
                 logger.log_result(storage.try_remove_pkg(pkg_id).with_context(|| {
                     format!(
-                        "when trying to remove a malformed dependency {} {} from its storage",
+                        "failed to remove a malformed dependency {} {} from its storage",
                         pkg_id.name(),
                         pkg_id.version()
                     )
@@ -155,12 +160,12 @@ async fn load_package(
         FullKind::Local => (
             log!(
                 url.to_path_buf()
-                    .with_context(|| format!("when loading a local dependency {}", pkg_id.name()))
+                    .with_context(|| format!("failed to load local dependency {}", pkg_id.name()))
             ),
             true,
         ),
-        FullKind::Git { commit } => {
-            rm_and_log!(fetch_git(pkg_id, url, commit, storage, fetcher))
+        FullKind::Git { commit: _ } => {
+            rm_and_log!(fetch_git(pkg_id, storage, fetcher))
         }
         FullKind::Registry => {
             let maybe_fetched = fetch_registry(pkg_id, url, storage, fetcher).await;
@@ -183,20 +188,20 @@ async fn load_package(
 /// Helper for [`load_package`].
 /// Checks if the git package is stored in storage, if not clones it.
 /// Returns path to the package in storage and whether it had to be cloned.
-#[tracing::instrument(skip_all)]
 fn fetch_git(
     pkg_id: PackageId,
-    url: InternedUrl,
-    commit: StrId,
     storage: &Storage,
     fetcher: &Fetcher<'_>,
 ) -> QuackResult<(PathBuf, bool)> {
-    let was_present = storage.is_stored_git(url, &commit);
+    let FullKind::Git { commit } = pkg_id.kind() else {
+        unreachable!("not a git package")
+    };
+    let was_present = storage.is_package_stored(pkg_id);
     if !was_present {
         fetcher.clone_from_git_to_directory(
-            &url,
+            &pkg_id.url(),
             GitReference::Rev(commit),
-            &storage.git_dir(url, &commit),
+            &storage.pkg_dir(pkg_id),
         )?;
         mark_cloned_git_as_stored(pkg_id, storage).with_context(|| {
             format!(
@@ -210,13 +215,12 @@ fn fetch_git(
 
 /// Mark a cloned git as stored.
 fn mark_cloned_git_as_stored(pkg: PackageId, storage: &Storage) -> QuackResult<()> {
-    let FullKind::Git { commit } = pkg.kind() else {
+    if !matches!(pkg.kind(), FullKind::Git { commit: _ }) {
         qp_bail_internal!("attempted to store not a git package: {pkg:?}")
     };
 
-    let url = pkg.url();
     storage.mark_as_stored(pkg)?;
-    storage.git_dir(url, &commit).try_fsync_dir()?;
+    try_fsync_dir(storage.pkg_dir(pkg))?;
     Ok(())
 }
 
@@ -266,7 +270,7 @@ fn unpack_package_blob(pkg: PackageId, storage: &Storage, blob_path: &Path) -> Q
         )
     })?;
     storage.mark_as_stored(pkg)?;
-    pkg_dir.try_fsync_dir()?;
+    try_fsync_dir(pkg_dir)?;
     Ok(())
 }
 

@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "type_validator.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/config/target_info.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -125,7 +132,8 @@ namespace {
 		const ErrorContextType&                  error_context_inh,
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
-		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
+		for (const auto& impl: inh.implementations)
+			implementations.maybePut(base::StrID(impl.name), base::StrID(impl.type));
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
 				tod_types,

@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "query_type_of_symbol.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -43,7 +49,7 @@ namespace compiler::helios {
 				symbol_type_qresult = tsh::SymbolType<>::withDefaults(type);
 			}
 
-			void setSymbolTypeByTypeExpr(const pst::Access<pst::ExprElement> expr) {
+			void setSymbolTypeByTypeExpr(const pst::AccessLocked<pst::ExprElement> expr) {
 				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
 				if (type_ctv.hasFailed()) {
 					setFailed();
@@ -53,7 +59,8 @@ namespace compiler::helios {
 			}
 
 			void setSymbolTypeByTypeExpr(
-				const pst::Access<pst::ExprElement> expr, const tsh::Mutability expected_mutability
+				const pst::AccessLocked<pst::ExprElement> expr,
+				const tsh::Mutability                     expected_mutability
 			) {
 				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
 				if (type_ctv.hasFailed()) {
@@ -73,8 +80,7 @@ namespace compiler::helios {
 			void visitConst(pst::Access<pst::Const> stmt) final {
 				if (stmt->getType().has_value()) {
 					setSymbolTypeByTypeExpr(
-						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx),
-						tsh::Mutability::Immutable
+						stmt->getType().value().unlock(ctx)->getExpr(), tsh::Mutability::Immutable
 					);
 				} else if (stmt->getValue().has_value()) {
 					auto parsed = ctx.query<QueryHoutOfExpr>(
@@ -101,7 +107,7 @@ namespace compiler::helios {
 					= stmt->isConst() ? tsh::Mutability::Immutable : tsh::Mutability::Mutable;
 				if (stmt->getType().has_value()) {
 					setSymbolTypeByTypeExpr(
-						stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
+						stmt->getType().value().unlock(ctx)->getExpr(), decl_mutability
 					);
 				} else if (stmt->getValue().has_value()) {
 					auto& parsed = ctx.query<QueryHoutOfExpr>(
@@ -122,11 +128,7 @@ namespace compiler::helios {
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
-				const auto decl_mutability
-					= field->isMutable() ? tsh::Mutability::Mutable : tsh::Mutability::Immutable;
-				setSymbolTypeByTypeExpr(
-					field->getType().unlock(ctx)->getExpr().unlock(ctx), decl_mutability
-				);
+				setSymbolTypeByTypeExpr(field->getType().unlock(ctx)->getExpr());
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
@@ -144,7 +146,7 @@ namespace compiler::helios {
 			void visitParam(pst::Access<pst::Param> param) final {
 				// @TODO: #1396 Handle parameter mutability.
 				setSymbolTypeByTypeExpr(
-					param->getType().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Mutable
+					param->getType().unlock(ctx)->getExpr(), tsh::Mutability::Mutable
 				);
 			}
 
@@ -181,24 +183,24 @@ namespace compiler::helios {
 				CORE_ASSERT(flow_parent.has_value(), "BindingPattern without parent");
 				auto flow_opt = flow_parent.value().unlock(ctx).dynamicCast<pst::FlowPattern>();
 				if (!flow_opt.has_value()) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Pattern bindings outside of a flow pattern.", binding->getStablePosition()
-					));
+					);
 					setFailed();
 					return;
 				}
 
 				auto constraint = flow_opt.value()->getTypeConstraint();
 				if (!constraint.has_value()) {
-					ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+					ctx.log<dia::NotYetImplementedCodeError>(
 						"Match pattern bindings without a type constraint (`case x : T`).",
 						binding->getStablePosition()
-					));
+					);
 					setFailed();
 					return;
 				}
 
-				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr().unlock(ctx));
+				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr());
 			}
 
 			void handleForIterator(pst::Access<pst::For> stmt) {
@@ -296,7 +298,7 @@ namespace compiler::helios {
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
 					// The implicit constructor takes a parameter per field, the default constructor
-					// takes none, and the copy constructor takes a single `const ref T` source.
+					// takes none, and the copy constructor takes a single read-only `ref T` source.
 					std::vector<tsh::SymbolType<>> param_types;
 					switch (ctor.kind) {
 					case defgen::Constructor::Kind::Implicit: {
@@ -308,7 +310,7 @@ namespace compiler::helios {
 						break;
 					case defgen::Constructor::Kind::Copy:
 						param_types.emplace_back(
-							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Immutable
+							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Mutable
 						);
 						break;
 					}
@@ -457,7 +459,7 @@ namespace compiler::helios {
 				variant_case(defgen::ReplInputWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = {},
-						.result_type     = repl.return_type,
+						.result_type     = repl.getReturnType(),
 					});
 					return tsh::SymbolType<>{
 						function_abstract_type,

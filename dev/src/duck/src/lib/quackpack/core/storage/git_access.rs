@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! A storage management of gits.
 use std::path::{Path, PathBuf};
 
 use super::paths::Storage;
 use crate::QuackResult;
+use crate::quackpack::core::PackageId;
 use crate::quackpack::core::solver::git_access::GitAccess;
-use crate::quackpack::util::interned_url::InternedUrl;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::util::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
@@ -20,24 +26,27 @@ impl<'paths> StorageGitAccess<'paths> {
 }
 
 impl GitAccess for StorageGitAccess<'_> {
-    fn git_path(&self, url: InternedUrl, commit: &str) -> PathBuf {
-        self.paths.git_dir(url, commit)
+    fn git_path(&self, package: PackageId) -> PathBuf {
+        package.debug_assert_git_package();
+        self.paths.pkg_dir(package)
     }
 
-    fn is_stored(&self, url: InternedUrl, commit: &str) -> bool {
-        self.paths.is_stored_git(url, commit)
+    fn is_stored(&self, package: PackageId) -> bool {
+        package.debug_assert_git_package();
+        self.paths.is_package_stored(package)
     }
 
-    fn store(&self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()> {
-        let dir = self.paths.git_dir(url, commit);
+    fn store(&self, package: PackageId, source_path: &Path) -> QuackResult<()> {
+        package.debug_assert_git_package();
+        let dir = self.paths.pkg_dir(package);
         if dir.exists() {
-            dir.rmtree()?;
+            remove_tree(&dir)?;
         }
         if let Some(parent) = dir.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
+            mkdir(parent, MkdirOptions::WithParents)?;
         }
-        source_path.rename_to(&dir)?;
-        self.paths.mark_git_stored(url, commit)?;
+        move_tree(source_path, &dir)?;
+        self.paths.mark_as_stored(package)?;
         Ok(())
     }
 }

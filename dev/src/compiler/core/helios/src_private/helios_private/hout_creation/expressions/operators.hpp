@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * This file stores operations used by helios to generate builtin
  * operations to hout-expressions (like operations on int's, bools).
@@ -10,7 +16,10 @@
 #include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax it.
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/lang_primitives.hpp>
+#include <helios/tsh/coercions/coercion.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+
+#include <base/collections/hashmap.hpp>
 
 #include <lexer/token_common.hpp>
 #include <query_framework/query_int.hpp>
@@ -34,7 +43,7 @@ namespace compiler::helios::code {
 	 * @return Returns the operation along with coercions to apply to operands in format
 	 * (builtin_operation, coercion)
 	 */
-	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+	base::Optional<std::tuple<BuiltinUnary, tsh::coercions::Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
 	);
 
@@ -43,15 +52,17 @@ namespace compiler::helios::code {
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation with proper coercions applied to operands
 	 */
-	base::Optional<std::tuple<BuiltinBinaryOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
-	);
+	base::Optional<
+		std::tuple<BuiltinBinaryOperation, tsh::coercions::Coercion, tsh::coercions::Coercion>>
+		findNumericBinaryBuiltin(
+			query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+		);
 
 	/**
 	 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 	 * HOUT expression. Consumes the provided expressions of the arguments.
 	 * Currently used for all operators other than `As` (type cast), `Pipe` (variant type
-	 * construction), and assignement operators (`X=`). Perhaps they will be moved here later.
+	 * construction), and assignment operators (`X=`). Perhaps they will be moved here later.
 	 * @param ctx The context of the query
 	 * @param op The operator
 	 * @param op_origin The origin of the operator in the PST
@@ -135,7 +146,7 @@ namespace compiler::helios::code {
 	// Type for storing a mapping between regular builtin operator symbols and related helpful data.
 	// The `symbol` in the data is the same as the key. We predict that the value type will
 	// grow in complexity as we introduce more features, so we keep the symbol for convenience.
-	using RegularBuiltinOperatorSymbolMap = base::StableHashMap<SymID, RegularBuiltinOperator>;
+	using RegularBuiltinOperatorSymbolMap = base::HashMap<SymID, RegularBuiltinOperator>;
 
 	/**
 	 * @brief Get all builtin operators which are *not* numeric operators

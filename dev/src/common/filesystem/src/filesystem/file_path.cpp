@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "file_path.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -46,8 +52,6 @@ namespace fs {
 	PathType FilePath::determinePathType(const std::filesystem::path& path) {
 		if (VFS::isVirtualPath(path))
 			return PathType::Virtual;
-		else if (hasTemporaryPrefix(path))
-			return PathType::Temporary;
 		else if (!path.is_absolute())
 			return PathType::Relative;
 		else
@@ -60,6 +64,15 @@ namespace fs {
 			CORE_PANIC("Cannot canonicalize virtual path: " + path.string());
 		}
 		return std::filesystem::canonical(path);
+	}
+
+	bool FilePath::isTemporary() const {
+		if (type == PathType::Virtual) return false;
+		// A relative path is resolved against the working directory first: whether the file
+		// ends up in the temp directory is a question about the file, not about how the path
+		// happened to be spelled.
+		if (type == PathType::Relative) return hasTemporaryPrefix(std::filesystem::absolute(path));
+		return hasTemporaryPrefix(path);
 	}
 
 	bool FilePath::isSymlink() const {
@@ -81,8 +94,7 @@ namespace fs {
 				"Cannot convert relative path to virtual: " + path.string()
 				+ " use absolute() first."
 			);
-		if (type != PathType::Physical)
-			CORE_PANIC("Can only convert physical paths to virtual: " + path.string());
+		CORE_ASSERT(type == PathType::Physical, "Unexpected path type: " + path.string());
 
 		auto root     = target->getRootPath();
 		auto abs_path = std::filesystem::absolute(path);

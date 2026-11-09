@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "query_framework_decl.hpp"       // query declaration
 
 #include <base/collections/maps.hpp>      // base::Map
@@ -50,7 +56,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 		std::string str_to_log = base::strConcat("Result of query 2 : ", result);
 		// Dummy source position:
 		dia::SourcePosition source_position = dia::SourcePosition::fakePosition();
-		context.logInt(makeBox<ExampleError>(source_position, str_to_log));
+		context.log<ExampleError>(source_position, str_to_log);
 
 		// some trivial implementation:
 		return PResult{ key.v };

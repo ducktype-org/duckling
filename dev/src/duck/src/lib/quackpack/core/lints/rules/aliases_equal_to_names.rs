@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Home of "aliases equal to names" lint.
 
 use crate::QuackResult;
@@ -41,26 +47,31 @@ dependencies:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(pcx: &PackageContext<'_>, buffer: &mut LintBuffer) -> QuackResult<()> {
+pub fn pass(
+    pcx: &PackageContext<'_>,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     let schema = pcx.package().original_schema();
     let dependencies_maps = [
         (DependencyKind::Normal, schema.dependencies.as_ref()),
         (DependencyKind::Dev, schema.dev_dependencies.as_ref()),
     ];
     for (dep_kind, dependencies) in dependencies_maps {
-        for (effective_name, dependency) in dependencies.into_iter().flatten() {
+        for (ename, dependency) in dependencies.into_iter().flatten() {
             if let Some(ref source) = dependency.source
                 && let DependencySource::Detailed(source) = source
                 && let Some(ref name) = source.name
-                && effective_name == name
+                && ename == name
             {
-                buffer.register_warning(
+                buffer.register(
                     AliasEqualsNameDiagnostic {
                         name: name.clone(),
                         dep_kind,
                         key_in_manifest: dep_kind.key_in_manifest(),
                     },
                     LINT,
+                    level,
                 );
             }
         }
@@ -75,7 +86,7 @@ macros::make_diagnostic! {
         key_in_manifest: &'static str,
     }
     display(
-        "{} dependency's alias `{}` is equal to its name specified at `{}.{}.source.name`",
+        "{}dependency `{}` has an alias equal to its name specified at `{}.{}.source.name`",
         dep_kind,
         name,
         key_in_manifest,

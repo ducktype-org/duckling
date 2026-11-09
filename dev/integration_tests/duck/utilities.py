@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import hashlib
 import os
 import subprocess
@@ -17,6 +23,12 @@ fun main() = {
 
 DEFAULT_GITIGNORE: Final[str] = """.duck_build
 """
+
+
+def check_file_does_not_exist(file: Path) -> None:
+    if file.exists():
+        print(f"file {file} exists")
+        sys.exit(1)
 
 
 def check_file_exists(file: Path) -> None:
@@ -98,6 +110,10 @@ def check_empty_files(files: Iterable[Path]) -> None:
 def check_files_exist(files: Iterable[Path]) -> None:
     for file in files:
         check_file_exists(file)
+
+def check_files_dont_exist(files: Iterable[Path]) -> None:
+    for file in files:
+        check_file_does_not_exist(file)
 
 
 def check_empty_dirs(dirs: Iterable[Path]) -> None:

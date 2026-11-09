@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 
 #include <functional>
@@ -40,7 +47,7 @@ namespace vm::persistent::detail {
 
 		std::pair<bool, R> emplaceByLeft(const L& left, const R& rght) {
 			if (auto it = left_right.find(left); it != left_right.end())
-				return { false, it->second };
+				return { false, it->value };
 
 			if (right_left.find(rght) != right_left.end())
 				throw std::invalid_argument("right element is already bound");
@@ -53,7 +60,7 @@ namespace vm::persistent::detail {
 
 		std::pair<bool, L> emplaceByRight(const L& left, const R& rght) {
 			if (auto it = right_left.find(rght); it != right_left.end())
-				return { false, it->second };
+				return { false, it->value };
 
 			if (left_right.find(left) != left_right.end())
 				throw std::invalid_argument("left element is already bound");

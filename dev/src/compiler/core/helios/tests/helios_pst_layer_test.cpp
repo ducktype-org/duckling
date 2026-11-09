@@ -1,3 +1,8 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
@@ -104,7 +109,7 @@ private:
 			std::vector<std::string> expected_stmt_names = { "a", "b", "c", "N" };
 
 			for (size_t i = 0; i < n_body_stmts.size(); i++) {
-				auto stmt        = n_body_stmts.at(i).unlock(ctx);
+				auto stmt        = n_body_stmts.at(i);
 				auto stmt_symbol = ctx.query<compiler::helios::QuerySymbolOfSTMT>(stmt);
 				ASSERT_EQUAL(
 					compiler::helios::name(stmt_symbol.valueOrPanic()),

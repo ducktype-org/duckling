@@ -1,11 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Dependency DAG and dictionary with all parsed [`CompilerPackage`]s.
 
 use std::collections::{HashMap, HashSet};
 
-use crate::QuackResult;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::missing_depenendcy_in_graph;
 use crate::quackpack::core::identity::Identity;
+use crate::{QuackResult, StrId};
 
 pub mod creating_graph;
 pub mod modifying_graph;
@@ -63,8 +69,9 @@ pub struct DependencyGraph {
 /// Single dependency node.
 ///
 /// Contains dependencies of this node.
+/// Each dependency is a pair `(<effective name>, <identity of the dependency>)`.
 pub struct DependencyNode {
-    dependencies: Vec<Identity>,
+    dependencies: Vec<(StrId, Identity)>,
 }
 
 impl DependencyGraph {
@@ -80,6 +87,22 @@ impl DependencyGraph {
             .unwrap_or_else(|| missing_depenendcy_in_graph(*package, self))
     }
 
+    /// All packages reachable from package (including the package itself).
+    pub fn reachable_subgraph_nodes(&self, package: Identity) -> HashSet<Identity> {
+        let mut result = HashSet::new();
+        self.reachable_subgraph_nodes_inner(package, &mut result);
+        result
+    }
+
+    fn reachable_subgraph_nodes_inner(&self, package: Identity, visited: &mut HashSet<Identity>) {
+        if !visited.contains(&package) {
+            visited.insert(package);
+            for (_ename, pkg_dep) in self.dependencies_for_package(&package).dependencies() {
+                self.reachable_subgraph_nodes_inner(*pkg_dep, visited);
+            }
+        }
+    }
+
     /// Get the iterator over all entries in this graph.
     pub fn iter(&self) -> impl Iterator<Item = (&Identity, &DependencyNode)> {
         self.graph.iter()
@@ -93,12 +116,12 @@ impl DependencyGraph {
 
 impl DependencyNode {
     /// Get dependencies of this node.
-    pub fn dependencies(&self) -> &[Identity] {
+    pub fn dependencies(&self) -> &[(StrId, Identity)] {
         &self.dependencies
     }
 
     /// Same as [`dependencies`](Self::dependencies), but returns a mutable vector.
-    pub fn dependencies_mut(&mut self) -> &mut Vec<Identity> {
+    pub fn dependencies_mut(&mut self) -> &mut Vec<(StrId, Identity)> {
         &mut self.dependencies
     }
 }

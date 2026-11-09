@@ -1,12 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "query_type_symbol_data.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -49,15 +54,15 @@ namespace compiler::helios {
 			auto keyword   = specifier->getSpecifier().unlock(ctx)->unwrap();
 
 			if (is_visiblity_keyword(keyword) and visibility_opt.has_value())
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Class visibility specifier is duplicated with another one.",
 					specifier->getStablePosition()
-				));
+				);
 			if (is_global_keyword(keyword) and is_static)
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Class global specifier is duplicated with another one.",
 					specifier->getStablePosition()
-				));
+				);
 			if (keyword == lang_def::Keyword::Public)
 				visibility_opt = tsh::MemberVisibility::Public;
 			if (keyword == lang_def::Keyword::Protected)
@@ -75,14 +80,14 @@ namespace compiler::helios {
 
 			ClassDataParser(query::Context& ctx): ctx(ctx) {}
 
-			base::Optional<base::StrID>                            name;
-			base::Optional<pst::AccessLocked<pst::ExprElement>>    base_class;
-			base::Optional<pst::AccessLocked<pst::ImplementsList>> implements;
+			base::Optional<base::StrID>                         name;
+			base::Optional<pst::AccessLocked<pst::ExprElement>> base_class;
+			base::Optional<pst::Access<pst::ImplementsList>>    implements;
 
 			void visitClass(pst::Access<pst::Class> stmt) final {
 				name = stmt->getName().unlock(ctx)->unwrap();
 				if (auto base = stmt->getBase().unlockOpt(ctx))
-					base_class = base.value()->getExpr().unlock(ctx);
+					base_class = base.value()->getExpr();
 				if (auto implements = stmt->getImplements().unlockOpt(ctx))
 					this->implements = implements.value();
 			}
@@ -115,7 +120,7 @@ namespace compiler::helios {
 						member_pst.unlock(ctx)->getStablePosition()
 					));
 			}
-			ctx.logInt(std::move(error));
+			ctx.log(std::move(error));
 			query::throwFailed();
 		}
 
@@ -390,7 +395,7 @@ namespace compiler::helios {
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
-				for (auto&& interface: *implements.unlock(ctx)) {
+				for (auto&& interface: *implements) {
 					UNPACK_QRESULT(
 						auto ctv =, getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr())
 					);

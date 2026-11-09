@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "numeric_literals.hpp"
 
 #include "errors.hpp"
@@ -5,16 +11,84 @@
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <diagnostic/stable_position.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <charconv>
+#include <string>
 #include <string_view>
 #include <system_error>
 
+
+// Below are includes needed for parseF64 (see its doc comment for more information)
+// Remove them when `std::from_chars` for `f64` becomes available on all supported macOS versions.
+// @TODO: #3988 Remove the includes.
+
+// clang-format off
+
+#include <cctype>
+#include <cerrno>
+#include <clocale>
+#include <cmath>
+#include <cstdlib>
+
+#include <base/config/target_info.hpp>
+
+#if BASE_TARGET_OS_MACOS
+	#include <xlocale.h>
+#endif
+
+// clang-format on
+
 namespace compiler::helios::code {
 	namespace {
+		/**
+		 * @brief Mimics `std::from_chars(first, last, out)` for an `f64` in the default (general)
+		 * format
+		 *
+		 * Floating-point `std::from_chars` on macOS is only available from 26.0.
+		 * We want to compile on macOS 15, to support all supported macOS versions.
+		 *
+		 * @TODO: #3988 This function will likely be deleted in fall of 2027,
+		 * when support for macOS 15 is dropped and `std::from_chars` for `f64` becomes available on
+		 * all supported macOS versions.
+		 */
+		std::from_chars_result parseF64(std::string_view value, f64& out) {
+			const char* const first = value.data();
+
+			// What strtod accepts but from_chars does not: leading whitespace and '+'.
+			if (value.empty() || value.front() == '+'
+			    || std::isspace(static_cast<unsigned char>(value.front())))
+				return { .ptr = first, .ec = std::errc::invalid_argument };
+
+			// Hexadecimal floats: from_chars (general format) reads only the "0" before the 'x'.
+			const usize sign = value.front() == '-' ? 1 : 0;
+			if (value.substr(sign).starts_with("0x") || value.substr(sign).starts_with("0X")) {
+				out = sign ? -0.0 : 0.0;
+				return { .ptr = first + sign + 1, .ec = std::errc() };
+			}
+
+			static const locale_t c_locale = newlocale(LC_ALL_MASK, "C", nullptr);
+			CORE_ASSERT(c_locale != nullptr, "newlocale(\"C\") failed");
+			const std::string terminated(value);  // strtod needs a NUL-terminated string.
+
+			char* end          = nullptr;
+			errno              = 0;
+			const f64   parsed = strtod_l(terminated.c_str(), &end, c_locale);
+			const char* ptr    = first + (end - terminated.c_str());
+			if (ptr == first) return { .ptr = first, .ec = std::errc::invalid_argument };
+
+			// Overflow (inf) and underflow to zero are out of range; subnormal results are not.
+			if (errno == ERANGE && (std::isinf(parsed) || parsed == 0.0))
+				return { .ptr = ptr, .ec = std::errc::result_out_of_range };
+
+			out = parsed;
+			return { .ptr = ptr, .ec = std::errc() };
+		}
+
 		/**
 		 * @brief Checks the given `from_chars_result` and logs compiler errors in case of errors.
 		 * @return True `from_chars` succeeded, false if an error occurred, an appropriate compiler
@@ -30,9 +104,9 @@ namespace compiler::helios::code {
 				if (result.ec
 				    == std::errc::invalid_argument) {  // Not a number at all. This will be returned
 					                                   // when trying to parse "abc".
-					ctx.logInt(makeBox<InvalidNumericLiteralError>(position));
+					ctx.log<InvalidNumericLiteralError>(position);
 				} else if (result.ec == std::errc::result_out_of_range) {
-					ctx.logInt(makeBox<NumericLiteralTooLargeError>(position));
+					ctx.log<NumericLiteralTooLargeError>(position);
 				}
 				return false;
 			}
@@ -42,7 +116,7 @@ namespace compiler::helios::code {
 			// "123" literal and stop on the first non numeric char. Here we check that the whole
 			// string was parsed.
 			if (result.ptr != value.data() + value.size()) {
-				ctx.logInt(makeBox<InvalidNumericLiteralError>(position));
+				ctx.log<InvalidNumericLiteralError>(position);
 				return false;
 			}
 			return true;
@@ -59,7 +133,7 @@ namespace compiler::helios::code {
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 
 			if (!base::fitsIn<TargetInt>(parsed_value)) {
-				ctx.logInt(makeBox<LiteralDoesNotFitError>(position, "signed integer type"));
+				ctx.log<LiteralDoesNotFitError>(position, "signed integer type");
 				return {};
 			}
 
@@ -76,7 +150,7 @@ namespace compiler::helios::code {
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			if (!base::fitsIn<TargetUInt>(parsed_value)) {
-				ctx.logInt(makeBox<LiteralDoesNotFitError>(position, "unsigned integer type"));
+				ctx.log<LiteralDoesNotFitError>(position, "unsigned integer type");
 				return {};
 			}
 			return numeric_value::NumericValue(static_cast<TargetUInt>(parsed_value));
@@ -87,42 +161,63 @@ namespace compiler::helios::code {
 			std::string_view value, const dia::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
-			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
+			auto result       = parseF64(value, parsed_value);
 
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			// @note: No need to check with fitsIn, since casting to smaller types is always okay.
 			return numeric_value::NumericValue(static_cast<TargetFloat>(parsed_value));
 		}
 
-		base::Optional<numeric_value::NumericValue> deduceIntegerType(
+		template<typename ParsedInt>
+		base::Optional<numeric_value::NumericValue> deduceIntegerTypeAs(
 			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
 		) {
-			i64  parsed_value = 0;
-			auto result
+			ParsedInt parsed_value = 0;
+			auto      result
 				= std::from_chars(value.data(), value.data() + value.size(), parsed_value, base);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
+		}
+
+		base::Optional<numeric_value::NumericValue> deduceIntegerType(
+			std::string_view value, int base, const dia::StablePosition& position, query::Context& ctx
+		) {
+			if (value.starts_with('-')) return deduceIntegerTypeAs<i64>(value, base, position, ctx);
+			return deduceIntegerTypeAs<u64>(value, base, position, ctx);
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
 			std::string_view value, const dia::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
-			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
+			auto result       = parseF64(value, parsed_value);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
 	}
 
+	bool canBeNegative(pst::Access<pst::expr::ExprNumericValue> literal_expr) {
+		using enum lang_def::NumericLiteralTypeSpecifier;
+		switch (literal_expr->getTypeSpecifier()) {
+		case u8:
+		case u16:
+		case u32:
+		case u64:
+		case u128:
+			return false;
+		default:
+			return true;
+		}
+	}
+
 	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr_locked
+		query::Context&                          ctx,
+		pst::Access<pst::expr::ExprNumericValue> literal_expr,
+		const dia::StablePosition&               position,
+		const LiteralSign                        sign
 	) {
-		auto literal_expr = literal_expr_locked.unlock(ctx);
-		auto value        = literal_expr->getValue().value.strView();
-		auto type_specifier_strid
-			= literal_expr->getValue().type_specifier.copyValueOr(base::StrID(""));
-		auto type_specifier = lang_def::strAsNumericLiteralTypeSpecifier(type_specifier_strid);
-		auto position       = literal_expr->getStablePosition();
+		auto value          = literal_expr->getValue().value.strView();
+		auto type_specifier = literal_expr->getTypeSpecifier();
 
 		int base = 10;
 		if (value.starts_with("0b") || value.starts_with("0B")) {
@@ -134,6 +229,17 @@ namespace compiler::helios::code {
 		} else if (value.starts_with("0x") || value.starts_with("0X")) {
 			base = 16;
 			value.remove_prefix(2);
+		}
+
+		// A negative literal is parsed with its sign, so that the smallest value of a signed type
+		// fits into it, like `-128i8`.
+		std::string negative_value;
+		if (sign == LiteralSign::Negative) {
+			CORE_ASSERT(
+				canBeNegative(literal_expr), "A literal of an unsigned type is never negative."
+			);
+			negative_value = std::string("-").append(value);
+			value          = negative_value;
 		}
 
 		switch (type_specifier) {

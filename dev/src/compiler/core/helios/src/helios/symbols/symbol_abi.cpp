@@ -1,15 +1,19 @@
-
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "symbol_abi.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/call_argument.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/errors/extern_c_class_empty.hpp>
 #include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -35,41 +39,43 @@
 
 namespace compiler::helios {
 
-
-	/**
-	 * @brief Extracts a string literal from an extern() call argument.
-	 * @param ctx The query context.
-	 * @param arg The call argument to extract the string from.
-	 * @return The string literal value, or a query::Failed if extraction fails (there is no string
-	 * literal there).
-	 */
-	query::QResult<base::StrID> getStrFromCallArg(
-		query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
-	) {
-		auto call_arg = arg.unlock(ctx);
-
-		if (call_arg->getArgName())
-			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
-
-		auto expr_holder = call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
-
-		auto str_lit_opt
-			= expr_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
-
-		match_optional(str_lit_opt) {
-			opt_none {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Expected string literal in extern() call argument",
-					arg.unlock(ctx)->getStablePosition()
-				));
-				return query::Failed();
-			}
-			opt_some(str_lit) { return str_lit->getValue().value; }
-		}
-		return query::Failed();  // unreachable
-	}
-
 	namespace {
+
+
+		/**
+		 * @brief Extracts a string literal from an extern() call argument.
+		 * @param ctx The query context.
+		 * @param arg The call argument to extract the string from.
+		 * @return The string literal value, or a query::Failed if extraction fails (there is no
+		 * string literal there).
+		 */
+		query::QResult<base::StrID> getStrFromCallArg(
+			query::Context& ctx, pst::AccessLocked<pst::CallArgument> arg
+		) {
+			auto call_arg = arg.unlock(ctx);
+
+			if (call_arg->getArgName())
+				throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
+
+			auto expr_holder
+				= call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
+
+			auto str_lit_opt
+				= expr_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
+
+			match_optional(str_lit_opt) {
+				opt_none {
+					ctx.log<dia::PlaceholderError>(
+						"Expected string literal in extern() call argument",
+						call_arg->getStablePosition()
+					);
+					return query::Failed();
+				}
+				opt_some(str_lit) { return str_lit->getValue().value; }
+			}
+			return query::Failed();  // unreachable
+		}
+
 		/**
 		 * @brief Whether a type is valid as variadic parameter type in
 		 * `@cffi_variadic_fixed_params` declaration.
@@ -107,18 +113,18 @@ namespace compiler::helios {
 			query::Context& ctx, const HOUTFunctionDeclaration& decl, u64 fixed_params
 		) {
 			if (fixed_params == 0) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Variadic function declaration should have at least one fixed parameter.",
 					decl.origin
-				));
+				);
 				return query::Failed();
 			}
 
 			if (fixed_params >= decl.parameters.size()) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Variadic function declaration should have at least one variadic parameter.",
 					decl.origin
-				));
+				);
 				return query::Failed();
 			}
 
@@ -127,7 +133,7 @@ namespace compiler::helios {
 			for (auto& param: std::span(decl.parameters).subspan(fixed_params)) {
 				auto param_result = validateVariadicArgType(ctx, param.type.getType());
 				if (not param_result.has_value()) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
 							"Variadic function parameter has to be promoted. Got ",
 							"`",
@@ -137,74 +143,73 @@ namespace compiler::helios {
 							"`."
 						),
 						param.origin
-					));
+					);
 					return query::Failed();
 				}
 			}
 
 			return fixed_params;
 		}
-	}
 
-	QuerySymbolABI_Result getSymbolABI(
-		query::Context& ctx, SymID sym, pst::AccessLocked<pst::CallList> extern_args
-	) {
-		std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args.unlock(ctx)->begin(),
-			                                                    extern_args.unlock(ctx)->end() };
+		QuerySymbolABI_Result getSymbolABI(
+			query::Context& ctx, SymID sym, pst::Access<pst::CallList> extern_args
+		) {
+			std::vector<pst::AccessLocked<pst::CallArgument>> args{ extern_args->begin(),
+				                                                    extern_args->end() };
 
-		if (args.empty()) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
-				"extern() requires at least one argument specifying the ABI",
-				extern_args.unlock(ctx)->getStablePosition()
-			));
-			return query::Failed();
-		}
-
-		UNPACK_QRESULT(auto first_arg =, getStrFromCallArg(ctx, args[0]));
-
-		if (first_arg == base::StrID("C")) {
-			CAbi result;
-
-			if (args.size() > 2) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
-					"Too many arguments for C ABI in extern()",
-					extern_args.unlock(ctx)->getStablePosition()
-				));
+			if (args.empty()) {
+				ctx.log<dia::PlaceholderError>(
+					"extern() requires at least one argument specifying the ABI",
+					extern_args->getStablePosition()
+				);
 				return query::Failed();
 			}
 
-			if (isFunctionLike(kind(sym))) {
-				if_opt_some(getAttribute<attributes::CFFIVariadicFunction>(sym), variadic) {
-					result.fixed_params = variadic->fixed_params;
+			UNPACK_QRESULT(auto first_arg =, getStrFromCallArg(ctx, args[0]));
+
+			if (first_arg == base::StrID("C")) {
+				CAbi result;
+
+				if (args.size() > 2) {
+					ctx.log<dia::PlaceholderError>(
+						"Too many arguments for C ABI in extern()", extern_args->getStablePosition()
+					);
+					return query::Failed();
 				}
-			}
 
-			// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the C
-			// ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
-			if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
-				result.symbol_name = link_name->name;
-			}
+				if (isFunctionLike(kind(sym))) {
+					if_opt_some(getAttribute<attributes::CFFIVariadicFunction>(sym), variadic) {
+						result.fixed_params = variadic->fixed_params;
+					}
+				}
 
-			if (args.size() == 2) {  // `extern("C" "mylib")` case
-				UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
-				result.library = lib_str_lit;
-			}
+				// Like `@cffi_variadic_fixed_params`, `@c_symbol_name` only means something for the
+				// C ABI: on a default-ABI or `extern("DVM")` symbol it is ignored.
+				if_opt_some(getAttribute<attributes::CSymbolName>(sym), link_name) {
+					result.symbol_name = link_name->name;
+				}
 
-			return result;
-		} else if (first_arg == base::StrID("DVM")) {
-			if (args.size() == 1)  // `extern("DVM")` case
-				return DVMAbi{};
-			ctx.logInt(makeBox<dia::PlaceholderError>(
-				"Too many arguments for DVM ABI in extern()",
-				extern_args.unlock(ctx)->getStablePosition()
-			));
-			return query::Failed();
-		} else {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
-				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()
-			));
-			return query::Failed();
+				if (args.size() == 2) {  // `extern("C" "mylib")` case
+					UNPACK_QRESULT(auto lib_str_lit =, getStrFromCallArg(ctx, args[1]));
+					result.library = lib_str_lit;
+				}
+
+				return result;
+			} else if (first_arg == base::StrID("DVM")) {
+				if (args.size() == 1)  // `extern("DVM")` case
+					return DVMAbi{};
+				ctx.log<dia::PlaceholderError>(
+					"Too many arguments for DVM ABI in extern()", extern_args->getStablePosition()
+				);
+				return query::Failed();
+			} else {
+				ctx.log<dia::PlaceholderError>(
+					"Unsupported ABI specified in extern()", extern_args->getStablePosition()
+				);
+				return query::Failed();
+			}
 		}
+
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolABI, QuerySymbolABI_Result) {
@@ -213,16 +218,16 @@ namespace compiler::helios {
 			if (isGlobalMain(key)) return MainAbi{};
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
-			for (auto specifier: *specifiers) {
-				if (specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap()
-				    == pst::Keyword::Extern) {
-					match_optional(specifier.unlock(ctx)->getArgs()) {
-						opt_some(args) { return getSymbolABI(ctx, key, args); }
+			for (auto specifier_locked: *specifiers) {
+				auto specifier = specifier_locked.unlock(ctx);
+				if (specifier->getSpecifier().unlock(ctx)->unwrap() == pst::Keyword::Extern) {
+					match_optional(specifier->getArgs()) {
+						opt_some(args) { return getSymbolABI(ctx, key, args.unlock(ctx)); }
 						opt_none {
-							ctx.logInt(makeBox<dia::PlaceholderError>(
+							ctx.log<dia::PlaceholderError>(
 								"extern symbol requires ABI specification passed as an argument",
-								specifier.unlock(ctx)->getStablePosition()
-							));
+								specifier->getStablePosition()
+							);
 							return query::Failed();
 						}
 					}
@@ -248,12 +253,12 @@ namespace compiler::helios {
 					auto log_from_cabi = [&](const tsl::CAbiConversionResult&    result,
 					                         std::string_view                    elem,
 					                         base::Optional<dia::StablePosition> pos) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
 								"CABI ", elem, " is invalid. Reason: `", result.error(), "`."
 							),
 							pos
-						));
+						);
 					};
 
 					if_opt_some(c_abi->fixed_params, fixed) {
@@ -308,7 +313,7 @@ namespace compiler::helios {
 						any_failed = true;
 
 						const auto field_pst = maybeSymbolPst(element.getSymbol());
-						ctx.logInt(makeBox<FieldNotCCompatibleError>(
+						ctx.log<FieldNotCCompatibleError>(
 							ctx,
 							field_pst.has_value()
 								? field_pst.value().unlock(ctx)->getStablePosition()
@@ -316,14 +321,14 @@ namespace compiler::helios {
 							std::string(name(element.getSymbol()).strView()),
 							element.getType(ctx),
 							field_result.error()
-						));
+						);
 					}
 
 					// C has no zero-sized structs, so a class without fields has no C layout.
 					if (not any_field) {
-						ctx.logInt(makeBox<ExternCClassEmptyError>(
+						ctx.log<ExternCClassEmptyError>(
 							class_position, std::string(name(class_type.getSymbol()).strView())
-						));
+						);
 						return query::Failed();
 					}
 

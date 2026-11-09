@@ -2,6 +2,7 @@ const x: i32 = 1235;
 using x as a;
 namespace N2 {
 	using a as b;
+	const in_n2: i32 = 77;
 }
 using N2 as n1;
 using N2 as n2;

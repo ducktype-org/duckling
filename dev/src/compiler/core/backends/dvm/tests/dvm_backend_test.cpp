@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
@@ -10,6 +16,7 @@
 #include <vm_tester_utils.hpp>
 
 #include <base/extend_cpp/vector_utils.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <os_utils/system_libraries.hpp>
 #include <query_framework/context/context.hpp>
@@ -18,6 +25,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
+#include <algorithm>
 #include <utility>
 
 using namespace compiler::driver;
@@ -32,6 +40,7 @@ public:
 		TESTER_ADD_TEST(functionCallsTest);
 		TESTER_ADD_TEST(builtinFuncsTest);
 		TESTER_ADD_TEST(globalVariablesTest);
+		TESTER_ADD_TEST(globalsDebugInfoTest);
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(referencesTest);
@@ -46,6 +55,7 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(bitwiseOperationsTest);
 		TESTER_ADD_TEST(variantUnitAlternativeTest);
+		TESTER_ADD_TEST(functionPointersTest);
 	}
 
 protected:
@@ -75,6 +85,7 @@ protected:
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 			{ fs::FilePath(path("modules/ffi/")), "ffi" },
 			{ fs::FilePath(path("modules/bitwise_operations/")), "bitwise_operations" },
+			{ fs::FilePath(path("modules/function_pointers/")), "function_pointers" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -207,12 +218,13 @@ private:
 				ctx, base::StrID("variant_unit_alternative_test"), false, false
 			);
 			const auto dvm_type = program_ctx.lowerAndKeepTslType(layout);
-			ASSERT_HAS_VALUE(dvm_type);
 
-			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(**dvm_type);
+			const auto dvm_variant = vm::code::getTypeKind<vm::code::VariantType>(*dvm_type);
 			ASSERT_HAS_VALUE(dvm_variant);
 
-			const auto& unit_dvm_type = program_ctx.getUnitType();
+			const auto& unit_dvm_type = *program_ctx.lowerAndKeepTslType(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(unit_type.getType())->valueOrThrow()
+			);
 			ASSERT_HAS_VALUE(vm::code::getTypeKind<vm::code::OpaqueType>(unit_dvm_type));
 			ASSERT_TRUE(std::ranges::contains(
 				dvm_variant.value().variant_alternatives, typeName(unit_dvm_type)
@@ -228,6 +240,37 @@ private:
 
 	void globalVariablesTest() {
 		runTest("globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n1\n0\n", {}, 0);
+	}
+
+	void globalsDebugInfoTest() {
+		using namespace compiler;
+
+		auto module = driver::test_utils::getModuleIdFromPath("globals");
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
+			auto  mir_unit  = mir::lowerToMIRUnit(ctx, &top_level);
+			ASSERT_HAS_VALUE(mir_unit, "MIR lowering failed");
+			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+
+			backend_vm::DVMCodeBuilder m(ctx, base::StrID("globals"), true, false);
+			m.insertLIRUnit(lir_unit);
+			auto debug_info = m.buildDebugInfo();
+			ASSERT_HAS_VALUE(debug_info, "Debug info should be built");
+
+			// Every user global is recorded under its mangled name, with its source name and the
+			// position of its declaration.
+			for (const auto* name: { "g_a", "g_b", "g_c", "g_f", "g_bool" }) {
+				const auto it = std::ranges::find_if(debug_info->globals, [&](const auto& entry) {
+					return entry.second.name == name;
+				});
+				assertTrue(
+					it != debug_info->globals.end(), base::strConcat("Missing global: ", name)
+				);
+				ASSERT_HAS_VALUE(
+					it->second.position, base::strConcat("Global without position: ", name)
+				);
+			}
+		});
 	}
 
 	void booleanOperationsTest() { runTest("boolean_operations", {}, {}, {}, 1); }
@@ -299,6 +342,10 @@ private:
 	}
 
 	void bitwiseOperationsTest() { runTest("bitwise_operations", {}, {}, {}, 0); }
+
+	void functionPointersTest() {
+		runMultimoduleTest("function_pointers", ALL_CORE_MODULES, {}, "3\n25\n12\n12\n7\n", {}, 42);
+	}
 };
 
 

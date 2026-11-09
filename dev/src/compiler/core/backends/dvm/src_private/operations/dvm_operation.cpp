@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dvm_operation.hpp"
 
 #include "../dvm_value.hpp"
@@ -25,8 +31,8 @@ namespace {
 		switch (op) {
 		case IntegerNeg: 	return OpKind::neg;
 		case FloatNeg:   	return OpKind::fneg;
-		case BooleanNot: 	return OpKind::log_not;
-		case IntegerBitNot: return OpKind::bit_not;
+		case BooleanNot: 	return OpKind::logNot;
+		case IntegerBitNot: return OpKind::bitNot;
 		case IntegerAdd:  	return OpKind::add;
 		case IntegerSub:  	return OpKind::sub;
 		case IntegerMul:  	return OpKind::mul;
@@ -34,17 +40,17 @@ namespace {
 		case IntegerSMod: 	return OpKind::mod;
 		case IntegerUDiv: 	return OpKind::udiv;
 		case IntegerUMod: 	return OpKind::umod;
-		case IntegerBitAnd: return OpKind::bit_and;
-        case IntegerBitOr:  return OpKind::bit_or;
-        case IntegerBitXor: return OpKind::bit_xor;
+		case IntegerBitAnd: return OpKind::bitAnd;
+        case IntegerBitOr:  return OpKind::bitOr;
+        case IntegerBitXor: return OpKind::bitXor;
         case IntegerShl:    return OpKind::shl;
         case IntegerShr:    return OpKind::shr;
 		case FloatAdd:    	return OpKind::fadd;
 		case FloatSub:    	return OpKind::fsub;
 		case FloatMul:    	return OpKind::fmul;
 		case FloatDiv:    	return OpKind::fdiv;
-		case BooleanAnd:  	return OpKind::log_and;
-		case BooleanOr:   	return OpKind::log_or;
+		case BooleanAnd:  	return OpKind::logAnd;
+		case BooleanOr:   	return OpKind::logOr;
 		case IntegerEq:    	return OpKind::cmpEq;
 		case IntegerNeq:   	return OpKind::cmpNeq;
 		case IntegerSLt:   	return OpKind::cmpLt;
@@ -65,31 +71,56 @@ namespace {
 		}
 		// clang-format on
 	}
+
+	compiler::backend_vm::internal::FunctionCallInfo makeFunctionCallInfo(
+		compiler::backend_vm::internal::DVMCallable             call_target,
+		const std::vector<CRef<tsl::TypeLayout>>&               parameter_layouts,
+		CRef<tsl::TypeLayout>                                   return_type_layout,
+		compiler::backend_vm::internal::ProgramLoweringContext& program_context
+	) {
+		base::Optional<vm::code::TypeOfData> called_result_type
+			= program_context.lowerAndKeepReturnTslType(return_type_layout)
+		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
+
+		std::vector<vm::code::TypeOfData> param_types
+			= parameter_layouts | std::views::transform([&](const auto& layout) {
+				  return *program_context.lowerAndKeepTslType(layout);
+			  })
+		    | std::ranges::to<std::vector>();
+
+		return { .call_target = std::move(call_target),
+			     .return_type = std::move(called_result_type),
+			     .param_types = std::move(param_types) };
+	}
 }
 
 namespace compiler::backend_vm::internal {
 	FunctionCallInfo FunctionCallInfo::fromLirFunction(
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
-		base::Optional<vm::code::TypeOfData> called_result_type
-			= program_context.lowerAndKeepTslType(func_literal.return_type_layout)
-		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
-
-		std::vector<vm::code::TypeOfData> param_types
-			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return **program_context.lowerAndKeepTslType(layout);
-			  })
-		    | std::ranges::to<std::vector>();
-
-		FunctionCallInfo call_info{ .call_target
-			                        = DVMFunctionName{ .name = func_literal.mangled_name },
-			                        .return_type = called_result_type,
-			                        .param_types = param_types };
-
+		DVMCallable call_target = DVMFunctionName{ .name = func_literal.mangled_name };
 		if (v_matches(func_literal.abi.value, lir::LIRAbi::CAbi))
-			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
+			call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
 
-		return call_info;
+		return makeFunctionCallInfo(
+			std::move(call_target),
+			*func_literal.parameter_layouts,
+			func_literal.return_type_layout,
+			program_context
+		);
+	}
+
+	FunctionCallInfo FunctionCallInfo::fromIndirectCall(
+		const lir::IndirectCallParameters& call_params,
+		DVMPlace                           callee,
+		ProgramLoweringContext&            program_context
+	) {
+		return makeFunctionCallInfo(
+			std::move(callee),
+			*call_params.parameter_layouts,
+			call_params.return_type_layout,
+			program_context
+		);
 	}
 
 	FunctionCallInfo FunctionCallInfo::fromExternCFunction(
@@ -195,7 +226,7 @@ namespace compiler::backend_vm::internal {
 
 			if_opt_some(func_literal.builtin_kind_opt, builtin) {
 				base::Optional<vm::code::TypeOfData> return_type
-					= ctx.program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+					= ctx.program_context.lowerAndKeepReturnTslType(func_literal.return_type_layout)
 				          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 				return BuiltinCallOperation{
 					.kind        = builtin,
@@ -211,6 +242,27 @@ namespace compiler::backend_vm::internal {
 				.call_info = dvm_call_info,
 				.args      = std::move(call_args),
 				.dest      = std::move(dest),
+			};
+		}
+		case IndirectCall: {
+			CORE_ASSERT(
+				!instr.arguments.empty(), "IndirectCall expects at least 1 argument (the callee)"
+			);
+			const auto* call_params = std::get_if<lir::IndirectCallParameters>(&instr.extra_params);
+			CORE_ASSERT(call_params != nullptr, "IndirectCall instruction without parameters");
+
+			auto callee    = ctx.lowerLirValue(instr.arguments[0]).get<DVMPlace>();
+			auto call_args = instr.arguments | std::views::drop(1)
+			               | std::views::transform([&](const auto& lir_arg) {
+								 return ctx.lowerLirValue(lir_arg);
+							 })
+			               | std::ranges::to<std::deque>();
+
+			return CallOperation{
+				.call_info
+				= FunctionCallInfo::fromIndirectCall(*call_params, callee, ctx.program_context),
+				.args = std::move(call_args),
+				.dest = lower_opt_dest(),
 			};
 		}
 		case AddressOf: {

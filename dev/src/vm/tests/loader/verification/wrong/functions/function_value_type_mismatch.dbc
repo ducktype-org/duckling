@@ -1,0 +1,12 @@
+# Function values of different function types cannot be copied into each other.
+type fun: unop { i64 } { i64 }
+type fun: thunk {} {}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type f, unop;
+    init_pany_type g, thunk;
+    mov_pfun_pfun g, f;
+    deinit; # g
+    deinit; # f
+    ret;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../dvm_value.hpp"
 #include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
@@ -17,7 +23,8 @@ namespace comptime_func_names {
 	constexpr auto GLOBAL_QUERY_CONTEXT     = "comptime_query_ctx";
 	constexpr auto CREATE_BOX               = "comptime_create_box";
 	constexpr auto CREATE_REF               = "comptime_create_ref";
-	constexpr auto CREATE_CONST             = "comptime_create_const";
+	constexpr auto CREATE_MUT               = "comptime_create_mut";
+	constexpr auto CREATE_IMM               = "comptime_create_imm";
 	constexpr auto CREATE_PTR               = "comptime_create_ptr";
 	constexpr auto CREATE_MANY_PTR          = "comptime_create_many_ptr";
 	constexpr auto CREATE_CPTR              = "comptime_create_cptr";
@@ -32,6 +39,7 @@ namespace comptime_func_names {
 	constexpr auto VARIANT_BUILDER_NEW      = "comptime_variant_builder_new";
 	constexpr auto VARIANT_BUILDER_PUSH     = "comptime_variant_builder_push";
 	constexpr auto VARIANT_BUILDER_FINALIZE = "comptime_variant_builder_finalize";
+	constexpr auto CREATE_OPTIONAL          = "comptime_create_optional";
 }
 
 namespace {
@@ -111,9 +119,13 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateRef expects 1 argument");
 			lower_single_call(base::StrID(comptime_func_names::CREATE_REF), op.args, op.dest);
 			break;
-		case lir::MetaKind::CreateConst:
-			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateConst expects 1 argument");
-			lower_single_call(base::StrID(comptime_func_names::CREATE_CONST), op.args, op.dest);
+		case lir::MetaKind::CreateMut:
+			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateMut expects 1 argument");
+			lower_single_call(base::StrID(comptime_func_names::CREATE_MUT), op.args, op.dest);
+			break;
+		case lir::MetaKind::CreateImm:
+			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateImm expects 1 argument");
+			lower_single_call(base::StrID(comptime_func_names::CREATE_IMM), op.args, op.dest);
 			break;
 		case lir::MetaKind::CreatePtr:
 			lower_ctx_call(base::StrID(comptime_func_names::CREATE_PTR));
@@ -145,6 +157,10 @@ namespace compiler::backend_vm::internal {
 			lower_builder_pattern(builder);
 			break;
 		}
+		case lir::MetaKind::CreateOptional:
+			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateOptional expects 1 argument");
+			lower_ctx_call(base::StrID(comptime_func_names::CREATE_OPTIONAL));
+			break;
 		case lir::MetaKind::Eq:
 			lower_single_call(base::StrID(comptime_func_names::TYPES_EQUAL), op.args, op.dest);
 			break;

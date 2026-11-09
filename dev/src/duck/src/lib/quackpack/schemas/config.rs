@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Schemas used by the user configuration file.
 
 use std::ops::{Deref, DerefMut};
@@ -5,8 +11,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use serde::{Deserialize, de};
-use url::Url;
 
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackError, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -31,7 +37,7 @@ pub struct SecurityTyposConfig {
 /// A struct for the `registry:` config map.
 pub struct RegistryConfig {
     /// If specified, this overrides the default registry URL.
-    pub url: Option<Url>,
+    pub url: Option<InternedUrl>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

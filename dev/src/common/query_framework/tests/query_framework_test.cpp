@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/anycast.hpp>
@@ -271,6 +277,7 @@ namespace context_leak {
 	// detection actually took place, and that other
 	// assertions did not prevent it
 	bool use_leaked_query_happened = false;
+	bool leak_detected             = false;
 
 	DECLARE_QUERY(IdentityQuery, query::U64Key, u64, ({ .uses_qresult = false }));
 	DECLARE_QUERY(LeakQuery, query::U64Key, u64, ({ .uses_qresult = false }));
@@ -299,7 +306,14 @@ namespace context_leak {
 	struct IMPLEMENT_QUERY(UseLeakedContext, u64) {
 		static auto provide(Context&, QKey key) -> PResult {
 			use_leaked_query_happened = true;
-			leaked_context->query<IdentityQuery>({ 1 });
+			// The inactive-context assert fires before any query state is touched,
+			// so it is safe to catch the panic here, inside the worker thread.
+			try {
+				leaked_context->query<IdentityQuery>({ 1 });
+			} catch (const base::Panic& panic) {
+				leak_detected = std::string_view(panic.what()).contains("Context is inactive.");
+			}
+
 			return key.value;
 		}
 
@@ -665,9 +679,14 @@ DECLARE_QUERY(
 );
 
 struct IMPLEMENT_QUERY(NonPreservedQuery, u64) {
+	inline static bool metadata_rejected = false;
+
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		// This should panic because preserve_in_graph = false
-		ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value);
+		// The preserve_in_graph assert fires before any state is touched,
+		// so it is safe to catch the panic here, inside the worker thread.
+		try {
+			ctx.addMetadata<metadata_tests::metadata_SimpleMeta>(key.value);
+		} catch (const base::Panic&) { metadata_rejected = true; }
 		return key.value;
 	}
 
@@ -772,12 +791,10 @@ private:
 #if defined(BUILD_TYPE_DEV)
 		const auto& graph = query::Context::getState().getGraph();
 
-		// @TODO: #2138 Change this to proper check, like "doesNodeExist"
-		// assertThrows<base::Panic>(
-		// 	[&]() { graph.getNodeDeps<EmptyQuery>({ 1 }); }, "Query deps present before query call."
-		// );
+		ASSERT_TRUE(!graph.nodeExists(query::internal::makeNodeID<EmptyQuery>({ 1 })));
 
 		query::entryPoint<EmptyQuery>({ 1 });
+		ASSERT_TRUE(graph.nodeExists(query::internal::makeNodeID<EmptyQuery>({ 1 })));
 		auto deps = graph.getNodeDeps<EmptyQuery>({ 1 });
 		ASSERT_EQUAL(deps.size(), 1);
 
@@ -982,19 +999,13 @@ private:
 	}
 
 	void testContextSanityCheck() {
-		// @TODO: #2138 This tests will be hard to bring back, but maybe we can explicitly test
-		// contexts active flags here.
-		return;
-
 #if defined(BUILD_TYPE_DEV)
-		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<context_leak::LeakQuery>({ 1 }); },
-			"Bad context usage not detected"
-		);
+		query::entryPoint<context_leak::LeakQuery>({ 1 });
 		assertTrue(
 			context_leak::use_leaked_query_happened,
 			"Something else happened, the test is inconclusive"
 		);
+		assertTrue(context_leak::leak_detected, "Bad context usage not detected");
 #endif
 	}
 
@@ -1086,18 +1097,21 @@ private:
 		auto result = query::entryPoint<UsesQResultTest>({ 1 });
 		assertTrue(result.hasFailed(), "Expected error in UsesQResultTest");
 
-		// @TODO: #2138 decide what to do with commented parts of this test, likely remove them, as
-		// they test inner query entry panics.
+#if defined(BUILD_TYPE_DEV)
+		// Panics on worker threads cannot be caught, so the query entry is run on this thread.
+		// It is safe as long as provide() does not call other queries.
+		assertThrows<base::Panic>(
+			[] {
+				query::internal::standardQueryEntry<ImplementationOf_UsesQResultNoCatchTest>({ 1 });
+			},
+			"QueryFailedException not turned into panic"
+		);
 
-		// assertThrows<base::Panic>(
-		// 	[] { query::entryPoint<UsesQResultNoCatchTest>({ 1 }); },
-		// 	"QueryFailedException not thrown as expected"
-		// );
-
-		// assertThrows<base::Panic>(
-		// 	[] { query::entryPoint<NoQResultTest>({ 1 }); },
-		// 	"QueryFailedException not thrown as expected"
-		// );
+		assertThrows<base::Panic>(
+			[] { query::internal::standardQueryEntry<ImplementationOf_NoQResultTest>({ 1 }); },
+			"QueryFailedException not turned into panic"
+		);
+#endif
 
 		assertThrows<query::internal::QueryFailedException>(
 			[] {
@@ -1196,14 +1210,10 @@ private:
 	}
 
 	void testMetadataPreserveInGraphCheck() {
-		// @TODO: #2138 Figure out if we can re-enable this test in some form.
-		return;
-
 #if defined(BUILD_TYPE_DEV)
-		// Calling NonPreservedQuery should panic because it tries to add metadata
-		// to a query without preserve_in_graph = true
-		assertThrows<base::Panic>(
-			[] { query::entryPoint<NonPreservedQuery>({ 1 }); },
+		query::entryPoint<NonPreservedQuery>({ 1 });
+		assertTrue(
+			ImplementationOf_NonPreservedQuery::metadata_rejected,
 			"Adding metadata to non-preserved query should panic"
 		);
 #endif

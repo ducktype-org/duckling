@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "mir_builders.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -6,6 +12,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
@@ -139,7 +146,7 @@ namespace compiler::mir {
 		std::vector<BlockID> block_order;
 		block_order.reserve(this->blocks.size());
 
-		base::StableHashMap<BlockID, Block> function_blocks;
+		base::HashMap<BlockID, Block> function_blocks;
 
 		// First element in block order is the entry block
 		block_order.push_back(entry_block_id);

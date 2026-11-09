@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "class_elements_errors.hpp"
@@ -15,6 +21,21 @@ namespace pst {
 
 	public:
 		NonEmptyError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class FieldBindingKeywordError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "field_binding_keyword" };
+		}
+
+	public:
+		FieldBindingKeywordError(dia::SourcePosition pos, std::string keyword):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("keyword", std::move(keyword));
+		}
 	};
 
 	class NoSpecifierError final: public dia::MessageWithCodeFragmentAndCause {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../jit_compiler.hpp"
 #include "jit_data.hpp"
 #include "jit_utils.hpp"
@@ -71,14 +77,16 @@ namespace vm::jit {
 		mpm.run(m, mam);
 	}
 
-	static void printModule(Ref<llvm::Module> module, std::string_view filename) {
-		std::error_code      error_code;
-		llvm::raw_fd_ostream file(filename, error_code, llvm::sys::fs::OF_Text);
+	namespace {
+		void printModule(Ref<llvm::Module> module, std::string_view filename) {
+			std::error_code      error_code;
+			llvm::raw_fd_ostream file(filename, error_code, llvm::sys::fs::OF_Text);
 
-		if (error_code)
-			llvm::errs() << "Error opening file: " << error_code.message() << "\n";
-		else
-			module->print(file, nullptr);
+			if (error_code)
+				llvm::errs() << "Error opening file: " << error_code.message() << "\n";
+			else
+				module->print(file, nullptr);
+		}
 	}
 
 	MRef<JitLLVMFunc> compileLLVM(

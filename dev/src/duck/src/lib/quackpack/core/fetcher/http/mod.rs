@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! General HTTP client, backed by [`curl`].
 
 use curl::easy::{Easy2, Handler};
@@ -33,7 +39,6 @@ impl<'duck> HttpClient<'duck> {
     }
 
     /// Perform a generic HTTP request.
-    #[tracing::instrument(skip_all)]
     pub fn request(&self, request: Request) -> QuackResult<Response> {
         let mut easy = self.create_easy(Collector::default(), &request)?;
         let (parts, body) = request.into_parts();

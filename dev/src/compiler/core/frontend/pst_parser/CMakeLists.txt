@@ -36,6 +36,7 @@ file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"${PST_SRC}/elements/implementations/expr_holders.cpp"
 	"${PST_SRC}/elements/implementations/meta/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/*.cpp"
+	"${PST_SRC}/elements/implementations/not_statements/synthetic_elements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/patterns/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/wrapper_elements/*.cpp"
 	"${PST_SRC}/elements/implementations/not_statements/format_string_sub_elements/*.cpp"
@@ -46,23 +47,23 @@ set_source_files_properties(${OtherElementsImplementationFiles}
 )
 
 add_library(PstParser
-	${PST_SRC}/lang_parser_element.cpp
-	${PST_SRC}/lang_parser_state.cpp
-	${PST_SRC}/source_position_locked.cpp
-	${PST_SRC}/test_utils/pst_test_utils.cpp
-	${PST_SRC}/access.cpp
-	${PST_SRC}/utility.cpp
-	${PST_SRC}/pst.cpp
-	${PST_SRC}/pst_automatic.cpp
+	${PST_SRC}/pst/pst.cpp
+	${PST_SRC}/state/lang_parser_state.cpp
+	${PST_SRC}/state/lang_state_unmethods.cpp
+	${PST_SRC}/base_element/lang_parser_element.cpp
+	${PST_SRC}/base_element/lang_element_construction_data.cpp
+	${PST_SRC}/access/source_position_locked.cpp
+	${PST_SRC}/access/access_pst.cpp
+	${PST_SRC}/automatic/pst_automatic.cpp
+	${PST_SRC}/elements/common/elements_common.cpp
 	${PST_SRC}/pst_query/code_dependency.cpp
-	${PST_SRC}/elements/elements_common.cpp
-	${PST_SRC}/elements/lang_state_unmethods.cpp
+	${PST_SRC}/repl_utils/extractors.cpp
+	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${StatementElementsImplementationFiles}
 	${DeclarationsElementsImplementationFiles}
 	${ExpressionElementsImplementationFiles}
 	${ClassElementsImplementationFiles}
 	${OtherElementsImplementationFiles}
-	${PST_SRC}/pst_visitor.hpp
 )
 
 if (NOT DISABLE_UNITY_COMPILATION)

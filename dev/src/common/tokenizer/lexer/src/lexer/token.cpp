@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file token.hpp
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
@@ -357,7 +363,15 @@ namespace lexer {
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
 	std::string Token::describe() const {
-		return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
+		if (type != Type::Sentinel)
+			return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
+
+		// A sentinel names a boundary in the token stream, not source text.
+		const std::string_view value = getStrValue();
+		if (value.empty()) return "the end of the statement";
+		if (value == "EOF") return "EOF";
+		if (value == "BOF") return "BOF";
+		return base::strConcat("the end of the '", value, "' group");
 	}
 
 	TokenData::TokenData(Tokens&& tokens, Token&& bof_sentinel, Token&& eof_sentinel):

@@ -1,5 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <frontend/pst_parser/elements/elements_common.hpp>
+#include <frontend/pst_parser/elements/common/elements_common.hpp>
+#include <frontend/pst_parser/elements/common/parser_common_errors.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -15,14 +21,15 @@
 #include <frontend/pst_parser/elements/implementations/not_statements/not_statements_errors.hpp>
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
-#include <frontend/pst_parser/elements/parser_common_errors.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <tester/tester.hpp>
 
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
@@ -37,12 +44,12 @@ class PSTErrorTests: public tester::TestSuite {
 
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
-		template<typename Element, typename Parser>
+		template<typename Element>
 		[[nodiscard]]
-		static base::OkBad testCloning(const pst::PST<Element, Parser>& pst) {
-			if (not pst.hasErrors()) {
+		static base::OkBad testCloning(CRef<pst::PST<Element>> pst) {
+			if (not pst->hasErrors()) {
 				return pst::testElementCloning(
-					base::CRef(&*pst.getRootElement().illegalAccess().value())
+					base::CRef(&*pst->getRootElement().illegalAccess().value())
 				);
 			}
 			return base::OK;
@@ -61,8 +68,10 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
+			auto parsed = pst::ParsedPST<Element>::template fromContents<Parser>(
+				code, pst::PSTType::Program
+			);
+			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 
 		[[nodiscard]]
@@ -70,48 +79,6 @@ class PSTErrorTests: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
 			ss << base::typeName<Element>();
-			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
-			return ss.str();
-		}
-	};
-
-	template<bool good, typename Parser>
-	struct Example<pst::CodeBlock, good, Parser>: public GenExample {
-		Example(std::string code): GenExample(std::move(code)) {}
-
-		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}
-			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
-		}
-
-		[[nodiscard]]
-		std::string message() const override {
-			std::stringstream ss;
-			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
-			ss << base::typeName<pst::CodeBlock>();
-			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
-			return ss.str();
-		}
-	};
-
-	template<bool good, typename Parser>
-	struct Example<pst::CodeBlockOrStmt, good, Parser>: public GenExample {
-		Example(std::string code): GenExample(std::move(code)) {}
-
-		bool operator()() override {
-			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}
-			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
-		}
-
-		[[nodiscard]]
-		std::string message() const override {
-			std::stringstream ss;
-			ss << "Unexpected behaviour while parsing: `" << code << "` as ";
-			ss << base::typeName<pst::CodeBlockOrStmt>();
 			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}
@@ -128,14 +95,14 @@ class PSTErrorTests: public tester::TestSuite {
 			  class_name(base::StrID(class_name.c_str())) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
+			auto parsed = pst::ParsedPST<Element>::template fromContents<Parser>(
 				this->code,
 				makeBox<pst::LangParserContext>(
 					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
 				),
 				hashing::ComponentHash{}
 			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
+			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 
 		[[nodiscard]]
@@ -162,8 +129,8 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Stmt, false> not_all_parsed{ "call(3, 5 + 3 = 7);" };
 
-	Example<pst::CodeBlockOrStmt, true> just_block{ "{}" };
-	Example<pst::CodeBlockOrStmt, true> just_stmt{ "x=y;" };
+	Example<pst::CodeBlockOrAnyStmt, true> just_block{ "{}" };
+	Example<pst::CodeBlockOrAnyStmt, true> just_stmt{ "x=y;" };
 
 	Example<pst::CodeBlock, true>  simple_code_block{ "{}" };
 	Example<pst::CodeBlock, false> no_code_block{ "x=y;" };
@@ -184,6 +151,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
 	Example<pst::Const, false> let_const{ "let x: i32 = 5" };
 	Example<pst::Const, false> var_const{ "var x: i32 = 5" };
+
+	Example<pst::CodeBlock, true>  const_after_semicolon{ "{ var x = 1; const Y = 2; }" };
+	Example<pst::CodeBlock, false> const_without_semicolon{ "{ var x = 1 const Y = 2; }" };
+	Example<pst::CodeBlock, false> const_in_var_type{ "{ var x: const i64 = 1; }" };
+	Example<pst::CodeBlock, false> const_after_ref{ "{ var x: ref const i64 = y; }" };
+	Example<pst::CodeBlock, false> const_in_result_type{ "{ fun g() -> const i64 = 1; }" };
 
 	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
 	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
@@ -217,18 +190,35 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
 	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
 	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
+	Example<pst::Fun, false>     bad_fun_expr{ "fun foo(t: type) -> type = return t;" };
+	Example<pst::Fun, true>      good_fun_expr{ "fun foo(t: type) -> type = ref t;" };
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
+	Example<pst::Fun, true>      contextual_fixity_names{
+        "fun prefix(suffix: i64) -> i64 = { return suffix; }"
+	};
+	Example<pst::Fun, false> fixity_on_plain_name{ "fun prefix ordinary(n: i64) -> i64 = n;" };
 
-	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
-	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
-	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
-	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
-	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
-	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
-	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
-	Example<pst::Fun, false>     special_operator_function2{ "fun .?(a: i64) = {}" };
+	Example<pst::Fun, true>     operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
+	Example<pst::Fun, true>     prefix_operator_function{ "fun prefix +*(a: i64) -> i64 = {}" };
+	Example<pst::Fun, true>     suffix_operator_function{ "fun suffix +*(a: i64) -> i64 = {}" };
+	Example<pst::FunDecl, true> operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
+	Example<pst::FunDecl, true> suffix_operator_fundecl{ "fundecl suffix +*(a: i64) -> i64" };
+	Example<pst::Class, true>   operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
+	Example<pst::Class, true> suffix_operator_method{ "class Foo { fun suffix +*() -> Foo = {} }" };
+	Example<pst::Fun, false>  assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false>  bare_assign_operator_function{ "fun =(a: i64) = {}" };
+	Example<pst::Fun, false>  comparison_operator_function1{ "fun <(a: i64) = {}" };
+	Example<pst::Fun, false>  special_operator_function1{ "fun ->(a: i64) = {}" };
+	Example<pst::Fun, false>  special_operator_function2{ "fun .?(a: i64) = {}" };
+
+	Example<pst::Fun, true> ternary_simple_expr{
+		"fun foo(t: type) -> type = if x then {return b;} else 2;"
+	};
+	Example<pst::Fun, false> normal_if_stmt{
+		"fun foo(t: type) -> type = if (x) {return a;} else 2;"
+	};
 	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
@@ -287,6 +277,24 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
+	Example<pst::TopLevel, true> template_expr_fun_then_stmt{
+		"template(T: type) fun f(x: T) -> T = x;\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_specifier{
+		"template(T: type) public fun f() = {}\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_attribute{
+		"template(T: type) @inline fun f() = {}\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> template_with_call_specifier{
+		"template(T: type) extern(\"C\") fundecl f();\nfun g() = {}"
+	};
+	Example<pst::TopLevel, true> nested_template{
+		"template(A: type) template(B: type) class P {}\nfun g() = {}"
+	};
+	Example<pst::Class, true> class_with_template_method{
+		"class C { template(T: type) fun m(x: T) = {} fun n() = {} }"
+	};
 
 	Example<pst::Using, true>  simple_using{ "using std.math" };
 	Example<pst::Using, true>  star_using{ "using a.b.*" };
@@ -327,7 +335,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true> trailing_comma_call_list{ "print(\"windows\",);" };
 	Example<pst::Stmt, true> trailing_comma_nested_import{ "import A.B.{C,}" };
 	Example<pst::Stmt, true> trailing_comma_parameter_list{ "fun foo(a: A,) = {}" };
-	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y:{1,};" };
+	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y[1,];" };
+	// The old `:{}` template bake syntax is gone, `x.y[1]` replaced it.
+	Example<pst::Stmt, false> old_template_bake_syntax{ "x.y:{1};" };
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };
@@ -335,7 +345,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::For, false> no_in_for{ "for(a a + c) {}" };
 
 	Example<pst::Class, true> simple_class{ "class x{}" };
-	Example<pst::Class, true> complicated_class{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, true> complicated_class{ "class x extends y implements z[], d[T] {}" };
 	Example<pst::Class, true> nested_class{
 		"class outer { class inner { x: i32 = 0; } x: i32 = 0;}"
 	};
@@ -359,16 +369,20 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::Stmt, true> class_using_as{ "using std.math.sqrt as sqrt;" };
 
-	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
-	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
-	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true>  public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true>  private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true>  protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true>  multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true>  simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true>  global_imm_field{ "global x: imm i32 = 5;" };
+	ClassStmtExample<pst::Stmt, false> global_var_field{ "global var x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, false> global_let_field{ "global let x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_let_field{ "let x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simple_let_field1{ "let x: i32" };
+	ClassStmtExample<pst::Field, false> var_field{ "var x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> let_field{ "let x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> let_field_without_init{ "let x: i32" };
+	ClassStmtExample<pst::Field, true>  imm_field{ "x: imm i32" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
 	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 
@@ -404,12 +418,15 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, false> bad1_ternary{ "if if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad2_ternary{ "+ if 5 then x else y" };
 	Example<pst::UniversalExprHolder, false> bad3_ternary{ "if 5 else y" };
+	Example<pst::UniversalExprHolder, true>  const_ternary{ "if const a == b then x else y" };
+	Example<pst::UniversalExprHolder, true>  const_ternary_group{ "if const (a) then x else y" };
+	Example<pst::UniversalExprHolder, false> const_ternary_no_condition{ "if const then x else y" };
+	Example<pst::UniversalExprHolder, false> const_ternary_no_else{ "if const a then x" };
 
 	Example<pst::UniversalExprHolder, true> range_operator{ "x[1 .. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_to{ "x[.. 10]" };
 	Example<pst::UniversalExprHolder, true> range_operator_from{ "x[1 ..]" };
-	// This is because it's lexed as two floats 1. and .10, not necessarily desired behaviour
-	Example<pst::UniversalExprHolder, false> range_operator_bad{ "x[1..10]" };
+	Example<pst::UniversalExprHolder, true> range_operator_no_spaces{ "x[1..10]" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
@@ -434,9 +451,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::UniversalExprHolder, true> simple_chain_expr{ "(x * t).y.z(4)[3]" };
 
-	Example<pst::UniversalExprHolder, true> simple_template_expr{
-		"(x * t).y:{x, y}::z:{abc}(4)[3]"
-	};
+	Example<pst::UniversalExprHolder, true> simple_template_expr{ "(x * t).y[x, y]::z[abc](4)[3]" };
 
 	Example<pst::FlowPattern, true> flow_tuple_simple{ "(1, x)" };
 	Example<pst::FlowPattern, true> flow_tuple_nested{ "(1, (x, _))" };
@@ -545,7 +560,6 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::MultipleTernaryError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::PartialTernaryError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::ImproperTernaryError>(ss, dia::SourcePosition::fakePosition());
-		testDiagnosticMessage<pst::BadTemplateError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadStrValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::MoreThanStrValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadRoundExprError>(ss, dia::SourcePosition::fakePosition());
@@ -609,10 +623,195 @@ class PSTErrorTests: public tester::TestSuite {
 		std::cerr << ss.str();
 	}
 
+	/**
+	 * @brief Prints the text of the diagnostics into a string.
+	 */
+	template<class Element>
+	static std::string renderedDiagnostics(CRef<pst::ParsedPST<Element>> parsed) {
+		std::stringstream raw;
+		parsed->getLogger()->terminalPrint(raw);
+		return raw.str();
+	}
+
+	/**
+	 * @brief Tests the error messages that reference `Sentinels` (tokens that act as a boundary
+	 * like EOF, end of brackets, etc.). These errors shouldn't directly reference `Sentinel` tokens
+	 * and should describe them properly.
+	 */
+	void sentinelMessageTests() {
+		// Tests regarding the end of a fallback window.
+		{
+			auto parsed = pst::ParsedPST<>::fromContents(
+				"fun main() = {\n    var var = 10;\n}\n", pst::PSTType::Program
+			);
+			const std::string text = renderedDiagnostics(parsed.ref());
+
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("the end of the statement") != std::string::npos,
+				base::strConcat("`var var = 10;` should describe the boundary, got:\n", text)
+			);
+			assertTrue(
+				text.find("''") == std::string::npos,
+				base::strConcat("an empty quoted payload was printed, got:\n", text)
+			);
+			// The next token is real, so its diagnostic must keep its informative rendering.
+			assertTrue(
+				text.find("Operator '='") != std::string::npos,
+				base::strConcat("the second diagnostic lost its token text, got:\n", text)
+			);
+			// The caret must keep pointing at the offending token: line 2, column 9.
+			assertTrue(
+				text.find(":2:9") != std::string::npos,
+				base::strConcat("the caret moved away from the offending token, got:\n", text)
+			);
+		}
+
+		// Tests regarding the end of a file.
+		{
+			auto parsed
+				= pst::ParsedPST<pst::FlowPattern>::fromContents("(a, b) as", pst::PSTType::Program);
+			const std::string text = renderedDiagnostics(parsed.ref());
+
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("but got: EOF.") != std::string::npos,
+				base::strConcat("a truncated pattern should report EOF, got:\n", text)
+			);
+		}
+
+		// Tests regarding the end of a bracketed expression.
+		{
+			auto parsed = pst::ParsedPST<>::fromContents(
+				"fun main() = {\n    match (x) {\n        case (a, b) as\n    }\n}\n",
+				pst::PSTType::Program
+			);
+			const std::string text = renderedDiagnostics(parsed.ref());
+
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("the internal token kind leaked into the message, got:\n", text)
+			);
+			assertTrue(
+				text.find("the end of the '}' group") != std::string::npos,
+				base::strConcat(
+					"a pattern cut by a closing brace should name the group, got:\n", text
+				)
+			);
+		}
+
+		{
+			auto parsed = pst::ParsedPST<>::fromContents(
+				"fun main() = {\n    var if = 10;\n}\n", pst::PSTType::Program
+			);
+			const std::string text = renderedDiagnostics(parsed.ref());
+
+			assertTrue(
+				text.find("Keyword 'if'") != std::string::npos,
+				base::strConcat("a real keyword lost its rendering, got:\n", text)
+			);
+			assertTrue(
+				text.find("Sentinel") == std::string::npos,
+				base::strConcat("a real keyword was reported as a sentinel, got:\n", text)
+			);
+		}
+	}
+
+	/**
+	 * @brief Parses a program with a single parsing error and checks that the broken statement was
+	 * dropped as a whole while the following code was parsed.
+	 */
+	void assertRecovered(
+		std::string_view code, std::string_view dropped_element, std::string_view kept_element
+	) {
+		auto              parsed      = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+		const std::string diagnostics = renderedDiagnostics(parsed.ref());
+		assertTrue(
+			parsed->getLogger()->errorCount() == 1,
+			base::strConcat("expected exactly one error for `", code, "`, got:\n", diagnostics)
+		);
+
+		std::stringstream tree;
+		parsed->dprint(tree);
+		assertTrue(
+			tree.str().find(dropped_element) == std::string::npos,
+			base::strConcat(
+				"`", dropped_element, "` should be dropped from `", code, "`, got:\n", tree.str()
+			)
+		);
+		assertTrue(
+			tree.str().find(kept_element) != std::string::npos,
+			base::strConcat(
+				"`", kept_element, "` should be kept in `", code, "`, got:\n", tree.str()
+			)
+		);
+	}
+
+	/**
+	 * @brief Tests that an error inside an element that changes the parser context is handled by
+	 * the statement fallback instead of leaving a partially parsed element in the tree.
+	 */
+	void contextRecoveryTests() {
+		assertRecovered("class 5 { }\nfun g() = {}", "\"Class\"", R"("value" : "g")");
+		assertRecovered("class { }\nfun g() = {}", "\"Class\"", R"("value" : "g")");
+		assertRecovered("namespace { }\nfun g() = {}", "\"Namespace\"", R"("value" : "g")");
+		assertRecovered("namespace { ;; }\nfun g() = {}", "\"Namespace\"", R"("value" : "g")");
+		assertRecovered("fun 5() = { }\nfun g() = {}", R"("value" : "5")", R"("value" : "g")");
+		assertRecovered("fun f() = { while { } let a = 1; }", "\"While\"", "\"Let\"");
+		assertRecovered("fun f() = { if { } let a = 1; }", "\"If\"", "\"Let\"");
+		assertRecovered("fun f() = { for x { a = b } let k = 1; }", "\"For\"", "\"Let\"");
+		assertRecovered(
+			"template(T: type) fun 5() = {}\nfun g() = {}",
+			"\"Template Statement\"",
+			R"("value" : "g")"
+		);
+		assertRecovered(
+			"template(T: type) class 5 {}\nfun g() = {}",
+			"\"Template Statement\"",
+			R"("value" : "g")"
+		);
+		assertRecovered(
+			"template class C {}\nfun g() = {}", "\"Template Statement\"", R"("value" : "g")"
+		);
+		assertRecovered(
+			"fun f() = { template class C {} let a = 1; }", "\"Template Statement\"", "\"Let\""
+		);
+		assertRecovered(
+			"fun f() = { template(T: type) let = 5; let a = 1; }",
+			"\"Template Statement\"",
+			"\"Let\""
+		);
+	}
+
+	/**
+	 * @brief Tests that a program always has a root element, even when it could not be tokenized
+	 * or a parsing error was not caught by any statement fallback.
+	 */
+	void rootAlwaysExistsTests() {
+		for (std::string_view code:
+		     { "\"abc", "}", "\xff\xfe", "@@@", "fun f() = {}\n@5\nfun g() = {}" }) {
+			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+			assertTrue(parsed->hasErrors(), base::strConcat("expected errors for `", code, "`"));
+			assertTrue(
+				parsed->getRootElement().illegalAccess().has_value(),
+				base::strConcat("missing root element for `", code, "`")
+			);
+		}
+	}
+
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
+		TESTER_ADD_TEST(sentinelMessageTests);
+		TESTER_ADD_TEST(contextRecoveryTests);
+		TESTER_ADD_TEST(rootAlwaysExistsTests);
 	}
 
 public:

@@ -1,18 +1,24 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file semantic_tokens.cpp
  * @brief This file defines the SemanticToken class, which provides functionality to export
  * semantic tokens in JSON format.
  */
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/element_kind.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/elements/common/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/hout/visitors.hpp>
@@ -405,6 +411,11 @@ namespace lsp {
 
 		void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& elem) override {
 			for (const auto& arg: elem.subtypes) arg->acceptVisitor(*this);
+		}
+
+		void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& elem
+		) override {
+			elem.value_type->acceptVisitor(*this);
 		}
 
 		void visitCallExpr(const code::CallExpr& elem) override {
