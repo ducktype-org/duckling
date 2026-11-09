@@ -22,6 +22,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 opt_level: OptLevel::One,
                 dvm_bytecode: false,
                 incremental: true,
+                c_std: true,
             },
         ),
         (
@@ -31,6 +32,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 opt_level: OptLevel::Three,
                 dvm_bytecode: false,
                 incremental: false,
+                c_std: true,
             },
         ),
         (
@@ -40,6 +42,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 opt_level: OptLevel::One,
                 dvm_bytecode: false,
                 incremental: true,
+                c_std: true,
             },
         ),
         (
@@ -49,6 +52,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 opt_level: OptLevel::Three,
                 dvm_bytecode: false,
                 incremental: false,
+                c_std: true,
             },
         ),
         (
@@ -58,6 +62,7 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 opt_level: OptLevel::Three,
                 dvm_bytecode: true,
                 incremental: true, // This does not effect how the script is compiled, but still affects the dependencies.
+                c_std: true,
             },
         ),
     ]
@@ -85,6 +90,8 @@ pub struct Profile {
     pub dvm_bytecode: bool,
     /// When false, disable incremental compilation (do not load previous query graph).
     pub incremental: bool,
+    /// When false, doesn't link the C standard library into the final executable.
+    pub c_std: bool,
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -119,6 +126,7 @@ impl Default for Profile {
             opt_level: Default::default(),
             dvm_bytecode: false,
             incremental: true,
+            c_std: true,
         }
     }
 }
@@ -214,6 +222,13 @@ determine_field!(
     field_type: OptLevel,
 );
 
+determine_field!(
+    function_name: determine_c_std,
+    helper_function_name: get_c_std_or_ask_parent,
+    field_name: c_std,
+    field_type: bool,
+);
+
 impl Profile {
     /// Constructs a [`Profile`], given the profile's name and [`manifest::Profiles`].
     /// Unwinds the inheritance structure to determine each field of the profile.
@@ -228,14 +243,15 @@ impl Profile {
             opt_level: determine_opt_level(profile_name, manifest_profiles)?,
             dvm_bytecode: determine_dvm_bytecode(profile_name, manifest_profiles)?,
             incremental: determine_incremental(profile_name, manifest_profiles)?,
+            c_std: determine_c_std(profile_name, manifest_profiles)?,
         })
     }
 
     /// Get a [`String`] describing the value (everything except `name`) of this profile.
     pub fn serialize_raw(self) -> String {
         format!(
-            "{}-{}-{}",
-            self.opt_level, self.incremental, self.dvm_bytecode
+            "{}-{}-{}-{}",
+            self.opt_level, self.incremental, self.c_std, self.dvm_bytecode
         )
     }
 }
@@ -271,12 +287,14 @@ mod test {
             opt_level: Some(manifest::OptLevel::S),
             dvm_bytecode: None,
             incremental: None,
+            c_std: None,
             inherits: Some("release".into()),
         };
         let profile_b = manifest::Profile {
             opt_level: None,
             dvm_bytecode: None,
             incremental: None,
+            c_std: Some(false),
             inherits: Some("release_with_s".into()),
         };
         let profiles = manifest::Profiles::new(
@@ -295,6 +313,7 @@ mod test {
                 opt_level: OptLevel::S,
                 dvm_bytecode: false,
                 incremental: false,
+                c_std: false,
             },
         )
     }
@@ -305,6 +324,7 @@ mod test {
             opt_level: None,
             dvm_bytecode: None,
             incremental: None,
+            c_std: None,
             inherits: None,
         };
         let profiles = manifest::Profiles::new([("default".into(), profile)].into()).unwrap();
@@ -328,6 +348,7 @@ mod test {
             opt_level: None,
             dvm_bytecode: None,
             incremental: Some(false),
+            c_std: None,
             inherits: None,
         };
         let profiles = manifest::Profiles::new([("dev".into(), profile)].into()).unwrap();
@@ -339,6 +360,7 @@ mod test {
                 opt_level: OptLevel::One,
                 dvm_bytecode: false,
                 incremental: false,
+                c_std: true,
             }
         );
     }
@@ -349,12 +371,14 @@ mod test {
             opt_level: None,
             dvm_bytecode: None,
             incremental: Some(false),
+            c_std: None,
             inherits: None,
         };
         let a = manifest::Profile {
             opt_level: None,
             dvm_bytecode: None,
             incremental: None,
+            c_std: Some(false),
             inherits: Some("dev".into()),
         };
         let profiles =
@@ -367,6 +391,7 @@ mod test {
                 opt_level: OptLevel::One,
                 dvm_bytecode: false,
                 incremental: false,
+                c_std: false,
             }
         );
     }

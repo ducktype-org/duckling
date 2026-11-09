@@ -121,10 +121,26 @@ impl DuckcProcessBuilder {
         self
     }
 
+    /// Set to use DVM as the backend.
+    pub fn set_dvm_backend(&mut self, value: bool) -> &mut Self {
+        if value {
+            self.inner.arg("--dvm-backend");
+        }
+        self
+    }
+
     /// Set not to use cached compilation artifacts.
     pub fn set_incremental(&mut self, value: bool) -> &mut Self {
         if !value {
             self.inner.arg("--no-incremental");
+        }
+        self
+    }
+
+    /// Set not to link c standard library.
+    pub fn set_c_std(&mut self, value: bool) -> &mut Self {
+        if !value {
+            self.inner.arg("--no-c-standard-library");
         }
         self
     }
