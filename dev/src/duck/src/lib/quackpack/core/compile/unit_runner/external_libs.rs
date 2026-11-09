@@ -11,7 +11,6 @@ use std::convert::Infallible;
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use tracing::debug;
 
@@ -157,30 +156,11 @@ fn native_library_file_names(name: StrId) -> [String; 2] {
     ]
 }
 
-/// Ask `pkg-config` for the directory holding the library `name`.
-///
-/// Returns [`None`] if `pkg-config` is not installed or does not know `name`.
-fn pkg_config_lib_dir(name: StrId) -> Option<PathBuf> {
-    let output = Command::new("pkg-config")
-        .arg("--variable=libdir")
-        .arg(name.as_str())
-        .output()
-        .inspect_err(|err| debug!(%name, %err, "failed to run `pkg-config`"))
-        .ok()?;
-    if !output.status.success() {
-        debug!(%name, "`pkg-config` does not know the library");
-        return None;
-    }
-    let dir = String::from_utf8(output.stdout).ok()?;
-    let dir = dir.trim();
-    (!dir.is_empty()).then(|| PathBuf::from(dir))
-}
-
 /// Resolve the external library `name` to the arguments for the native linker.
 ///
-/// The library is searched for, as `lib<name>.a` first and then as a shared library, in:
-/// 1. `search_dirs` (the package's `external-lib-paths`), in order,
-/// 2. the `libdir` that `pkg-config` reports for `name`.
+/// The library is searched for by file name, as `lib<name>.a` first and then as a shared library,
+/// in `search_dirs` (the package's `external-lib-paths`), in order. Nothing else is consulted (no
+/// `pkg-config`): the package says where its libraries are.
 ///
 /// A found library is passed by its path; a shared one also gets an `rpath` entry, so the binary
 /// finds it at runtime. When the library is not found anywhere, this falls back to `-l<name>` and
@@ -192,10 +172,7 @@ pub fn resolve_external_library(name: StrId, search_dirs: &[PathBuf]) -> Vec<Str
             .map(|file_name| dir.join(file_name))
             .find(|path| path.is_file())
     };
-    let found = search_dirs
-        .iter()
-        .find_map(|dir| find_in(dir))
-        .or_else(|| pkg_config_lib_dir(name).and_then(|dir| find_in(&dir)));
+    let found = search_dirs.iter().find_map(|dir| find_in(dir));
     debug!(%name, ?search_dirs, ?found, "resolved external library");
     let Some(path) = found else {
         return vec![format!("-l{name}")];
