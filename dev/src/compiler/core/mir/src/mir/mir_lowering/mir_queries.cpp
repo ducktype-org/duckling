@@ -117,7 +117,7 @@ namespace compiler::mir {
 
 		// build cfg+quad step by step:
 		auto first_block = lowerCodeBlock(
-			*function->body, last_block, function_builder, function_builder.getTopLevelScope()
+			*function->body, last_block, function_builder, function_builder.getTopLevelScope(), {}
 		);
 
 		function_builder.setEntry(first_block.begin);

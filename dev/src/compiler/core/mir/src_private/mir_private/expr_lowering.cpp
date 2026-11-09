@@ -524,7 +524,8 @@ namespace compiler::mir {
 
 			auto store_continuation = body_block;
 			if_opt_some(per_element_body, body) {
-				store_continuation = lowerCodeBlock(*body, body_block, function, body_scope).begin;
+				store_continuation
+					= lowerCodeBlock(*body, body_block, function, body_scope, {}).begin;
 			}
 
 			auto store_hole   = store_continuation->addHole();
@@ -1410,7 +1411,7 @@ namespace compiler::mir {
 		void visitBlockExpr(const hc::BlockExpr& expr) override {
 			// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
 			// expressions.
-			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope);
+			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope, {});
 			valueOutput(
 				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
 			);
