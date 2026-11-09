@@ -5,8 +5,10 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <debug_info/debug_info.hpp>
+#include <debug_info/debug_info_io.hpp>
 #include <vm_tester_utils.hpp>
 
+#include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 
 #include <vm/api/data/function_source_info.hpp>
@@ -15,6 +17,8 @@
 #include <vm/core/safe/exceptions.hpp>
 
 #include <array>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -44,6 +48,7 @@ public:
 		TESTER_ADD_TEST(lineOfInstructionPrefersTheNextLine);
 		TESTER_ADD_TEST(formatStackTraceDescribesEachFrame);
 		TESTER_ADD_TEST(stackTraceRoundTripsThroughJson);
+		TESTER_ADD_TEST(debugInfoNextToBytecodeIsFoundAndRead);
 
 		// Memory
 		TESTER_ADD_TEST(localLeakTest);
@@ -294,6 +299,53 @@ private:
 		ASSERT_TRUE(json["frames"][0]["call_site"].is_null());
 		ASSERT_TRUE(json["frames"][1]["call_site"]["column"] == 5);
 		ASSERT_TRUE(json.get<vm::api::StackTrace>() == trace);
+	}
+
+	void debugInfoNextToBytecodeIsFoundAndRead() {
+		const auto dir = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto dbc = (dir / "program.dbc").string();
+
+		// Only a bytecode file has debug info next to it, and only when the file is there.
+		ASSERT_TRUE(!vm::api::findDebugInfoNextToBytecode((dir / "program.o").string()));
+		ASSERT_TRUE(!vm::api::findDebugInfoNextToBytecode(dbc).has_value());
+
+		debug_info::DebugInfo        debug_info;
+		debug_info::FunctionMetadata divide;
+		divide.function_name = "divide";
+		divide.position      = lineIn("math.dk", 3);
+		debug_info.functions.put("divideByZero", std::move(divide));
+		{
+			std::ofstream output(dir / "program.di.json");
+			debug_info::saveToStream(debug_info, output);
+		}
+
+		const auto found = vm::api::findDebugInfoNextToBytecode(dbc);
+		ASSERT_TRUE(found.has_value());
+		ASSERT_EQUAL((dir / "program.di.json").string(), found->getPath().string());
+
+		vm::api::FunctionSourceInfos infos;
+		ASSERT_TRUE(vm::api::addFunctionSourceInfoFromFile(infos, *found).has_value());
+		const auto& info = infos.at(base::StrID("divideByZero"));
+		ASSERT_EQUAL(std::string("divide"), info.name.value());
+		ASSERT_EQUAL(u64{ 3 }, info.definition.value().line);
+
+		// A missing or broken file is reported, and adds nothing.
+		const auto missing
+			= vm::api::addFunctionSourceInfoFromFile(infos, fs::FilePath(dir / "missing.di.json"));
+		ASSERT_TRUE(!missing.has_value());
+		assertTrue(missing.error().starts_with("Cannot open"), missing.error());
+
+		{
+			std::ofstream output(dir / "broken.di.json");
+			output << "{ not json";
+		}
+		const auto broken
+			= vm::api::addFunctionSourceInfoFromFile(infos, fs::FilePath(dir / "broken.di.json"));
+		ASSERT_TRUE(!broken.has_value());
+		assertTrue(broken.error().starts_with("Cannot read"), broken.error());
+		ASSERT_EQUAL(usize{ 1 }, infos.size());
+
+		std::filesystem::remove_all(dir);
 	}
 
 	// Memory
