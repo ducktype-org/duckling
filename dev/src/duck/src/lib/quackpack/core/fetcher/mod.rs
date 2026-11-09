@@ -103,16 +103,16 @@ impl<'duck> Fetcher<'duck> {
     /// Retrieve metadata for `package` from a given Ducknest instance.
     ///
     /// Exact cache hit takes precedence over HTTP requests.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn get_package_metadata(
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         if let Some(cached) = self.cache.borrow().get_manifest(package)? {
-            debug!(target: "duck::ducknest", "metadata cache hit");
+            debug!("metadata cache hit");
             return Ok(FetcherResponse::Some(cached));
         }
-        debug!(target: "duck::ducknest", "metadata cache miss");
+        debug!("metadata cache miss");
         if self.ctx.is_offline() {
             return Ok(FetcherResponse::Offline);
         }
@@ -139,14 +139,14 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn get_package_all_metadata(
         &self,
         url: InternedUrl,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
-            debug!(target: "duck::ducknest", "offline, using only the cached metadata");
+            debug!("offline, using only the cached metadata");
             let package = PackageWithUrl {
                 name: package_name,
                 version: 1.into(),
@@ -186,7 +186,7 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Clone a git repository pointed by `url` to the `destination_directory`.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url))]
+    #[tracing::instrument(skip(self, url), fields(%url))]
     #[track_caller] // Because of `.unwrap_package()`.
     pub fn clone_from_git_to_directory(
         &self,
@@ -244,7 +244,7 @@ impl<'duck> Fetcher<'duck> {
         self.ctx
     }
 
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     /// Fetch a package from ducknest with retries.
     pub async fn fetch_package_blob_with_retries(
         &self,
@@ -273,12 +273,12 @@ impl<'duck> Fetcher<'duck> {
         for attempt in 1..=calls {
             match self.fetch_package_blob(package, guard.file()).await {
                 Ok(()) => {
-                    debug!(target: "duck::ducknest", "fetched on attempt {attempt}/{calls}");
+                    debug!("fetched on attempt {attempt}/{calls}");
                     guard.disarm();
                     return Ok(guard.file().path().to_path_buf());
                 }
                 Err(e) => {
-                    debug!(target: "duck::ducknest", error = %e, "attempt {attempt}/{calls} failed");
+                    debug!(error = %e, "attempt {attempt}/{calls} failed");
                     self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
                         package.name, package.version, package.url
@@ -337,10 +337,10 @@ impl<'duck> Fetcher<'duck> {
                 let network_config = self.ctx.duck_cfg().network()?;
                 let client: Box<dyn git::GitClient + 'duck> =
                     if network_config.use_git_cli == Some(true) {
-                        debug!(target: "duck::git", "using git cli backend");
+                        debug!("using git cli backend");
                         Box::new(git::cli::GitCliClient::new()?)
                     } else {
-                        debug!(target: "duck::git", "using git2 backend");
+                        debug!("using git2 backend");
                         Box::new(git::git2::Git2Client::new(self.ctx))
                     };
                 Ok(client)

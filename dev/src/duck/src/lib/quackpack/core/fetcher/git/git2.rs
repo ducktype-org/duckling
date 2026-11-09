@@ -33,7 +33,7 @@ impl<'duck> Git2Client<'duck> {
     }
 
     /// Clone a repository pointed by `url` into `destination`.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url, ?reference, ?destination))]
+    #[tracing::instrument(skip(self, url), fields(%url, ?reference, ?destination))]
     pub fn clone(
         &self,
         url: &Url,
@@ -51,7 +51,7 @@ impl<'duck> Git2Client<'duck> {
         let repository = match builder.clone(url.as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
-                debug!(target: "duck::git", error = %e, "failed to clone the repository");
+                debug!(error = %e, "failed to clone the repository");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 if matches!(e.code(), git2::ErrorCode::Auth) {
                     return Err(e.into());
@@ -59,7 +59,7 @@ impl<'duck> Git2Client<'duck> {
                 if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
-                debug!(target: "duck::git", "falling back to a full clone");
+                debug!("falling back to a full clone");
                 // We print this only here because otherwise the user gets information from the error.
                 self.ctx.warning(format!(
                     "failed to shallow clone the repository at `{url}`: {e}"
@@ -103,7 +103,7 @@ impl<'duck> Git2Client<'duck> {
     fn fetch_options_for(&self, url: &Url, reference: GitReference) -> FetchOptions<'_> {
         let mut fetch_options = FetchOptions::new();
         if can_shallow_clone(url, reference) {
-            trace!(target: "duck::git", "using a shallow clone");
+            trace!("using a shallow clone");
             fetch_options.depth(1);
         }
 
@@ -138,7 +138,7 @@ impl<'duck> Git2Client<'duck> {
             match super::known_hosts::check_certificate(self.ctx, cert, host) {
                 Ok(status) => Ok(status),
                 Err(e) => {
-                    warn!(target: "duck::git", "failed to check certificates: {e}");
+                    warn!("failed to check certificates: {e}");
                     Err(git2::Error::from_str(
                         "failed to parse ssh known hosts file",
                     ))
