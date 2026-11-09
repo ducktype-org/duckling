@@ -22,17 +22,17 @@ pub fn check_certificate(
     certificate: &Cert<'_>,
     host: &str,
     port: Option<u16>,
-) -> CertificateCheckStatus {
+) -> Result<CertificateCheckStatus, git2::Error> {
     debug!(target: "duck::git", ?host, ?port);
     let Some(host_cert) = certificate.as_hostkey() else {
-        return CertificateCheckStatus::CertificatePassthrough;
+        return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     let Some(hostkey) = host_cert.hostkey() else {
-        return CertificateCheckStatus::CertificatePassthrough;
+        return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     let Some(host_type) = host_cert.hostkey_type() else {
         warn!(target: "duck::git", "has hostkey, but not hostkey type");
-        return CertificateCheckStatus::CertificatePassthrough;
+        return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     // Nonstandard port might also be used. In that case, the host format is `[{host}]:{port}`.
     // 22 is the standard port.
@@ -75,11 +75,16 @@ pub fn check_certificate(
         }
     }
     if encountered_revoked {
-        CertificateCheckStatus::CertificatePassthrough
+        let error = git2::Error::new(
+            git2::ErrorCode::Certificate,
+            git2::ErrorClass::Ssh,
+            "tried to use a revoked key",
+        );
+        Err(error)
     } else if encountered_accept {
-        CertificateCheckStatus::CertificateOk
+        Ok(CertificateCheckStatus::CertificateOk)
     } else {
-        CertificateCheckStatus::CertificatePassthrough
+        Ok(CertificateCheckStatus::CertificatePassthrough)
     }
 }
 

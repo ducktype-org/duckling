@@ -149,7 +149,7 @@ impl<'duck> GitClient<'duck> {
             }
         });
         callbacks.certificate_check(move |cert, host| {
-            Ok(known_hosts::check_certificate(self.ctx, cert, host, port))
+            known_hosts::check_certificate(self.ctx, cert, host, port)
         });
         callbacks
     }
