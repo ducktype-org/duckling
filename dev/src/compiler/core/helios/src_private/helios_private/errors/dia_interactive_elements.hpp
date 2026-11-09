@@ -11,6 +11,7 @@
 #include <helios/tsh/symbol_type.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 #include <diagnostic/message.hpp>
 #include <query_framework/context/context.hpp>
@@ -23,10 +24,10 @@ namespace compiler::helios {
 	 * i.e. the same way the user wrote it in the source code.
 	 */
 	class InteractiveType: public dia::InteractiveElement {
-		tsh::SymbolType<>                                 symbol_type;
-		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
-		base::HashMap<std::string, Box<dia::MessageBase>> linked_messages;
-		std::string                                       displayed_name;
+		tsh::SymbolType<>                                       symbol_type;
+		base::Optional<pst::Access<pst::LangElement>>           pst_expr;
+		base::StableHashMap<std::string, Box<dia::MessageBase>> linked_messages;
+		std::string                                             displayed_name;
 
 		Box<dia::dia_args::Component> getValue(dia::MessageBase& msg) final;
 
@@ -46,10 +47,10 @@ namespace compiler::helios {
 	 * It will support methods as well in the future.
 	 */
 	class InteractiveFunction final: public dia::InteractiveElement {
-		SymID                                             function_symbol;
-		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
-		base::HashMap<std::string, Box<dia::MessageBase>> linked_messages;
-		std::string                                       displayed_name;
+		SymID                                                   function_symbol;
+		base::Optional<pst::Access<pst::LangElement>>           pst_expr;
+		base::StableHashMap<std::string, Box<dia::MessageBase>> linked_messages;
+		std::string                                             displayed_name;
 
 		Box<dia::dia_args::Component> getValue(dia::MessageBase& msg) final;
 

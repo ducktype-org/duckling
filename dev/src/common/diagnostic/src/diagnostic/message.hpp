@@ -8,6 +8,8 @@
 
 #include "stable_position.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic/location.hpp>
 #include <diagnostic/source_position.hpp>
@@ -313,7 +315,7 @@ namespace dia {
 		 * @brief Additional messages that are not attached directly to this diagnostic,
 		 * but may be the link destination or explore link target.
 		 */
-		base::HashMap<std::string, Box<MessageBase>> linked_messages;
+		base::StableHashMap<std::string, Box<MessageBase>> linked_messages;
 
 		bool has_been_built = false;
 
@@ -327,7 +329,7 @@ namespace dia {
 		[[nodiscard]] virtual int getPriority() const { return 0; }
 
 		dia_args::Message buildMessages(
-			base::HashMap<std::string, dia_args::Message>& additional_messages
+			base::StableHashMap<std::string, dia_args::Message>& additional_messages
 		);
 
 	protected:

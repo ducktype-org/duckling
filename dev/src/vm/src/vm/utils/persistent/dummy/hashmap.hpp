@@ -7,6 +7,7 @@
 #pragma once
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ints.hpp>
@@ -24,7 +25,7 @@ namespace vm::persistent {
 	 */
 	template<typename Key, typename Val, typename Hasher = std::hash<Key>>
 	class DummyHashMap final {
-		std::vector<base::HashMap<Key, Val, Hasher>> copies;
+		std::vector<base::StableHashMap<Key, Val, Hasher>> copies;
 
 		[[nodiscard]]
 		auto& validateState(usize state) const {
@@ -94,6 +95,6 @@ namespace vm::persistent {
 			return validateState(state_1) == validateState(state_2);
 		}
 
-		DummyHashMap() { copies.emplace_back(base::HashMap<Key, Val, Hasher>{}); }
+		DummyHashMap() { copies.emplace_back(base::StableHashMap<Key, Val, Hasher>{}); }
 	};
 }

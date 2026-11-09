@@ -13,6 +13,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <algorithm>
 
 namespace compiler::mir {
@@ -238,10 +240,10 @@ namespace compiler::mir {
 			} else {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
-				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
-				base::Optional<ScopeRef>                      first_path_begin_scope;
-				bool                                          paths_identical = true;
-				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
+				base::Optional<std::vector<ScopeRef>>               first_path_ending_scopes;
+				base::Optional<ScopeRef>                            first_path_begin_scope;
+				bool                                                paths_identical = true;
+				base::StableHashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
 
 				for (auto succ: successors) {
 					auto succ_begin_scope   = function.blocks[succ].beginScope();
@@ -357,7 +359,7 @@ namespace compiler::mir {
 		query::Context& ctx, Function& function, const LifetimePassArgs& args
 	) {
 		for (auto block_id: function.block_order) {
-			auto& block = *function.blocks.at(block_id);
+			auto& block = function.blocks.at(block_id);
 
 			// Replay move-state through the block, starting from its entry state. Unreachable blocks
 			// have no computed move-state, so default to empty (matching AddDestructorsPass).

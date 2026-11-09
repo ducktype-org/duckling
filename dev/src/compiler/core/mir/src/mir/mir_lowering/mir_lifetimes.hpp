@@ -12,14 +12,16 @@
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::mir {
 
 	struct LifetimePassArgs {
-		LocalsByScopeMap                             locals_by_scope;
-		MoveStateData                                move_states;
-		base::HashMap<BlockID, std::vector<BlockID>> block_predecessors;
+		LocalsByScopeMap                                   locals_by_scope;
+		MoveStateData                                      move_states;
+		base::StableHashMap<BlockID, std::vector<BlockID>> block_predecessors;
 	};
 
 	/**

@@ -12,6 +12,7 @@
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <string_view>
