@@ -12,6 +12,7 @@ use std::path::Path;
 use url::Url;
 
 use crate::quackpack::core::GitReference;
+use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{QuackResult, StrId};
 
 pub mod cli;
@@ -39,4 +40,13 @@ pub trait GitClient: fmt::Debug {
 
     /// Returns `true` if the client uses git CLI.
     fn uses_cli(&self) -> bool;
+}
+
+/// Check, if we can shallow clone a `reference` from `url`.
+/// Right now conditions are as follow:
+/// 1. `url` must not be a local repository (i.e. schema != "file"),
+/// 2. reference must NOT point to specific commit (it's either a default branch, or a specific branch).
+fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
+    let is_local_repository_url = url.is_local_file();
+    !is_local_repository_url && (reference.is_default() || reference.is_branch())
 }

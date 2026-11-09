@@ -13,9 +13,8 @@ use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository}
 use tracing::{debug, trace, warn};
 use url::Url;
 
-use super::{ClonedRepositoryData, GitClient};
+use super::{ClonedRepositoryData, GitClient, can_shallow_clone};
 use crate::quackpack::core::GitReference;
-use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -163,15 +162,6 @@ impl<'duck> Git2Client<'duck> {
     }
 }
 
-/// Check, if we can shallow clone a `reference` from `url`.
-/// Right now conditions are as follow:
-/// 1. `url` must not be a local repository (i.e. schema != "file"),
-/// 2. reference must NOT point to specific commit (it's either a default branch, or a specific branch).
-fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
-    let is_local_repository_url = url.is_local_file();
-    !is_local_repository_url && (reference.is_default() || reference.is_branch())
-}
-
 /// Callback for ssh authentication.
 fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
     let username = username_from_url.unwrap_or("git");
@@ -202,7 +192,6 @@ trait RepositoryExt {
 }
 
 impl RepositoryExt for Repository {
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self))]
     fn checkout_commit(&self, commit: &str) -> QuackResult<()> {
         let oid =
             Oid::from_str(commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
@@ -215,7 +204,6 @@ impl RepositoryExt for Repository {
         Ok(())
     }
 
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self))]
     fn checkout_tag(&self, tag: &str) -> QuackResult<()> {
         let refname = format!("refs/tags/{}", tag);
         let reference = self

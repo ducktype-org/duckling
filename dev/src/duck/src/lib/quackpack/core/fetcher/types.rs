@@ -66,7 +66,7 @@ pub struct ClonedPackage {
     /// Hash of the checkout'd repository.
     pub commit: StrId,
     /// Parsed package at the repository checkout'd at the
-    /// [`commit_hash`](GitCloneResponse::commit_hash).
+    /// [`commit`](ClonedPackage::commit).
     pub package: core::Package,
 }
 

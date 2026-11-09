@@ -330,6 +330,7 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Get or initialize a new [`git::GitClient`].
+    /// It chooses the right client based on the user configuration.
     fn git_client(&self) -> QuackResult<&(dyn git::GitClient + 'duck)> {
         self.git_client
             .try_init_with(|| {
