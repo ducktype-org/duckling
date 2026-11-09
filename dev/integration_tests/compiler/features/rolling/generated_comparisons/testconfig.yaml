@@ -16,11 +16,11 @@ Tests:
         ExitCode: 0
 
   custom_comparisons:
-    Description: User-defined comparison operators replace the generated ones.
+    Description: User-defined comparison operators replace the generated ones of the same kind only.
     Cases:
       all:
         Output:
-          String: "1\n1\n0\n0\n1\n0\n1\n1\n1\n1\n1\n"
+          String: "1\n1\n0\n1\n0\n1\n1\n1\n1\n1\n1\n"
         ExitCode: 0
 
   string_comparisons:
@@ -28,5 +28,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "1\n1\n1\n0\n1\n1\n1\n1\n0\n"
+          String: "1\n1\n1\n0\n1\n1\n0\n1\n1\n1\n1\n0\n"
         ExitCode: 0

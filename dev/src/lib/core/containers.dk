@@ -228,6 +228,26 @@ class String {
         return len < rhs.len;
     }
 
+    #{
+        The remaining comparisons are defined in terms of `==` and `<`. The
+        generated ones would compare the buffers instead.
+    #}
+    fun !=(rhs: const ref String) -> bool = {
+        return not (self == rhs);
+    }
+
+    fun <=(rhs: const ref String) -> bool = {
+        return not (rhs < self);
+    }
+
+    fun >(rhs: const ref String) -> bool = {
+        return rhs < self;
+    }
+
+    fun >=(rhs: const ref String) -> bool = {
+        return not (self < rhs);
+    }
+
     String.copy(other: const ref String) = {
         var result = stringReserve(other.length());
         copyChars(other.pointer, result.pointer, other.length());

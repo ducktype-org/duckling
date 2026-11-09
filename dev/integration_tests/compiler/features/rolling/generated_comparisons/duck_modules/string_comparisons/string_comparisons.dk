@@ -20,6 +20,12 @@ fun main() -> i64 = {
     show("ab".toString() < a);    # 1
     show(a > "".toString());      # 1
 
+    # Equal strings in different buffers.
+    var c = "abc".toString();
+    show(a != c);                 # 0
+    show(a >= c);                 # 1
+    show(a <= c);                 # 1
+
     var alice = Person("Alice".toString(), 30);
     show(alice == Person("Alice".toString(), 30));  # 1
     show(alice < Person("Bob".toString(), 20));     # 1
