@@ -19,6 +19,8 @@
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <lexer/token_common.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/utils/simple_keys.hpp>

@@ -9,6 +9,8 @@
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <diagnostic/stable_position.hpp>
 
 #include <algorithm>
@@ -74,7 +76,7 @@ namespace compiler::mir {
 	 * last instruction that was applied to it.
 	 */
 	class LocalMoveStateMap final {
-		base::HashMap<LocalID, MoveState> map;
+		base::StableHashMap<LocalID, MoveState> map;
 		/**
 		 * @brief Scope of the last instruction passed to @ref updateMoveStateMapByInstr, or none
 		 * when no instruction has been applied yet.
@@ -135,15 +137,15 @@ namespace compiler::mir {
 		/**
 		 * @brief Move state of the local variables at the beginning of each block.
 		 */
-		base::HashMap<BlockID, LocalMoveStateMap> block_in_move_state;
+		base::StableHashMap<BlockID, LocalMoveStateMap> block_in_move_state;
 
 		/**
 		 * @brief Calculate the MoveStateData of the function.
 		 */
 		static MoveStateData calculateGlobalInMoveStateMap(
-			const Function&                                     fun,
-			const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors,
-			const LocalsByScopeMap&                             locals_by_scope
+			const Function&                                           fun,
+			const base::StableHashMap<BlockID, std::vector<BlockID>>& block_predecessors,
+			const LocalsByScopeMap&                                   locals_by_scope
 		);
 		void debugPrint(std::ostream& out);
 	};

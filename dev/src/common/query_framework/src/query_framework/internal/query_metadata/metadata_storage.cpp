@@ -14,6 +14,7 @@
 
 #include "metadata_registry.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <cstring>

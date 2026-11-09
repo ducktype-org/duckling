@@ -6,6 +6,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/core/diagnostic_state.hpp>
 #include <diagnostic/core/template_evaluation.hpp>
@@ -33,7 +35,7 @@ private:
 	void evaluateSimpleTextTemplate() {
 		// Create a simple text template
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "error/type_error/simple_error", R"(
+			base::StableHashMap<std::string, std::string>{ { "error/type_error/simple_error", R"(
 metadata:
   template_type: message
   type: error
@@ -82,7 +84,8 @@ pointer_messages: {}
 	void evaluateComplexComponentTemplate() {
 		// Register templates
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "error/type_check/no_match_2op_new", R"(
+			base::StableHashMap<std::string, std::string>{
+				{ "error/type_check/no_match_2op_new", R"(
 metadata:
   template_type: message
   type: error
@@ -132,7 +135,7 @@ pointer_messages:
     content:
         - "used here"
 )" },
-		                                             { "component/general/type_with_alias", R"yaml(
+				{ "component/general/type_with_alias", R"yaml(
 metadata:
   template_type: component
   type: component
@@ -302,7 +305,7 @@ content:
 	void evaluatePointerMessageTemplate() {
 		// Register templates
 		TemplateRegistrySingleton::setNewInstance(base::makeBox<TemplateRegistryTestProvider>(
-			base::HashMap<std::string, std::string>{ { "error/overload/call_failed", R"yaml(
+			base::StableHashMap<std::string, std::string>{ { "error/overload/call_failed", R"yaml(
 metadata:
   template_type: message
   type: error
@@ -349,7 +352,7 @@ explore_links:
 
 pointer_messages: {}
 )yaml" },
-		                                             { "note/overload/candidate", R"yaml(
+		                                                   { "note/overload/candidate", R"yaml(
 metadata:
   template_type: message
   type: note
@@ -386,7 +389,7 @@ pointer_messages:
     type: "error"
     content: []
 )yaml" },
-		                                             { "note/overload/no_conversion", R"yaml(
+		                                                   { "note/overload/no_conversion", R"yaml(
 metadata:
   template_type: pointer_message
   type: note
@@ -560,7 +563,7 @@ pointer_messages:
 		auto it    = diagnostic.messages[1].pointer_messages.find(pm_id);
 		ASSERT_EQUAL(true, it != diagnostic.messages[1].pointer_messages.end());
 
-		const auto& pm = it->second;
+		const auto& pm = it->value;
 		ASSERT_EQUAL("no conversion found from string to i32", pm.content);
 
 		// Verify explore edges
