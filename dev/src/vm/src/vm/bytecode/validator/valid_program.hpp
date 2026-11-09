@@ -8,6 +8,8 @@
 
 #include "flag_context.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
@@ -91,7 +93,7 @@ namespace vm::code {
 		 * match the expected signatures. This map basically stores forward declarations of functions
 		 * available in the program, since `function_map` building is done after type verification.
 		 */
-		base::HashMap<base::StrID, FuncSignature> function_signatures;
+		base::StableHashMap<base::StrID, FuncSignature> function_signatures;
 
 		/**
 		 * @brief Inserts code in-place.

@@ -21,6 +21,7 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -33,8 +34,8 @@ namespace compiler::helios {
 		/**
 		 * @brief Single source of truth mapping builtin names to BuiltinKind.
 		 */
-		const base::HashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
-			static const base::HashMap<std::string_view, BuiltinKind> mapping = {
+		const base::StableHashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
+			static const base::StableHashMap<std::string_view, BuiltinKind> mapping = {
 				{ "ptr_from_slice", BuiltinKind::PtrFromSlice },
 				{ "slice_from_ptr_len", BuiltinKind::SliceFromPtrLen },
 				{ "dvm_alloc_arr", BuiltinKind::DvmAllocArr },

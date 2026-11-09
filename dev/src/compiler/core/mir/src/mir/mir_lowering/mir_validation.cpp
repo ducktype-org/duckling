@@ -14,12 +14,13 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/collections/stable_hashmap.hpp>
 
 namespace compiler::mir {
 
 	namespace {
 		base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
-			base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
+			base::StableHashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
 			for (auto& local: fun.local_list) {
 				if (local.helios_id.empty()) continue;
 				if (local.lifetime_flags.contains(LifetimeFlag::NoShadowingValidation)) continue;

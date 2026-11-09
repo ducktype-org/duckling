@@ -33,6 +33,7 @@
 #include <time_stats/time_stats.hpp>
 #include <version/version.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/ranges_utils.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -194,7 +195,7 @@ namespace {
 		using LLVMOptimizationLevel
 			= global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
 		using enum LLVMOptimizationLevel;
-		static const base::HashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
+		static const base::StableHashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
 			{ "0", O0 }, { "1", O1 }, { "2", O2 }, { "3", O3 }, { "s", Os }, { "z", Oz },
 		};
 		const auto llvm_optimization_level = str_to_llvm_opt_level.at(

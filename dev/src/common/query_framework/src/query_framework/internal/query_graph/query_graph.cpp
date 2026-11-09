@@ -8,6 +8,7 @@
 
 #include "node_id.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
@@ -181,12 +182,11 @@ namespace query::internal {
 	std::vector<byte> QueryGraph::serialize() const {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
-		base::HashMap<NodeID, usize> node_to_index;
-		node_to_index.reserve(node_deps->size());
+		base::StableHashMap<NodeID, usize> node_to_index;
 
 		usize next_index = 0;
 		for (const auto& [node, _]: *node_deps) {
-			node_to_index.emplace(node, next_index++);
+			node_to_index.put(node, next_index++);
 			nodes.push_back(node);
 		}
 

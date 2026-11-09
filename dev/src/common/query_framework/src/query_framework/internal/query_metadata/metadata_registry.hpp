@@ -7,6 +7,8 @@
 #pragma once
 #include "metadata_storage.hpp"
 
+#include <base/collections/stable_hashmap.hpp>
+
 #include <variant>
 
 namespace query::internal {
