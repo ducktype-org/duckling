@@ -7,16 +7,19 @@
 //! CLI based git client.
 
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use tracing::{debug, trace, warn};
 use url::Url;
 
-use super::{ClonedRepositoryData, GitClient, can_shallow_clone};
+use super::{AnyExt, GitClient, GitCommit, GitRepository, can_shallow_clone};
 use crate::quackpack::core::GitReference;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
+
+type RepositoryInner = PathBuf;
+type CommitInner = StrId;
 
 /// git environmental variables to unset.
 /// They can affect git execution.
@@ -40,20 +43,6 @@ impl GitCliClient {
         check_git_binary_exists()?;
         Ok(Self(()))
     }
-
-    /// Clone a repository pointed by `url` into `destination`.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url, ?reference, ?destination))]
-    pub fn clone(
-        &self,
-        url: &Url,
-        reference: GitReference,
-        destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData> {
-        clone_git_repository(url, reference, destination)?;
-        maybe_checkout_to_commit(reference, destination)?;
-        let commit = get_current_commit(destination)?;
-        Ok(ClonedRepositoryData { commit })
-    }
 }
 
 impl GitClient for GitCliClient {
@@ -62,12 +51,35 @@ impl GitClient for GitCliClient {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData> {
-        self.clone(url, reference, destination)
+    ) -> QuackResult<GitRepository> {
+        clone_git_repository(url, reference, destination)?;
+        let repository: RepositoryInner = destination.to_path_buf();
+        Ok(GitRepository {
+            inner: Box::new(repository),
+        })
     }
 
     fn uses_cli(&self) -> bool {
         true
+    }
+
+    fn checkout(&self, repository: &GitRepository, reference: GitReference) -> QuackResult<()> {
+        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
+        maybe_checkout_to_commit(reference, repository)?;
+        Ok(())
+    }
+
+    fn get_head_commit(&self, repository: &GitRepository) -> QuackResult<GitCommit> {
+        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
+        let commit: CommitInner = get_current_commit(repository)?;
+        Ok(GitCommit {
+            inner: Box::new(commit),
+        })
+    }
+
+    fn commit_to_str(&self, commit: &GitCommit) -> QuackResult<StrId> {
+        let commit = commit.inner.downcast_ext::<CommitInner>()?;
+        Ok(*commit)
     }
 }
 
@@ -96,14 +108,40 @@ fn clone_git_repository(url: &Url, reference: GitReference, destination: &Path) 
 
 /// Checkout repo to the given commit, if we requested that.
 fn maybe_checkout_to_commit(reference: GitReference, path: &Path) -> QuackResult<()> {
-    let GitReference::Rev(commit) = reference else {
-        return Ok(());
-    };
+    if let GitReference::Rev(commit) = reference {
+        validate_commit(commit, path)?;
+    }
+    if let GitReference::Tag(tag) = reference {
+        validate_tag(tag, path)?;
+    }
+    let mut command = git_cmd();
+    set_cwd_on_git_cmd(&mut command, path);
+    match reference {
+        GitReference::Tag(tag_or_commit) | GitReference::Rev(tag_or_commit) => {
+            command.arg("checkout").arg(tag_or_commit);
+        }
+        GitReference::Branch(_) | GitReference::Default => return Ok(()),
+    }
+    execute_git(&mut command)
+}
+
+fn validate_commit(commit: StrId, path: &Path) -> QuackResult<()> {
     let mut command = git_cmd();
     set_cwd_on_git_cmd(&mut command, path)
-        .arg("checkout")
-        .arg(commit);
-    execute_git(&mut command)
+        .args(["rev-parse", "--verify", "--quiet", "--end-of-options"])
+        .arg(format!("{}^{{commit}}", commit));
+    let _ = get_git_output(&mut command)
+        .with_context(|| format!("`{commit}` is not a valid commit"))?;
+    Ok(())
+}
+
+fn validate_tag(tag: StrId, path: &Path) -> QuackResult<()> {
+    let mut command = git_cmd();
+    set_cwd_on_git_cmd(&mut command, path)
+        .arg("check-ref-format")
+        .arg(format!("refs/tags/{tag}"));
+    let _ = get_git_output(&mut command).with_context(|| format!("`{tag}` is not a valid tag"))?;
+    Ok(())
 }
 
 /// Get current HEAD commit.

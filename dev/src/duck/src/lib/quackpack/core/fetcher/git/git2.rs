@@ -10,12 +10,15 @@ use std::path::Path;
 
 use git2::build::RepoBuilder;
 use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository};
-use tracing::{debug, trace, warn};
+use tracing::{debug, trace};
 use url::Url;
 
-use super::{ClonedRepositoryData, GitClient, can_shallow_clone};
+use super::{AnyExt, GitClient, GitCommit, GitRepository, can_shallow_clone};
 use crate::quackpack::core::GitReference;
 use crate::{DuckContext, QuackResult, QuackResultContext};
+
+type RepositoryInner = git2::Repository;
+type CommitInner = git2::Oid;
 
 #[derive(Debug)]
 /// Client implementing interaction with Git repositories.
@@ -30,73 +33,6 @@ const MAX_AUTHENTICATION_NUMBER: u32 = 3;
 impl<'duck> Git2Client<'duck> {
     pub fn new(ctx: &'duck DuckContext) -> Self {
         Self { ctx }
-    }
-
-    /// Clone a repository pointed by `url` into `destination`.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url, ?reference, ?destination))]
-    pub fn clone(
-        &self,
-        url: &Url,
-        reference: GitReference,
-        destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData> {
-        let mut builder = RepoBuilder::new();
-
-        builder.fetch_options(self.fetch_options_for(url, reference));
-        // git2-rs doesn't support cloning with a given tag :(.
-        if let GitReference::Branch(branch) = reference {
-            builder.branch(branch.as_str());
-        }
-
-        let repository = match builder.clone(url.as_str(), destination) {
-            Ok(repository) => repository,
-            Err(e) => {
-                debug!(target: "duck::git", error = %e, "failed to clone the repository");
-                // We've failed to clone a repository, try to fallback to a non-shallow clone.
-                if matches!(e.code(), git2::ErrorCode::Auth) {
-                    return Err(e.into());
-                }
-                if !can_shallow_clone(url, reference) {
-                    return Err(e.into());
-                }
-                debug!(target: "duck::git", "falling back to a full clone");
-                // We print this only here because otherwise the user gets information from the error.
-                self.ctx.warning(format!(
-                    "failed to shallow clone the repository at `{url}`: {e}"
-                ))?;
-                self.ctx
-                    .info_verbose("retrying with a full clone instead of a shallow clone")?;
-                let mut fetch_options = self.fetch_options_for(url, reference);
-                // Here we always want to perform full clone, so set depth to 0.
-                fetch_options.depth(0);
-                builder.fetch_options(fetch_options);
-                builder.clone(url.as_str(), destination)?
-            }
-        };
-
-        // Prefer specific commits over tags.
-        if let GitReference::Rev(commit) = reference {
-            repository
-                .checkout_commit(commit.as_str())
-                .with_context(|| {
-                    format!(
-                        "failed to check out the commit `{}` of a repository cloned from `{}`",
-                        commit, url
-                    )
-                })?;
-        } else if let GitReference::Tag(tag) = reference {
-            repository.checkout_tag(tag.as_str()).with_context(|| {
-                format!(
-                    "failed to check out the tag `{}` of a repository cloned from `{}`",
-                    tag, url
-                )
-            })?;
-        }
-
-        let commit = repository.head()?.peel_to_commit()?.id();
-        Ok(ClonedRepositoryData {
-            commit: commit.to_string().into(),
-        })
     }
 
     /// Get specific [`FetchOptions`] for cloning the given `url` with `reference`.
@@ -167,12 +103,77 @@ impl GitClient for Git2Client<'_> {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData> {
-        self.clone(url, reference, destination)
+    ) -> QuackResult<GitRepository> {
+        let mut builder = RepoBuilder::new();
+
+        builder.fetch_options(self.fetch_options_for(url, reference));
+        // git2-rs doesn't support cloning with a given tag :(.
+        if let GitReference::Branch(branch) = reference {
+            builder.branch(branch.as_str());
+        }
+
+        let repository = match builder.clone(url.as_str(), destination) {
+            Ok(repository) => repository,
+            Err(e) => {
+                debug!(target: "duck::git", error = %e, "failed to clone the repository");
+                // We've failed to clone a repository, try to fallback to a non-shallow clone.
+                if matches!(e.code(), git2::ErrorCode::Auth) {
+                    return Err(e.into());
+                }
+                if !can_shallow_clone(url, reference) {
+                    return Err(e.into());
+                }
+                debug!(target: "duck::git", "falling back to a full clone");
+                // We print this only here because otherwise the user gets information from the error.
+                self.ctx.warning(format!(
+                    "failed to shallow clone the repository at `{url}`: {e}"
+                ))?;
+                self.ctx
+                    .info_verbose("retrying with a full clone instead of a shallow clone")?;
+                let mut fetch_options = self.fetch_options_for(url, reference);
+                // Here we always want to perform full clone, so set depth to 0.
+                fetch_options.depth(0);
+                builder.fetch_options(fetch_options);
+                builder.clone(url.as_str(), destination)?
+            }
+        };
+        // Make sure we type-check.
+        let repository: RepositoryInner = repository;
+        Ok(GitRepository {
+            inner: Box::new(repository),
+        })
+    }
+
+    fn checkout(&self, repository: &GitRepository, reference: GitReference) -> QuackResult<()> {
+        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
+        // Prefer specific commits over tags.
+        if let GitReference::Rev(commit) = reference {
+            repository
+                .checkout_commit(commit.as_str())
+                .with_context(|| format!("failed to check out the commit `{}`", commit))?;
+        } else if let GitReference::Tag(tag) = reference {
+            repository
+                .checkout_tag(tag.as_str())
+                .with_context(|| format!("failed to check out the tag `{}`", tag))?;
+        }
+        Ok(())
+    }
+
+    fn get_head_commit(&self, repository: &GitRepository) -> QuackResult<GitCommit> {
+        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
+        let commit: CommitInner = repository.head()?.peel_to_commit()?.id();
+        Ok(GitCommit {
+            inner: Box::new(commit),
+        })
     }
 
     fn uses_cli(&self) -> bool {
         false
+    }
+
+    fn commit_to_str(&self, commit: &GitCommit) -> QuackResult<crate::StrId> {
+        let commit = commit.inner.downcast_ext::<CommitInner>()?;
+        Ok(commit.to_string().into())
     }
 }
 
@@ -180,6 +181,7 @@ impl GitClient for Git2Client<'_> {
 trait RepositoryExt {
     /// Checkout `self` into a given commit.
     fn checkout_commit(&self, commit: &str) -> QuackResult<()>;
+
     /// Checkout `self` into a given tag.
     fn checkout_tag(&self, tag: &str) -> QuackResult<()>;
 }
