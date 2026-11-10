@@ -474,11 +474,8 @@ namespace compiler::helios::code {
 
 				// Box creation
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
-					const auto origin = inner->origin.generatedFrom();
-					const auto direct_type
-						= inner->expression_type.getSymbolType().withReferenceKind(
-							tsh::ReferenceKind::Direct
-						);
+					const auto origin      = inner->origin.generatedFrom();
+					const auto direct_type = inner->expression_type.getSymbolType().toDirect();
 
 					auto value = coercions::coerceFromBox(
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
@@ -609,11 +606,7 @@ namespace compiler::helios::code {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					const auto meta_type = tsh::SymbolType<>{
-						tsh::getMetaType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto meta_type = tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType());
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
@@ -663,12 +656,8 @@ namespace compiler::helios::code {
 					kind            = tsh::FunctionKind::Raw;
 				}
 
-				const ElementOrigin origin    = pstOrigin(arrow);
-				const auto          meta_type = tsh::SymbolType<>{
-                    tsh::getMetaType(),
-                    tsh::ReferenceKind::Direct,
-                    tsh::Mutability::Mutable,
-				};
+				const ElementOrigin origin = pstOrigin(arrow);
+				const auto meta_type       = tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType());
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
@@ -861,7 +850,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				const auto bool_type     = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
                 );
@@ -995,11 +984,8 @@ namespace compiler::helios::code {
 				// Some type had to be chosen. `void` would perhaps make more sense,
 				// but it seemed to break some assumptions of the compiler and cause panics.
 				// @TODO: #3707 When fixed, think about making this `void`.
-				auto elem_type_of_empty_array = tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto elem_type_of_empty_array
+					= tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 
 				auto type = ctx.query<tsh::QueryStaticArrayType>(
 					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }
