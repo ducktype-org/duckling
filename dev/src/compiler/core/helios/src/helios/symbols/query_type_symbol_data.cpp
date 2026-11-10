@@ -156,10 +156,12 @@ namespace compiler::helios {
 				name(sym).strView(),
 				&defgen::ComparisonMethodInfo::spelling
 			);
-			if (comparison == defgen::COMPARISON_METHODS.end()) return tsh::MemberSpecialKind::None;
+			CORE_ASSERT(
+				comparison != defgen::COMPARISON_METHODS.end(), "Expected a comparison symbol"
+			);
 
 			const auto method_type
-				= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+				= ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
 			if (method_type.getKind() != tsh::Kind::Function) return tsh::MemberSpecialKind::None;
 			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
 			const auto& params  = fn_type.getParameterTypes();

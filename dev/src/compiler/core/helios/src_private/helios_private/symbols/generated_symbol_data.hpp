@@ -88,22 +88,7 @@ namespace compiler::helios::defgen {
 	 * @brief Whether @p kind is one of the generated comparison operators (`==`, `!=`, `<`, `<=`,
 	 * `>`, `>=`).
 	 */
-	[[nodiscard]] constexpr bool isComparisonMethodKind(const Method::Kind kind) {
-		switch (kind) {
-		case Method::Kind::Equal:
-		case Method::Kind::NotEqual:
-		case Method::Kind::Lesser:
-		case Method::Kind::LesserEqual:
-		case Method::Kind::Greater:
-		case Method::Kind::GreaterEqual:
-			return true;
-		case Method::Kind::DefaultDestructor:
-		case Method::Kind::LengthMethod:
-		case Method::Kind::ToString:
-			return false;
-		}
-		CORE_UNREACHABLE();
-	}
+	[[nodiscard]] constexpr bool isComparisonMethodKind(Method::Kind kind);
 
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
