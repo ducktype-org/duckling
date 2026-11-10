@@ -1,5 +1,5 @@
 # Weekly dev build: builds the Duckling release packages and publishes
-# it as the rolling GitHub pre-release `dev-weekly`.
+# them as the rolling GitHub pre-release `dev-weekly`.
 #
 # The first run creates the release. Later runs replace the assets, then move its tag to the built
 # commit and update the notes.
@@ -13,7 +13,7 @@ on:
 
   schedule:
     # Off the hour: runs at :00 are often delayed by GitHub.
-    - cron: "17 3 * * 1" # every Monday, 07:17 UTC
+    - cron: "17 3 * * 1" # every Monday, 03:17 UTC
   workflow_dispatch:
     # note: package.py refuses an unpublished source: the commit must be in a remote branch.
     inputs:
@@ -47,8 +47,8 @@ jobs:
     name: build / ${{ matrix.package }}
     strategy:
       
-      # When one platform fail, the packaging will not run,
-      # but we want other platforms to continue building: its artifact is still useful.
+      # When one platform fails, nothing is published,
+      # but the other platforms keep building: their artifacts might still be useful.
       fail-fast: false
       
       matrix:
@@ -70,8 +70,9 @@ jobs:
             
             package: duckling-dev-macos-arm64
             
-            # Intentionally pinned, the build package will run on this macOS
-            # version and newer, as the compilers target the macOS they run on.
+            # Intentionally pinned to macOS 15, and deployment-target set to 15.0.
+            # The package runs on used macOS deployment-target version and newer.
+            deployment-target: "15.0"
             runner: macos-15
             
             # Note: the compilers should be the same as in test CI (.github/workflows/setup-build-matrix.py).
@@ -140,6 +141,11 @@ jobs:
           HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
           set -euo pipefail
+
+          # This variable is read by CMake by default,
+          # and it automtically configures the build for this deployment target.
+          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.deployment-target }}" >> "$GITHUB_ENV"
+
           brew install llvm@19 llvm@23 lld icu4c ccache ninja sccache
 
           # The image's rustup comes from Homebrew, without ~/.cargo/bin and ~/.cargo/env, which
@@ -214,6 +220,19 @@ jobs:
             --cc-compiler '${{ matrix.cc }}' \
             ${{ inputs.exclude-duck && '--exclude-product duck' || '' }} \
             < /dev/null
+
+      # Sanity check that minimum macOS version deduced by packaging scripts
+      # matches the MACOSX_DEPLOYMENT_TARGET environment variable.
+      - name: Check minimum macOS version
+        if: matrix.platform == 'macos'
+        working-directory: _packaging/output
+        run: |
+          actual="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("min_os_version", ""))' "$PACKAGE_NAME/duckling-package.json")"
+          echo "Package runs on macOS ${actual:-?} or newer, expected ${MACOSX_DEPLOYMENT_TARGET}"
+          if [ "${actual}" != "${MACOSX_DEPLOYMENT_TARGET}" ]; then
+            echo "::error::The package needs macOS ${actual:-? (no min_os_version in duckling-package.json)}, expected ${MACOSX_DEPLOYMENT_TARGET}"
+            exit 1
+          fi
 
       - name: Disk usage
         if: always()
