@@ -22,12 +22,12 @@
 
 namespace compiler::helios {
 	namespace defgen {
-		constexpr bool isComparisonMethodKind(const Method::Kind kind) {
+		bool isComparisonMethodKind(const Method::Kind kind) {
 			switch (kind) {
 			case Method::Kind::Equal:
 			case Method::Kind::NotEqual:
 			case Method::Kind::Lesser:
-			case Method::Kind::LessEqual:
+			case Method::Kind::LesserEqual:
 			case Method::Kind::Greater:
 			case Method::Kind::GreaterEqual:
 				return true;

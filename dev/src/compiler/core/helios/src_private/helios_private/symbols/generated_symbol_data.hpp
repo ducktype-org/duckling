@@ -88,7 +88,7 @@ namespace compiler::helios::defgen {
 	 * @brief Whether @p kind is one of the generated comparison operators (`==`, `!=`, `<`, `<=`,
 	 * `>`, `>=`).
 	 */
-	[[nodiscard]] constexpr bool isComparisonMethodKind(Method::Kind kind);
+	[[nodiscard]] bool isComparisonMethodKind(Method::Kind kind);
 
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
