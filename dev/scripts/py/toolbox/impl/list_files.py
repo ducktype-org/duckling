@@ -70,12 +70,12 @@ def _get_all_tracked_files(
     The index, not HEAD: a file that is staged but not committed yet is tracked, and a
     "format/lint everything" caller wants it.
     """
-    files_str, _ = bash_command_get_output("git ls-files --cached")
-    files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
+    files_str, _ = bash_command_get_output("git ls-files -z --cached")
+    files = _split_nul_listing(files_str)
 
     if filter_deleted:
-        deleted_str, _ = bash_command_get_output("git ls-files --deleted")
-        deleted_files = set(deleted_str.splitlines())
+        deleted_str, _ = bash_command_get_output("git ls-files -z --deleted")
+        deleted_files = set(_split_nul_listing(deleted_str))
         files = [file for file in files if file not in deleted_files]
 
     return _filter_by_extensions(files, extensions)
@@ -91,9 +91,9 @@ def _get_modified_files(
     """Get modified files compared to the specified branch."""
     # Get the diff
     diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative {'--diff-filter=d' if filter_deleted else ''}"
+        f"git diff -z {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative {'--diff-filter=d' if filter_deleted else ''}"
     )
-    files = [f.strip() for f in diff_out.strip().split("\n") if f.strip()]
+    files = _split_nul_listing(diff_out)
 
     return _filter_by_extensions(files, extensions) + _get_untracked_files_to_list(
         extensions, include_untracked
@@ -107,10 +107,22 @@ def _get_untracked_files(extensions: list[str] | None = None) -> list[str]:
     The paths are relative to the current working directory, just like the ones
     `git diff --relative` reports, so both listings can be concatenated.
     """
-    files_str, _ = bash_command_get_output("git ls-files --others --exclude-standard")
-    files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
+    files_str, _ = bash_command_get_output(
+        "git ls-files -z --others --exclude-standard"
+    )
+    files = _split_nul_listing(files_str)
 
     return _filter_by_extensions(files, extensions)
+
+
+def _split_nul_listing(listing: str) -> list[str]:
+    """
+    Split a `git … -z` listing into paths.
+
+    Without `-z`, git wraps a path holding a control character in quotes and escapes it
+    (`"mod_\\177_.dk"`), and that string names no file on disk.
+    """
+    return [f for f in listing.split("\0") if f]
 
 
 def _get_untracked_files_to_list(
