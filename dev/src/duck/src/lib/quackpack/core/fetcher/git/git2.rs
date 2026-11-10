@@ -13,12 +13,9 @@ use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository}
 use tracing::{debug, trace};
 use url::Url;
 
-use super::{AnyExt, GitClient, GitCommit, GitRepository, can_shallow_clone};
+use super::{GitClient, GitRepository, can_shallow_clone};
 use crate::quackpack::core::GitReference;
-use crate::{DuckContext, QuackResult, QuackResultContext};
-
-type RepositoryInner = git2::Repository;
-type CommitInner = git2::Oid;
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
 /// Client implementing interaction with Git repositories.
@@ -103,7 +100,7 @@ impl GitClient for Git2Client<'_> {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<GitRepository> {
+    ) -> QuackResult<Box<dyn GitRepository>> {
         let mut builder = RepoBuilder::new();
 
         builder.fetch_options(self.fetch_options_for(url, reference));
@@ -137,42 +134,33 @@ impl GitClient for Git2Client<'_> {
                 builder.clone(url.as_str(), destination)?
             }
         };
-        // Make sure we type-check.
-        let repository: RepositoryInner = repository;
-        Ok(GitRepository {
-            inner: Box::new(repository),
-        })
-    }
-
-    fn checkout(&self, repository: &GitRepository, reference: GitReference) -> QuackResult<()> {
-        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
-        // Prefer specific commits over tags.
-        if let GitReference::Rev(commit) = reference {
-            repository
-                .checkout_commit(commit.as_str())
-                .with_context(|| format!("failed to check out the commit `{}`", commit))?;
-        } else if let GitReference::Tag(tag) = reference {
-            repository
-                .checkout_tag(tag.as_str())
-                .with_context(|| format!("failed to check out the tag `{}`", tag))?;
-        }
-        Ok(())
-    }
-
-    fn get_head_commit(&self, repository: &GitRepository) -> QuackResult<GitCommit> {
-        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
-        let commit: CommitInner = repository.head()?.peel_to_commit()?.id();
-        Ok(GitCommit {
-            inner: Box::new(commit),
-        })
+        Ok(Box::new(repository))
     }
 
     fn uses_cli(&self) -> bool {
         false
     }
+}
 
-    fn commit_to_str(&self, commit: &GitCommit) -> QuackResult<crate::StrId> {
-        let commit = commit.inner.downcast_ext::<CommitInner>()?;
+impl GitRepository for git2::Repository {
+    fn checkout(&self, reference: GitReference) -> QuackResult<()> {
+        if let GitReference::Rev(commit) = reference {
+            self.checkout_commit(commit.as_str())
+                .with_context(|| format!("failed to check out the commit `{}`", commit))?;
+        } else if let GitReference::Tag(tag) = reference {
+            self.checkout_tag(tag.as_str())
+                .with_context(|| format!("failed to check out the tag `{}`", tag))?;
+        }
+        Ok(())
+    }
+
+    fn head_commit(&self) -> QuackResult<StrId> {
+        let commit = self
+            .head()
+            .context("failed to get HEAD")?
+            .peel_to_commit()
+            .context("failed to peel HEAD to a commit")?
+            .id();
         Ok(commit.to_string().into())
     }
 }
@@ -193,9 +181,13 @@ impl RepositoryExt for Repository {
         let commit = self
             .find_commit(oid)
             .with_context(|| format!("repository does not have a commit `{}", commit))?;
-        let tree = commit.tree()?;
-        self.checkout_tree(tree.as_object(), None)?;
-        self.set_head_detached(oid)?;
+        let tree = commit
+            .tree()
+            .context("failed to get tree of a repository")?;
+        self.checkout_tree(tree.as_object(), None)
+            .context("failed to checkout the tree")?;
+        self.set_head_detached(oid)
+            .context("failed to set detached HEAD")?;
         Ok(())
     }
 
@@ -205,11 +197,15 @@ impl RepositoryExt for Repository {
             .find_reference(&refname)
             .with_context(|| format!("repository does not have a tag `{}`", tag))?;
 
-        let commit = reference.peel_to_commit()?;
+        let commit = reference
+            .peel_to_commit()
+            .with_context(|| format!("failed to get a commit of tag `{tag}`"))?;
 
-        self.checkout_tree(commit.as_object(), None)?;
+        self.checkout_tree(commit.as_object(), None)
+            .context("failed to checkout the tree")?;
 
-        self.set_head_detached(commit.id())?;
+        self.set_head_detached(commit.id())
+            .context("failed to set detached HEAD")?;
         Ok(())
     }
 }

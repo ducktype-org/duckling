@@ -13,13 +13,14 @@ use std::process::{Command, Output};
 use tracing::{debug, trace, warn};
 use url::Url;
 
-use super::{AnyExt, GitClient, GitCommit, GitRepository, can_shallow_clone};
+use super::{GitClient, GitRepository, can_shallow_clone};
 use crate::quackpack::core::GitReference;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
-type RepositoryInner = PathBuf;
-type CommitInner = StrId;
+#[derive(Debug)]
+/// A git repository rooted at the given path.
+struct GitCliRepository(PathBuf);
 
 /// git environmental variables to unset.
 /// They can affect git execution.
@@ -51,35 +52,26 @@ impl GitClient for GitCliClient {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<GitRepository> {
+    ) -> QuackResult<Box<dyn GitRepository>> {
         clone_git_repository(url, reference, destination)?;
-        let repository: RepositoryInner = destination.to_path_buf();
-        Ok(GitRepository {
-            inner: Box::new(repository),
-        })
+        let repository = GitCliRepository(destination.to_path_buf());
+        Ok(Box::new(repository))
     }
 
     fn uses_cli(&self) -> bool {
         true
     }
+}
 
-    fn checkout(&self, repository: &GitRepository, reference: GitReference) -> QuackResult<()> {
-        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
-        maybe_checkout_to_commit(reference, repository)?;
+impl GitRepository for GitCliRepository {
+    fn checkout(&self, reference: GitReference) -> QuackResult<()> {
+        maybe_checkout_to_commit(reference, &self.0)?;
         Ok(())
     }
 
-    fn get_head_commit(&self, repository: &GitRepository) -> QuackResult<GitCommit> {
-        let repository = repository.inner.downcast_ext::<RepositoryInner>()?;
-        let commit: CommitInner = get_current_commit(repository)?;
-        Ok(GitCommit {
-            inner: Box::new(commit),
-        })
-    }
-
-    fn commit_to_str(&self, commit: &GitCommit) -> QuackResult<StrId> {
-        let commit = commit.inner.downcast_ext::<CommitInner>()?;
-        Ok(*commit)
+    fn head_commit(&self) -> QuackResult<StrId> {
+        let commit = get_current_commit(&self.0)?;
+        Ok(commit)
     }
 }
 

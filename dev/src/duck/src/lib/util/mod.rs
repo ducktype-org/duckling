@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 pub mod command_ext;
 pub mod dependency_graph;
 pub mod duckling_consts;
-pub mod dyn_type_name;
 pub mod edit_distance;
 pub mod env;
 pub mod error;

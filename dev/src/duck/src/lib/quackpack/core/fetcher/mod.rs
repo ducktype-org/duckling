@@ -224,15 +224,12 @@ impl<'duck> Fetcher<'duck> {
         let repository = client
             .clone(url, reference, destination_directory)
             .with_context(|| format!("failed to clone the repository from `{url}`"))?;
-        client
-            .checkout(&repository, reference)
+        repository
+            .checkout(reference)
             .with_context(|| format!("failed to checkout the repository cloned from `{url}`"))?;
-        let head = client
-            .get_head_commit(&repository)
+        let commit = repository
+            .head_commit()
             .context("failed to get HEAD commit of a repository")?;
-        let commit = client
-            .commit_to_str(&head)
-            .context("failed to turn commit into a string")?;
         Ok(commit)
     }
 
