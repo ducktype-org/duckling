@@ -8,6 +8,7 @@
 
 #include "safe_compiler.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
 

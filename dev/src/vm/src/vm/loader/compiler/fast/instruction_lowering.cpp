@@ -6,6 +6,7 @@
 
 #include "instruction_lowering.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/preproc/equal.hpp>
 #include <base/preproc/for_each.hpp>
 
@@ -64,8 +65,8 @@ namespace {
 	 * @brief Converts a label argument into a label ID
 	 */
 	arg::JumpDestination makeJumpDestination(Context& ctx, const vm::opargs::Label& label) {
-		auto [key_val, _] = ctx.label_ids.put(label.label_name, ctx.label_ids.size());
-		return key_val->second;
+		ctx.label_ids.maybePut(label.label_name, ctx.label_ids.size());
+		return ctx.label_ids.at(label.label_name);
 	}
 
 #define PUSH_HELPER_ARG(tp, name)      auto &&name,

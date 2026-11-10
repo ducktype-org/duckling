@@ -33,6 +33,7 @@
 #include <time_stats/time_stats.hpp>
 #include <version/version.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/ranges_utils.hpp>
 #include <base/extend_cpp/variant_match.hpp>
