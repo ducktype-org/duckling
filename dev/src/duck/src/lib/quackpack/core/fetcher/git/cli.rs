@@ -138,7 +138,7 @@ fn validate_tag(tag: StrId, path: &Path) -> QuackResult<()> {
 
 /// Get current HEAD commit.
 fn get_current_commit(path: &Path) -> QuackResult<StrId> {
-    let mut command = Command::new("git");
+    let mut command = git_cmd();
     set_cwd_on_git_cmd(&mut command, path).args(["rev-parse", "HEAD"]);
     let output = get_git_output(&mut command)?;
     let commit = String::from_utf8(output.stdout)
