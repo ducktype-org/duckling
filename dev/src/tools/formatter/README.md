@@ -203,21 +203,6 @@ The unit tests are golden tests: each feeds an input string (or a
 expected output, also asserting idempotence (formatting the output again is a
 no-op) and round-trip safety (the significant token stream is unchanged).
 
-## Keeping the repository formatted
-
-Every `.dk` file in the repository is kept formatted with `duckfmt`. Both helpers
-below find the binary in `build/bin/duckfmt` by default, so build it first.
-
-```sh
-# format the .dk files this branch changed (plus untracked ones); --all for every file
-./scripts/formatting/format_repo_duckling.sh [--all] [--check] [path/to/duckfmt]
-
-# check only; --auto-fix formats the offending files, --no-fix just reports them
-python3 toolbox.py duckling-formatter -b build [--all] [--no-fix | --auto-fix]
-```
-
-`pr-validate` runs the same check right after its build step.
-
 ## Limitations
 
 Because the formatter sees only tokens, some constructs are ambiguous and are
