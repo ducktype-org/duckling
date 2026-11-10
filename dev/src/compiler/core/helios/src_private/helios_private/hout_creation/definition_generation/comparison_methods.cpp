@@ -17,7 +17,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -35,7 +35,7 @@ namespace compiler::helios::defgen {
 	|   SYMBOLS   |
 	**************/
 
-	const base::StableHashMap<ComparisonKind, base::StrID> COMPARISON_METHOD_SPELLING{
+	const base::HashMap<ComparisonKind, base::StrID> COMPARISON_METHOD_SPELLING{
 		{ ComparisonKind::Equal, base::StrID("==") },
 		{ ComparisonKind::NotEqual, base::StrID("!=") },
 		{ ComparisonKind::Lesser, base::StrID("<") },
@@ -44,7 +44,7 @@ namespace compiler::helios::defgen {
 		{ ComparisonKind::GreaterEqual, base::StrID(">=") },
 	};
 
-	const base::StableHashMap<ComparisonKind, Method::Kind> COMPARISON_DEFGEN_KIND{
+	const base::HashMap<ComparisonKind, Method::Kind> COMPARISON_DEFGEN_KIND{
 		{ ComparisonKind::Equal, Method::Kind::Equal },
 		{ ComparisonKind::NotEqual, Method::Kind::NotEqual },
 		{ ComparisonKind::Lesser, Method::Kind::Lesser },
@@ -53,7 +53,7 @@ namespace compiler::helios::defgen {
 		{ ComparisonKind::GreaterEqual, Method::Kind::GreaterEqual },
 	};
 
-	const base::StableHashMap<ComparisonKind, tsh::MemberSpecialKind> COMPARISON_METHOD_SPECIAL_KIND{
+	const base::HashMap<ComparisonKind, tsh::MemberSpecialKind> COMPARISON_METHOD_SPECIAL_KIND{
 		{ ComparisonKind::Equal, tsh::MemberSpecialKind::Equal },
 		{ ComparisonKind::NotEqual, tsh::MemberSpecialKind::NotEqual },
 		{ ComparisonKind::Lesser, tsh::MemberSpecialKind::Lesser },
@@ -62,7 +62,7 @@ namespace compiler::helios::defgen {
 		{ ComparisonKind::GreaterEqual, tsh::MemberSpecialKind::GreaterEqual },
 	};
 
-	const base::StableHashMap<Method::Kind, ComparisonKind> DEFGEN_KIND_TO_COMPARISON_KIND{
+	const base::HashMap<Method::Kind, ComparisonKind> DEFGEN_KIND_TO_COMPARISON_KIND{
 		{ Method::Kind::Equal, ComparisonKind::Equal },
 		{ Method::Kind::NotEqual, ComparisonKind::NotEqual },
 		{ Method::Kind::Lesser, ComparisonKind::Lesser },
