@@ -123,40 +123,40 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
-		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type and change the
-		// mutability defaults
 		/**
 		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
 		 *
-		 * This static factory method makes a SylbolType<> that has Direct reference kind, is
-		 * Mutable, NonLeaking and NonUnique and wrpas the given abstract type.
+		 * This static factory method makes a SymbolType<> that has Direct reference kind, is
+		 * Immutable, NonLeaking and NonUnique and wraps the given abstract type. Use
+		 * withDefaultsMut() when the symbol has to be Mutable.
 		 *
 		 * @warning Do not wrap this method in "convenience" functions or implicit conversions.
 		 * Hiding this call behind a shorter or automated wrapper defeats its purpose of making the
 		 * transition from AbstractType to SymbolType explicit and conscious decision.
 		 *
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
-		 * @return A SymbolType<ABSTRACT_TYPE> with default symbol properties.
+		 * @return A SymbolType<ABSTRACT_TYPE> with default (immutable) symbol properties.
 		 */
 		static SymbolType<ABSTRACT_TYPE> withDefaults(const ABSTRACT_TYPE abstract_type) {
 			return SymbolType<ABSTRACT_TYPE>(
 				abstract_type,
 				ReferenceKind::Direct,
-				Mutability::Mutable,
+				Mutability::Immutable,
 				Leakage::NonLeaking,
 				Uniqueness::NonUnique
 			);
 		}
 
 		/**
-		 * @brief Same as above, but with immutability.
-		 * @TODO: #2348 change the names to withDefaultsMut and withDefaults, rustlike
+		 * @brief Same as withDefaults(), but the resulting SymbolType is Mutable.
+		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
+		 * @return A SymbolType<ABSTRACT_TYPE> with default symbol properties, but Mutable.
 		 */
-		static SymbolType<ABSTRACT_TYPE> withDefaultsConst(const ABSTRACT_TYPE abstract_type) {
+		static SymbolType<ABSTRACT_TYPE> withDefaultsMut(const ABSTRACT_TYPE abstract_type) {
 			return SymbolType<ABSTRACT_TYPE>(
 				abstract_type,
 				ReferenceKind::Direct,
-				Mutability::Immutable,
+				Mutability::Mutable,
 				Leakage::NonLeaking,
 				Uniqueness::NonUnique
 			);
@@ -297,9 +297,42 @@ namespace compiler::tsh {
 			return abstract_type.isTriviallyCopyable(ctx);
 		}
 
+		/**
+		 * @brief Copies this SymbolType with the reference kind replaced. Prefer toDirect(),
+		 * toBox() or toRef() when the new reference kind is known at the call site.
+		 * @param new_reference_kind The reference kind of the result.
+		 * @return This SymbolType with the given reference kind.
+		 */
 		[[nodiscard]]
 		SymbolType withReferenceKind(const ReferenceKind new_reference_kind) const {
 			return SymbolType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
+		}
+
+		/**
+		 * @brief Copies this SymbolType with the reference kind set to Direct.
+		 * @return This SymbolType as a Direct (non-reference) value.
+		 */
+		[[nodiscard]]
+		SymbolType toDirect() const {
+			return withReferenceKind(ReferenceKind::Direct);
+		}
+
+		/**
+		 * @brief Copies this SymbolType with the reference kind set to Box.
+		 * @return This SymbolType as an owning Box reference.
+		 */
+		[[nodiscard]]
+		SymbolType toBox() const {
+			return withReferenceKind(ReferenceKind::Box);
+		}
+
+		/**
+		 * @brief Copies this SymbolType with the reference kind set to Ref.
+		 * @return This SymbolType as a non-owning Ref reference.
+		 */
+		[[nodiscard]]
+		SymbolType toRef() const {
+			return withReferenceKind(ReferenceKind::Ref);
 		}
 
 		[[nodiscard]]
