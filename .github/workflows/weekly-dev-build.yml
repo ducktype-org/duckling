@@ -71,7 +71,9 @@ jobs:
             package: duckling-dev-macos-arm64
             
             # Intentionally pinned to macOS 15, and deployment-target set to 15.0.
-            # The package runs on used macOS deployment-target version and newer.
+            # The package runs on macOS deployment-target and newer.
+            # Keep the runner on the same macOS as deployment-target: Homebrew's bottles linked
+            # into the binaries (llvm@19, zstd) are built for the macOS they are installed on.
             deployment-target: "15.0"
             runner: macos-15
             
@@ -142,8 +144,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # This variable is read by CMake by default,
-          # and it automtically configures the build for this deployment target.
+          # This variable is read by default by CMake, clang, rustc and the cc crate,
+          # so it automatically configures the whole build for this deployment target.
           echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.deployment-target }}" >> "$GITHUB_ENV"
 
           brew install llvm@19 llvm@23 lld icu4c ccache ninja sccache
