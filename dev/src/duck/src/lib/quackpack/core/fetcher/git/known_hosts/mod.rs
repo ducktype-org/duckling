@@ -63,28 +63,28 @@ pub fn check_certificate(
     let mut encountered_accept = false;
     let mut encountered_revoked = false;
     for entry in entries {
-        let (entry, path) = entry;
+        let (entry, source) = entry;
         let result = entry.accept(&host, hostkey, host_type);
         match result {
             accept::AcceptResult::Accepted => {
-                info!(target: "duck::git", ?path, ?entry, "accepted certificate");
+                info!(target: "duck::git", ?source, ?entry, "accepted certificate");
                 encountered_accept = true;
             }
             accept::AcceptResult::Rejected => {
-                trace!(target: "duck::git", ?path, ?entry, "rejected certificate");
+                trace!(target: "duck::git", ?source, ?entry, "rejected certificate");
             }
             accept::AcceptResult::Revoked => {
-                warn!(target: "duck::git", ?path, ?entry, "revoked certificate");
+                warn!(target: "duck::git", ?source, ?entry, "revoked certificate");
                 encountered_revoked = true;
             }
             accept::AcceptResult::NotMatched => {
-                trace!(target: "duck::git", ?path, ?entry, "not matched");
+                trace!(target: "duck::git", ?source, ?entry, "not matched");
             }
             accept::AcceptResult::KeyMismatch => {
-                trace!(target: "duck::git", ?path, ?entry, "keys mismatch");
+                trace!(target: "duck::git", ?source, ?entry, "keys mismatch");
             }
             accept::AcceptResult::Unsupported => {
-                trace!(target: "duck::git", ?path, ?entry, "unsupported key");
+                trace!(target: "duck::git", ?source, ?entry, "unsupported key");
             }
         }
     }
@@ -188,8 +188,11 @@ enum Marker {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// Source of the single [`KnownHostEntry`].
 enum KnownHostSource<'a> {
+    /// From the file.
     Path(&'a Path),
+    /// Bundled.
     Bundled,
 }
 
