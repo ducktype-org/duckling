@@ -8,10 +8,13 @@
 //! All sections are copied from: <https://man.openbsd.org/sshd#SSH_KNOWN_HOSTS_FILE_FORMAT>.
 //! Last access time: 1st of November 2026.
 
-#![expect(dead_code)]
+use std::fmt;
 
 use base64::prelude::*;
+use thiserror::Error;
 use tracing::{debug, trace};
+
+use super::{HashedHostname, Hostname, KnownHostEntry, KnownHostsLine, Marker, NormalHostname};
 
 /// Marker indicating a certification authority (CA) key.
 const CA_MARKER: &str = "@cert-authority";
@@ -40,26 +43,35 @@ const COMMENT_CHAR: char = '#';
 
 pub type ParseResult<T> = Result<T, ParseError>;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 /// Error type indicating failed parsing.
 pub enum ParseError {
     /// Obligatory field was missing.
-    MissingField(MissingFieldType),
+    #[error("missing obligatory field `{0}`")]
+    MissingField(KnownHostField),
     /// Hashed hostname was missing magic.
+    #[error("hashed hostname is missing the magic identifier")]
     MissingHashMagic,
     /// Hashed hostname was missing salt or host fields.
+    #[error("hashed hostname is missing a salt or a host")]
     MissingHashSaltOrHost,
     /// Hashed hostname contains too many delimiters.
+    #[error("hashed hostname contains too many delimiters")]
     TooManyHashDelims,
     /// An error occurred while performing a base64 decoding.
-    Base64Decoding(base64::DecodeError),
+    #[error("failed to base64 decode field `{0}`: {1}")]
+    Base64Decoding(KnownHostField, base64::DecodeError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-/// Which obligatory field was missing.
-pub enum MissingFieldType {
+/// All known hosts fields
+pub enum KnownHostField {
+    /// Salt of hashed hostname
+    HashedSalt,
+    /// Host of hashed hostname
+    HashedHost,
     /// Hostnames (patterns)
     Hostnames,
     /// Keytype
@@ -68,79 +80,31 @@ pub enum MissingFieldType {
     Key,
 }
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// A single line in `known_hosts` file.
-pub enum KnownHostsLine {
-    /// This line is a comment.
-    Comment,
-    /// This line contains pattern to match against.
-    Entry(KnownHostEntry),
-}
-
-#[derive(Debug, Copy, Clone)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// Optional marker of the line.
-pub enum Marker {
-    /// This line is certification authority key.
-    CA,
-    /// This line contains a revoked key.
-    Revoked,
-}
-
-#[derive(Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// “Normal” (patternable) single entry.
-///
-/// If the pattern is negated and it matches, _the entire line_ is discarded.
-pub struct NormalHostname {
-    /// Raw pattern.
-    pattern: String,
-    /// Whether the pattern is negated.
-    is_negated: bool,
-}
-
-#[derive(Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// A hashed hostname entry.
-///
-/// Uses HMAC SHA1 algorithm.
-pub struct HashedHostname {
-    /// Salt for the hash. Already base64 decoded.
-    salt: Vec<u8>,
-    /// Base64 decoded host hash.
-    host: Vec<u8>,
-}
-
-#[derive(Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// A single hostname pattern.
-pub enum Hostname {
-    Hashed(HashedHostname),
-    Normal(NormalHostname),
-}
-
-#[derive(Debug)]
-#[cfg_attr(test, derive(Eq, PartialEq))]
-/// A single entry (line) in the `known_hosts` file.
-pub struct KnownHostEntry {
-    /// Marker of the entry.
-    marker: Option<Marker>,
-    /// List of patterns to match against.
-    hosts: Vec<Hostname>,
-    /// Keytype.
-    key_type: String,
-    /// Base64 decoded key.
-    key: Vec<u8>,
+impl fmt::Display for KnownHostField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::HashedSalt => "hashed salt",
+            Self::HashedHost => "hashed host",
+            Self::Hostnames => "hostnames' patterns",
+            Self::Keytype => "key-type",
+            Self::Key => "key",
+        };
+        f.write_str(name)
+    }
 }
 
 /// Parse a `known_hosts` file.
-pub fn parse_known_hosts_file(file: &str) -> ParseResult<Vec<KnownHostsLine>> {
-    file.lines().map(parse_known_hosts_line).collect()
+pub fn parse_known_hosts_file(file: &str) -> Vec<KnownHostsLine> {
+    file.lines()
+        .map(|line| match parse_known_hosts_line(line) {
+            Ok(line) => line,
+            Err(err) => KnownHostsLine::Failed(err),
+        })
+        .collect()
 }
 
 /// Parse a single `known_hosts` line.
-pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
+fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let line = line.trim_ascii();
     trace!(target: "duck::git", ?line, "parsing line");
     // Lines starting with ‘#’ and empty lines are ignored as comments.
@@ -166,7 +130,7 @@ pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let hostnames_str = if marker.is_some() {
         // Advance iter to get hostnames.
         iter.next()
-            .ok_or(ParseError::MissingField(MissingFieldType::Hostnames))?
+            .ok_or(ParseError::MissingField(KnownHostField::Hostnames))?
     } else {
         // No marker, that were hostnames.
         marker_or_hostnames
@@ -174,13 +138,13 @@ pub fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let hosts = parse_hostnames(hostnames_str)?;
     let key_type = iter
         .next()
-        .ok_or(ParseError::MissingField(MissingFieldType::Keytype))?;
+        .ok_or(ParseError::MissingField(KnownHostField::Keytype))?;
     let base64_key = iter
         .next()
-        .ok_or(ParseError::MissingField(MissingFieldType::Key))?;
+        .ok_or(ParseError::MissingField(KnownHostField::Key))?;
     let key = BASE64_STANDARD
         .decode(base64_key)
-        .map_err(ParseError::Base64Decoding)?;
+        .map_err(|err| ParseError::Base64Decoding(KnownHostField::Key, err))?;
     let entry = KnownHostEntry {
         marker,
         hosts,
@@ -249,10 +213,10 @@ fn parse_hashed_hostname(hostname: &str) -> ParseResult<HashedHostname> {
     }
     let salt = BASE64_STANDARD
         .decode(salt)
-        .map_err(ParseError::Base64Decoding)?;
+        .map_err(|err| ParseError::Base64Decoding(KnownHostField::HashedSalt, err))?;
     let host = BASE64_STANDARD
         .decode(host)
-        .map_err(ParseError::Base64Decoding)?;
+        .map_err(|err| ParseError::Base64Decoding(KnownHostField::HashedHost, err))?;
     Ok(HashedHostname { salt, host })
 }
 
@@ -462,7 +426,7 @@ example.com {KEY_TYPE} {KEY}
 
         assert_eq!(
             parse_known_hosts_file(&file),
-            Ok(vec![
+            vec![
                 KnownHostsLine::Comment,
                 KnownHostsLine::Comment,
                 entry(None, vec![normal("example.com", false)], KEY_TYPE, DUCKLING),
@@ -478,13 +442,13 @@ example.com {KEY_TYPE} {KEY}
                     KEY_TYPE,
                     DUCKLING,
                 ),
-            ])
+            ]
         );
     }
 
     #[test]
     fn empty_file() {
-        assert_eq!(parse_known_hosts_file(""), Ok(vec![]));
+        assert_eq!(parse_known_hosts_file(""), vec![]);
     }
 
     #[test]
@@ -492,7 +456,7 @@ example.com {KEY_TYPE} {KEY}
         for line in ["@cert-authority", "@revoked"] {
             assert_eq!(
                 parse_known_hosts_line(line),
-                Err(ParseError::MissingField(MissingFieldType::Hostnames))
+                Err(ParseError::MissingField(KnownHostField::Hostnames))
             );
         }
     }
@@ -501,7 +465,7 @@ example.com {KEY_TYPE} {KEY}
     fn missing_keytype_error() {
         assert_eq!(
             parse_known_hosts_line("example.com"),
-            Err(ParseError::MissingField(MissingFieldType::Keytype))
+            Err(ParseError::MissingField(KnownHostField::Keytype))
         );
     }
 
@@ -509,7 +473,7 @@ example.com {KEY_TYPE} {KEY}
     fn missing_key_error() {
         assert_eq!(
             parse_known_hosts_line("example.com ssh-ed25519"),
-            Err(ParseError::MissingField(MissingFieldType::Key))
+            Err(ParseError::MissingField(KnownHostField::Key))
         );
     }
 
@@ -556,7 +520,7 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
 
         assert_eq!(
             parse_known_hosts_file(&file),
-            Ok(vec![
+            vec![
                 KnownHostsLine::Comment,
                 entry(
                     None,
@@ -586,7 +550,7 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
                     KEY_TYPE,
                     DUCKLING,
                 ),
-            ])
+            ]
         );
     }
 }
