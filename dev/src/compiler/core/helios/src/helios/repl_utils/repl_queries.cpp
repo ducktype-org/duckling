@@ -48,7 +48,7 @@ namespace compiler::repl {
 					= std::make_shared<helios::code::CodeBlock>(helios::compileSingleStatement(
 						ctx,
 						element.dynamicCast<pst::Stmt>(),
-						tsh::SymbolType<>::withDefaults(tsh::getUnitType())
+						tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType())
 					));
 
 				code_block->statements.emplace_back(

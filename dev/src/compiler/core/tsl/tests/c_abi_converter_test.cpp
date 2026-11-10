@@ -30,7 +30,7 @@ namespace ats = abi::types;
 namespace {
 
 	SymbolType<> directOf(AbstractType abstract_type) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, Mutability::Immutable };
+		return SymbolType<>::withDefaults(abstract_type);
 	}
 
 	SymbolType<> refOf(AbstractType abstract_type) {
