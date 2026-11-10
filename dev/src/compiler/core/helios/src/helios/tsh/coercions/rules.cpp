@@ -235,8 +235,8 @@ namespace compiler::tsh::coercions {
 		SymbolTypeCoercion takeByRef(
 			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
 		) {
-			const SymbolType<> referenced = source.withReferenceKind(ReferenceKind::Ref);
-			const base::CRef<SymbolTypeCoercion> rest = planPart(ctx, referenced, target);
+			const SymbolType<>                   referenced = source.toRef();
+			const base::CRef<SymbolTypeCoercion> rest       = planPart(ctx, referenced, target);
 
 			if (rest->isRefused()) {
 				CoercionError error = rest->getError();

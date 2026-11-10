@@ -13,6 +13,8 @@
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
 
+#include <base/collections/hashmap.hpp>
+
 #include <algorithm>
 #include <set>
 
@@ -74,7 +76,7 @@ namespace compiler::mir {
 		// Only locals that are destructed conditionally need a flag.
 		std::set<MIRLocalRef> conditionally_destructed;
 		for (auto block_id: function.block_order)
-			for (const auto& instr: function.blocks.at(block_id)->instructions)
+			for (const auto& instr: function.blocks.at(block_id).instructions)
 				if_opt_some(conditionally_destructed_local(instr), local)
 					conditionally_destructed.insert(local);
 
@@ -85,7 +87,7 @@ namespace compiler::mir {
 		for (const auto& local: function.local_list)
 			if (conditionally_destructed.contains(&local)) tracked_locals.emplace_back(&local);
 
-		const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+		const auto bool_type = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 
 		// Add lifetime flags for all of them.
 		base::Map<MIRLocalRef, MIRLocalRef> flag_of;
@@ -115,7 +117,7 @@ namespace compiler::mir {
 		std::vector<MIRLocalRef> parameter_flags;
 
 		for (auto block_id: function.block_order) {
-			auto& block = *function.blocks.at(block_id);
+			auto& block = function.blocks.at(block_id);
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -206,7 +208,7 @@ namespace compiler::mir {
 		// The parameter flags are opened before anything else, so they are closed on every path
 		// leaving the function, after every other scope of that path has ended.
 		for (auto block_id: function.block_order) {
-			auto& terminator = function.blocks.at(block_id)->terminator;
+			auto& terminator = function.blocks.at(block_id).terminator;
 			if (not getTerminatorSuccessors(terminator).empty()) continue;
 
 			for (auto flag: parameter_flags | std::views::reverse)
@@ -339,8 +341,10 @@ namespace compiler::mir {
 	LocalsByScopeMap collectLocalsByScope(const Function& function) {
 		LocalsByScopeMap locals_by_scope;
 		for (const auto& local: function.local_list)
-			if (local.scope.value() != function.no_lifetime_scope)
-				locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
+			if (local.scope.value() != function.no_lifetime_scope) {
+				locals_by_scope.maybePut(local.scope.value(), std::vector<MIRLocalRef>{});
+				locals_by_scope.at(local.scope.value()).emplace_back(&local);
+			}
 		return locals_by_scope;
 	}
 
@@ -357,8 +361,10 @@ namespace compiler::mir {
 			for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
 
 			for (auto block_id: function.block_order)
-				for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
-					args.block_predecessors.put(succ).first->second.push_back(block_id);
+				for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id).terminator)) {
+					args.block_predecessors.maybePut(succ, std::vector<BlockID>{});
+					args.block_predecessors.at(succ).push_back(block_id);
+				}
 
 			args.move_states = MoveStateData::calculateGlobalInMoveStateMap(
 				function, args.block_predecessors, args.locals_by_scope

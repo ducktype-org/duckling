@@ -91,6 +91,30 @@ Tests:
         Output:
           String: "1\n2\n"
 
+  # `duckc run` names the functions of a panic's stack trace as in the Duckling source, both the
+  # script's own (`readPastEnd`, `forward`) and the standard library's (`panic`), instead of
+  # their mangled names, and shows the Duckling file and line of each call: the script's lines are
+  # lines of the `.dks` file. `(?s)` lets `.` cross the line breaks.
+  panic_stack_trace:
+    folder: "panic_stack_trace"
+    Cases:
+      direct:
+        mode: direct
+        Run: "@{expect_output} --expect-exit 1 --err-regex \"(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#1 panic at [^ ]*panicking[.]dk:[0-9]+\n.*#2 readPastEnd at [^ ]*panic_stack_trace[.]dks:3\n.*#3 forward at [^ ]*panic_stack_trace[.]dks:7\n\" -- @{duckc_path} run @{folder}/@{Name}.dks --custom-std-artifacts-path @{case_std_artifacts}"
+        Output:
+          String: "Program panicked!\n"
+
+  # `duckc run` also runs a `.dk` file with a `main`. A frame whose call is a statement of its own
+  # (`store(4);`) or initializes a `var` shows the line of that call, not the line after it.
+  panic_stack_trace_dk:
+    folder: "panic_stack_trace_dk"
+    Cases:
+      direct:
+        mode: direct
+        Run: "@{expect_output} --expect-exit 1 --err-regex \"(?s)DVM stack trace [(]most recent call first[)]:.*#2 readPastEnd at [^ ]*panic_stack_trace_dk[.]dk:3\n.*#3 store at [^ ]*panic_stack_trace_dk[.]dk:7\n.*#4 main at [^ ]*panic_stack_trace_dk[.]dk:12\n\" -- @{duckc_path} run @{folder}/@{Name}.dk --custom-std-artifacts-path @{case_std_artifacts}"
+        Output:
+          String: "Program panicked!\n"
+
   const_ternary:
     folder: "const_ternary"
     Cases:

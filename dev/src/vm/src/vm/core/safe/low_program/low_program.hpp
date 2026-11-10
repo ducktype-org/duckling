@@ -14,6 +14,7 @@
 
 #include <ffi.h>
 
+#include <base/collections/hashmap.hpp>
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -282,6 +283,7 @@ namespace vm::low {
 			return global_data;
 		}
 
+		[[nodiscard]]
 		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return method_name_pool;
 		}

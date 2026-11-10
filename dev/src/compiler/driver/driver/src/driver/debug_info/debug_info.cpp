@@ -24,35 +24,33 @@
 namespace compiler::driver {
 	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION = ".di.json";
 
-	namespace {
-		debug_info::FilePosition calculateSourcePosition(
-			query::Context& ctx, const debug_info::PstHashPostion& pos
-		) {
-			auto source_position = pst::LangElement::getByStableHash(pos.postion_scope_begin)
-			                           .unlock(ctx)
-			                           ->getSourcePosition()
-			                           .unlock(ctx);
+	debug_info::FilePosition resolveDebugInfoPosition(
+		query::Context& ctx, const debug_info::PstHashPostion& pos
+	) {
+		auto source_position = pst::LangElement::getByStableHash(pos.postion_scope_begin)
+		                           .unlock(ctx)
+		                           ->getSourcePosition()
+		                           .unlock(ctx);
 
-			if_opt_some(pos.postion_scope_end, end_hash) {
-				auto end_position = pst::LangElement::getByStableHash(end_hash)
-				                        .unlock(ctx)
-				                        ->getSourcePosition()
-				                        .unlock(ctx);
-				source_position = dia::SourcePosition::merge(source_position, end_position);
-			}
-
-			auto [start_line, start_column] = source_position.getStartLineColumn();
-			auto [end_line, end_column]     = source_position.getEndLineColumn();
-
-			return debug_info::FilePosition{
-				.file_path    = source_position.getSource()->getFile().getFilePath().string(),
-				.start_line   = start_line,
-				.start_column = start_column,
-				.end_line     = end_line,
-				.end_column   = end_column,
-			};
+		if_opt_some(pos.postion_scope_end, end_hash) {
+			auto end_position = pst::LangElement::getByStableHash(end_hash)
+			                        .unlock(ctx)
+			                        ->getSourcePosition()
+			                        .unlock(ctx);
+			source_position = dia::SourcePosition::merge(source_position, end_position);
 		}
-	}  // namespace
+
+		auto [start_line, start_column] = source_position.getStartLineColumn();
+		auto [end_line, end_column]     = source_position.getEndLineColumn();
+
+		return debug_info::FilePosition{
+			.file_path    = source_position.getSource()->getFile().getFilePath().string(),
+			.start_line   = start_line,
+			.start_column = start_column,
+			.end_line     = end_line,
+			.end_column   = end_column,
+		};
+	}
 
 	base::Bit256 KeyOf_DebugInfoForModule::queryStablePerfectHash() const {
 		auto component_hash = compiler::frontend::ModuleTree::getPathComponentHash(module_id);
@@ -91,7 +89,7 @@ namespace compiler::driver {
 			auto debug_info = compile_module_result.debug_info.value();
 			debug_info.resolvePositions(
 				[&](const debug_info::PstHashPostion& pos) -> debug_info::FilePosition {
-					return calculateSourcePosition(ctx, pos);
+					return resolveDebugInfoPosition(ctx, pos);
 				}
 			);
 

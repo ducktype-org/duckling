@@ -8,6 +8,7 @@
 #include "highlight.hpp"
 #include "styles.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 
