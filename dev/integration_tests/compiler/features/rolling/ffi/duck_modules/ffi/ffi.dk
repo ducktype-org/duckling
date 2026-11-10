@@ -114,11 +114,11 @@ fun main() -> i64 = {
 
 	# 0x0000ABCD: positive as i32, but -21555 once truncated to i16 (clean-zero upper bits).
 	let raw_s: i32 = 43981i32;
-	builtin_output_i64(narrow_ints :: add_shorts(raw_s as i16, 1i16)); # -21554
+	builtin_output_i64(narrow_ints::add_shorts(raw_s as i16, 1i16)); # -21554
 
 	# 0x000000C8: -56 as i8; without signext the clang callee reads 200 and prints 201.
 	let raw_b: i32 = 200i32;
-	builtin_output_i64(narrow_ints :: add_bytes(raw_b as i8, 1i8)); # -55
+	builtin_output_i64(narrow_ints::add_bytes(raw_b as i8, 1i8)); # -55
 
 	return 0i64;
 }

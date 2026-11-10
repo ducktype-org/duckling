@@ -95,7 +95,7 @@ fun testPrimitives() -> () = {
 	printPrimitives(&b);
 	printSmallSeparator();
 
-	# Note: a unit typed field could also go in `Primitives`, etc. class.
+	# @TODO: #2306 Put a unit typed field in `Primitives`, etc. class once it's possible.
 	var x: (); # This is default initialized by a unit.
 }
 

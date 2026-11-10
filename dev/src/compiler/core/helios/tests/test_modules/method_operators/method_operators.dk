@@ -5,11 +5,11 @@ class Foo {
 		return x + a;
 	}
 
-	fun prefix -* () -> i64 = {
+	fun prefix -*() -> i64 = {
 		return x;
 	}
 
-	fun suffix++ () -> i64 = {
+	fun suffix ++() -> i64 = {
 		return x;
 	}
 }

@@ -11,7 +11,11 @@ class Cls {
 	x: i64;
 }
 
-class NonTrivialCls {x: String} fun checkType(v: str) = ();
+class NonTrivialCls {
+	x: String
+}
+
+fun checkType(v: str) = ();
 
 fun intro() -> () = {
 	var c: ?Cls = Cls(1);

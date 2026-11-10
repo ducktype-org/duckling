@@ -39,7 +39,15 @@ fun positions(v: i32 | f32) -> i64 = {
 		case _ = 20i64;
 	} * 2i64;
 
-	return identity(match (v) {case x: i32 = match (v) {case y: i32 = acc; case _ = 0i64;}; case _ = acc;});
+	return identity(
+		match (v) {
+			case x: i32 = match (v) {
+				case y: i32 = acc;
+				case _ = 0i64;
+			};
+			case _ = acc;
+		}
+	);
 }
 
 # Nothing follows the match, so its continuation is the end of the function.

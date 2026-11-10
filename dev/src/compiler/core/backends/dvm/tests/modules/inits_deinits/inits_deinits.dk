@@ -16,8 +16,7 @@ fun foo(arg: i32) -> i32 = {
 		}
 	};
 
-	while (0 < arg < 10 < arg * 2) {
-		# comparison chain, loop
+	while (0 < arg < 10 < arg * 2) { # comparison chain, loop
 		arg = arg + 1;
 	}
 

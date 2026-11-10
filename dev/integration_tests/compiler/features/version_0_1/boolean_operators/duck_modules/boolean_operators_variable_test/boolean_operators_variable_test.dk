@@ -50,12 +50,10 @@ fun main() -> i64 = {
 
 	# Testing AND operator for laziness
 	v = false;
-	if (v and print_error(v)) {
-		# Should not print
+	if (v and print_error(v)) { # Should not print
 		builtin_output_i64(108); # Should not execute
 	}
-	if (false and print_error(v)) {
-		# Should not print
+	if (false and print_error(v)) { # Should not print
 		builtin_output_i64(109); # Should not execute
 	}
 
@@ -96,12 +94,10 @@ fun main() -> i64 = {
 
 	# Testing OR for laziness
 	v = true;
-	if (v or print_error(true)) {
-		# Should not print
+	if (v or print_error(true)) { # Should not print
 		builtin_output_i64(12); # 12
 	}
-	if (v or print_error(false)) {
-		# Should not print
+	if (v or print_error(false)) { # Should not print
 		builtin_output_i64(13); # 13
 	}
 
@@ -135,21 +131,17 @@ fun main() -> i64 = {
 
 	# Testing laziness of and+or combo
 	v = true;
-	if (v or print_error(not v) and not v) {
-		# Should not print
+	if (v or print_error(not v) and not v) { # Should not print
 		builtin_output_i64(17); # 17
 	}
-	if (v or not v and print_error(not v)) {
-		# Should not print
+	if (v or not v and print_error(not v)) { # Should not print
 		builtin_output_i64(18); # 18
 	}
 	v = false;
-	if (v and not v and print_error(not v)) {
-		# Should not print
+	if (v and not v and print_error(not v)) { # Should not print
 		builtin_output_i64(116); # Should not execute
 	}
-	if (v and print_error(not v) and not v) {
-		# Should not print
+	if (v and print_error(not v) and not v) { # Should not print
 		builtin_output_i64(117); # Should not execute
 	}
 

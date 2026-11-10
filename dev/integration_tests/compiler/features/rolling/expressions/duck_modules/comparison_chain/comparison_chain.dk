@@ -9,20 +9,17 @@ fun numeric() -> i64 = {
 
 	#   (false) true  true
 	#   -2 <= -3 == -3 != 3
-	if (-2 <= -c == -c != c) {
-		# first comparison is important
+	if (-2 <= -c == -c != c) { # first comparison is important
 		return 2;
 
 		#       true  (false) true
 		#      -4 <= -3 != -3 != 3
-	} else if (-4 <= -c != -c != c) {
-		# middle comparison is important
+	} else if (-4 <= -c != -c != c) { # middle comparison is important
 		return 3;
 
 		#       true  true (false)
 		#      -4 <= -3 == -3 != 3
-	} else if (-4 <= -c == -c == c) {
-		# last comparison is important
+	} else if (-4 <= -c == -c == c) { # last comparison is important
 		return 4;
 	}
 

@@ -2,15 +2,15 @@ fun +*(a: i64, b: i64) -> i64 = {
 	return a * b + a;
 }
 
-fun prefix -* (a: i64) -> i64 = {
+fun prefix -*(a: i64) -> i64 = {
 	return a * 6;
 }
 
-fun suffix -* (a: i64) -> i64 = {
+fun suffix -*(a: i64) -> i64 = {
 	return a * 7;
 }
 
-fun suffix - (a: i64) -> i64 = {
+fun suffix -(a: i64) -> i64 = {
 	return a * 8;
 }
 
@@ -21,11 +21,11 @@ class Foo {
 		return x * a + x;
 	}
 
-	fun prefix - () -> i64 = {
+	fun prefix -() -> i64 = {
 		return x * 6;
 	}
 
-	fun suffix - () -> i64 = {
+	fun suffix -() -> i64 = {
 		return x * 7;
 	}
 }
@@ -37,9 +37,9 @@ fun main() -> i64 = {
 	builtin_output_i64(x);
 	let y = -* 7;
 	builtin_output_i64(y);
-	let z = 7 -*;
+	let z = 7-*;
 	builtin_output_i64(z);
-	let numeric_suffix = (6 + suffix) -;
+	let numeric_suffix = (6 + suffix)-;
 	builtin_output_i64(numeric_suffix);
 
 	var fu = Foo(7);
@@ -49,7 +49,7 @@ fun main() -> i64 = {
 	let v = -fv;
 	builtin_output_i64(v);
 	var fw = Foo(7);
-	let w = fw -;
+	let w = fw-;
 	builtin_output_i64(w);
 	return 0;
 }

@@ -1,5 +1,9 @@
 namespace NS1 {
-	class B {x: i64} class A {
+	class B {
+		x: i64
+	}
+
+	class A {
 		b: B;
 	}
 	var a: A = A(B(7));

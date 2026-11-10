@@ -38,8 +38,7 @@ fun main() -> i64 = {
 		output = 1i64;
 	}
 
-	if (a) {
-		# a = false
+	if (a) { # a = false
 		output = output + 10i64;
 	} else {
 		output = output + 90i64; # output = 99

@@ -7,14 +7,14 @@ class Num {
 	fun +(rhs: Num) -> Num = {
 		return Num(self.val + rhs.val + 1000);
 	}
-	fun prefix - () -> Num = {
+	fun prefix -() -> Num = {
 		return Num(-self.val - 1000);
 	}
 }
 fun +(lhs: Num, rhs: Num) -> Num = {
 	return Num(lhs.val + rhs.val);
 }
-fun prefix - (n: Num) -> Num = {
+fun prefix -(n: Num) -> Num = {
 	return Num(-n.val);
 }
 

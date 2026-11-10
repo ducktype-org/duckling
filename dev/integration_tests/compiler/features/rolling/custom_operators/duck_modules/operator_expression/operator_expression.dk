@@ -1,4 +1,4 @@
-fun prefix -* (value: i64) -> i64 = {
+fun prefix -*(value: i64) -> i64 = {
 	return value + 1;
 }
 
@@ -6,12 +6,12 @@ fun +*(lhs: i64, rhs: i64) -> i64 = {
 	return lhs * 10 + rhs;
 }
 
-fun suffix -* (value: i64) -> i64 = {
+fun suffix -*(value: i64) -> i64 = {
 	return value * 10;
 }
 
 fun main() -> i64 = {
-	let result = -* 1 +* 2 +* 3 -*;
+	let result = -* 1 +* 2 +* 3-*;
 	builtin_output_i64(result);
 	return 0;
 }
