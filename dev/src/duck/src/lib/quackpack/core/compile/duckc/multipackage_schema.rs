@@ -157,7 +157,10 @@ pub struct ComplexLinkerOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub linker: Option<PathBuf>,
     /// Pass additional linker arguments.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "additional_link_options",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub additional_linking_options: Option<Vec<String>>,
     #[serde(
         rename = "link_c_standard_library",
@@ -273,7 +276,7 @@ mod tests {
       "strategy": "native",
       "output_file": "out.exe",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "-lfoo"
         ],
         "link_c_standard_library": true
@@ -624,7 +627,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app2",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a"
         ],
         "link_c_standard_library": true
@@ -635,7 +638,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a",
           "build/lib_b.a",
           "build/lib_c.a"
@@ -648,7 +651,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3_alias",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a",
           "build/lib_b.a",
           "build/lib_c.a"
