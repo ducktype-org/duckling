@@ -6,7 +6,7 @@
 
 #include "stack_trace.hpp"
 
-#include <sstream>
+#include <ostream>
 
 namespace vm::api {
 	namespace {
@@ -16,13 +16,12 @@ namespace vm::api {
 		}
 	}
 
-	std::string formatStackTrace(const StackTrace& trace) {
-		if (trace.frames.empty()) return "";
+	void StackTrace::print(std::ostream& out) const {
+		if (frames.empty()) return;
 
-		std::stringstream out;
 		out << "DVM stack trace (most recent call first):\n";
 		u64 expected_depth = 0;
-		for (const auto& frame: trace.frames) {
+		for (const auto& frame: frames) {
 			if (frame.depth > expected_depth)
 				out << "  ... " << frame.depth - expected_depth << " frames omitted ...\n";
 			expected_depth = frame.depth + 1;
@@ -43,6 +42,5 @@ namespace vm::api {
 			}
 			out << "\n";
 		}
-		return out.str();
 	}
 }

@@ -15,6 +15,7 @@
 #include <json/optional.hpp>
 #include <json/string_id.hpp>
 
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -65,17 +66,17 @@ namespace vm::api {
 		/// the frames left out in the middle.
 		std::vector<StackFrame> frames;
 
+		/**
+		 * @brief Writes the trace for people to `out`, one line per frame, most recent call
+		 * first. A frame is named by its source name when it has one, else by its mangled name.
+		 * It shows its call site when it has one, else where its function is defined. Frames
+		 * left out in the middle get one `... N frames omitted ...` line.
+		 * Writes nothing when the trace has no frames.
+		 */
+		void print(std::ostream& out) const;
+
 		bool operator==(const StackTrace&) const = default;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StackTrace, frames);
 	};
-
-	/**
-	 * @brief Formats `trace` for people, one line per frame, most recent call first. A frame is
-	 * named by its source name when it has one, else by its mangled name. It shows its call site
-	 * when it has one, else where its function is defined. Frames left out in the middle get one
-	 * `... N frames omitted ...` line.
-	 * @return An empty string when the trace has no frames.
-	 */
-	[[nodiscard]] std::string formatStackTrace(const StackTrace& trace);
 }

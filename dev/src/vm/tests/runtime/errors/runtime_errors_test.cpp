@@ -46,7 +46,7 @@ public:
 		TESTER_ADD_TEST(panicStackTracePrintsSourceNames);
 		TESTER_ADD_TEST(panicStackTracePrintsSourceLines);
 		TESTER_ADD_TEST(lineOfInstructionTakesTheLastLineBefore);
-		TESTER_ADD_TEST(formatStackTraceDescribesEachFrame);
+		TESTER_ADD_TEST(printStackTraceDescribesEachFrame);
 		TESTER_ADD_TEST(stackTraceRoundTripsThroughJson);
 		TESTER_ADD_TEST(debugInfoNextToBytecodeIsFoundAndRead);
 
@@ -280,8 +280,17 @@ private:
 		return trace;
 	}
 
-	void formatStackTraceDescribesEachFrame() {
-		ASSERT_EQUAL(std::string(), vm::api::formatStackTrace({}));
+	/**
+	 * @brief What `StackTrace::print` writes for `trace`.
+	 */
+	static std::string printed(const vm::api::StackTrace& trace) {
+		std::stringstream out;
+		trace.print(out);
+		return out.str();
+	}
+
+	void printStackTraceDescribesEachFrame() {
+		ASSERT_EQUAL(std::string(), printed({}));
 
 		// A source name wins over the mangled one, a call site over the definition, and the
 		// depths skipped between two frames are counted.
@@ -291,7 +300,7 @@ private:
 		                "  #1 _Q_forward at math.dbc:19:5\n"
 		                "  ... 3 frames omitted ...\n"
 		                "  #5 main\n"),
-			vm::api::formatStackTrace(sampleStackTrace())
+			printed(sampleStackTrace())
 		);
 	}
 

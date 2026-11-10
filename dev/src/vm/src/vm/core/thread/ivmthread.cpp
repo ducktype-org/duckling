@@ -104,7 +104,7 @@ namespace vm {
 			applyEvent(te::Kill{});
 		} catch (const exceptions::VMRuntimeException& e) {
 			std::cerr << "VMThread has panicked: " << e.what() << "\n";
-			if_opt_some(e.getVMStackTrace(), trace) { std::cerr << api::formatStackTrace(trace); }
+			if_opt_some(e.getVMStackTrace(), trace) { trace.print(std::cerr); }
 			applyEvent(te::Panic{ e.what() });
 		} catch (const std::exception& e) {
 			std::cerr << "VMThread has panicked with an unexpected error: " << e.what() << "\n";
