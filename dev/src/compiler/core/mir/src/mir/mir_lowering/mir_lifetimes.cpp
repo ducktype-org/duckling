@@ -87,7 +87,7 @@ namespace compiler::mir {
 		for (const auto& local: function.local_list)
 			if (conditionally_destructed.contains(&local)) tracked_locals.emplace_back(&local);
 
-		const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+		const auto bool_type = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 
 		// Add lifetime flags for all of them.
 		base::Map<MIRLocalRef, MIRLocalRef> flag_of;

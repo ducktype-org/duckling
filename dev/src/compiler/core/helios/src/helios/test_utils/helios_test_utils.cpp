@@ -92,7 +92,7 @@ namespace compiler::helios::test_utils {
 	}
 
 	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
-		return tsh::SymbolType<>::withDefaults(
+		return tsh::SymbolType<>::withDefaultsMut(
 			query::entryPoint<tsh::QueryClassType>(getChain(chain, scope).back())
 		);
 	}

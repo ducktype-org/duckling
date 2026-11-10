@@ -13,6 +13,6 @@ namespace compiler::helios {
 	tsh::SymbolType<> requiredMainReturnType(query::Context& ctx) {
 		using enum tsh::IntegralAbstractType::Signedness;
 
-		return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(ctx, 64, Signed));
+		return tsh::SymbolType<>::withDefaultsMut(tsh::getIntegralType(ctx, 64, Signed));
 	}
 }

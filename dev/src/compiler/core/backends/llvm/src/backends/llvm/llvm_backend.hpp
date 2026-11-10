@@ -21,6 +21,10 @@
 #include <filesystem>
 
 namespace compiler::backend_llvm {
+
+	// Call during compiler startup, before any thread can create an LLVM target machine.
+	void configureAssemblySyntax();
+
 	enum class CompilationOutputType : std::uint8_t { Object, Assembly };
 
 	/**
