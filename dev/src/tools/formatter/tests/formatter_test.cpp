@@ -185,12 +185,22 @@ private:
 			{ "foo (a ,b );", "foo(a, b);\n" },
 			{ "foo();", "foo();\n" },
 			{ "arr [ i ] ;", "arr[i];\n" },
-			// The attribute sigil binds to its name. An attribute stays on the line the author
-		    // put it on: on the declaration's line, or on a line of its own above it.
-			{ "@Attr x=1;", "@Attr x = 1;\n" },
+			// The attribute sigil binds to its name. An attribute always gets a line of its own
+		    // above what it applies to.
+			{ "@Attr x=1;", "@Attr\nx = 1;\n" },
 			{ "@Attr\nx=1;", "@Attr\nx = 1;\n" },
 			{ "@c_symbol_name(\"in\")\nfundecl f();", "@c_symbol_name(\"in\")\nfundecl f();\n" },
-			{ "@a\n@b(1) fun f()={}", "@a\n@b(1) fun f() = {}\n" },
+			{ "@a\n@b(1) fun f()={}", "@a\n@b(1)\nfun f() = {}\n" },
+			// Custom operator declarations bind the operator to its parameters.
+			{ "fun prefix -* (v: i64) -> i64;", "fun prefix -*(v: i64) -> i64;\n" },
+			{ "fun suffix ++(v: i64) -> i64;", "fun suffix ++(v: i64) -> i64;\n" },
+			{ "fundecl suffix ** (a: i64) -> i64;", "fundecl suffix **(a: i64) -> i64;\n" },
+			// A custom suffix operator binds to its operand, before `;`, `,` or `)`.
+			{ "let w = fw -;", "let w = fw-;\n" },
+			{ "f(a -*, b);", "f(a-*, b);\n" },
+			{ "x = a - b;", "x = a - b;\n" },
+			// `::` binds both of its sides.
+			{ "ns :: f(1);", "ns::f(1);\n" },
 			// A keyword used as a member name is still a call: `destroy` and `copy` are keywords.
 			{ "C.destroy ();", "C.destroy();\n" },
 			{ "x = a.copy (b);", "x = a.copy(b);\n" },
@@ -229,6 +239,24 @@ private:
 	/** Declaration syntax: imports, types, generics, custom operators, text operators. */
 	void testDeclarations() {
 		checkAll({
+			// A class body with no `;` ends the declaration when the next one starts a line.
+			{ "class C {\nx: String\n}\nfun f() = ();",
+		      "class C {\n\tx: String\n}\nfun f() = ();\n" },
+			// So does a `fundecl` with no `;`.
+			{ "fundecl f() -> i64\nclass Foo {x: i64 = 0;}",
+		      "fundecl f() -> i64\nclass Foo {\n\tx: i64 = 0;\n}\n" },
+			// A long `and` chain breaks before an `and`, not at the `=`.
+			{ "let is_ok = not check_empty and not check(aaaaaaaa) and not check(bbbbbbbb) and "
+		      "check(cccccccc) and check(d);",
+		      "let is_ok = not check_empty and not check(aaaaaaaa) and not check(bbbbbbbb) and "
+		      "check(cccccccc)\n\tand check(d);\n" },
+			// A call holding a code block breaks when too long, and the block spreads over lines.
+			{ "return identity(match (v) {case x: i32 = match (v) {case y: i32 = accumulator; case "
+		      "_ = 0i64;}; case _ = acc;});",
+		      "return identity(\n\tmatch (v) {\n\t\tcase x: i32 = match (v) {\n\t\t\tcase y: i32 = "
+		      "accumulator;\n\t\t\tcase _ = 0i64;\n\t\t};\n\t\tcase _ = acc;\n\t}\n);\n" },
+			// A comment right after `{` stays on the brace's line.
+			{ "for (x in a) { # note\nx = 1;\n}", "for (x in a) { # note\n\tx = 1;\n}\n" },
 			{ "import a.b.c.d;", "import a.b.c.d;\n" },
 			{ "import a.b.c as D;", "import a.b.c as D;\n" },
 			{ "import a.b .* ;", "import a.b.*;\n" },
@@ -729,7 +757,7 @@ fun f() = {
 		// Continuation lines keep the indentation of the comment. The tab indent counts as
 		// indent_width visual columns, so the wrap point honors what an editor shows.
 		check(
-			"fun f() = {# explanation of the tricky part of this code\nx = 1;}",
+			"fun f() = {\n# explanation of the tricky part of this code\nx = 1;}",
 			golden(R"(
 fun f() = {
 	# explanation of the

@@ -101,12 +101,15 @@ positions, which reference the `TokenSource` the tokens came from.
    arms), after a `template(...)` header (which always gets its own line), or
    after a `{...}` code block — unless `else` follows, so an
    `if/else if/else` chain stays one statement, or an operator follows on the
-   brace's line (`match (v) {...} * 2;` is one expression). An attribute
-   (`@name`, `@name(...)`) or a `#{ ... #}` block comment that opens a statement
-   and is followed by a line break keeps that line break: it becomes a statement
-   of its own. On the same line, it stays on the same line. A comment trailing the last
-   token on its source line (`x = 1; # note`, `} # done`) stays attached to that
-   statement. A curly group is a *code block*
+   brace's line (`match (v) {...} * 2;` is one expression). A curly group with
+   no `;` inside (`class C { x: String }`) and a `fundecl` with no `;` also end
+   the statement when the next declaration starts a new line. An attribute
+   (`@name`, `@name(...)`) that opens a statement always gets a line of its own.
+   A `#{ ... #}` block comment that opens a statement and is followed by a line
+   break keeps that line break; on the same line, it stays on the same line. A
+   comment trailing the last token on its source line (`x = 1; # note`,
+   `} # done`) stays attached to that statement, and a line comment right after
+   a `{` stays on the brace's line (`for (x in a) { # note`). A curly group is a *code block*
    (as opposed to an inline literal like `{1, 2, 3}`) when it contains a `;`, a
    nested curly block, a comment, a `case` arm, or a statement-opening keyword.
 
@@ -117,13 +120,16 @@ positions, which reference the `TokenSource` the tokens came from.
      tightly, adjacent operators must stay separated so the lexer cannot merge
      them back differently, generic arguments bind to their `:`
      (`impl.max:{i32}(x, y)`), a custom operator declared as a name binds to its
-     parameter list (`fun +*(a, b)`), and so on). Text operators such as `not`
+     parameter list (`fun +*(a, b)`, `fun prefix -*(a)`), a custom suffix
+     operator binds to its operand (`fw-;`), `::` binds both sides
+     (`ns::f()`), and so on). Text operators such as `not`
      never glue to their operand — that would merge them into one identifier;
    - every bracket group becomes a **Group** node, which renders flat when it
-     fits and otherwise *explodes* one comma-separated element per line;
+     fits and otherwise *explodes* one comma-separated element per line (a group
+     holding a code block may break too: `identity(match (v) {...})`);
    - over-long expressions become **Fill** nodes that break greedily, preferring
      method-chain dots (`foo(a).bar` breaks before `.bar`) and falling back to
-     spaced binary operators;
+     spaced binary operators, `and` and `or` included;
    - line comments attach to the statement or group element they trail in the
      source, and force every enclosing group to explode (a line comment consumes
      the rest of its line, so it can never render mid-group).
