@@ -12,7 +12,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
@@ -146,7 +146,7 @@ namespace compiler::mir {
 		std::vector<BlockID> block_order;
 		block_order.reserve(this->blocks.size());
 
-		base::StableHashMap<BlockID, Block> function_blocks;
+		base::HashMap<BlockID, Block> function_blocks;
 
 		// First element in block order is the entry block
 		block_order.push_back(entry_block_id);
@@ -260,10 +260,8 @@ namespace compiler::mir {
 	 */
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addConditionTmp(ScopeRef scope) {
-		auto type = tsh::SymbolType<>(
-			tsh::getBoolType(), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
-		);
-		auto tmp = addTmp(type, scope);
+		auto type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+		auto tmp  = addTmp(type, scope);
 		tmp->lifetime_flags |= LifetimeFlag::ConditionTmpValue | LifetimeFlag::NoDestructor;
 		return tmp;
 	}

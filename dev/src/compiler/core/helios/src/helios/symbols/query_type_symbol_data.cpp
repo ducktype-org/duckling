@@ -192,7 +192,7 @@ namespace compiler::helios {
 						// parameterTypes.size() == 1 means method has not params except self.
 						if (fn_type.getParameterTypes().size() == 1
 						    && fn_type.getResultType()
-						           == tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)))
+						           == tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx)))
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}

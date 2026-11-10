@@ -13,7 +13,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -278,7 +278,7 @@ namespace compiler::backend_vm::internal {
 			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
 			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
 			// Main container for all types in the module.
-			base::StableHashMap<base::StrID, vm::code::TypeOfData> dvm_types;
+			base::HashMap<base::StrID, vm::code::TypeOfData> dvm_types;
 		};
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
@@ -307,8 +307,8 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::Function> extra_bytecode_functions;
 
 		// Using names as keys to avoid issues with CRef hash/equality.
-		base::StableHashMap<base::StrID, DVMPlace>             global_name_to_dvm;
-		base::StableHashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
+		base::HashMap<base::StrID, DVMPlace>             global_name_to_dvm;
+		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
 
 		// Optional debug info builder.
 		base::Optional<debug_info::DebugInfoBuilder> debug_info_builder;

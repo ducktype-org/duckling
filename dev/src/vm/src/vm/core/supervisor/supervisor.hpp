@@ -6,8 +6,8 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -24,9 +24,9 @@ namespace vm {
 		Supervisor() = default;
 		~Supervisor();
 
-		std::shared_mutex                         rw_process_table;
-		u64                                       next_pid = 0;
-		base::StableHashMap<PID, Box<IVMProcess>> process_table;
+		std::shared_mutex                   rw_process_table;
+		u64                                 next_pid = 0;
+		base::HashMap<PID, Box<IVMProcess>> process_table;
 
 		std::expected<Ref<IVMProcess>, api::ApiError> getProcess(PID pid);
 

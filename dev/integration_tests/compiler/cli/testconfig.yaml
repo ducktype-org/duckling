@@ -134,6 +134,24 @@ Tests:
           && test ! -e @{case_build}/package_dvm.dbc
         ExitCode: 0
 
+  compile-module-asm-syntax:
+    Enabled: '[ "$(uname -m)" = x86_64 ]'
+    PreCase: "@{copy_std_artifacts}"
+    assembly: "@{case_build}/duck_debug_artifacts/syntax.inferred_name.s"
+    Run: >-
+      @{duckc_path} compile_module ./duck_modules/inferred_name/inferred_name.dk
+      --name syntax -a @{case_build} --no-incremental --dump-ir asm --asm-syntax @{dialect}
+      --custom-std-artifacts-path @{case_std_artifacts}
+      && test -s "@{assembly}"
+      && test "$(grep -Fc '.intel_syntax noprefix' "@{assembly}")" -eq @{intel_directives}
+    Cases:
+      intel:
+        dialect: intel
+        intel_directives: "1"
+      att:
+        dialect: att
+        intel_directives: "0"
+
   compile-script-dump-ir:
     # Compile once per backend and check every dump plus the linked output.
     PreCase: "@{copy_std_artifacts}"

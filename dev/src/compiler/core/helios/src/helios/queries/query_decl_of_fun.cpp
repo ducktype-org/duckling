@@ -238,11 +238,7 @@ namespace compiler::helios {
 					output(expr->expression_type.getSymbolType());
 				} else {
 					// "void" return should actually deduce to unit type:
-					output(tsh::SymbolType<>{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					});
+					output(tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType()));
 				}
 			}
 
@@ -297,11 +293,7 @@ namespace compiler::helios {
 			case 0:
 				// there are no returns to deduce the type
 				// we default to unit type
-				return tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 			case 1:
 				// deduced type is conclusive (albeit there might still be a fallthrough to the
 				// end of the function, but it then does not contribute to return type deduction).
@@ -418,11 +410,7 @@ namespace compiler::helios {
 				                                 && kind(original_symbol) == SymbolKind::Function;
 
 				// Default return type is a direct unit.
-				auto ret_type = tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto ret_type              = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 				code::ElementOrigin origin = code::generatedOrigin();
 
 				// Set return type if provided.
@@ -572,11 +560,7 @@ namespace compiler::helios {
 				);
 
 				const auto class_type  = classMemberOwner(original_symbol);
-				this->out->return_type = tsh::SymbolType<>{
-					class_type,
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				this->out->return_type = tsh::SymbolType<>::withDefaultsMut(class_type);
 			}
 
 			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
@@ -598,7 +582,7 @@ namespace compiler::helios {
 					code::generatedOrigin()
 				);
 
-				const auto unit_ret = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+				const auto unit_ret = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 
 				this->out.emplace(HOUTFunctionDeclaration(
 					original_symbol,
@@ -634,11 +618,12 @@ namespace compiler::helios {
 				ctor_name = name(target_type.as<tsh::ClassAbstractType>().getSymbol());
 				break;
 			case tsh::Kind::Tuple:
-				ctor_name = ctx
-				                .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(
-									target_type.as<tsh::TupleAbstractType>()
-								))
-				                ->valueOrThrow();
+				ctor_name
+					= ctx
+				          .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaultsMut(
+							  target_type.as<tsh::TupleAbstractType>()
+						  ))
+				          ->valueOrThrow();
 				break;
 			default:
 				CORE_PANIC("Implicit ctor of type kind", target_type.getKind(), " is not handled.");
@@ -650,11 +635,7 @@ namespace compiler::helios {
 					   .generated_symbol_data
                 = Constructor{ .type = target_type, .kind = Constructor::Kind::Implicit },
             });
-			const auto  result_symbol_type = tsh::SymbolType<>{
-                target_type,
-                tsh::ReferenceKind::Direct,
-                tsh::Mutability::Mutable,
-			};
+			const auto  result_symbol_type = tsh::SymbolType<>::withDefaultsMut(target_type);
 
 			std::vector<code::Parameter> parameters;
 			parameters.reserve(num_fields);
@@ -785,9 +766,8 @@ namespace compiler::helios {
 						case defgen::Constructor::Kind::Implicit:
 							return getImplicitCtorDecl(ctx, ctor_data);
 						case defgen::Constructor::Kind::Default: {
-							const auto return_type = tsh::SymbolType<>{ ctor_data.type,
-								                                        tsh::ReferenceKind::Direct,
-								                                        tsh::Mutability::Mutable };
+							const auto return_type
+								= tsh::SymbolType<>::withDefaultsMut(ctor_data.type);
 
 							return HOUTFunctionDeclaration{
 								key,

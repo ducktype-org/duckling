@@ -1,5 +1,4 @@
-fun f() = {
-	# body comment
+fun f() = { # body comment
 	x = 1;
 	y = 2; # trailing
 

@@ -13,7 +13,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_liveness.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <algorithm>
 #include <set>
@@ -87,7 +87,7 @@ namespace compiler::mir {
 		for (const auto& local: function.local_list)
 			if (conditionally_destructed.contains(&local)) tracked_locals.emplace_back(&local);
 
-		const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+		const auto bool_type = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 
 		// Add lifetime flags for all of them.
 		base::Map<MIRLocalRef, MIRLocalRef> flag_of;
@@ -256,8 +256,8 @@ namespace compiler::mir {
 		// context is unused, but left since it might be useful in the future.
 		// preserving block order is important, because of how MIR BlockIDs works
 
-		auto&                                               locals_by_scope = args.locals_by_scope;
-		base::StableHashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
+		auto&                                         locals_by_scope = args.locals_by_scope;
+		base::HashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
 
 
 		auto   first_block_id = function.block_order[0];

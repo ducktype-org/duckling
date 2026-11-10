@@ -132,11 +132,7 @@ private:
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
 	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			compiler::tsh::Mutability::Mutable,
-		};
+		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
 	}
 
 	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
@@ -199,7 +195,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return compiler::tsh::SymbolType<>::withDefaults(
+				return compiler::tsh::SymbolType<>::withDefaultsMut(
 					ctx.query<compiler::tsh::QueryClassType>(sym_id)
 				);
 			};
@@ -969,8 +965,8 @@ private:
 
 		auto i32_type
 			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
-		auto ref_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
-		auto box_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+		auto ref_i32 = st(i32_type).toRef();
+		auto box_i32 = st(i32_type).toBox();
 
 		auto get_var_stmt = [&](usize index) -> const VariableStmt& {
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[index].get());
@@ -1293,9 +1289,8 @@ private:
 					// bound with: a mutable reference to the alternative.
 					ASSERT_TRUE(match_case.constraint_type.has_value());
 					ASSERT_EQUAL(
-						alternatives.at(i)
-							.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-							.withMutability(compiler::tsh::Mutability::Mutable),
+						alternatives.at(i).toRef().withMutability(compiler::tsh::Mutability::Mutable
+					    ),
 						match_case.constraint_type.value()
 					);
 					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
@@ -1497,10 +1492,9 @@ private:
 				// The payload is destroyed in place, so it is bound as a mutable reference.
 				ASSERT_TRUE(owning_case.constraint_type.has_value());
 				ASSERT_EQUAL(
-					variant_type.getUnderlyingTypes()
-						.at(0)
-						.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-						.withMutability(compiler::tsh::Mutability::Mutable),
+					variant_type.getUnderlyingTypes().at(0).toRef().withMutability(
+						compiler::tsh::Mutability::Mutable
+					),
 					owning_case.constraint_type.value()
 				);
 				ASSERT_TRUE(
@@ -1786,16 +1780,10 @@ private:
 			using compiler::tsh::ReferenceKind;
 			ASSERT_EQUAL(ptr_i32_st, pof_direct_type);
 			ASSERT_EQUAL(
-				st(ctx.query<compiler::tsh::QueryPointerType>(
-					{ i32_st.withReferenceKind(ReferenceKind::Box) }
-				)),
-				pof_box_type
+				st(ctx.query<compiler::tsh::QueryPointerType>({ i32_st.toBox() })), pof_box_type
 			);
 			ASSERT_EQUAL(
-				st(ctx.query<compiler::tsh::QueryPointerType>(
-					{ i32_st.withReferenceKind(ReferenceKind::Ref) }
-				)),
-				pof_ref_type
+				st(ctx.query<compiler::tsh::QueryPointerType>({ i32_st.toRef() })), pof_ref_type
 			);
 			// Indexing a `manyptr i32` gives an `i32` place, so its address is a plain `ptr i32`.
 			ASSERT_EQUAL(ptr_i32_st, pof_elem_type);

@@ -866,7 +866,7 @@ namespace compiler::helios::code {
 			auto direct_callee = coercions::coerceFromBox(
 				ctx,
 				std::move(callee),
-				tsh::SymbolType<>::withDefaults(function_type),
+				tsh::SymbolType<>::withDefaultsMut(function_type),
 				call_expr->getStablePosition()
 			);
 			UNPACK_QRESULT_MOVE(callee =, direct_callee);

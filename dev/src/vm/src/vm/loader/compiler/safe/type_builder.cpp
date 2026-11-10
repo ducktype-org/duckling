@@ -6,7 +6,7 @@
 
 #include "type_builder.hpp"
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -43,11 +43,11 @@ namespace {
 				auto implements = prev_imd.implements | std::views::transform(get_type_cref)
 				                | std::ranges::to<std::unordered_set>();
 
-				base::StableHashMap<base::StrID, vm::TypeCRef> virtual_methods;
+				base::HashMap<base::StrID, vm::TypeCRef> virtual_methods;
 				for (auto& method: prev_imd.available_methods)
 					virtual_methods.put(method.key, get_type_cref(method.value));
 
-				base::StableHashMap<base::StrID, base::StrID> vtable;
+				base::HashMap<base::StrID, base::StrID> vtable;
 				for (auto& impl: prev_imd.vtable) vtable.put(impl.key, impl.value);
 
 				vm::InheritanceMetadata::Kind kind;

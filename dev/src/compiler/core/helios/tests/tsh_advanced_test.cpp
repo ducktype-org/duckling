@@ -100,7 +100,8 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto get_type = [&](const compiler::helios::SymID sym_id) {
-				return SymbolType<>::withDefaults(ctx.query<compiler::tsh::QueryClassType>(sym_id));
+				return SymbolType<>::withDefaultsMut(ctx.query<compiler::tsh::QueryClassType>(sym_id
+				));
 			};
 
 			auto assert_flags = [&](const SymbolType<>& type,

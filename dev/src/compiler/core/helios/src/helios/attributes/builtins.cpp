@@ -20,8 +20,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -34,8 +34,8 @@ namespace compiler::helios {
 		/**
 		 * @brief Single source of truth mapping builtin names to BuiltinKind.
 		 */
-		const base::StableHashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
-			static const base::StableHashMap<std::string_view, BuiltinKind> mapping = {
+		const base::HashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
+			static const base::HashMap<std::string_view, BuiltinKind> mapping = {
 				{ "ptr_from_slice", BuiltinKind::PtrFromSlice },
 				{ "slice_from_ptr_len", BuiltinKind::SliceFromPtrLen },
 				{ "dvm_alloc_arr", BuiltinKind::DvmAllocArr },
@@ -285,7 +285,7 @@ namespace compiler::helios {
 		using namespace code::shorthands;
 		const Shorthand s{ ctx };
 		const auto      pointee_type
-			= tsh::SymbolType<>::withDefaults(inner->expression_type.getSymbolType().getType());
+			= tsh::SymbolType<>::withDefaultsMut(inner->expression_type.getSymbolType().getType());
 		const SymID alloc_symbol
 			= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { pointee_type });
 
@@ -296,8 +296,6 @@ namespace compiler::helios {
 
 		// `boxAlloc` returns the storage as a `ptr T`; the box is that same pointer. The cast is
 		// representation-free and is the only way to spell a box from a pointer.
-		return withOrigin(
-			origin, s.cast(std::move(call), pointee_type.withReferenceKind(tsh::ReferenceKind::Box))
-		);
+		return withOrigin(origin, s.cast(std::move(call), pointee_type.toBox()));
 	}
 }

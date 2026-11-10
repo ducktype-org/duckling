@@ -19,6 +19,7 @@ fun printPrimitives(a: ref Primitives) -> () = {
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
     print(&a.e);                 # ""
     builtin_output_i64(a.f.length());                # empty list -> 0
+    let h: () = a.h;                            # () - the unit field is readable
 }
 
 fun printPrimitives(a: ref Primitives2) -> () = {
@@ -28,6 +29,7 @@ fun printPrimitives(a: ref Primitives2) -> () = {
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
     print(&a.e);                 # ""
     builtin_output_i64(a.f.length());                # empty list -> 0
+    let h: () = a.h;                            # () - the unit field is readable
 }
 
 fun printPrimitives(a: ref InitializedPrimitives) -> () = {
@@ -47,6 +49,7 @@ class Primitives {
     e: String;      # ""
     f: List[i32];   # empty list
     g: type;        # Unit
+    h: ();          # ()
 }
 
 class Primitives2 {
@@ -57,6 +60,7 @@ class Primitives2 {
     e: String;      # ""
     f: List[i32];   # empty list
     g: type;        # Unit
+    h: ();          # ()
 }
 
 class InitializedPrimitives {
@@ -94,8 +98,7 @@ fun testPrimitives() -> () = {
     var b: InitializedPrimitives;
     printPrimitives(&b);
     printSmallSeparator(); 
-    
-    # @TODO: #2306 Put a unit typed field in `Primitives`, etc. class once it's possible.
+
     var x: (); # This is default initialized by a unit.
 }
 

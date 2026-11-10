@@ -6,8 +6,8 @@
 
 #include "valid_type.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -128,11 +128,11 @@ void valid_type::ValidType::defineClass(
 				structure.field_definitions.emplace_back(defined::DefinedField{
 					.name = field_def.first, .type = field_def.second });
 
-			base::StableHashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
+			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
 			for (const auto& method: new_virtual_methods)
 				new_virtual_methods_map.put(method.first, method.second);
 
-			base::StableHashMap<base::StrID, base::StrID> implementations_map;
+			base::HashMap<base::StrID, base::StrID> implementations_map;
 			for (const auto& impl: implementations)
 				implementations_map.put(impl.first, impl.second);
 
@@ -158,11 +158,11 @@ void valid_type::ValidType::defineInterface(
 ) {
 	variant_match(state) {
 		variant_case_novalue(Declared) {
-			base::StableHashMap<base::StrID, ValidTypeID> virtual_methods;
+			base::HashMap<base::StrID, ValidTypeID> virtual_methods;
 			for (const auto& method: new_virtual_methods)
 				virtual_methods.put(method.first, method.second);
 
-			base::StableHashMap<base::StrID, base::StrID> impls;
+			base::HashMap<base::StrID, base::StrID> impls;
 			for (const auto& impl: implementations) impls.put(impl.first, impl.second);
 
 			state

@@ -176,11 +176,7 @@ private:
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
 	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			Mutable,
-		};
+		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
 	}
 
 	static compiler::tsh::SymbolType<> stImm(const compiler::tsh::AbstractType abstract_type) {
@@ -234,13 +230,13 @@ private:
 			{
 				auto simple_ref
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_REF", root_scope);
-				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				auto expected = st(i64_type).toRef();
 				ASSERT_EQUAL(expected, simple_ref);
 			}
 			{
 				auto simple_box
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_BOX", root_scope);
-				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto expected = st(i64_type).toBox();
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
@@ -286,12 +282,12 @@ private:
 			}
 			{
 				auto b_type   = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
-				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto expected = st(i32_type).toBox();
 				ASSERT_EQUAL(expected, b_type);
 			}
 			{
 				auto c_type   = getConstValueAs<compiler::tsh::SymbolType<>>("C", root_scope);
-				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				auto expected = st(i32_type).toRef();
 				ASSERT_EQUAL(expected, c_type);
 			}
 			{
@@ -318,7 +314,7 @@ private:
 					= getConstValueAs<compiler::tsh::SymbolType<>>("megaGigaType", root_scope);
 
 				auto first  = st(unit_type);
-				auto second = st(i128_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto second = st(i128_type).toBox();
 				auto third  = st(i32_type);
 				auto fourth
 					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i16_type),
@@ -338,13 +334,13 @@ private:
 			}
 			{
 				auto first_type = getConstValueAs<compiler::tsh::SymbolType<>>("FIRST", root_scope);
-				auto expected   = st(i16_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto expected   = st(i16_type).toBox();
 				ASSERT_EQUAL(expected, first_type);
 			}
 			{
 				auto second_type
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
-				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				auto expected = st(i64_type).toRef();
 				ASSERT_EQUAL(expected, second_type);
 			}
 			{  // Type Comparisons
@@ -1457,10 +1453,8 @@ private:
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
 		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-		const auto int32ref_type = st(int32_type)
-		                               .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-		                               .withMutability(Immutable);
-		const auto vref_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
+		const auto int32ref_type = st(int32_type).toRef().withMutability(Immutable);
+		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
 		// Only the type of `VBOX` is checked here. Its initializer is a `boxAlloc` call into
@@ -1468,10 +1462,8 @@ private:
 		// is covered by `helios_with_std_test`.
 		auto       sym_vbox    = getChain("VBOX", root_scope).back();
 		const auto f32_type    = getFloatTypeNoContext(32);
-		const auto f32box_type = st(f32_type)
-		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
-		                             .withMutability(Immutable);
-		const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
+		const auto f32box_type = st(f32_type).toBox().withMutability(Immutable);
+		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
 		auto              sym_vconst  = getChain("VCONST", root_scope).back();
@@ -1602,7 +1594,7 @@ private:
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
 			auto i32_type              = getIntegralTypeNoContext(32, Signed);
-			auto expected_type = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+			auto expected_type         = st(i32_type).toRef();
 			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
 		}
 		{

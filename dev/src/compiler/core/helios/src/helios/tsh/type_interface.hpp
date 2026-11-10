@@ -20,8 +20,8 @@
 
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
-#include <base/collections/stable_hashmap.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -288,9 +288,9 @@ namespace compiler::tsh {
 		 * \parallel Accessed when building and querying a \ref TypeInterface; should be safe if
 		 * \ref TypeInterface instances are shared across threads.
 		 */
-		base::StableHashMap<base::StrID, std::vector<InterfaceElement>> elements_by_name;
+		base::HashMap<base::StrID, std::vector<InterfaceElement>> elements_by_name;
 
-		base::StableHashMap<MemberSpecialKind, InterfaceElement> element_by_special_kind;
+		base::HashMap<MemberSpecialKind, InterfaceElement> element_by_special_kind;
 
 		/**
 		 * Check if the element list of the interface contains duplicates.
@@ -335,8 +335,7 @@ namespace compiler::tsh {
 		 * @return The elements of an interface, grouped by name.
 		 */
 		[[nodiscard]]
-		const base::StableHashMap<base::StrID, std::vector<InterfaceElement>>& getElementsByName(
-		) const;
+		const base::HashMap<base::StrID, std::vector<InterfaceElement>>& getElementsByName() const;
 
 		/**
 		 * @brief Gets the element of this interface with the given special kind, if it has one.
