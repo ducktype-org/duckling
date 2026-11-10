@@ -261,8 +261,6 @@ private:
 
 		// ============================ Function calls ============================
 		{
-			// The "declared here" note must start at the function name (column 9 here), not at
-			// the parameter list (column 10).
 			checkForErrorOnCompileModule(
 				R"(
 				fun a(x: i32) -> i32 = 0;
