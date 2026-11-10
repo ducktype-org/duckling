@@ -2768,11 +2768,7 @@ private:
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			auto st = tsh::SymbolType{
-				int32_type,
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			auto st = tsh::SymbolType<>::withDefaultsMut(int32_type);
 
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
