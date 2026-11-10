@@ -6,7 +6,7 @@ fun main() -> i64 = {
 	};
 	{
 		var c = 2;
-		builtin_output_i64(* a);
+		builtin_output_i64(*a);
 	};
 	return 0;
 }

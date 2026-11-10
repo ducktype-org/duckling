@@ -5,7 +5,7 @@ import core.builtins.*;
 class Res {
 	id: i64 = 0;
 
-	Res.destroy () = {
+	Res.destroy() = {
 		print("dtor ");
 		builtin_output_i64(id);
 	}

@@ -57,6 +57,9 @@ namespace formatter {
 				if (isOperator(*prev) && prev2 != nullptr && isKeyword(*prev2)
 				    && isStr(*prev2, "fun"))
 					return false;
+				// A keyword used as a member name is a method call: `Counter.destroy()`.
+				if (isKeyword(*prev) && prev2 != nullptr && isMemberAccessOperator(*prev2))
+					return false;
 				if (isKeyword(*prev)) return true;       // `if (...)`, `return [...]`
 				if (isValueCloser(*prev)) return false;  // `foo(...)`, `a[...]`
 			}

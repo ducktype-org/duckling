@@ -4,7 +4,7 @@
 
 class R {
 	id: i32 = 0;
-	R.destroy () = {
+	R.destroy() = {
 		var t: i32 = id;
 	}
 }

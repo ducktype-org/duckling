@@ -30,8 +30,8 @@ fun intChain() -> i32 = {
 # `manyptr T` taken by the `_arr` builtins above.
 fun singleChain() -> i64 = {
 	var p = dvm_alloc[i64]();
-	* p = 5i64;
-	let v = * p;
+	*p = 5i64;
+	let v = *p;
 
 	dvm_free[i64](p);
 	return v;

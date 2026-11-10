@@ -56,13 +56,13 @@ fun i64ReallocChain() -> i64 = {
 # `dvm_free[T]`, separate names from the `_arr` builtins above.
 fun singleObjectChain() -> i64 = {
 	var p = dvm_alloc[i64]();
-	* p = 55i64;
-	let value = * p;
+	*p = 55i64;
+	let value = *p;
 	dvm_free[i64](p);
 
 	var c = dvm_alloc[char]();
-	* c = 'Z';
-	let letter = * c;
+	*c = 'Z';
+	let letter = *c;
 	dvm_free[char](c);
 
 	return value + (letter as i64);

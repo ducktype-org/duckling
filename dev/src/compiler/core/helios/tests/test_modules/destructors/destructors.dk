@@ -13,7 +13,7 @@ class HasBox {
 class UserDestroyed {
 	tag: i32 = 0;
 
-	UserDestroyed.destroy () = {
+	UserDestroyed.destroy() = {
 		var x: i32 = self.tag; # Just to check that it compiles.
 	}
 }
@@ -29,7 +29,7 @@ class UserAndMembers {
 	first: HasBox;
 	second: box i32;
 
-	UserAndMembers.destroy () = {
+	UserAndMembers.destroy() = {
 		var y: i32 = 0;
 	}
 }

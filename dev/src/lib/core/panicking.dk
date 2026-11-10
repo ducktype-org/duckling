@@ -7,12 +7,15 @@ fun panic() -> void = {
 	return doPanic();
 }
 
-@backend_dependent fundecl doPanic() -> void;
+@backend_dependent
+fundecl doPanic() -> void;
 
-@native_only_impl fun doPanic() -> void = {
+@native_only_impl
+fun doPanic() -> void = {
 	return clib.abort();
 }
 
-@dvm_only_impl fun doPanic() -> void = {
+@dvm_only_impl
+fun doPanic() -> void = {
 	return runtime.dvm.abort();
 }

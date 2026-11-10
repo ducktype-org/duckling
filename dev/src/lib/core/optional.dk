@@ -5,12 +5,14 @@ let none: optional_primitives.None = optional_primitives.None();
 #{
     Language primitives backing the interface of `?T`. The compiler bakes them for the held type
     and exposes them as the methods of the optional.
-#} namespace optional_primitives {
+#}
+namespace optional_primitives {
 	class None {
 		#{
             We ideally want this class as empty, but for now the compiler doesn't support 
             empty classes.
-        #} private _placeholder: u32 = 0u32;
+        #}
+		private _placeholder: u32 = 0u32;
 	}
 
 	namespace by_value {
@@ -51,7 +53,9 @@ let none: optional_primitives.None = optional_primitives.None();
 
 	#{
         Whether the optional holds a value.
-    #} template(T: type) fun nonEmpty(o: ref ?T) -> bool = {
+    #}
+	template(T: type)
+	fun nonEmpty(o: ref ?T) -> bool = {
 		return match (o) {
 			case _: ref T = true;
 			case _: None = false;
@@ -60,7 +64,9 @@ let none: optional_primitives.None = optional_primitives.None();
 
 	#{
         Whether the optional holds no value.
-    #} template(T: type) fun isEmpty(o: ref ?T) -> bool = {
+    #}
+	template(T: type)
+	fun isEmpty(o: ref ?T) -> bool = {
 		return match (o) {
 			case _: ref T = false;
 			case _: None = true;
@@ -69,7 +75,9 @@ let none: optional_primitives.None = optional_primitives.None();
 
 	#{
         Destroys the held value, if any, leaving the optional empty.
-    #} template(T: type) fun reset(o: ref ?T) -> () = {
+    #}
+	template(T: type)
+	fun reset(o: ref ?T) -> () = {
 		o = none;
 	}
 }

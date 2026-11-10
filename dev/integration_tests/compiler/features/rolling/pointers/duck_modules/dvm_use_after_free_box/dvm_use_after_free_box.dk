@@ -4,6 +4,6 @@ fun main() -> i64 = {
 		var box_val: box i32 = new 10;
 		p = box_val as ptr i32;
 	};
-	* p = 30;
+	*p = 30;
 	return 0;
 }

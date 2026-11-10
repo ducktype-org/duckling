@@ -90,10 +90,10 @@ fun main() -> i64 = {
 	pad.inner.b = 6i8;
 	pad.tail = 77i8;
 	let pad_p = &pad as cptr Pad;
-	builtin_output_i64((* pad_p).inner.a); # 5
-	builtin_output_i64((* pad_p).inner.b as i64); # 6
-	builtin_output_i64((* pad_p).tail as i64); # 77
-	(* pad_p).tail = 78i8;
+	builtin_output_i64((*pad_p).inner.a); # 5
+	builtin_output_i64((*pad_p).inner.b as i64); # 6
+	builtin_output_i64((*pad_p).tail as i64); # 77
+	(*pad_p).tail = 78i8;
 	builtin_output_i64(pad.tail as i64); # 78
 
 	let m = make_mid(5i64);

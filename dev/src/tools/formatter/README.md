@@ -100,7 +100,11 @@ positions, which reference the `TokenSource` the tokens came from.
    A statement ends at a `;`, at a line comment, at a `case` keyword (match
    arms), after a `template(...)` header (which always gets its own line), or
    after a `{...}` code block — unless `else` follows, so an
-   `if/else if/else` chain stays one statement. A comment trailing the last
+   `if/else if/else` chain stays one statement, or an operator follows on the
+   brace's line (`match (v) {...} * 2;` is one expression). An attribute
+   (`@name`, `@name(...)`) or a `#{ ... #}` block comment that opens a statement
+   and is followed by a line break keeps that line break: it becomes a statement
+   of its own. On the same line, it stays on the same line. A comment trailing the last
    token on its source line (`x = 1; # note`, `} # done`) stays attached to that
    statement. A curly group is a *code block*
    (as opposed to an inline literal like `{1, 2, 3}`) when it contains a `;`, a

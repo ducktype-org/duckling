@@ -37,8 +37,7 @@ fun positions(v: i32 | f32) -> i64 = {
 	acc = acc + match (v) {
 		case x: i32 = 10i64;
 		case _ = 20i64;
-	}
-	* 2i64;
+	} * 2i64;
 
 	return identity(match (v) {case x: i32 = match (v) {case y: i32 = acc; case _ = 0i64;}; case _ = acc;});
 }
@@ -314,7 +313,7 @@ fun makeF32Variant() -> box i32 | f32 = (2.5 as f32);
 # The box is moved out of the variant and into the binding, which destroys it.
 fun takeBox(v: box i32 | f32) -> i64 = {
 	return match (move v) {
-		case b: box i32 = * b as i64;
+		case b: box i32 = *b as i64;
 		case f: f32 = -1i64;
 	};
 }
@@ -366,7 +365,7 @@ fun owningMatch() -> () = {
 	check(dropBox(makeF32Variant()), -1i64, 123i64);
 
 	var stolen_box: box i32 = stealBox(makeBoxVariant(9i32));
-	check(* stolen_box as i64, 9i64, 124i64);
+	check(*stolen_box as i64, 9i64, 124i64);
 
 	# The same for a payload whose destructor frees a buffer.
 	check(takeString(makeStringVariant("hello")), 5i64, 140i64);

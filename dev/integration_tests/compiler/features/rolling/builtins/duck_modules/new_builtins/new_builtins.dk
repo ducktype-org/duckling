@@ -17,8 +17,8 @@ fun main() -> i64 = {
 
 	# Single-object allocation: `dvm_alloc` works on `ptr T` instead of `manyptr T`.
 	var single = dvm_alloc[char]();
-	* single = a;
-	builtin_output_char(* single);
+	*single = a;
+	builtin_output_char(*single);
 	dvm_free[char](single);
 
 	# A DVM pointer is a `(block, offset)` pair, so it cannot be cast to a single integer.

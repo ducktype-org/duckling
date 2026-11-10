@@ -113,7 +113,7 @@ fun overloads() = {
 class Res {
 	id: i64 = 0;
 
-	Res.destroy () = {
+	Res.destroy() = {
 		builtin_output_i64(id);
 	}
 }

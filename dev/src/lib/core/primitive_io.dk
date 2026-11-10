@@ -6,7 +6,8 @@
     Everything else is built on top: writers rely on `toString()` and `writeChar`, readers on
     `readCharCode` (end of input is a negative code). Integers are parsed by hand, floats via
     `strtod`.
-#} import core.builtins;
+#}
+import core.builtins;
 import core.clib;
 import core.containers;
 
@@ -24,28 +25,36 @@ namespace dvm {
     Reads one byte of input as its character code, or a negative value (`EOF`) at end of input,
     matching libc `getchar`. Callers that scan for a delimiter MUST stop on a negative result,
     otherwise they spin forever at end of input.
-#} @backend_dependent fundecl readCharCode() -> i32;
+#}
+@backend_dependent
+fundecl readCharCode() -> i32;
 
-@native_only_impl fun readCharCode() -> i32 = {
+@native_only_impl
+fun readCharCode() -> i32 = {
 	return clib.getchar();
 }
 
-@dvm_only_impl fun readCharCode() -> i32 = {
+@dvm_only_impl
+fun readCharCode() -> i32 = {
 	return dvm.builtin_input_char();
 }
 
 #{
     Reads one character. At end of input the code is negative; the resulting `char` is then not
     meaningful, so use `readCharCode` directly when end of input must be detected.
-#} fun readChar() -> char = readCharCode() as char;
+#}
+fun readChar() -> char = readCharCode() as char;
 
-@backend_dependent fundecl writeChar(c: char) -> i64;
+@backend_dependent
+fundecl writeChar(c: char) -> i64;
 
-@native_only_impl fun writeChar(c: char) -> i64 = {
+@native_only_impl
+fun writeChar(c: char) -> i64 = {
 	return clib.putchar(c as i32) as i64;
 }
 
-@dvm_only_impl fun writeChar(c: char) -> i64 = {
+@dvm_only_impl
+fun writeChar(c: char) -> i64 = {
 	return dvm.builtin_output_char(c);
 }
 
@@ -53,15 +62,19 @@ namespace dvm {
     Parses the leading floating-point number out of the NUL-terminated buffer `p`.
     Native forwards to libc `strtod` (on a `cptr`), the DVM to its `strtod` builtin (on a
     `manyptr`).
-#} @backend_dependent fundecl strtod(p: manyptr char) -> f64;
+#}
+@backend_dependent
+fundecl strtod(p: manyptr char) -> f64;
 
-@native_only_impl fun strtod(p: manyptr char) -> f64 = {
+@native_only_impl
+fun strtod(p: manyptr char) -> f64 = {
 	# `strtod` needs a writable end pointer; we point it at a throwaway local and ignore it.
 	var endptr: cptr char = p as cptr char;
 	return clib.strtod(p as cptr char, &endptr as cptr cptr char);
 }
 
-@dvm_only_impl fun strtod(p: manyptr char) -> f64 = {
+@dvm_only_impl
+fun strtod(p: manyptr char) -> f64 = {
 	return dvm.strtod(p);
 }
 
@@ -69,7 +82,8 @@ namespace dvm {
 
 #{
     Writes every character of `s` through `writeChar`.
-#} fun writeStr(s: str) -> i64 = {
+#}
+fun writeStr(s: str) -> i64 = {
 	var i = 0i64;
 	while (i < s.length()) {
 		writeChar(s[i]);
@@ -107,7 +121,8 @@ fun writeF64(x: f64) -> i64 = {
 
 #{
     Consumes leading blanks (space, tab, newline) and returns the first non-blank character.
-#} fun skipBlanks() -> char = {
+#}
+fun skipBlanks() -> char = {
 	var c = readChar();
 	while (c == ' ' or c == '\t' or c == '\n') c = readChar();
 	return c;

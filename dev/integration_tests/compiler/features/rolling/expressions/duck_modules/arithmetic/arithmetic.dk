@@ -1,6 +1,7 @@
 #{
 # For cases when code lir emits a=b+c instructions.
-#} fun assignmentChainedWithArithmetics() -> () = {
+#}
+fun assignmentChainedWithArithmetics() -> () = {
 	var a: i64 = 0;
 	var b: i64 = 1;
 

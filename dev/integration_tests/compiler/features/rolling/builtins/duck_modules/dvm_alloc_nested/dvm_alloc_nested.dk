@@ -3,7 +3,9 @@ import core.builtins.*;
 #{
 	Tests whether VM correctly counts references in nested blocks while
 	allocating and freeing memory.
-#} class Labelled {
+#}
+
+class Labelled {
 	name: str = "";
 	tag: i64 = 0;
 }

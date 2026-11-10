@@ -4,8 +4,10 @@
 # the used types are not implemented.
 
 # ========== Helpers ==========
-class T {} class U {} # A class with a non-trivial layout: i8 at offset 0, i64 (align 8) at offset
-# 8,
+class T {}
+class U {}
+
+# A class with a non-trivial layout: i8 at offset 0, i64 (align 8) at offset 8,
 # i16 at offset 16 -> 18 bytes of payload rounded up to the 8-byte alignment,
 # so size 24 bytes, alignment 8 bytes.
 class Mixed {

@@ -1,6 +1,8 @@
 #{
     Standard mathematical functions.
-#} # int -> i32
+#}
+
+# int -> i32
 # long -> i64
 # float -> f32
 # double -> f64
@@ -56,7 +58,9 @@ namespace libm_forward {
         Forward interface from libc (cstdlib) and libm (cmath).
         See: https://en.cppreference.com/c/header/math
         and: https://en.cppreference.com/c/numeric/math
-    #} namespace int_funcs {
+    #}
+
+	namespace int_funcs {
 		extern ("C") {
 			class div_t {
 				quot: i32;
@@ -376,7 +380,9 @@ namespace libm_forward {
 namespace impl {
 	#{
         These are the functions not provided by the C standard library.
-    #} # Computes absolute value of an integral value
+    #}
+
+	# Computes absolute value of an integral value
 	# Note that it returnes the same value for the most negative value of the type (e.g. -2^31 for
 	# i32)
 	template(T: type)
@@ -560,7 +566,9 @@ namespace impl {
 namespace constants {
 	#{
         Mathematical constants.
-    #} # Ratio of a circle's circumference to its diameter and derived constants
+    #}
+
+	# Ratio of a circle's circumference to its diameter and derived constants
 	const PI: f64 = 3.141592653589793238462643;
 	const SQRT_PI: f64 = 1.772453850905516027298167;
 	const FRAC_1_PI: f64 = 0.3183098861837906715377675;

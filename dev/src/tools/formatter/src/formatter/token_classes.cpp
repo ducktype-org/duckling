@@ -58,7 +58,7 @@ namespace formatter {
 		// merge with the operand into a single identifier.
 		if (!isOperator(t)) return false;
 		return isStr(t, "-") || isStr(t, "+") || isStr(t, "!") || isStr(t, "~") || isStr(t, "&")
-		    || isStr(t, "?") || isStr(t, "++") || isStr(t, "--");
+		    || isStr(t, "*") || isStr(t, "?") || isStr(t, "++") || isStr(t, "--");
 	}
 
 	bool isSuffixOperator(const Token& t) {

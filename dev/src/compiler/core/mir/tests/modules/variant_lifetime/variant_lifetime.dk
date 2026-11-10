@@ -2,7 +2,7 @@
 # the lifetime flags.
 class R {
 	a: i32 = 0;
-	R.destroy () = {
+	R.destroy() = {
 		var t: i32 = a;
 	}
 }

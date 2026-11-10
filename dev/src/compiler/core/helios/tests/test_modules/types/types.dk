@@ -12,7 +12,11 @@ const SimpleString: String = "Hello World!";
 const TupleII: (i32, i32) = (1, 2);
 const TupleIIFF: ((i16, i32), (f16, f32)) = (1, 2);
 
-class A {} class B {} class C {} var first_variant: i32 | f32 = 1;
+class A {}
+class B {}
+class C {}
+
+var first_variant: i32 | f32 = 1;
 
 var second_variant: i32 | f32 | bool = true;
 

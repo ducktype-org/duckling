@@ -1,10 +1,13 @@
-@backend_dependent fundecl getValue() -> i64;
+@backend_dependent
+fundecl getValue() -> i64;
 
-@dvm_only_impl fun getValue() = {
+@dvm_only_impl
+fun getValue() = {
 	return 10i64;
 }
 
-@native_only_impl fun getValue() = {
+@native_only_impl
+fun getValue() = {
 	return 20i64;
 }
 

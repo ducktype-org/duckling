@@ -4,7 +4,10 @@ namespace Name {
 		return tmpl_param + param;
 	}
 
-	class Cls {} template(f: f32) class Tcls {}
+	class Cls {}
+
+	template(f: f32)
+	class Tcls {}
 }
 
 fun hoo(j: i64) -> i64 = {

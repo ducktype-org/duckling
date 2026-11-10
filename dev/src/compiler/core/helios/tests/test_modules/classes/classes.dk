@@ -29,12 +29,12 @@ class Base {
 	}
 
 	private {
-		Base.copy (other: ref Base) = {
+		Base.copy(other: ref Base) = {
 			return Base(other.pub_field, other.prot_field, other.priv_field, other.unspecified);
 		}
 	}
 
-	public Base.destroy () = {}
+	public Base.destroy() = {}
 }
 
 class Derived extends Base {
@@ -46,7 +46,9 @@ class Derived extends Base {
 	}
 }
 
-class Empty extends Base {} class ClassWithMember {
+class Empty extends Base {}
+
+class ClassWithMember {
 	public member: Base = Base(1, 2, 3, 4.0 as f32);
 
 	# A body inside a class unrelated to `Base`.

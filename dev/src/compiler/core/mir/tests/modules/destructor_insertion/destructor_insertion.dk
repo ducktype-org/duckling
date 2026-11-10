@@ -3,7 +3,7 @@
 
 class Res {
 	id: i32 = 0;
-	Res.destroy () = {
+	Res.destroy() = {
 		var t: i32 = id;
 	}
 }

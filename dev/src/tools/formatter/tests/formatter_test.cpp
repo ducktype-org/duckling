@@ -185,8 +185,15 @@ private:
 			{ "foo (a ,b );", "foo(a, b);\n" },
 			{ "foo();", "foo();\n" },
 			{ "arr [ i ] ;", "arr[i];\n" },
-			// The attribute sigil binds to its name, and the attribute to its statement.
-			{ "@Attr\nx=1;", "@Attr x = 1;\n" },
+			// The attribute sigil binds to its name. An attribute stays on the line the author
+		    // put it on: on the declaration's line, or on a line of its own above it.
+			{ "@Attr x=1;", "@Attr x = 1;\n" },
+			{ "@Attr\nx=1;", "@Attr\nx = 1;\n" },
+			{ "@c_symbol_name(\"in\")\nfundecl f();", "@c_symbol_name(\"in\")\nfundecl f();\n" },
+			{ "@a\n@b(1) fun f()={}", "@a\n@b(1) fun f() = {}\n" },
+			// A keyword used as a member name is still a call: `destroy` and `copy` are keywords.
+			{ "C.destroy ();", "C.destroy();\n" },
+			{ "x = a.copy (b);", "x = a.copy(b);\n" },
 			// A comma-separated curly with no statement keyword is an inline literal.
 			{ "x={1,2,3};", "x = {1, 2, 3};\n" },
 			{ "block{}", "block {}\n" },
@@ -206,6 +213,12 @@ private:
 			{ "arr[i]++;", "arr[i]++;\n" },
 			{ "x = &y;", "x = &y;\n" },
 			{ "f(&a, b & c);", "f(&a, b & c);\n" },
+			// `*` in prefix position is a dereference and glues like `&`; as a binary
+			// operator it keeps its spaces.
+			{ "x = * p;", "x = *p;\n" },
+			{ "f(* p, a * b);", "f(*p, a * b);\n" },
+			{ "x = a * * p;", "x = a * *p;\n" },
+			{ "return * (* p);", "return *(*p);\n" },
 			{ "pattern T(b: ref B) -> ref D = &b.data;",
 		      "pattern T(b: ref B) -> ref D = &b.data;\n" },
 			// `?` is a prefix type operator: `?i32` is an optional i32.
@@ -665,6 +678,19 @@ fun f() = {
 		// A `#{ ... #}` comment is reproduced verbatim and does not end the statement.
 		check("x = 1; #{ c #}\n", "x = 1; #{ c #}\n");
 		check("x =   #{ inline note #}   1;", "x = #{ inline note #} 1;\n");
+		// A block comment on lines of its own (a doc comment) keeps the line break after it.
+		check("#{\n    doc\n#}\nclass C {}", "#{\n    doc\n#}\nclass C {}\n");
+		check("#{ doc #}\nfun f() = {}", "#{ doc #}\nfun f() = {}\n");
+		check("#{ doc #} fun f() = {}", "#{ doc #} fun f() = {}\n");
+		// A block followed by an operator on the same line is an operand, not a statement.
+		check(
+			"acc = acc + match (v) {\ncase x = 1;\ncase _ = 2;\n} * 2;",
+			"acc = acc + match (v) {\n\tcase x = 1;\n\tcase _ = 2;\n} * 2;\n"
+		);
+		check("while (c) {\nx;\n}\n*p = 1;", "while (c) {\n\tx;\n}\n*p = 1;\n");
+		// An empty body ends its declaration when a line break follows it.
+		check("class A {}\nclass B {}", "class A {}\nclass B {}\n");
+		check("fun f() = {}\n\nfun g() = {}", "fun f() = {}\n\nfun g() = {}\n");
 	}
 
 	/** An over-long line comment re-flows at word boundaries, repeating its prefix. */

@@ -110,9 +110,11 @@ fun intentionally_complex_collatz_nth(start: i64, n: i64) -> i64 = {
 
 const COLLATZ: i64 = intentionally_complex_collatz_nth(6, 8); # COLLATZ == 1
 
-@builtin("size_of") fundecl sizeOf(v: type) -> i64;
+@builtin("size_of")
+fundecl sizeOf(v: type) -> i64;
 
-@builtin("alignment_of") fundecl alignOf(v: type) -> i64;
+@builtin("alignment_of")
+fundecl alignOf(v: type) -> i64;
 
 fun sizeAndAlign(t: type) -> i64 = {
 	return sizeOf(t) + alignOf(t);

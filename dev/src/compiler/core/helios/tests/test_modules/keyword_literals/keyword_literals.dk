@@ -29,5 +29,7 @@ fun foo() = {
 	var v_bool_f: bool = false;
 
 	# bool literals:
-	if (false) {} if (true) {} while (false) {}
+	if (false) {}
+	if (true) {}
+	while (false) {}
 }

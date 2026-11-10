@@ -10,72 +10,93 @@ import core.clib as clib;
 
     On the DVM a block (or a dynamic table for the `many_` variants) is allocated. On native
     targets it is a plain `malloc`/`free` pair.
-#} template(T: type) namespace allocation {
+#}
+template(T: type)
+namespace allocation {
 	const LLVM_OBJECT_SIZE = builtins.size_of(T);
 
-	@backend_dependent fundecl alloc() -> ptr T;
+	@backend_dependent
+	fundecl alloc() -> ptr T;
 
-	@dvm_only_impl fun alloc() -> ptr T = {
+	@dvm_only_impl
+	fun alloc() -> ptr T = {
 		return builtins.dvm_alloc[T]();
 	}
 
 	#{
         `malloc` answers a failed allocation with a null pointer. Nothing downstream can do
         anything useful with it, so the program stops right here instead of dereferencing it.
-    #} @native_only_impl fun alloc() -> ptr T = {
+    #}
+	@native_only_impl
+	fun alloc() -> ptr T = {
 		let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr T;
 		if (p as u64 == 0u64) panicking.panic();
 		return p;
 	}
 
-	@backend_dependent fundecl free(p: ptr T) -> ();
+	@backend_dependent
+	fundecl free(p: ptr T) -> ();
 
-	@dvm_only_impl fun free(p: ptr T) -> () = {
+	@dvm_only_impl
+	fun free(p: ptr T) -> () = {
 		builtins.dvm_free[T](p);
 	}
 
-	@native_only_impl fun free(p: ptr T) -> () = {
+	@native_only_impl
+	fun free(p: ptr T) -> () = {
 		clib.free(p as cptr u8);
 	}
 
-	@backend_dependent fundecl many_alloc(len: i64) -> manyptr T;
+	@backend_dependent
+	fundecl many_alloc(len: i64) -> manyptr T;
 
-	@dvm_only_impl fun many_alloc(len: i64) -> manyptr T = {
+	@dvm_only_impl
+	fun many_alloc(len: i64) -> manyptr T = {
 		return builtins.dvm_alloc_arr[T](len);
 	}
 
-	@native_only_impl fun many_alloc(len: i64) -> manyptr T = {
+	@native_only_impl
+	fun many_alloc(len: i64) -> manyptr T = {
 		return clib.malloc((len * LLVM_OBJECT_SIZE) as u64) as manyptr T;
 	}
 
-	@backend_dependent fundecl many_free(p: manyptr T) -> ();
+	@backend_dependent
+	fundecl many_free(p: manyptr T) -> ();
 
-	@dvm_only_impl fun many_free(p: manyptr T) -> () = {
+	@dvm_only_impl
+	fun many_free(p: manyptr T) -> () = {
 		builtins.dvm_free_arr[T](p);
 	}
 
-	@native_only_impl fun many_free(p: manyptr T) -> () = {
+	@native_only_impl
+	fun many_free(p: manyptr T) -> () = {
 		clib.free(p as cptr u8);
 	}
 
-	@backend_dependent fundecl many_realloc(p: manyptr T, new_size: i64) -> manyptr T;
+	@backend_dependent
+	fundecl many_realloc(p: manyptr T, new_size: i64) -> manyptr T;
 
 	#{
         `dvm_realloc_arr` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
-    #} @dvm_only_impl fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
+    #}
+	@dvm_only_impl
+	fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
 		builtins.dvm_realloc_arr[T](p, new_size);
 		return p;
 	}
 
-	@native_only_impl fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
+	@native_only_impl
+	fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
 		return clib.realloc(p as cptr u8, (new_size * LLVM_OBJECT_SIZE) as u64) as manyptr T;
 	}
 }
 
 #{
     The two halves of `box T`'s storage management, as the compiler sees them.
-#} template(T: type) fun boxAlloc(value: T) -> ptr T = {
+#}
+template(T: type)
+fun boxAlloc(value: T) -> ptr T = {
 	let storage = allocation[T].alloc();
 	builtins.move_in[T](storage, move value);
 	return storage;
@@ -98,7 +119,8 @@ class String {
         Makes sure at least `required` characters fit into the buffer.
         The capacity is doubled instead of trimmed to `required`, which keeps a
         sequence of `append`s amortized O(1).
-    #} fun reserve(required: i64) -> () = {
+    #}
+	fun reserve(required: i64) -> () = {
 		if (required > cap) {
 			var new_cap = cap;
 			if (new_cap == 0i64) new_cap = 1i64;
@@ -158,7 +180,8 @@ class String {
 	#{
         Drops the contents but keeps the buffer, so it can be refilled without
         allocating again.
-    #} fun clear() -> () = {
+    #}
+	fun clear() -> () = {
 		len = 0i64;
 	}
 
@@ -178,14 +201,14 @@ class String {
 		return copy self;
 	}
 
-	String.copy (other: ref String) = {
+	String.copy(other: ref String) = {
 		var result = stringReserve(other.length());
 		copyChars(other.pointer, result.pointer, other.length());
 		result.len = other.length();
 		return result;
 	}
 
-	String.destroy () = {
+	String.destroy() = {
 		allocation[char].many_free(pointer);
 	}
 }
@@ -288,10 +311,14 @@ namespace stringification {
 
 	#{
         Pointer stringification.
-    #} template(T: type) namespace pointer_stringification {
-		@backend_dependent fundecl stringifyPtr(pointer: ptr T) -> String;
+    #}
+	template(T: type)
+	namespace pointer_stringification {
+		@backend_dependent
+		fundecl stringifyPtr(pointer: ptr T) -> String;
 
-		@dvm_only_impl fun stringifyPtr(pointer: ptr T) -> String = {
+		@dvm_only_impl
+		fun stringifyPtr(pointer: ptr T) -> String = {
 			var result = stringifyStr("ptr(");
 
 			# `dvm_ptr_parts` fails on a null pointer, which points into no block.
@@ -312,7 +339,8 @@ namespace stringification {
 			return result;
 		}
 
-		@native_only_impl fun stringifyPtr(pointer: ptr T) -> String = {
+		@native_only_impl
+		fun stringifyPtr(pointer: ptr T) -> String = {
 			if (pointer as u64 == 0u64) return stringifyStr("ptr(null)");
 			let buffer_cap = 21;
 			var address = stringReserve(buffer_cap);
@@ -335,14 +363,19 @@ namespace stringification {
 	#{
         A `cptr` is a bare address. The native backend can print it directly, while the DVM has no
         cast from `cptr` to an integer, so the address is not observable there.
-    #} template(T: type) namespace cptr_stringification {
-		@backend_dependent fundecl stringifyCPtr(pointer: cptr T) -> String;
+    #}
+	template(T: type)
+	namespace cptr_stringification {
+		@backend_dependent
+		fundecl stringifyCPtr(pointer: cptr T) -> String;
 
-		@dvm_only_impl fun stringifyCPtr(pointer: cptr T) -> String = {
+		@dvm_only_impl
+		fun stringifyCPtr(pointer: cptr T) -> String = {
 			return stringifyStr("cptr(?)");
 		}
 
-		@native_only_impl fun stringifyCPtr(pointer: cptr T) -> String = {
+		@native_only_impl
+		fun stringifyCPtr(pointer: cptr T) -> String = {
 			if (pointer as u64 == 0u64) return stringifyStr("cptr(null)");
 			let buffer_cap = 21;
 			var address = stringReserve(buffer_cap);
@@ -366,14 +399,17 @@ namespace stringification {
 	namespace manyptr_stringification {
 		# The distinction between manyptr and ptr is not supported on the DVM,
 		# as taking a pointer from manyptr throws when manyptr is null.
-		@backend_dependent fundecl stringifyManyPtr(pointer: manyptr T) -> String;
+		@backend_dependent
+		fundecl stringifyManyPtr(pointer: manyptr T) -> String;
 
-		@dvm_only_impl fun stringifyManyPtr(pointer: manyptr T) -> String = {
+		@dvm_only_impl
+		fun stringifyManyPtr(pointer: manyptr T) -> String = {
 			if (builtins.dvm_is_nullmanyptr[T](pointer)) return stringifyStr("ptr(null)");
 			return pointer_stringification[T].stringifyPtr(pointer as ptr T);
 		}
 
-		@native_only_impl fun stringifyManyPtr(pointer: manyptr T) -> String = {
+		@native_only_impl
+		fun stringifyManyPtr(pointer: manyptr T) -> String = {
 			return pointer_stringification[T].stringifyPtr(pointer as ptr T);
 		}
 	}
@@ -422,14 +458,17 @@ namespace stringification {
         Appends the `,` that joins the elements of a sequence.
         A `,` literal cannot be written inside a call argument list yet, so the separator is built
         from its character code instead.
-    #} fun appendSequenceSeparator(s: ref String) -> () = {
+    #}
+	fun appendSequenceSeparator(s: ref String) -> () = {
 		s.append(44u64 as char);
 	}
 
 	#{
         Element-by-element stringification of a sequence, rendered as `[a,b,c]`.
         A `str` is not stringified this way; it is its own text (see `stringifyStr`).
-    #} template(T: type) fun stringifySlice(x: slice T) -> String = {
+    #}
+	template(T: type)
+	fun stringifySlice(x: slice T) -> String = {
 		var result = stringifyStr("[");
 		var i = 0;
 		while (i < x.length()) {
@@ -445,7 +484,9 @@ namespace stringification {
         `A` is the whole array type and `N` its length. The array type cannot be spelled as `T[N]`
         from an element type `T`: as in C, `T[N]` appends the new dimension innermost, so for a
         nested array that names a different type than `N` elements of `T`.
-    #} template(A: type, N: i64) fun stringifyStaticArray(arr: ref A) -> String = {
+    #}
+	template(A: type, N: i64)
+	fun stringifyStaticArray(arr: ref A) -> String = {
 		var result = stringifyStr("[");
 		var i = 0;
 		while (i < N) {
@@ -461,14 +502,17 @@ namespace stringification {
 #{
     Growable array of `T`. Capacity doubles on growth, so a sequence of
     `push`es is amortized O(1).
-#} template(T: type) class List {
+#}
+template(T: type)
+class List {
 	pointer: manyptr T;
 	len: i64;
 	cap: i64;
 
 	#{
         Makes sure at least `required` elements fit into the buffer.
-    #} fun reserve(required: i64) -> () = {
+    #}
+	fun reserve(required: i64) -> () = {
 		if (required > cap) {
 			var new_cap = cap;
 			if (new_cap == 0i64) new_cap = 1i64;
@@ -514,7 +558,8 @@ namespace stringification {
 	#{
         Drops the contents but keeps the buffer, so it can be refilled without
         allocating again.
-    #} fun clear() -> () = {
+    #}
+	fun clear() -> () = {
 		# Moving an element out and dropping the result on the floor runs `T`'s destructor.
 		var i = 0i64;
 		while (i < len) {
@@ -527,7 +572,8 @@ namespace stringification {
 	#{
         A list owns its buffer, so a copy has to allocate its own and copy the elements one by
         one with `T`'s copy constructor.
-    #} List.copy (other: ref listType[T]()) = {
+    #}
+	List.copy(other: ref listType[T]()) = {
 		var result: listType[T]();
 		result.reserve(other.length());
 
@@ -539,7 +585,7 @@ namespace stringification {
 		return result;
 	}
 
-	List.destroy () = {
+	List.destroy() = {
 		clear();
 		if (cap > 0i64) allocation[T].many_free(pointer);
 	}
@@ -548,4 +594,6 @@ namespace stringification {
 #{
     Spells out `List[T]`, which the class body cannot name directly.
     @TODO: #3350 Use `List[T]` inside the class body once it resolves unambiguously.
-#} template(T: type) fun listType() -> type = List[T];
+#}
+template(T: type)
+fun listType() -> type = List[T];

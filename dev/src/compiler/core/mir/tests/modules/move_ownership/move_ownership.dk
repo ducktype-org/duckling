@@ -1,4 +1,6 @@
-fun sink(x: box i64) = {} fun handedToCall() = {
+fun sink(x: box i64) = {}
+
+fun handedToCall() = {
 	var a: box i64 = new 1i64;
 	sink(move a);
 }

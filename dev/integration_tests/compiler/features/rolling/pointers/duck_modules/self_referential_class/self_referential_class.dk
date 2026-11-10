@@ -26,8 +26,8 @@ fun main() -> i64 = {
 	b.v = 7;
 	a.next = &b as ptr Node;
 	b.next = &a as ptr Node;
-	builtin_output_i64((* a.next).v);
-	builtin_output_i64((* (* a.next).next).v);
+	builtin_output_i64((*a.next).v);
+	builtin_output_i64((*(*a.next).next).v);
 
 	var x = Link(1, ());
 	var y = Link(20, &x);

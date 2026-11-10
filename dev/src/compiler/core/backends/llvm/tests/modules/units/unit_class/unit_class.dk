@@ -4,7 +4,9 @@
 # from the generated code. The only place where they are kept are in function
 # return types, where they are converted to LLVM's void type anyway.
 
-class Unit {} let a: Unit = Unit();
+class Unit {}
+
+let a: Unit = Unit();
 
 fun foo(u: Unit) -> Unit = {
 	return u;

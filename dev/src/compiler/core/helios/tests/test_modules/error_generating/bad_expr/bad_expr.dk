@@ -1,4 +1,6 @@
-fun foo() = {} const InvalidExpr: i32 = +1 +;
+fun foo() = {}
+
+const InvalidExpr: i32 = +1 +;
 const InvalidSym: i32 = A + 1;
 
 const InvalidCompMiddle: bool = 1 < foo() == 5;

@@ -37,6 +37,57 @@ namespace formatter {
 			return i + 1;
 		}
 
+		/** Index of the first significant token at or after @p i, or `tokens.size()`. */
+		usize nextSignificant(std::span<const Token> tokens, usize i) {
+			while (i < tokens.size() && isSkippable(tokens[i])) i++;
+			return i;
+		}
+
+		/**
+		 * At the start of a statement, finds where a leading item that the author put on lines
+		 * of its own ends: a block comment (`#{ ... #}` above a declaration) or an attribute
+		 * (`@name` or `@name(...)` above a `fun`). Such an item becomes a statement of its own,
+		 * so the line break after it survives.
+		 *
+		 * @return The index just past the item, or 0 when @p i opens no such item or the
+		 *         next token sits on the same source line.
+		 */
+		usize ownLineItemEnd(std::span<const Token> tokens, usize i) {
+			const usize n    = tokens.size();
+			usize       last = i;
+			if (isSpecial(tokens[i]) && isStr(tokens[i], "@")) {
+				last = nextSignificant(tokens, i + 1);
+				if (last == n) return 0;
+				const usize args = nextSignificant(tokens, last + 1);
+				if (args < n && isBracketGroup(tokens[args])
+				    && tokens[args].getBracketType() == Bracket::Round
+				    && onSameSourceLine(tokens[last], tokens[args]))
+					last = args;
+			} else if (!isComment(tokens[i]) || isLineComment(tokens[i])) {
+				return 0;
+			}
+			const usize next = nextSignificant(tokens, last + 1);
+			if (next == n || onSameSourceLine(tokens[last], tokens[next])) return 0;
+			return last + 1;
+		}
+
+		/**
+		 * Whether the curly group at @p i is an empty body that closes its line, as in
+		 * `fun f() = {}` or `class C {}` followed by the next declaration. Such a group ends
+		 * the statement like a code block; without content it cannot be told apart from an
+		 * empty literal, so only the line break after it decides.
+		 */
+		bool isEmptyBodyEndingLine(std::span<const Token> tokens, usize i) {
+			const Token& t = tokens[i];
+			if (!isBracketGroup(t) || t.getBracketType() != Bracket::Curly) return false;
+			for (const auto& child: t.getRecursive())
+				if (!isSkippable(child)) return false;
+			const usize next = nextSignificant(tokens, i + 1);
+			if (next == tokens.size()) return false;
+			const Token& after = tokens[next];
+			return !onSameSourceLine(t, after) && !isOperator(after) && !isSpecial(after);
+		}
+
 		/**
 		 * Parses one statement starting at @p i into @p stmt.
 		 *
@@ -80,6 +131,12 @@ namespace formatter {
 						return j + 1;
 					}
 				}
+				if (at_start) {
+					if (const usize end = ownLineItemEnd(tokens, i); end != 0) {
+						flush_run(end);
+						return end;
+					}
+				}
 				at_start = false;
 
 				// Statement terminator.
@@ -97,7 +154,7 @@ namespace formatter {
 				}
 
 				// A code block ends the statement (unless an `else` clause or `;` follows).
-				if (isBlockCurly(t)) {
+				if (isBlockCurly(t) || isEmptyBodyEndingLine(tokens, i)) {
 					flush_run(i);
 					stmt.items.emplace_back(BlockItem{
 						.curly = &t,
@@ -107,7 +164,13 @@ namespace formatter {
 					usize j = i + 1;
 					while (j < n && isSkippable(tokens[j])) j++;
 
-					if (j < n && isKeyword(tokens[j]) && isStr(tokens[j], "else")) {
+					// So does an operator right after the brace, on the same line: the block
+					// is an operand (`acc + match (v) {...} * 2;`), not a statement of its own.
+					const bool continues
+						= j < n
+					   && ((isKeyword(tokens[j]) && isStr(tokens[j], "else"))
+					       || (isOperator(tokens[j]) && onSameSourceLine(t, tokens[j])));
+					if (continues) {
 						run_start = j;
 						i         = j;
 						continue;

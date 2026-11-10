@@ -11,6 +11,8 @@ fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 fun createTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
 fun megaType(a: type) -> type = ((), a, createBox(i32), (i16, f16), i64 | (f64, f128));
 
-@builtin("size_of") fundecl sizeOf(v: type) -> i64;
+@builtin("size_of")
+fundecl sizeOf(v: type) -> i64;
 
-@builtin("alignment_of") fundecl alignOf(v: type) -> i64;
+@builtin("alignment_of")
+fundecl alignOf(v: type) -> i64;

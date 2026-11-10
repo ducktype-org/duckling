@@ -4,7 +4,7 @@ import core.builtins.*;
 class Res {
 	id: i64 = 0;
 
-	Res.destroy () = {
+	Res.destroy() = {
 		builtin_output_i64(id);
 	}
 }
@@ -94,7 +94,7 @@ fun matchExpr(v: i32 | f32) -> i64 = {
 class Borrowed {
 	x: i64 = 0;
 
-	Borrowed.destroy () = {
+	Borrowed.destroy() = {
 		builtin_output_i64(40);
 		x = -1i64;
 	}

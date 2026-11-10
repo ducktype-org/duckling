@@ -54,13 +54,13 @@ fun cPointerProjectionsTest() = {
 	var v: Vec;
 	let p = &v as cptr Vec;
 
-	(* p).tag = 7i64;
-	(* p).nums[2] = 33;
-	(* p).inner.b = 9;
+	(*p).tag = 7i64;
+	(*p).nums[2] = 33;
+	(*p).inner.b = 9;
 
-	builtin_output_i64((* p).tag); # 7
-	builtin_output_i64((* p).nums[2] as i64); # 33
-	builtin_output_i64((* p).inner.b as i64); # 9
+	builtin_output_i64((*p).tag); # 7
+	builtin_output_i64((*p).nums[2] as i64); # 33
+	builtin_output_i64((*p).inner.b as i64); # 9
 
 	# The writes went to the original local, not to a copy.
 	builtin_output_i64(v.nums[2] as i64); # 33
@@ -68,11 +68,11 @@ fun cPointerProjectionsTest() = {
 
 	# A `cptr` to a field, and a `cptr` to an element of a static array field.
 	let ip = &v.inner as cptr Inner;
-	(* ip).a = 4;
+	(*ip).a = 4;
 	builtin_output_i64(v.inner.a as i64); # 4
 
 	let ep = &v.nums[1] as cptr i32;
-	(* ep) = 21;
+	(*ep) = 21;
 	builtin_output_i64(v.nums[1] as i64); # 21
 
 	# Indexing the `cptr` itself, which is pointer arithmetic over the pointee, so `ep[1]` is
@@ -123,7 +123,7 @@ fun cPointerRepointingTest() = {
 	# `ptr Vec` -> `cptr i64`: the address of `v`, read as its first field.
 	let vp = &v as ptr Vec;
 	let tag_p = vp as cptr i64;
-	builtin_output_i64(* tag_p); # 5
+	builtin_output_i64(*tag_p); # 5
 
 	# `manyptr i32` -> `cptr Inner`: a many-pointer is a dynamic table handle, so it first has
 	# to become the address of element 0, and only then change pointee. `Inner` is two i32s,
@@ -133,8 +133,8 @@ fun cPointerRepointingTest() = {
 	table[1] = 7i32;
 
 	let head_p = table as cptr Inner;
-	builtin_output_i64((* head_p).a as i64); # 6
-	builtin_output_i64((* head_p).b as i64); # 7
+	builtin_output_i64((*head_p).a as i64); # 6
+	builtin_output_i64((*head_p).b as i64); # 7
 
 	dvm_free_arr[i32](table);
 }
@@ -146,16 +146,16 @@ fun cPointerAddressOfTest() = {
 
 	let bytes = p as cptr u8;
 	let offset_p = &bytes[12] as cptr i32;
-	builtin_output_i64((* offset_p) as i64);
-	(* offset_p) = 13;
+	builtin_output_i64((*offset_p) as i64);
+	(*offset_p) = 13;
 	builtin_output_i64(v.nums[1] as i64);
 
 	let field_p = &p[0].nums[2] as cptr i32;
-	(* field_p) = 17;
+	(*field_p) = 17;
 	builtin_output_i64(v.nums[2] as i64);
 
-	let deref_p = &(* p).inner as cptr Inner;
-	(* deref_p).b = 8;
+	let deref_p = &(*p).inner as cptr Inner;
+	(*deref_p).b = 8;
 	builtin_output_i64(v.inner.b as i64);
 }
 

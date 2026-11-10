@@ -17,7 +17,9 @@ fun main() -> i64 = {
 	a = false;
 	if (a) {
 		return 5i64;
-	} else {} # Testing nested if expressions
+	} else {}
+
+	# Testing nested if expressions
 	if (true) {
 		if (false) {
 			return 6i64;

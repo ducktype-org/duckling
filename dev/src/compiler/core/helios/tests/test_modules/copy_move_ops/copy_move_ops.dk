@@ -1,7 +1,7 @@
 class W {
 	x: i32 = 0;
 
-	W.copy (other: ref W) = {
+	W.copy(other: ref W) = {
 		return W(other.x);
 	}
 }

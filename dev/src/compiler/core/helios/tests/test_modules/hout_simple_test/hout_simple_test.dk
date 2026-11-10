@@ -1,4 +1,6 @@
-fun foo(a: i32) = {} fun foo2() = {
+fun foo(a: i32) = {}
+
+fun foo2() = {
 	return 2;
 }
 

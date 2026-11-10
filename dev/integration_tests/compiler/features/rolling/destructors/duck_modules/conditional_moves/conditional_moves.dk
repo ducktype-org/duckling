@@ -2,12 +2,14 @@ import core.builtins.*;
 
 class Res {
 	id: i32 = 0;
-	Res.destroy () = {
+	Res.destroy() = {
 		builtin_output_i64(id);
 	}
 }
 
-fun eat(r: Res) -> () = {} fun eatBoxed(r: box Res) -> () = {} fun maybeEat(r: Res, take_it: bool) -> () = {
+fun eat(r: Res) -> () = {}
+fun eatBoxed(r: box Res) -> () = {}
+fun maybeEat(r: Res, take_it: bool) -> () = {
 	if (take_it) {
 		eat(move r);
 	}
