@@ -96,13 +96,11 @@ namespace compiler::helios::code {
 					}
 				}
 
-				return tsh::SymbolType<>{
-					// @TODO: #2754 Possibly adjust the type based on the actual type of the index
-					// expression.
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable
-				};
+				// @TODO: #2754 Possibly adjust the type based on the actual type of the index
+				// expression.
+				return tsh::SymbolType<>::withDefaults(
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+				);
 			}();
 
 			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);

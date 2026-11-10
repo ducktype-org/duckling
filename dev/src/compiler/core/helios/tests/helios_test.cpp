@@ -174,11 +174,7 @@ private:
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
 	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			Mutable,
-		};
+		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
 	}
 
 	static compiler::tsh::SymbolType<> stImm(const compiler::tsh::AbstractType abstract_type) {
