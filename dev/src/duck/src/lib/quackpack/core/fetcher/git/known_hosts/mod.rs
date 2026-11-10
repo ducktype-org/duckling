@@ -18,6 +18,7 @@ use git2::CertificateCheckStatus;
 use git2::cert::Cert;
 use tracing::{debug, error, info, trace, warn};
 
+use self::parse::get_bundled_keys;
 use crate::DuckContext;
 
 mod accept;
@@ -50,7 +51,10 @@ pub fn check_certificate(
     let files = get_known_hosts_files(ctx);
     debug!(target: "duck::git", ?files, ?host, ?hostkey, ?host_type);
     let entries = {
-        let mut buffer = vec![];
+        let mut buffer = get_bundled_keys()
+            .into_iter()
+            .map(|entry| (entry, KnownHostSource::Bundled))
+            .collect();
         for file in &files {
             parse_single_known_hosts_file(file, &mut buffer);
         }
@@ -59,28 +63,28 @@ pub fn check_certificate(
     let mut encountered_accept = false;
     let mut encountered_revoked = false;
     for entry in entries {
-        let (entry, path) = entry;
+        let (entry, source) = entry;
         let result = entry.accept(&host, hostkey, host_type);
         match result {
             accept::AcceptResult::Accepted => {
-                info!(target: "duck::git", ?path, ?entry, "accepted certificate");
+                info!(target: "duck::git", ?source, ?entry, "accepted certificate");
                 encountered_accept = true;
             }
             accept::AcceptResult::Rejected => {
-                trace!(target: "duck::git", ?path, ?entry, "rejected certificate");
+                trace!(target: "duck::git", ?source, ?entry, "rejected certificate");
             }
             accept::AcceptResult::Revoked => {
-                warn!(target: "duck::git", ?path, ?entry, "revoked certificate");
+                warn!(target: "duck::git", ?source, ?entry, "revoked certificate");
                 encountered_revoked = true;
             }
             accept::AcceptResult::NotMatched => {
-                trace!(target: "duck::git", ?path, ?entry, "not matched");
+                trace!(target: "duck::git", ?source, ?entry, "not matched");
             }
             accept::AcceptResult::KeyMismatch => {
-                trace!(target: "duck::git", ?path, ?entry, "keys mismatch");
+                trace!(target: "duck::git", ?source, ?entry, "keys mismatch");
             }
             accept::AcceptResult::Unsupported => {
-                trace!(target: "duck::git", ?path, ?entry, "unsupported key");
+                trace!(target: "duck::git", ?source, ?entry, "unsupported key");
             }
         }
     }
@@ -183,7 +187,16 @@ enum Marker {
     Revoked,
 }
 
-type TrackedKnownHostEntry<'a> = (KnownHostEntry, &'a Path);
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+/// Source of the single [`KnownHostEntry`].
+enum KnownHostSource<'a> {
+    /// From the file.
+    Path(&'a Path),
+    /// Bundled.
+    Bundled,
+}
+
+type TrackedKnownHostEntry<'a> = (KnownHostEntry, KnownHostSource<'a>);
 
 /// Get paths to the `known_hosts` files.
 fn get_known_hosts_files(ctx: &DuckContext) -> Vec<PathBuf> {
@@ -212,11 +225,12 @@ fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKno
             }
         }
     };
+    let source = KnownHostSource::Path(path);
     let parsed = parse::parse_known_hosts_file(&text)
         .into_iter()
         .filter_map(|entry| match entry {
             KnownHostsLine::Comment => None,
-            KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, path)),
+            KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, source)),
             KnownHostsLine::Failed(err) => {
                 error!(target: "duck::git", %err, ?path, "failed to parse a known_hosts line, ignoring...");
                 None
