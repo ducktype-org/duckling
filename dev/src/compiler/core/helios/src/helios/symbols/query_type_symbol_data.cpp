@@ -160,9 +160,9 @@ namespace compiler::helios {
 				comparison != defgen::COMPARISON_METHODS.end(), "Expected a comparison symbol"
 			);
 
-			const auto method_type
-				= ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+			const auto method_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
 			if (method_type.getKind() != tsh::Kind::Function) return tsh::MemberSpecialKind::None;
+
 			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
 			const auto& params  = fn_type.getParameterTypes();
 			// The parameters are `self` and the right-hand side.
@@ -176,13 +176,14 @@ namespace compiler::helios {
 			switch (kind(sym)) {
 			case SymbolKind::Destructor:
 				return tsh::MemberSpecialKind::UserDestructor;
-			case SymbolKind::Constructor:
+			case SymbolKind::Constructor: {
 				CORE_ASSERT(
 					name(sym) == "copy",
 					"The only supported constructor in the class is copy constructor"
 				);
 				return tsh::MemberSpecialKind::CopyConstructor;
-			case SymbolKind::Method:
+			}
+			case SymbolKind::Method: {
 				if (name(sym) == "toString") {
 					const auto method_type
 						= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
@@ -195,7 +196,15 @@ namespace compiler::helios {
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}
-				return comparisonSpecialKind(ctx, sym);
+				const auto* const comparison = std::ranges::find(
+					defgen::COMPARISON_METHODS,
+					name(sym).strView(),
+					&defgen::ComparisonMethodInfo::spelling
+				);
+				if (comparison != defgen::COMPARISON_METHODS.end())
+					return comparisonSpecialKind(ctx, sym);
+				return tsh::MemberSpecialKind::None;
+			}
 			default:
 				return tsh::MemberSpecialKind::None;
 			}
