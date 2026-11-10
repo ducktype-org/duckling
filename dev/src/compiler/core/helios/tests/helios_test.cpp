@@ -3891,6 +3891,31 @@ private:
 		expect_inline_deref(condition_at(boxed_less, 2), BuiltinBinary::IntegerLt);
 		expect_inline_deref(condition_at(boxed_less, 3), BuiltinBinary::IntegerLt);
 		expect_returns(boxed_less, false);
+
+		// These comparisons are only generated, not checked.
+		for (const auto* fn_name:
+		     { "floatsEqual", "floatsNotEqual", "floatsLess", "floatsGreater", "typesNotEqual" })
+			body_of(operator_called_from(getChain(fn_name, root_scope).back()));
+
+		// Values of simple types are compared with builtin operations in user code, so their
+		// generated comparison methods are only generated when queried directly.
+		using compiler::helios::defgen::ComparisonKind;
+		const std::vector<std::pair<compiler::tsh::AbstractType, ComparisonKind>> simple_comparisons{
+			{ getIntegralTypeNoContext(64, Signed), ComparisonKind::LesserEqual },
+			{ getIntegralTypeNoContext(64, Signed), ComparisonKind::GreaterEqual },
+			{ getFloatTypeNoContext(64), ComparisonKind::LesserEqual },
+			{ getFloatTypeNoContext(64), ComparisonKind::GreaterEqual },
+			{ compiler::tsh::getUnitType(), ComparisonKind::Equal },
+		};
+		for (const auto& [type, kind]: simple_comparisons) {
+			const auto sym = base::anyCast<SymID>(
+				query::utils::withContextCompute([&](query::Context& ctx) {
+					return compiler::helios::defgen::generatedComparisonSymForType(ctx, type, kind);
+				})
+			);
+			query::entryPoint<compiler::helios::defgen::QueryGeneratedComparisonMethod>(sym)
+				->valueOrPanic();
+		}
 	}
 
 	void testScopeParentsAndDepth() {

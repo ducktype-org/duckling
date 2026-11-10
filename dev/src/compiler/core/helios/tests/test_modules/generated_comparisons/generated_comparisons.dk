@@ -65,3 +65,23 @@ fun boxedEqual(x: Boxed, y: Boxed) -> bool = {
 fun boxedLess(x: Boxed, y: Boxed) -> bool = {
     return x < y;
 }
+
+fun floatsEqual(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a == b;
+}
+
+fun floatsNotEqual(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a != b;
+}
+
+fun floatsLess(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a < b;
+}
+
+fun floatsGreater(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a > b;
+}
+
+fun typesNotEqual() -> bool = {
+    return (i32, i64) != (i64, i32);
+}
