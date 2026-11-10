@@ -12,9 +12,51 @@ use std::fmt;
 
 use base64::prelude::*;
 use thiserror::Error;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 use super::{HashedHostname, Hostname, KnownHostEntry, KnownHostsLine, Marker, NormalHostname};
+
+/// Known bundled keys. Resources:
+/// * github:
+///   <https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints>,
+///   last access: 10-09-2026.
+/// * gitlab:
+///   <https://docs.gitlab.com/user/gitlab_com#ssh-known_hosts-entries>
+///   last access: 10-09-2026.
+///
+/// Format is `(host, keytype, key)`.
+const BUNDLED_KEYS: &[(&str, &str, &str)] = &[
+    (
+        "github.com",
+        "ssh-ed25519",
+        "AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl",
+    ),
+    (
+        "github.com",
+        "ecdsa-sha2-nistp256",
+        "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=",
+    ),
+    (
+        "github.com",
+        "ssh-rsa",
+        "AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=",
+    ),
+    (
+        "gitlab.com",
+        "ssh-ed25519",
+        "AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf",
+    ),
+    (
+        "gitlab.com",
+        "ssh-rsa",
+        "AAAAB3NzaC1yc2EAAAADAQABAAABAQCsj2bNKTBSpIYDEGk9KxsGh3mySTRgMtXL583qmBpzeQ+jqCMRgBqB98u3z++J1sKlXHWfM9dyhSevkMwSbhoR8XIq/U0tCNyokEi/ueaBMCvbcTHhO7FcwzY92WK4Yt0aGROY5qX2UKSeOvuP4D6TPqKF1onrSzH9bx9XUf2lEdWT/ia1NEKjunUqu1xOB/StKDHMoX4/OKyIzuS0q/T1zOATthvasJFoPrAjkohTyaDUz2LN5JoH839hViyEG82yB+MjcFV5MU3N1l1QL3cVUCh93xSaua1N85qivl+siMkPGbO5xR/En4iEY6K2XPASUEMaieWVNTRCtJ4S8H+9",
+    ),
+    (
+        "gitlab.com",
+        "ecdsa-sha2-nistp256",
+        "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFSMqzJeV9rUzU4kWitGjeR4PWSa29SPqJ1fVkhtj3Hw9xjLVXVYrU9QlYWrOLXBpQ6KWjbjTDTdDkoohFzgbEY=",
+    ),
+];
 
 /// Marker indicating a certification authority (CA) key.
 const CA_MARKER: &str = "@cert-authority";
@@ -99,6 +141,23 @@ pub fn parse_known_hosts_file(file: &str) -> Vec<KnownHostsLine> {
         .map(|line| match parse_known_hosts_line(line) {
             Ok(line) => line,
             Err(err) => KnownHostsLine::Failed(err),
+        })
+        .collect()
+}
+
+/// Get bundled known hosts keys.
+pub fn get_bundled_keys() -> Vec<KnownHostEntry> {
+    BUNDLED_KEYS
+        .iter()
+        .filter_map(|(host, keytype, key)| {
+            let line = format!("{host} {keytype} {key}");
+            match parse_known_hosts_line(&line) {
+                Ok(KnownHostsLine::Entry(entry)) => Some(entry),
+                other => {
+                    error!(?other, "failed to parse a bundled known_hosts entry");
+                    None
+                }
+            }
         })
         .collect()
 }
@@ -551,6 +610,16 @@ cvs.example.net,192.0.2.10 {KEY_TYPE} {KEY}
                     DUCKLING,
                 ),
             ]
+        );
+    }
+
+    #[test]
+    fn bundled_keys_parse() {
+        let parsed = get_bundled_keys();
+        assert_eq!(
+            parsed.len(),
+            BUNDLED_KEYS.len(),
+            "some lines failed to parse"
         );
     }
 }

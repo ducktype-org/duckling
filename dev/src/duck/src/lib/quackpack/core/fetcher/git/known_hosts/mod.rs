@@ -18,6 +18,7 @@ use git2::CertificateCheckStatus;
 use git2::cert::Cert;
 use tracing::{debug, error, info, trace, warn};
 
+use self::parse::get_bundled_keys;
 use crate::DuckContext;
 
 mod accept;
@@ -50,7 +51,10 @@ pub fn check_certificate(
     let files = get_known_hosts_files(ctx);
     debug!(target: "duck::git", ?files, ?host, ?hostkey, ?host_type);
     let entries = {
-        let mut buffer = vec![];
+        let mut buffer = get_bundled_keys()
+            .into_iter()
+            .map(|entry| (entry, KnownHostSource::Bundled))
+            .collect();
         for file in &files {
             parse_single_known_hosts_file(file, &mut buffer);
         }
@@ -183,7 +187,13 @@ enum Marker {
     Revoked,
 }
 
-type TrackedKnownHostEntry<'a> = (KnownHostEntry, &'a Path);
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum KnownHostSource<'a> {
+    Path(&'a Path),
+    Bundled,
+}
+
+type TrackedKnownHostEntry<'a> = (KnownHostEntry, KnownHostSource<'a>);
 
 /// Get paths to the `known_hosts` files.
 fn get_known_hosts_files(ctx: &DuckContext) -> Vec<PathBuf> {
@@ -212,11 +222,12 @@ fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKno
             }
         }
     };
+    let source = KnownHostSource::Path(path);
     let parsed = parse::parse_known_hosts_file(&text)
         .into_iter()
         .filter_map(|entry| match entry {
             KnownHostsLine::Comment => None,
-            KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, path)),
+            KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, source)),
             KnownHostsLine::Failed(err) => {
                 error!(target: "duck::git", %err, ?path, "failed to parse a known_hosts line, ignoring...");
                 None
