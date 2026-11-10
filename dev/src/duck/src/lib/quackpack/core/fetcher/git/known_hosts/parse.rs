@@ -149,14 +149,11 @@ pub fn parse_known_hosts_file(file: &str) -> Vec<KnownHostsLine> {
 pub fn get_bundled_keys() -> Vec<KnownHostEntry> {
     BUNDLED_KEYS
         .iter()
-        .filter_map(|(host, keytype, key)| {
+        .map(|(host, keytype, key)| {
             let line = format!("{host} {keytype} {key}");
             match parse_known_hosts_line(&line) {
-                Ok(KnownHostsLine::Entry(entry)) => Some(entry),
-                other => {
-                    error!(?other, "failed to parse a bundled known_hosts entry");
-                    None
-                }
+                Ok(KnownHostsLine::Entry(entry)) => entry,
+                other => unreachable!("bundled keys are valid, but got: {other:?}"),
             }
         })
         .collect()
