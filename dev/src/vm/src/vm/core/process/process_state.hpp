@@ -17,6 +17,7 @@
  */
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -142,7 +143,7 @@ namespace vm {
 
 		/// Adds a thread in the `NotStarted` state with a zeroed counter.
 		void registerThread(api::ThreadID tid) {
-			threads.insert_or_assign(
+			threads.insertOrAssign(
 				tid,
 				ThreadEntry{
 					.state                = thread_state::NotStarted{},
@@ -193,7 +194,7 @@ namespace vm {
 			if (first_panic_err.has_value()) return Panicked{ *first_panic_err };
 
 			const bool any_started_active = std::ranges::any_of(threads, [](const auto& p) {
-				return ts::isActive(p.second.state);
+				return ts::isActive(p.value.state);
 			});
 
 			// Stop in progress.
@@ -201,7 +202,7 @@ namespace vm {
 				return any_started_active ? ProcessState{ Stopping{} } : ProcessState{ Stopped{} };
 
 			const bool any_started = std::ranges::any_of(threads, [](const auto& p) {
-				return ts::hasStarted(p.second.state);
+				return ts::hasStarted(p.value.state);
 			});
 
 			// Nothing started.

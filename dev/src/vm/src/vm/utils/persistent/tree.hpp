@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -460,7 +461,7 @@ namespace vm::persistent::detail {
 			if (!is_new) return node;
 
 			next_node_id++;
-			branch_info.emplace(
+			branch_info.put(
 				node,
 				BranchEntry{
 					.size        = getSize(left) + getSize(right),
@@ -488,7 +489,7 @@ namespace vm::persistent::detail {
 			if (!is_new) return node;
 
 			next_node_id++;
-			branch_info.emplace(
+			branch_info.put(
 				node,
 				BranchEntry{
 					.size        = 1,

@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
