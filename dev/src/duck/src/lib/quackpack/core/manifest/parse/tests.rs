@@ -1910,7 +1910,7 @@ metadata:
 
 #[test]
 fn old_links_field_is_an_error() {
-    let (_dir, manifest_path) = prepare_manifest(
+    let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: foo
@@ -1920,38 +1920,84 @@ metadata:
     );
     let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    assert!(
-        err.to_string()
-            .contains("`metadata.links` is no longer supported"),
-        "{err}"
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `metadata`",
+                "failed to parse the field `metadata.links`",
+                "`metadata.links` is no longer supported",
+                "list the library names in `metadata.external-libs` instead",
+            ]
+        )
     );
 }
 
+/// Parse a manifest whose `external-libs` is `[<name>]`, and check that it fails with `note`.
+fn check_invalid_external_lib_name(name: &str, note: &str) {
+    let (dir, manifest_path) = prepare_manifest(&format!(
+        "metadata:\n  name: foo\n  version: '1'\n  external-libs: [{name}]\n"
+    ));
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    let unquoted_name = name.trim_matches('\'');
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `metadata`",
+                "failed to parse the field `metadata.external-libs`",
+                &format!("invalid external library name `{unquoted_name}`"),
+                note,
+                "use the bare library name (e.g. `sqlite3` for `libsqlite3.a`) and put its directory in `metadata.external-lib-paths`",
+            ]
+        )
+    );
+}
+
+const LIB_PREFIX_NOTE: &str =
+    "the `lib` prefix is added when the library is searched for, so it must not be in the name";
+const EXTENSION_NOTE: &str =
+    "the file extension is added when the library is searched for, so it must not be in the name";
+
 #[test]
-fn invalid_external_lib_names() {
-    let cases = [
-        ("''", "it is empty"),
-        ("libs/foo", "it looks like a path"),
-        ("libsqlite3", "it starts with `lib`"),
-        ("sqlite3.a", "it ends with a file extension"),
-        ("sqlite3.so", "it ends with a file extension"),
-        ("sqlite3.so.0", "it ends with a file extension"),
-        ("sqlite3.dylib", "it ends with a file extension"),
-    ];
-    for (name, problem) in cases {
-        let (_dir, manifest_path) = prepare_manifest(&format!(
-            "metadata:\n  name: foo\n  version: '1'\n  external-libs: [{name}]\n"
-        ));
-        let ctx = DuckContext::default();
-        let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-        let message = err.to_string();
-        assert!(
-            message.contains("invalid external library name"),
-            "{message}"
-        );
-        assert!(
-            message.contains(&format!(": {problem}\n")),
-            "{name}: {message}"
-        );
-    }
+fn external_lib_name_empty() {
+    check_invalid_external_lib_name("''", "the name is empty");
+}
+
+#[test]
+fn external_lib_name_is_a_path() {
+    check_invalid_external_lib_name("libs/foo", "the name looks like a path");
+}
+
+#[test]
+fn external_lib_name_with_lib_prefix() {
+    check_invalid_external_lib_name("libsqlite3", LIB_PREFIX_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_static_extension() {
+    check_invalid_external_lib_name("sqlite3.a", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_shared_extension() {
+    check_invalid_external_lib_name("sqlite3.so", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_versioned_shared_extension() {
+    check_invalid_external_lib_name("sqlite3.so.0", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_dylib_extension() {
+    check_invalid_external_lib_name("sqlite3.dylib", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_dll_extension() {
+    check_invalid_external_lib_name("sqlite3.dll", EXTENSION_NOTE);
 }

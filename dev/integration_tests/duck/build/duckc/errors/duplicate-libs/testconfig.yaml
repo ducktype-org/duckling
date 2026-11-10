@@ -3,7 +3,7 @@ PreCase: |+
   @{duck-exe} init foo
   @{duck-exe} init bar
   echo "  external-libs: [sqlite]" >> foo/quackconfig.yaml
-  echo "  external-libs: [z, sqlite]" >> bar/quackconfig.yaml
+  echo "  external-libs: [only-in-bar, sqlite]" >> bar/quackconfig.yaml
   @{duck-exe} -C foo add bar --local ../bar
 Tests:
   duplicate-libs:

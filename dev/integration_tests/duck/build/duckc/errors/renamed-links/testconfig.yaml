@@ -14,6 +14,12 @@ Tests:
             echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
 
               Caused by:
+                failed to parse the field \`metadata\`
+
+              Caused by:
+                failed to parse the field \`metadata.links\`
+
+              Caused by:
                 \`metadata.links\` is no longer supported
 
             hint: list the library names in \`metadata.external-libs\` instead"

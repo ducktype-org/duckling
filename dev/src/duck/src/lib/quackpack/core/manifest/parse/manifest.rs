@@ -156,7 +156,9 @@ pub(crate) fn parse(
                 description: metadata.description.as_ref().map(<&String>::into),
             };
 
-            let build_options = parse_build_options(metadata)?;
+            let mut guard = scope.push("metadata".into());
+            let build_options = parse_build_options(metadata, &mut guard)
+                .with_context(move || guard.make_context_string())?;
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -265,27 +267,34 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }
 
-/// Parse a [`BuildOptions`] from the schema.
-fn parse_build_options(input: &MetadataSchema) -> QuackResult<BuildOptions> {
+/// Parse a [`BuildOptions`] from the `metadata` part of the schema.
+fn parse_build_options(
+    input: &MetadataSchema,
+    scope: &mut ScopeGuard<'_>,
+) -> QuackResult<BuildOptions> {
     if input.links.is_some() {
+        let guard = scope.push("links".into());
         let mut err = qp_err!("`metadata.links` is no longer supported");
         err.add_hint("list the library names in `metadata.external-libs` instead");
-        qp_bail!(err);
+        return Err(err).with_context(move || guard.make_context_string());
     }
-    let external_libs = input
-        .external_libs
-        .iter()
-        .flatten()
-        .map(StrId::from)
-        .collect::<Vec<_>>();
-    for lib in &external_libs {
-        validate_external_lib_name(lib.as_str())?;
-    }
+    let guard = scope.push("external-libs".into());
+    let external_libs = parse_external_libs(input.external_libs.as_deref())
+        .with_context(move || guard.make_context_string())?;
     let external_lib_paths = input.external_lib_paths.clone().unwrap_or_default();
     Ok(BuildOptions {
         external_libs,
         external_lib_paths,
     })
+}
+
+/// Parse the `metadata.external-libs` list, checking that every entry is a bare library name.
+fn parse_external_libs(input: Option<&[String]>) -> QuackResult<Vec<StrId>> {
+    input
+        .unwrap_or_default()
+        .iter()
+        .map(|name| validate_external_lib_name(name).map(|()| StrId::from(name)))
+        .collect()
 }
 
 /// File name extensions that do not belong in an external library's name.
@@ -294,26 +303,23 @@ const EXTERNAL_LIB_EXTENSIONS: [&str; 5] = [".a", ".so", ".dylib", ".dll", ".lib
 /// Check that `name` is a bare library name, like `sqlite3`: not empty, not a path, and without
 /// the `lib` prefix or a file extension, because those are added when the library is searched for.
 fn validate_external_lib_name(name: &str) -> QuackResult<()> {
-    let problem = if name.is_empty() {
-        Some("it is empty")
+    let note = if name.is_empty() {
+        "the name is empty"
     } else if name.chars().any(std::path::is_separator) {
-        Some("it looks like a path")
+        "the name looks like a path"
     } else if name.starts_with("lib") {
-        Some("it starts with `lib`")
+        "the `lib` prefix is added when the library is searched for, so it must not be in the name"
     } else if EXTERNAL_LIB_EXTENSIONS
         .iter()
         .any(|extension| name.ends_with(extension))
         || name.contains(".so.")
     {
-        Some("it ends with a file extension")
+        "the file extension is added when the library is searched for, so it must not be in the name"
     } else {
-        None
-    };
-    let Some(problem) = problem else {
         return Ok(());
     };
-    let mut err =
-        qp_err!("invalid external library name `{name}` in `metadata.external-libs`: {problem}");
+    let mut err = qp_err!("invalid external library name `{name}`");
+    err.add_note(note);
     err.add_hint(
         "use the bare library name (e.g. `sqlite3` for `libsqlite3.a`) and put its directory in `metadata.external-lib-paths`",
     );
