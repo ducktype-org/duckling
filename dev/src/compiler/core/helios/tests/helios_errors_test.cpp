@@ -261,12 +261,16 @@ private:
 
 		// ============================ Function calls ============================
 		{
+			// The "declared here" note must start at the function name (column 9 here), not at
+			// the parameter list (column 10).
 			checkForErrorOnCompileModule(
 				R"(
 				fun a(x: i32) -> i32 = 0;
 				fun b() = a(1.0);
 			)",
-				{ "given argument type `f32` cannot be converted", "Function declared here." },
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:2:9\n" },
 				1
 			);
 
@@ -275,7 +279,26 @@ private:
 				fundecl a(x: i32) -> i32;
 				fun b() = a(1.0);
 			)",
-				{ "given argument type `f32` cannot be converted", "Function declared here." },
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:2:13\n" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class P {
+					x: i64;
+					fun m(y: i32) = {}
+				}
+				fun b() = {
+					var p = P(x=1);
+					p.m(1.0);
+				}
+			)",
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:4:10\n" },
 				1
 			);
 
