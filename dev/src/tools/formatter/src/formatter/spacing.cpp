@@ -16,23 +16,16 @@ namespace formatter {
 
 		bool isStr(const Token& t, std::string_view s) { return sv(t) == s; }
 
-		/** `fun` or `fundecl`: the keywords that open a function declaration. */
-		bool isFunKeyword(const Token& t) {
-			return isKeyword(t) && (isStr(t, "fun") || isStr(t, "fundecl"));
-		}
-
-		/** The `prefix`/`suffix` marker of a custom operator: `fun prefix -*(...)`. */
-		bool isFixityMarker(const Token& t, const Token* before) {
-			return before != nullptr && isFunKeyword(*before) && !isKeyword(t)
-			    && (isStr(t, "prefix") || isStr(t, "suffix"));
-		}
-
 		/** The `::` operator binds both of its sides: `variadic::sum(...)`. */
 		bool isScopeOperator(const Token& t) { return isOperator(t) && isStr(t, "::"); }
 	}
 
 	bool needSpace(
-		const FormatConfig& config, const Token* prev, const Token& cur, const Token* prev2
+		const FormatConfig& config,
+		const Token*        prev,
+		const Token&        cur,
+		const Token*        prev2,
+		const Token*        prev3
 	) {
 		if (prev == nullptr) return false;
 
@@ -73,8 +66,9 @@ namespace formatter {
 				if (isKeyword(*prev) && isStr(*prev, "template")) return false;
 				// A custom operator used as the declared name: `fun +*(a, b)`,
 				// `fun prefix -*(a)`, `fundecl suffix **(a)`.
+				// A variable named `prefix` is no marker: `prefix - (a + b)` keeps its space.
 				if (isOperator(*prev) && prev2 != nullptr
-				    && (isFunKeyword(*prev2) || isStr(*prev2, "prefix") || isStr(*prev2, "suffix")))
+				    && (isFunKeyword(*prev2) || isFixityMarker(*prev2, prev3)))
 					return false;
 				// A keyword used as a member name is a method call: `Counter.destroy()`.
 				if (isKeyword(*prev) && prev2 != nullptr && isMemberAccessOperator(*prev2))

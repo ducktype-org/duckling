@@ -88,8 +88,10 @@ namespace formatter {
 			const Token& after = tokens[next];
 			if (onSameSourceLine(t, after)) return false;
 			// A new declaration or statement, an attribute or a comment starts the next line.
-			return isKeyword(after) || after.getType() == Token::Type::Identifier
-			    || isComment(after) || (isSpecial(after) && isStr(after, "@"));
+			// Not a keyword that joins onto the expression before it, though: `== {1, 2}\n and b`.
+			return (isKeyword(after) && !isContinuationKeyword(after))
+			    || after.getType() == Token::Type::Identifier || isComment(after)
+			    || (isSpecial(after) && isStr(after, "@"));
 		}
 
 		/**

@@ -195,6 +195,9 @@ private:
 			{ "fun prefix -* (v: i64) -> i64;", "fun prefix -*(v: i64) -> i64;\n" },
 			{ "fun suffix ++(v: i64) -> i64;", "fun suffix ++(v: i64) -> i64;\n" },
 			{ "fundecl suffix ** (a: i64) -> i64;", "fundecl suffix **(a: i64) -> i64;\n" },
+			// Only after `fun`/`fundecl`: a variable named `prefix` keeps the operator spaced.
+			{ "x = prefix - (a + b);", "x = prefix - (a + b);\n" },
+			{ "let s = suffix + (n * 2);", "let s = suffix + (n * 2);\n" },
 			// A custom suffix operator binds to its operand, before `;`, `,` or `)`.
 			{ "let w = fw -;", "let w = fw-;\n" },
 			{ "f(a -*, b);", "f(a-*, b);\n" },
@@ -231,6 +234,11 @@ private:
 			{ "return * (* p);", "return *(*p);\n" },
 			{ "pattern T(b: ref B) -> ref D = &b.data;",
 		      "pattern T(b: ref B) -> ref D = &b.data;\n" },
+			// After a value or type keyword the operator is binary, not unary.
+			{ "x = self * 2;", "x = self * 2;\n" },
+			{ "x = true - 1;", "x = true - 1;\n" },
+			{ "x = a as i64 - 1;", "x = a as i64 - 1;\n" },
+			{ "x = (c as i64 - '0' as i64);", "x = (c as i64 - '0' as i64);\n" },
 			// `?` is a prefix type operator: `?i32` is an optional i32.
 			{ "pattern S(r: ref R) -> ?i32 = none;", "pattern S(r: ref R) -> ?i32 = none;\n" },
 		});
@@ -719,6 +727,10 @@ fun f() = {
 		// An empty body ends its declaration when a line break follows it.
 		check("class A {}\nclass B {}", "class A {}\nclass B {}\n");
 		check("fun f() = {}\n\nfun g() = {}", "fun f() = {}\n\nfun g() = {}\n");
+		check("if (a) {}\nif (b) {}", "if (a) {}\nif (b) {}\n");
+		// An `and`/`or` on the next line continues the expression the literal is part of.
+		check("let ok = c == {1, 2}\n\tand other;", "let ok = c == {1, 2} and other;\n");
+		check("let ok = c == {1, 2}\n\tor other;", "let ok = c == {1, 2} or other;\n");
 	}
 
 	/** An over-long line comment re-flows at word boundaries, repeating its prefix. */
