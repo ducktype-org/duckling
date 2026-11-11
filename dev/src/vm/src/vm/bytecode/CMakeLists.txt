@@ -1,4 +1,4 @@
-add_files(
+set_files(
     bytecode.cpp
     instructions.cpp
     flags.cpp

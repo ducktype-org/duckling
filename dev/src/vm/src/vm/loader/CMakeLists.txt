@@ -1,4 +1,4 @@
-add_files(loader.cpp
+set_files(loader.cpp
           parser/elements.cpp
           parser/parser.cpp
           compiler/ivm_compiler.cpp
