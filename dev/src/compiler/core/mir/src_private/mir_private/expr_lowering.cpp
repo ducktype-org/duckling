@@ -535,7 +535,7 @@ namespace compiler::mir {
 			const auto counter_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 			auto counter
-				= function.addTmp(tsh::SymbolType<>::withDefaults(counter_type), expr_scope);
+				= function.addTmp(tsh::SymbolType<>::withDefaultsMut(counter_type), expr_scope);
 
 			auto counter_constant = [&](usize constant) {
 				return MIRValue{ MIRConstant{
@@ -848,7 +848,7 @@ namespace compiler::mir {
 
 
 				if (projects_payload) {
-					const auto pointer_type = tsh::SymbolType<>::withDefaults(
+					const auto pointer_type = tsh::SymbolType<>::withDefaultsMut(
 						function.getContext().query<tsh::QueryPointerType>({ alternative_type.value(
 						) })
 					);
@@ -932,9 +932,7 @@ namespace compiler::mir {
 
 			if (subject_is_direct) {
 				assign_ref_subject = first_entry.value()->addHole();
-				ref_subject_local  = function.addTmp(
-                    subject_type.withReferenceKind(tsh::ReferenceKind::Ref), expr_scope
-                );
+				ref_subject_local  = function.addTmp(subject_type.toRef(), expr_scope);
 			}
 
 			auto       assign_subject = first_entry.value()->addHole();
@@ -1487,7 +1485,7 @@ namespace compiler::mir {
 
 	private:
 		static MIRValue unitTypeConstant() {
-			return MIRValue{ MIRConstant{ tsh::SymbolType<>::withDefaults(tsh::getUnitType()) } };
+			return MIRValue{ MIRConstant{ tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType()) } };
 		}
 
 		/**
@@ -1511,7 +1509,7 @@ namespace compiler::mir {
 			case tsh::Kind::Tuple: {
 				auto tuple_tmp = function.addTmp(value_type, expr_scope);
 				auto result    = function.addTmp(
-                    tsh::SymbolType<>::withDefaults(tsh::getMetaType()), expr_scope
+                    tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
                 );
 
 				CORE_ASSERT(
@@ -1559,7 +1557,7 @@ namespace compiler::mir {
 					break;
 				case tsh::Kind::Tuple: {
 					auto nested_result = function.addTmp(
-						tsh::SymbolType<>::withDefaults(tsh::getMetaType()), expr_scope
+						tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
 					);
 					element_types.emplace_back(nested_result);
 					nested_tuples.emplace_back(field_place, nested_result);
@@ -1675,8 +1673,10 @@ namespace compiler::mir {
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateBox } };
 			case Ref:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateRef } };
-			case Const:
-				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateConst } };
+			case Mut:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateMut } };
+			case Imm:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateImm } };
 			case Ptr:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreatePtr } };
 			case ManyPtr:
@@ -1816,7 +1816,9 @@ namespace compiler::mir {
 			hole.fillNop(scope);
 			data.instr.output.emplace(target);
 			data.instr.flags.insert(data.instr.flags.end(), flags.begin(), flags.end());
-			data.instr.metadata = metadata;
+			// A store without a position (e.g. into the return value) must not erase the
+			// position the instruction already has, or a call there has no line of its own.
+			if (metadata.position.has_value()) data.instr.metadata = metadata;
 			data.hole.fill(data.instr);
 			value = target;
 		};

@@ -57,7 +57,7 @@ pub struct SyncOutput {
 }
 
 /// Synchronize virtual environment for package, and return information required to build it.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(skip_all)]
 pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
     emit_diagnostics_and_run_lint_passes(pcx)?;
@@ -138,7 +138,7 @@ pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResul
 /// Checks if the venv for which the sync is run was previously synced from a different location,
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
-#[tracing::instrument(level = "trace", skip_all, fields(%id))]
+#[tracing::instrument(skip_all, fields(%id))]
 fn check_if_overwrites(
     pcx: &PackageContext<'_>,
     venv: Option<&Venv>,
@@ -232,9 +232,9 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Creates [`Solver`] and runs it.
-fn get_solver_answer(
-    pcx: &PackageContext<'_>,
-    fetcher: &Fetcher<'_>,
+fn get_solver_answer<'duck>(
+    pcx: &PackageContext<'duck>,
+    fetcher: &Fetcher<'duck>,
     git_access: StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,

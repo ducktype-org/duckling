@@ -10,7 +10,7 @@
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/element_kind.hpp>
+#include <frontend/pst_parser/elements/common/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <global_state/packages.hpp>
@@ -32,6 +32,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 
 #include <hashing/hash.hpp>
 #include <logger/logger.hpp>
@@ -643,7 +644,7 @@ namespace compiler::helios::mangler {
 							// distinguishes the implicit, default and copy constructors.
 							const auto mangled_type
 								= ctx.query<QueryMangledType>(
-										 tsh::SymbolType<>::withDefaults(ctor.type)
+										 tsh::SymbolType<>::withDefaultsMut(ctor.type)
 								)
 							          ->valueOrThrow()
 							          .str();

@@ -1,0 +1,35 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "field_binding_keyword"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the `let` or `var` keyword."
+  keyword:
+    description: "The keyword written before the field name, `let` or `var`."
+
+header_message:
+  - "Class fields are declared without `let` or `var`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "A field takes its mutability from its type. Write `x: T` for a field that can be changed and `x: imm T` for an immutable one."
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "remove `"
+      - param: "keyword"
+      - "` here"

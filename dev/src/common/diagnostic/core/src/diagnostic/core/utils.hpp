@@ -15,6 +15,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -133,6 +134,4 @@ namespace dia {
 		for (auto& [key, val]: data.items()) res.put(key, fun(val));
 		return res;
 	}
-
-
 }

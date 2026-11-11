@@ -10,7 +10,9 @@ duck_add_playground(init init_playground.cpp USES Init)
 target_link_libraries(clah_example_cat Base Clah)
 
 duck_add_playground(llvm_example llvm_example_playground.cpp USES)
-llvm_map_components_to_libnames(llvm_libs
+
+target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
+duck_llvm_libs(llvm_libs
     Core
     ExecutionEngine
     Interpreter
@@ -18,7 +20,6 @@ llvm_map_components_to_libnames(llvm_libs
     MCJIT
     Support
     nativecodegen)
-target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
 
 duck_add_playground(ffi ffi_playground.cpp USES Base PkgConfig::LIBFFI)

@@ -23,7 +23,7 @@
 
 #include <abi/type_system/type.hpp>
 #include <ctv/numeric_value.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -291,8 +291,10 @@ namespace compiler::lir {
 				return lir::MetaKind::CreateBox;
 			case CreateRef:
 				return lir::MetaKind::CreateRef;
-			case CreateConst:
-				return lir::MetaKind::CreateConst;
+			case CreateMut:
+				return lir::MetaKind::CreateMut;
+			case CreateImm:
+				return lir::MetaKind::CreateImm;
 			case CreatePtr:
 				return lir::MetaKind::CreatePtr;
 			case CreateManyPtr:
@@ -1287,12 +1289,8 @@ namespace compiler::lir {
 		const base::StrID&                 mangled_name
 	) {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
-			.parameter_types={},
-			.result_type=tsh::SymbolType{
-				tsh::getUnitType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			},
+			.parameter_types = {},
+			.result_type     = tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
 		});
 
 		auto layouts = getFunctionLayouts(ctx, function_type);

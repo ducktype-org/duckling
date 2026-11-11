@@ -524,6 +524,7 @@ dependencies = [
 name = "duck"
 version = "0.3.0"
 dependencies = [
+ "base64",
  "chrono",
  "clap",
  "clap_complete",
@@ -533,6 +534,7 @@ dependencies = [
  "flate2",
  "futures",
  "git2",
+ "hmac",
  "http",
  "httpmock",
  "itertools 0.15.0",
@@ -550,6 +552,7 @@ dependencies = [
  "serde_ignored",
  "serde_json",
  "serde_yaml_ng",
+ "sha1",
  "sha2 0.11.0",
  "tar",
  "tempfile",

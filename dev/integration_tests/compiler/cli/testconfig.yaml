@@ -134,6 +134,24 @@ Tests:
           && test ! -e @{case_build}/package_dvm.dbc
         ExitCode: 0
 
+  compile-module-asm-syntax:
+    Enabled: '[ "$(uname -m)" = x86_64 ]'
+    PreCase: "@{copy_std_artifacts}"
+    assembly: "@{case_build}/duck_debug_artifacts/syntax.inferred_name.s"
+    Run: >-
+      @{duckc_path} compile_module ./duck_modules/inferred_name/inferred_name.dk
+      --name syntax -a @{case_build} --no-incremental --dump-ir asm --asm-syntax @{dialect}
+      --custom-std-artifacts-path @{case_std_artifacts}
+      && test -s "@{assembly}"
+      && test "$(grep -Fc '.intel_syntax noprefix' "@{assembly}")" -eq @{intel_directives}
+    Cases:
+      intel:
+        dialect: intel
+        intel_directives: "1"
+      att:
+        dialect: att
+        intel_directives: "0"
+
   compile-script-dump-ir:
     # Compile once per backend and check every dump plus the linked output.
     PreCase: "@{copy_std_artifacts}"
@@ -143,8 +161,11 @@ Tests:
       --dump-ir @{dump_categories} -a @{case_build} \
       --custom-std-artifacts-path @{case_std_artifacts} || exit 1
 
+      # Use the exact module stem so the .ll check does not also match .opt.ll.
+      lir_dump="$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' -print -quit)"
+      module_name="$(basename "$lir_dump" .lir)"
       for extension in @{dump_extensions}; do
-        pattern="script_module_*.$extension"
+        pattern="$module_name.$extension"
         test "$(find @{case_build}/duck_debug_artifacts -type f -name "$pattern" | wc -l)" -eq 1 || exit 1
         dump="$(find @{case_build}/duck_debug_artifacts -type f -name "$pattern" -print -quit)"
         test -s "$dump" || exit 1
@@ -157,14 +178,13 @@ Tests:
         awk '/4242/ && !a {a=NR} /1234/ && !b {b=NR} /7777/ && !c {c=NR} END {exit !(a && b && c && a < b && b < c)}' "$dump" || exit 1
       done
 
-      lir_dump="$(find @{case_build}/duck_debug_artifacts -type f -name 'script_module_*.lir' -print -quit)"
       grep -q 'foo' "$lir_dump" || exit 1
       test -s "@{case_build}/foo.@{output_extension}"
     Cases:
       llvm:
         backend_flags: ""
-        dump_categories: "hir,mir,lir,llvm,asm"
-        dump_extensions: "hir mir lir ll s"
+        dump_categories: "hir,mir,lir,llvm,llvm-opt,asm"
+        dump_extensions: "hir mir lir ll opt.ll s"
         output_extension: "exe"
         ExitCode: 0
       dvm:
@@ -183,7 +203,7 @@ Tests:
             for option in artifact-location dump-ir print-ir; do
               grep -Eq "^[[:space:]]+(-[[:alnum:]], +)?--$option([[:space:]]|$)" "$DIT_TMP_DIR/help" || exit 1;
             done;
-            grep -Fq 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), asm (.s), and dbc (.dbc)' "$DIT_TMP_DIR/help" || exit 1;
+            grep -Fq 'hir (.hir), mir (.mir), lir (.lir), llvm (.ll), llvm-opt (.opt.ll), asm (.s), and dbc (.dbc)' "$DIT_TMP_DIR/help" || exit 1;
           done
         ExitCode: 0
 
@@ -265,8 +285,8 @@ Tests:
     Cases:
       llvm-objects:
         backend_flags: ""
-        dump_categories: "hir,mir,lir,llvm,asm"
-        dump_extensions: "hir mir lir ll s"
+        dump_categories: "hir,mir,lir,llvm,llvm-opt,asm"
+        dump_extensions: "hir mir lir ll opt.ll s"
         object_extension: "o"
         output_file: "package_llvm.exe"
         ExitCode: 0

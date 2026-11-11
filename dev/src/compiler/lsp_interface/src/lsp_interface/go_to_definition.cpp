@@ -9,8 +9,8 @@
  * @brief This file defines the findDefinitions function
  */
 
-#include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
+#include <frontend/pst_parser/pst/pst.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <lsp_interface/go_to_definition.hpp>
 

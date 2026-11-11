@@ -6,7 +6,7 @@
 
 #include "dia_interactive_elements.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function_decl.hpp>
@@ -18,6 +18,8 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+
+#include <base/collections/hashmap.hpp>
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/placeholder.hpp>
@@ -119,25 +121,26 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Get source position from a PST element of a function-like character
-		 * (pst of a function, function declaration or class method). We want only the
-		 * name and parameters to be included in the source position. @TODO: #2521 fix this
+		 * (pst of a function, function declaration or class method). The position spans only
+		 * the name and the parameters, e.g. `a(x: i32)` in `fun a(x: i32) -> i32 = 0;`.
 		 */
 		dia::StablePosition getFunctionLikeSourcePosition(
 			query::Context& ctx, pst::Access<pst::LangElement> function_like
 		) {
+			auto name_and_params = [&ctx](const auto& function) {
+				auto name_pos = function->getName().unlock(ctx)->getStablePosition();
+				return name_pos.extendedWithSubsequentPos(
+					function->getParams().unlock(ctx)->getStablePosition()
+				);
+			};
+
 			switch (function_like->getElementKind()) {
-			case pst::ElementKind::Fun: {
-				auto fun = function_like.dynamicCast<pst::Fun>().value();
-				return fun->getParams().unlock(ctx)->getStablePosition();
-			}
-			case pst::ElementKind::FunDecl: {
-				auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
-				return fun_decl->getParams().unlock(ctx)->getStablePosition();
-			}
-			case pst::ElementKind::ClassMethod: {
-				auto class_method = function_like.dynamicCast<pst::Method>().value();
-				return class_method->getParams().unlock(ctx)->getStablePosition();
-			}
+			case pst::ElementKind::Fun:
+				return name_and_params(function_like.dynamicCast<pst::Fun>().value());
+			case pst::ElementKind::FunDecl:
+				return name_and_params(function_like.dynamicCast<pst::FunDecl>().value());
+			case pst::ElementKind::ClassMethod:
+				return name_and_params(function_like.dynamicCast<pst::Method>().value());
 			default:
 				CORE_PANIC(
 					"Expected a function, function-like or a method expected while getting "

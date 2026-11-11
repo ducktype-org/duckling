@@ -8,6 +8,7 @@
 
 #include "errors.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
@@ -567,7 +568,7 @@ class FunctionValidator {
 								if constexpr (requires { t.inheritance_metadata; }) {
 									if_opt_some(t.inheritance_metadata, inh_meta) {
 										for (const auto& vmethod: inh_meta.available_methods)
-											if (vmethod.first == method_name) valid = true;
+											if (vmethod.key == method_name) valid = true;
 									}
 								}
 							},
@@ -1800,16 +1801,16 @@ class FunctionValidator {
 
 	void preprocessLabels() {
 		auto register_jump = [&](const auto& instr) {
-			jumps_to_label.try_emplace(instr.label.label_name);
+			if (!jumps_to_label.contains(instr.label.label_name))
+				jumps_to_label.put(instr.label.label_name);
 			jumps_to_label.at(instr.label.label_name).push_back(instr);
 		};
 
 		for (usize index = 0; index < function.body.size(); index++) {
 			instr_match(function.body[index]) {
 				instr_case(Op_label, instr) {
-					auto [_, added]
-						= index_of_label.insert_or_assign(instr.label.label_name, index);
-					if (!added) throw DuplicatedLabelError(instr.label);
+					if (!index_of_label.maybePut(instr.label.label_name, index))
+						throw DuplicatedLabelError(instr.label);
 				}
 				instr_case(Op_jmp_label, instr) { register_jump(instr); }
 				instr_case(Op_jmpIf_label, instr) { register_jump(instr); }

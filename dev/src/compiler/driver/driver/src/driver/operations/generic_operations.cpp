@@ -40,6 +40,7 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
@@ -91,6 +92,14 @@ namespace compiler::driver {
 	}
 
 	namespace {
+		base::Optional<std::filesystem::path> getOptimizedLLVMOutputPath(base::StrID module_name) {
+			if (!dump_ir_options.dump_llvm_opt) return {};
+			auto artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+				base::StrID(base::strConcat(module_name.strView(), ".opt.ll"))
+			);
+			return artifact.file.getFilePath().getPath();
+		}
+
 		/**
 		 * @brief Handles the `--print-ir=dbc` and `--dump-ir=dbc` debug options for a module
 		 * compiled to DVM bytecode. The dump is written to the `duck_debug_artifacts` directory.
@@ -277,7 +286,9 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 					llvm_module.compile(
-						code_output.file.getFilePath(), backend_llvm::CompilationOutputType::Object
+						code_output.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object,
+						getOptimizedLLVMOutputPath(lir_data.module_id_human)
 					);
 				}
 				break;
@@ -400,8 +411,47 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
+		/**
+		 * @brief Where a statement of a script starts in the script file, 1-based. Each statement
+		 * is compiled from its own virtual file, so positions in it are relative to the statement.
+		 */
+		struct ScriptStatementStart final {
+			u64 line;
+			u64 column;
+		};
+
+		/// Keyed by the path of the statement's virtual file.
+		using ScriptStatementStarts = base::Map<std::string, ScriptStatementStart>;
+
+		/**
+		 * @brief Moves a position in the virtual file of a script statement to the same place in
+		 * the script file. Positions in any other file are returned unchanged.
+		 */
+		debug_info::FilePosition toScriptFilePosition(
+			debug_info::FilePosition     position,
+			const ScriptStatementStarts& statement_starts,
+			const std::string&           script_path
+		) {
+			if_opt_some(statement_starts.atMaybe(position.file_path), start) {
+				// Only the statement's first line is shifted right, the others start a line.
+				const auto shift = [&](u64& line, u64& column) {
+					if (line == 1) column += start->column - 1;
+					line += start->line - 1;
+				};
+				shift(position.start_line, position.start_column);
+				shift(position.end_line, position.end_column);
+				position.file_path = script_path;
+			}
+			return position;
+		}
+
+		/**
+		 * @brief Compiles the script of the global script context to one LIR unit, one statement
+		 * at a time.
+		 * @param statement_starts When given, receives where each statement starts in the script.
+		 */
 		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
-			query::Context& ctx
+			query::Context& ctx, ScriptStatementStarts* statement_starts = nullptr
 		) {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
@@ -465,12 +515,36 @@ namespace compiler::driver {
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
+			usize search_from = 0;
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createSyntheticChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_", session_id
 				);
 				auto module_id   = module_ref->getModuleID();
 				parent_module_id = module_id;
+
+				// The statements are verbatim pieces of the script, in order.
+				const auto statement_at = script_source.find(statement_source, search_from);
+				if (statement_starts != nullptr && statement_at != std::string::npos) {
+					search_from = statement_at + statement_source.size();
+
+					const auto before     = std::string_view(script_source).substr(0, statement_at);
+					const auto line_break = before.rfind('\n');
+					const auto line_begin
+						= line_break == std::string_view::npos ? 0 : line_break + 1;
+					const auto statement_file
+						= frontend::getFileRef(
+							  module_ref->getMainSourceFile().illegalAccess().getID()
+						)
+					          ->getFileIllegalAccess();
+					statement_starts->put(
+						statement_file.getFilePath().string(),
+						ScriptStatementStart{
+							.line   = 1 + static_cast<u64>(std::ranges::count(before, '\n')),
+							.column = 1 + statement_at - line_begin,
+						}
+					);
+				}
 
 				CORE_DEV_LOG(
 					REPL,
@@ -645,7 +719,8 @@ namespace compiler::driver {
 					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 					llvm_module.compile(
 						object_artifact.file.getFilePath(),
-						backend_llvm::CompilationOutputType::Object
+						backend_llvm::CompilationOutputType::Object,
+						getOptimizedLLVMOutputPath(script_lir->module_id)
 					);
 				}
 
@@ -765,13 +840,15 @@ namespace compiler::driver {
 		base::Optional<RunOutput>   output;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto script_lir = compileScriptToLIRModuleData(ctx);
+			ScriptStatementStarts statement_starts;
+			auto                  script_lir = compileScriptToLIRModuleData(ctx, &statement_starts);
 			if (!script_lir.has_value()) {
 				error_message = script_lir.error();
 				return;
 			}
 
-			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+			// With debug info, so that a panic's stack trace can show the script's lines.
+			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, true);
 
 			checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
 
@@ -792,6 +869,37 @@ namespace compiler::driver {
 				deduplicateCodeCollection(dvm_module.code);
 			}
 
+			// The Duckling names and source lines of the functions, so that a panic's stack trace
+			// can print them instead of the mangled names and bytecode positions. The standard
+			// library's come from its debug info files.
+			vm::api::FunctionSourceInfos function_source_info;
+			for (const auto& lir_function: script_lir->lir_unit.lir_functions) {
+				if_opt_some(lir_function->metadata.source_code_name, source_name) {
+					function_source_info.put(lir_function->mangled_name).first->second.name
+						= source_name.str();
+				}
+			}
+			if_opt_some(dvm_module.debug_info, script_debug_info) {
+				const auto script_path
+					= global_state::getScriptContext().script_file.getFilePath().string();
+				script_debug_info.resolvePositions(
+					[&](const debug_info::PstHashPostion& position) -> debug_info::FilePosition {
+						return toScriptFilePosition(
+							resolveDebugInfoPosition(ctx, position), statement_starts, script_path
+						);
+					}
+				);
+				vm::api::addFunctionSourceInfo(function_source_info, script_debug_info);
+			}
+			if (load_stdlib) {
+				for (const auto& art: getStdLibDebugInfoArtifacts()) {
+					// The info only makes the stack trace nicer, so a broken file is not an error.
+					(void) vm::api::addFunctionSourceInfoFromFile(
+						function_source_info, art.file.getFilePath()
+					);
+				}
+			}
+
 			auto run_result
 				= vm::api::spawn()
 			          .and_then(
@@ -810,6 +918,11 @@ namespace compiler::driver {
 							  });
 
 							  return vm::api::loadCode(pid, dvm_module.code)
+				                  .and_then([&] {
+									  return vm::api::setFunctionSourceInfo(
+										  pid, std::move(function_source_info)
+									  );
+								  })
 				                  .and_then([&] {
 									  return vm::api::attach(pid, std::cin, std::cout);
 								  })
@@ -950,9 +1063,11 @@ namespace compiler::driver {
 				auto& objects_by_root_module = module.backend == BackendType::DVM
 				                                 ? dvm_objects_by_root_module
 				                                 : llvm_objects_by_root_module;
-				objects_by_root_module
-					.put(module.package_root_module, std::vector<artifacts::FileArtifact>())
-					.first->second.emplace_back(module_result->valueOrPanic().object_art);
+				objects_by_root_module.maybePut(
+					module.package_root_module, std::vector<artifacts::FileArtifact>()
+				);
+				objects_by_root_module.at(module.package_root_module)
+					.emplace_back(module_result->valueOrPanic().object_art);
 
 				// We schedule debug info here, to only schedule it for correctly compiled modules.
 				if (module.build_debug_info) {
@@ -971,11 +1086,13 @@ namespace compiler::driver {
 
 		for (auto [module, handle]: debug_info_handles) {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
-			if (di_result.hasValue())
-				debug_info_artifacts_by_root_module
-					.put(module.package_root_module, std::vector<artifacts::FileArtifact>())
-					.first->second.emplace_back(di_result.valueOrPanic());
-			else {
+			if (di_result.hasValue()) {
+				debug_info_artifacts_by_root_module.maybePut(
+					module.package_root_module, std::vector<artifacts::FileArtifact>()
+				);
+				debug_info_artifacts_by_root_module.at(module.package_root_module)
+					.emplace_back(di_result.valueOrPanic());
+			} else {
 				CORE_USER_LOG("Debug info generation failed for a module.");
 				result = base::BAD;
 			}

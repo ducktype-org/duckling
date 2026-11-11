@@ -165,21 +165,21 @@ impl SolverFreeze {
                 .get(pkg)
                 .with_context_internal(|| format!("package {pkg:?} without manifest"))?;
             let mut good_realizations_for_pkg = HashSet::new();
-            for (name, realization) in freeze.dependencies_realization.iter() {
+            for (ename, realization) in freeze.dependencies_realization.iter() {
                 let Some(realization_freeze) = self.package_freezes.get(realization) else {
                     continue;
                 };
                 if Self::still_satisfies_enabled_dep(
                     &freeze.features,
                     manifest,
-                    *name,
+                    *ename,
                     *realization,
                     realization_freeze,
                     fetcher,
                 )
                 .await?
                 {
-                    good_realizations_for_pkg.insert(*name);
+                    good_realizations_for_pkg.insert(*ename);
                 }
             }
             good_realizations.insert(*pkg, good_realizations_for_pkg);
@@ -190,7 +190,7 @@ impl SolverFreeze {
                 .expect("we added a map for all packages");
             freeze
                 .dependencies_realization
-                .retain(|name, _| good_realizations_for_pkg.contains(name));
+                .retain(|ename, _| good_realizations_for_pkg.contains(ename));
         }
         Ok(())
     }
@@ -202,7 +202,7 @@ impl SolverFreeze {
     async fn still_satisfies_enabled_dep(
         pkg_features: &HashSet<FeatureName>,
         pkg_manifest: &Manifest,
-        dep_name: StrId,
+        dep_ename: StrId,
         realization: PackageId,
         realization_freeze: &SolverPackageFreeze,
         fetcher: &Fetcher<'_>,
@@ -211,7 +211,7 @@ impl SolverFreeze {
         let Some(manifest_dependency) = pkg_manifest
             .dependencies()
             .select(&Selector::All(vec![
-                Selector::EffectiveName(dep_name),
+                Selector::EffectiveName(dep_ename),
                 Selector::EnabledBy(pkg_features),
             ]))
             .next()
@@ -222,7 +222,7 @@ impl SolverFreeze {
             .still_satisfies_dep(manifest_dependency, fetcher)
             .await?
         {
-            debug!(target: "duck::solver", "was satisfied before, but now is not");
+            debug!("was satisfied before, but now is not");
             return Ok(false);
         }
         let forced_child_features = manifest_dependency.enabled_features(pkg_features);
@@ -290,7 +290,7 @@ impl SolverFreeze {
                     .retain(|_, realization| still_satisfied_pkgs.contains(realization));
             }
             let is_satisfied = still_satisfied_pkgs.contains(pkg);
-            trace!(target: "duck::solver", ?pkg, %is_root_package, %is_satisfied);
+            trace!(?pkg, %is_root_package, %is_satisfied);
             is_satisfied || is_root_package
         });
         Ok(())

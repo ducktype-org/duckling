@@ -8,6 +8,7 @@
 
 #include "node_id.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
@@ -182,11 +183,10 @@ namespace query::internal {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
 		base::HashMap<NodeID, usize> node_to_index;
-		node_to_index.reserve(node_deps->size());
 
 		usize next_index = 0;
 		for (const auto& [node, _]: *node_deps) {
-			node_to_index.emplace(node, next_index++);
+			node_to_index.put(node, next_index++);
 			nodes.push_back(node);
 		}
 

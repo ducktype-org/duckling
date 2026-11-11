@@ -18,7 +18,7 @@ namespace pst {
 
 		PARSE().one(Keyword::Template);
 		if (not state[0].isBracketGroup(lexer::Token::Round))
-			state.logSafeError(makeBox<TemplateNoListError>(state.getPosition()));
+			state.logInt(makeBox<TemplateNoListError>(state.getPosition()));
 		PARSE().one(&out->params);
 
 		PST_RETURN out;

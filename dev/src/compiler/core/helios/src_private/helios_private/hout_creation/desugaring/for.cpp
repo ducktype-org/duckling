@@ -6,7 +6,7 @@
 
 #include "for.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_any_statement.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -48,13 +48,13 @@ namespace compiler::helios::desugaring {
 		};
 
 		tsh::SymbolType<> getI64(query::Context& ctx) {
-			return tsh::SymbolType<>::withDefaults(
+			return tsh::SymbolType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 		}
 
 		tsh::SymbolType<> getConstI64(query::Context& ctx) {
-			return tsh::SymbolType<>::withDefaults(
+			return tsh::SymbolType<>::withDefaultsMut(
 					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			)
 			    .withMutability(tsh::Mutability::Immutable);
@@ -300,7 +300,7 @@ namespace compiler::helios::desugaring {
 
 		// Desugar the loop.
 		// var __index : i64 = 0i64;
-		// var __len: const i64 = <constant> / len <iterable_reusable>;
+		// var __len: imm i64 = <constant> / len <iterable_reusable>;
 		// while(__idx < __len) {
 		// 		let <iter> = <iterable_reusable>[__idx];
 		// 		<body>;

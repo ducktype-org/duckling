@@ -11,7 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -164,7 +164,7 @@ namespace compiler::helios {
 						// parameterTypes.size() == 1 means method has not params except self.
 						if (fn_type.getParameterTypes().size() == 1
 						    && fn_type.getResultType()
-						           == tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)))
+						           == tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx)))
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}

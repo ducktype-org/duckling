@@ -15,7 +15,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
-#include <frontend/pst_parser/pst_expr_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_expr_visitor.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -474,11 +474,8 @@ namespace compiler::helios::code {
 
 				// Box creation
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
-					const auto origin = inner->origin.generatedFrom();
-					const auto direct_type
-						= inner->expression_type.getSymbolType().withReferenceKind(
-							tsh::ReferenceKind::Direct
-						);
+					const auto origin      = inner->origin.generatedFrom();
+					const auto direct_type = inner->expression_type.getSymbolType().toDirect();
 
 					auto value = coercions::coerceFromBox(
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
@@ -534,9 +531,9 @@ namespace compiler::helios::code {
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
-					// The copy constructor takes a `const ref` and returns a direct value. `refOf`
-					// turns every type into a reference (including ref/box because of reference
-					// kind collapsing).
+					// The copy constructor takes a read-only `ref` and returns a direct value.
+					// `refOf` turns every type into a reference (including ref/box because of
+					// reference kind collapsing).
 					node = s.call(
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))
@@ -609,11 +606,7 @@ namespace compiler::helios::code {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					const auto meta_type = tsh::SymbolType<>{
-						tsh::getMetaType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto meta_type = tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType());
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
@@ -663,12 +656,8 @@ namespace compiler::helios::code {
 					kind            = tsh::FunctionKind::Raw;
 				}
 
-				const ElementOrigin origin    = pstOrigin(arrow);
-				const auto          meta_type = tsh::SymbolType<>{
-                    tsh::getMetaType(),
-                    tsh::ReferenceKind::Direct,
-                    tsh::Mutability::Mutable,
-				};
+				const ElementOrigin origin = pstOrigin(arrow);
+				const auto meta_type       = tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType());
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
@@ -836,8 +825,32 @@ namespace compiler::helios::code {
 				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
+			/**
+			 * @brief Compiles `if const condition then if_true else if_false`, evaluating the
+			 * condition at compile time and compiling only the taken branch.
+			 *
+			 * The branch that is not taken is never lowered to HOUT, so it may contain code that
+			 * would not compile for the current instantiation.
+			 */
+			void compileConstTernary(pst::Access<pst::expr::Ternary> stmt) {
+				auto condition = unlockOrFail(ctx, stmt->getCondition());
+				auto taken     = getBoolCTVFromPST(ctx, condition);
+				if (taken.hasFailed()) return;
+
+				auto branch = taken.valueOrThrow() ? stmt->getIfTrue() : stmt->getIfFalse();
+				auto result = subExprFromPST(ctx, unlockOrFail(ctx, branch));
+				if (result.hasFailed()) return;
+
+				node = std::move(result).valueOrThrow();
+			}
+
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
-				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				if (stmt->isConst()) {
+					compileConstTernary(stmt);
+					return;
+				}
+
+				const auto bool_type     = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
                 );
@@ -971,11 +984,8 @@ namespace compiler::helios::code {
 				// Some type had to be chosen. `void` would perhaps make more sense,
 				// but it seemed to break some assumptions of the compiler and cause panics.
 				// @TODO: #3707 When fixed, think about making this `void`.
-				auto elem_type_of_empty_array = tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto elem_type_of_empty_array
+					= tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 
 				auto type = ctx.query<tsh::QueryStaticArrayType>(
 					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }

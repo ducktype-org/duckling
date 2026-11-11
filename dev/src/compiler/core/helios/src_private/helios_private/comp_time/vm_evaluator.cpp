@@ -514,7 +514,7 @@ namespace {
 			return CompileTimeValue{ *meta_ptr };
 		}
 		case compiler::tsh::Kind::Slice: {
-			auto char_slice_type = tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx));
+			auto char_slice_type = tsh::SymbolType<>::withDefaultsMut(tsh::getCharSliceType(ctx));
 			if (vm_value->getType()->getName()
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
@@ -523,7 +523,7 @@ namespace {
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
-				auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx));
+				auto string_type = tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx));
 				if (vm_value->getType()->getName()
 				    == ctx.query<mangler::QueryMangledType>(string_type)->valueOrThrow())
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{

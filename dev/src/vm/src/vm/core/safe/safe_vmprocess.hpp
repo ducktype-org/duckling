@@ -12,6 +12,7 @@
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
+#include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/ivmprocess.hpp>
@@ -278,6 +279,23 @@ namespace vm {
 		Box<SafeVMValue> createOwnedVMValue(TypeCRef type, Pointer src);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
+
+		/**
+		 * @brief Maps a position in the low program to the function name, the instruction index in
+		 * the loaded code and, when the code has debug info, the source position.
+		 */
+		[[nodiscard]] api::response::CodePosition mapToCodePosition(
+			const low::LowCodePosition& low_position
+		) const;
+
+		/**
+		 * @brief Maps a position in the low program to the index of its instruction in the loaded
+		 * code, which is the index debug info uses.
+		 * @return Nothing when the position cannot be mapped.
+		 */
+		[[nodiscard]] base::Optional<u64> mapToCodeCollectionIndex(
+			const low::LowCodePosition& low_position
+		) const;
 
 		/**
 		 * @brief Get the GIL of the process.

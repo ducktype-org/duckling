@@ -15,7 +15,7 @@
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <global_state/packages.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -46,7 +46,7 @@ namespace compiler::driver {
 		// depends on, and we want to quickly find all lookups related to a module when we process
 		// it during input collection.
 		using ModulesLookupsMap
-			= base::StableHashMap<hashing::ComponentHash::HashType, std::vector<LookupValue>>;
+			= base::HashMap<hashing::ComponentHash::HashType, std::vector<LookupValue>>;
 
 		/**
 		 * @brief Create a lookups map from module lookup metadata.
@@ -187,10 +187,9 @@ namespace compiler::driver {
 		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
 	) {
 		auto root = pst_ref->getRootElement();
-		if (auto maybe_root = root.illegalAccess()) {
-			auto root_unlocked = maybe_root.value();
-			out.emplace_back(pst::internal::PSTAccessSideInput::getID(), root_unlocked->getHash());
-		}
+		out.emplace_back(
+			pst::internal::PSTAccessSideInput::getID(), root.illegalAccess().value()->getHash()
+		);
 
 		auto elems = pst::viewAllSubTreeElements(root);
 		for (auto& el: elems)
