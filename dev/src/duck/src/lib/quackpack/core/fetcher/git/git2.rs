@@ -144,6 +144,7 @@ impl GitClient for Git2Client<'_> {
 
 impl GitRepository for git2::Repository {
     fn checkout(&self, reference: GitReference) -> QuackResult<()> {
+        // We only checkout to tag or commit, since we can clone to branch.
         if let GitReference::Rev(commit) = reference {
             checkout_commit(self, commit.as_str())
         } else if let GitReference::Tag(tag) = reference {

@@ -104,15 +104,17 @@ fn checkout(reference: GitReference, path: &Path) -> QuackResult<()> {
     if let GitReference::Tag(tag) = reference {
         validate_tag(tag, path)?;
     }
-    let mut command = git_cmd();
-    set_cwd_on_git_cmd(&mut command, path);
     match reference {
+        // We only checkout to tag or commit, since we can clone to branch.
         GitReference::Tag(tag_or_commit) | GitReference::Rev(tag_or_commit) => {
-            command.arg("checkout").arg(tag_or_commit);
+            let mut command = git_cmd();
+            set_cwd_on_git_cmd(&mut command, path)
+                .arg("checkout")
+                .arg(tag_or_commit);
+            execute_git(&mut command)
         }
-        GitReference::Branch(_) | GitReference::Default => return Ok(()),
+        GitReference::Branch(_) | GitReference::Default => Ok(()),
     }
-    execute_git(&mut command)
 }
 
 fn validate_commit(commit: StrId, path: &Path) -> QuackResult<()> {

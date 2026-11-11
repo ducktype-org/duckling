@@ -39,6 +39,8 @@ pub trait GitClient: fmt::Debug {
 /// Generic git repository.
 pub trait GitRepository {
     /// Checkout a given repository, to the reference.
+    ///
+    /// Currently this only checkouts to tags or commits, since all implementers can clone to branch.
     fn checkout(&self, reference: GitReference) -> QuackResult<()>;
 
     /// Get current HEAD commit.
