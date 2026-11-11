@@ -17,7 +17,6 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/placeholder.hpp>
@@ -35,57 +34,28 @@ namespace compiler::helios::defgen {
 	|   SYMBOLS   |
 	**************/
 
-	const base::HashMap<ComparisonKind, base::StrID> COMPARISON_METHOD_SPELLING{
-		{ ComparisonKind::Equal, base::StrID("==") },
-		{ ComparisonKind::NotEqual, base::StrID("!=") },
-		{ ComparisonKind::Lesser, base::StrID("<") },
-		{ ComparisonKind::LesserEqual, base::StrID("<=") },
-		{ ComparisonKind::Greater, base::StrID(">") },
-		{ ComparisonKind::GreaterEqual, base::StrID(">=") },
-	};
-
-	const base::HashMap<ComparisonKind, Method::Kind> COMPARISON_DEFGEN_KIND{
-		{ ComparisonKind::Equal, Method::Kind::Equal },
-		{ ComparisonKind::NotEqual, Method::Kind::NotEqual },
-		{ ComparisonKind::Lesser, Method::Kind::Lesser },
-		{ ComparisonKind::LesserEqual, Method::Kind::LesserEqual },
-		{ ComparisonKind::Greater, Method::Kind::Greater },
-		{ ComparisonKind::GreaterEqual, Method::Kind::GreaterEqual },
-	};
-
-	const base::HashMap<ComparisonKind, tsh::MemberSpecialKind> COMPARISON_METHOD_SPECIAL_KIND{
-		{ ComparisonKind::Equal, tsh::MemberSpecialKind::Equal },
-		{ ComparisonKind::NotEqual, tsh::MemberSpecialKind::NotEqual },
-		{ ComparisonKind::Lesser, tsh::MemberSpecialKind::Lesser },
-		{ ComparisonKind::LesserEqual, tsh::MemberSpecialKind::LesserEqual },
-		{ ComparisonKind::Greater, tsh::MemberSpecialKind::Greater },
-		{ ComparisonKind::GreaterEqual, tsh::MemberSpecialKind::GreaterEqual },
-	};
-
-	const base::HashMap<Method::Kind, ComparisonKind> DEFGEN_KIND_TO_COMPARISON_KIND{
-		{ Method::Kind::Equal, ComparisonKind::Equal },
-		{ Method::Kind::NotEqual, ComparisonKind::NotEqual },
-		{ Method::Kind::Lesser, ComparisonKind::Lesser },
-		{ Method::Kind::LesserEqual, ComparisonKind::LesserEqual },
-		{ Method::Kind::Greater, ComparisonKind::Greater },
-		{ Method::Kind::GreaterEqual, ComparisonKind::GreaterEqual },
-	};
+	const ComparisonMethodInfo& comparisonMethodInfo(const Method::Kind defgen_kind) {
+		const auto* const comparison
+			= std::ranges::find(COMPARISON_METHODS, defgen_kind, &ComparisonMethodInfo::defgen_kind);
+		CORE_ASSERT(comparison != COMPARISON_METHODS.end(), "Expected a comparison method kind.");
+		return *comparison;
+	}
 
 	SymID comparisonSymForType(
 		query::Context& ctx, const tsh::AbstractType type, const ComparisonKind kind
 	) {
 		const auto comparison
-			= type.getInterface(ctx)->getSpecialElement(COMPARISON_METHOD_SPECIAL_KIND.at(kind));
+			= type.getInterface(ctx)->getSpecialElement(comparisonMethodInfo(kind).special_kind);
 		return comparison.value()->getSymbol();
 	}
 
 	SymID generatedComparisonSymForType(
 		query::Context& ctx, const tsh::AbstractType type, const ComparisonKind kind
 	) {
+		const auto& comparison = comparisonMethodInfo(kind);
 		return ctx.query<QueryGeneratedSymbol>({
-			.name = base::StrID(COMPARISON_METHOD_SPELLING.at(kind)),
-			.generated_symbol_data
-			= Method{ .owner_type = type, .kind = COMPARISON_DEFGEN_KIND.at(kind) },
+			.name                  = base::StrID(comparison.spelling),
+			.generated_symbol_data = Method{ .owner_type = type, .kind = comparison.defgen_kind },
 		});
 	}
 
@@ -99,7 +69,7 @@ namespace compiler::helios::defgen {
 		ctx.log<dia::NotYetImplementedCodeError>(
 			base::strConcat(
 				"The `",
-				COMPARISON_METHOD_SPELLING.at(kind),
+				comparisonMethodInfo(kind).spelling,
 				"` operator is not yet implemented for the type `",
 				type.toString(),
 				"`."
@@ -369,7 +339,7 @@ namespace compiler::helios::defgen {
 			const auto method      = std::get<Method>(getSymRef(comparison_sym)->other);
 			const auto owner_type  = method.owner_type;
 			const auto defgen_kind = method.kind;
-			const auto comp_kind   = DEFGEN_KIND_TO_COMPARISON_KIND.at(defgen_kind);
+			const auto comp_kind   = comparisonMethodInfo(defgen_kind).kind;
 			const auto decl        = ctx.query<QueryDeclOfFun>(comparison_sym);
 
 			std::vector<Box<code::Stmt>> body{};

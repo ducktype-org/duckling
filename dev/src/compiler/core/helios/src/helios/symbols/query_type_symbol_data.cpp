@@ -147,8 +147,10 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The special kind of a user-defined comparison operator, like `fun ==(rhs: T)`,
-		 * which replaces the generated one. The right-hand side has to be of the class type.
+		 * @brief The special kind of a user-defined comparison operator, like
+		 * `fun ==(rhs: ref T) -> bool`, which replaces the generated one. The right-hand side has
+		 * to be taken by `ref` and be of the class type, like `self`, because the generated
+		 * comparisons of aggregates pass both fields by `ref`.
 		 */
 		static tsh::MemberSpecialKind comparisonSpecialKind(query::Context& ctx, SymID sym) {
 			const auto* const comparison = std::ranges::find(
@@ -165,8 +167,12 @@ namespace compiler::helios {
 
 			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
 			const auto& params  = fn_type.getParameterTypes();
-			// The parameters are `self` and the right-hand side.
-			if (params.size() == 2 && params.at(1).getType() == params.at(0).getType()
+			// The parameters are `self` and the right-hand side, both taken by `ref`.
+			const auto is_ref = [](const tsh::SymbolType<>& param) {
+				return param.getRefKind() == tsh::ReferenceKind::Ref;
+			};
+			if (params.size() == 2 && is_ref(params.at(0)) && is_ref(params.at(1))
+			    && params.at(1).getType() == params.at(0).getType()
 			    && fn_type.getResultType().getType() == tsh::getBoolType())
 				return comparison->special_kind;
 			return tsh::MemberSpecialKind::None;

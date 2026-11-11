@@ -159,6 +159,17 @@ namespace compiler::helios::code {
 	using MatchResult = std::variant<Match, NoMatch>;
 
 	namespace {
+
+		/**
+		 * @brief The mode of coercion to use for overload resolution.
+		 *
+		 * This is different from CoercionMode because it determines the behaviour to be used for
+		 * all arguments, not just a single one. This is useful, for example, for certain
+		 * operators, such as comparison operators, where all arguments may be implicitly
+		 * taken by reference.
+		 *
+		 * This may disappear in the future, once passing arguments by reference is refined.
+		 */
 		enum class OverloadCoercionMode {
 			/// Only the regular implicit coercions.
 			Default,
