@@ -24,14 +24,14 @@ use crate::DuckContext;
 mod accept;
 mod parse;
 
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(skip_all)]
 pub fn check_certificate(
     ctx: &DuckContext,
     certificate: &Cert<'_>,
     host: &str,
     port: Option<u16>,
 ) -> Result<CertificateCheckStatus, git2::Error> {
-    debug!(target: "duck::git", ?host, ?port);
+    debug!(?host, ?port);
     let Some(host_cert) = certificate.as_hostkey() else {
         return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
@@ -39,7 +39,7 @@ pub fn check_certificate(
         return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     let Some(host_type) = host_cert.hostkey_type() else {
-        warn!(target: "duck::git", "has hostkey, but not hostkey type");
+        warn!("has hostkey, but not hostkey type");
         return Ok(CertificateCheckStatus::CertificatePassthrough);
     };
     // Nonstandard port might also be used. In that case, the host format is `[{host}]:{port}`.
@@ -49,7 +49,7 @@ pub fn check_certificate(
         Some(port) => format!("[{host}]:{port}"),
     };
     let files = get_known_hosts_files(ctx);
-    debug!(target: "duck::git", ?files, ?host, ?hostkey, ?host_type);
+    debug!(?files, ?host, ?hostkey, ?host_type);
     let entries = {
         let mut buffer = get_bundled_keys()
             .into_iter()
@@ -67,24 +67,24 @@ pub fn check_certificate(
         let result = entry.accept(&host, hostkey, host_type);
         match result {
             accept::AcceptResult::Accepted => {
-                info!(target: "duck::git", ?source, ?entry, "accepted certificate");
+                info!(?source, ?entry, "accepted certificate");
                 encountered_accept = true;
             }
             accept::AcceptResult::Rejected => {
-                trace!(target: "duck::git", ?source, ?entry, "rejected certificate");
+                trace!(?source, ?entry, "rejected certificate");
             }
             accept::AcceptResult::Revoked => {
-                warn!(target: "duck::git", ?source, ?entry, "revoked certificate");
+                warn!(?source, ?entry, "revoked certificate");
                 encountered_revoked = true;
             }
             accept::AcceptResult::NotMatched => {
-                trace!(target: "duck::git", ?source, ?entry, "not matched");
+                trace!(?source, ?entry, "not matched");
             }
             accept::AcceptResult::KeyMismatch => {
-                trace!(target: "duck::git", ?source, ?entry, "keys mismatch");
+                trace!(?source, ?entry, "keys mismatch");
             }
             accept::AcceptResult::Unsupported => {
-                trace!(target: "duck::git", ?source, ?entry, "unsupported key");
+                trace!(?source, ?entry, "unsupported key");
             }
         }
     }
@@ -220,7 +220,7 @@ fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKno
             if io_err.kind() == io::ErrorKind::NotFound {
                 String::new()
             } else {
-                error!(target: "duck::git", err = ?io_err, ?path, "failed to read known_hosts file, ignoring...");
+                error!(err = ?io_err, ?path, "failed to read known_hosts file, ignoring...");
                 return;
             }
         }
@@ -232,7 +232,7 @@ fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKno
             KnownHostsLine::Comment => None,
             KnownHostsLine::Entry(known_host_entry) => Some((known_host_entry, source)),
             KnownHostsLine::Failed(err) => {
-                error!(target: "duck::git", %err, ?path, "failed to parse a known_hosts line, ignoring...");
+                error!(%err, ?path, "failed to parse a known_hosts line, ignoring...");
                 None
             }
         });
