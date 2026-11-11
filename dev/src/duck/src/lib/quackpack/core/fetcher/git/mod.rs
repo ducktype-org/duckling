@@ -22,12 +22,6 @@ mod known_hosts;
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug)]
-pub struct ClonedRepositoryData {
-    /// Hash of the checkout'd repository.
-    pub commit: StrId,
-}
-
 /// Generic git client.
 pub trait GitClient: fmt::Debug {
     /// Clone a repository to the given path.
@@ -36,10 +30,21 @@ pub trait GitClient: fmt::Debug {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData>;
+    ) -> QuackResult<Box<dyn GitRepository>>;
 
     /// Returns `true` if the client uses git CLI.
     fn uses_cli(&self) -> bool;
+}
+
+/// Generic git repository.
+pub trait GitRepository {
+    /// Checkout a given repository, to the reference.
+    ///
+    /// Currently this only checkouts to tags or commits, since all implementers can clone to branch.
+    fn checkout(&self, reference: GitReference) -> QuackResult<()>;
+
+    /// Get current HEAD commit.
+    fn head_commit(&self) -> QuackResult<StrId>;
 }
 
 /// Check, if we can shallow clone a `reference` from `url`.

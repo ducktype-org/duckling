@@ -54,11 +54,9 @@ namespace compiler::helios::code {
 
 			// @TODO: #1532 This i64 coercion should be handled by the `[]` operator.
 			// @TODO: #2754 Possibly adjust the type based on the actual type of the index expression.
-			auto i64_type = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable
-			};
+			auto i64_type = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+			);
 			auto index_res = subExprFromPSTWithType(ctx, index_pst, i64_type);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> index_expr =, index_res);
 
@@ -94,22 +92,15 @@ namespace compiler::helios::code {
 				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
 					if (literal_type_expr->value_type.getType().getKind()
 					    == tsh::Kind::TypeTemplate) {
-						return tsh::SymbolType<>{
-							tsh::getMetaType(),
-
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Immutable,
-						};
+						return tsh::SymbolType<>::withDefaults(tsh::getMetaType());
 					}
 				}
 
-				return tsh::SymbolType<>{
-					// @TODO: #2754 Possibly adjust the type based on the actual type of the index
-					// expression.
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable
-				};
+				// @TODO: #2754 Possibly adjust the type based on the actual type of the index
+				// expression.
+				return tsh::SymbolType<>::withDefaults(
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+				);
 			}();
 
 			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);

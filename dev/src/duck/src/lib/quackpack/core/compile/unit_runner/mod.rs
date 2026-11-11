@@ -282,7 +282,6 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             .set_subcommand(DuckcSubcommand::CompilePackages)
             .set_manifest_path(&layout.dependency_json_path())
             .set_artifacts_dir(&layout.compiler_artifacts())
-            .set_c_std(profile.c_std)
             .set_opt_level(profile.opt_level)
             .set_incremental(profile.incremental)
             .set_workers_count(self.bcx.jobs);

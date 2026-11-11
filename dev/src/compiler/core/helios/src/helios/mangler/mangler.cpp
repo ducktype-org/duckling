@@ -644,7 +644,7 @@ namespace compiler::helios::mangler {
 							// distinguishes the implicit, default and copy constructors.
 							const auto mangled_type
 								= ctx.query<QueryMangledType>(
-										 tsh::SymbolType<>::withDefaults(ctor.type)
+										 tsh::SymbolType<>::withDefaultsMut(ctor.type)
 								)
 							          ->valueOrThrow()
 							          .str();

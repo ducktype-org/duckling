@@ -19,6 +19,7 @@ class SimpleFileSystemTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(getSimpleContentTest);
+		TESTER_ADD_TEST(getContentOfDirectoryTest);
 		TESTER_ADD_TEST(filePathTest);
 		TESTER_ADD_TEST(isTemporaryTest);
 		TESTER_ADD_TEST(vfsTest);
@@ -35,6 +36,33 @@ private:
 
 		assertTrue(a_content.view().size() == 12, "Wrong a_content file size");
 		assertTrue(a_content.view().stringView() == "abrakadabra\n", "Wrong a_content file content");
+	}
+
+	void getContentOfDirectoryTest() {
+		// Reading a directory used to size the buffer from `tellg()` after seeking to the end.
+		// A directory has no meaningful size there, so it asked for a huge allocation.
+		auto temp_dir = fs::FileManager::createRandomTempDirectory();
+
+		auto safe_content = temp_dir.getContentSafe();
+		ASSERT_NO_VALUE(safe_content, "getContentSafe should fail for a directory");
+		assertTrue(
+			safe_content.error().find("is a directory") != std::string::npos,
+			base::strConcat("getContentSafe should name the directory, got: ", safe_content.error())
+		);
+
+		bool panicked = false;
+		try {
+			std::ignore = temp_dir.getContent();
+		} catch (const base::Panic&) { panicked = true; }
+		assertTrue(panicked, "getContent should panic for a directory");
+
+		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
+		ASSERT_NO_VALUE(
+			virtual_dir.getContentSafe(), "getContentSafe should fail for a virtual directory"
+		);
+
+		fs::FileManager::deleteFolder(temp_dir);
+		fs::FileManager::deleteFolder(virtual_dir);
 	}
 
 	void filePathTest() {
