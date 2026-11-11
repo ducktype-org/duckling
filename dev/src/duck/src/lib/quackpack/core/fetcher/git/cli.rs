@@ -78,7 +78,7 @@ fn check_git_binary_exists() -> QuackResult<()> {
     let mut command = git_cmd();
     command.arg("--version");
     let output = get_git_output(&mut command).map_err(add_path_hint_to_missing_git)?;
-    debug!(target: "duck::git", version = %String::from_utf8_lossy(&output.stdout), "git binary version");
+    debug!(version = %String::from_utf8_lossy(&output.stdout), "git binary version");
     Ok(())
 }
 
@@ -168,7 +168,7 @@ fn git_cmd() -> Command {
 
 /// Execute a prepared git command, inheriting stdout, stderr, and stdin.
 fn execute_git(command: &mut Command) -> QuackResult<()> {
-    trace!(target: "duck::git", ?command, "executing git command");
+    trace!(?command, "executing git command");
     let status = command
         .status()
         .with_context(|| format!("failed to execute `{}`", command.display()))?;
@@ -180,7 +180,7 @@ fn execute_git(command: &mut Command) -> QuackResult<()> {
 
 /// Execute a prepared git command, and return the output.
 fn get_git_output(command: &mut Command) -> QuackResult<Output> {
-    trace!(target: "duck::git", ?command, "executing git command");
+    trace!(?command, "executing git command");
     let output = command
         .output()
         .with_context(|| format!("failed to execute `{}`", command.display()))?;

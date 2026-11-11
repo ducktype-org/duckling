@@ -152,13 +152,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
+    #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
         let solve = self.model.minimize().solve();
         let Some(solution) = solve.best_sol() else {
             qp_bail!(NoSolutionError())
         };
-        debug!(target: "duck::solver", ?solution);
+        debug!(?solution);
         let preexisting_packages = self.input.all_preexisting_pkgs();
         let new_packages = new_packages(self.package_vars, &preexisting_packages, &solution);
         let new_features = new_features(

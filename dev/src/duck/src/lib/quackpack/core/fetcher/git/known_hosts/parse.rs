@@ -189,7 +189,7 @@ pub fn get_bundled_keys() -> Vec<KnownHostEntry> {
 /// Parse a single `known_hosts` line.
 fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
     let line = line.trim_ascii();
-    trace!(target: "duck::git", ?line, "parsing line");
+    trace!(?line, "parsing line");
     // Lines starting with ‘#’ and empty lines are ignored as comments.
     if line.is_empty() || line.starts_with(COMMENT_CHAR) {
         return Ok(KnownHostsLine::Comment);
@@ -208,7 +208,7 @@ fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
         _ => None,
     };
 
-    trace!(target: "duck::git", ?marker, "parsed marker");
+    trace!(?marker, "parsed marker");
 
     let hostnames_str = if marker.is_some() {
         // Advance iter to get hostnames.
@@ -234,7 +234,7 @@ fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
         key_type: key_type.to_string(),
         key,
     };
-    trace!(target: "duck::git", ?entry, "parsed known_hosts entry");
+    trace!(?entry, "parsed known_hosts entry");
     Ok(KnownHostsLine::Entry(entry))
 }
 
@@ -246,9 +246,9 @@ fn parse_known_hosts_line(line: &str) -> ParseResult<KnownHostsLine> {
 fn parse_hostnames(hostnames: &str) -> ParseResult<Vec<Hostname>> {
     // This is a hashed hostname.
     if hostnames.starts_with(HASH_HOSTNAME_START) {
-        debug!(target: "duck::git", "detected hashed hostname");
+        debug!("detected hashed hostname");
         let hashed = parse_hashed_hostname(hostnames)?;
-        trace!(target: "duck::git", ?hashed, "parsed hashed hostname");
+        trace!(?hashed, "parsed hashed hostname");
         return Ok(vec![Hostname::Hashed(hashed)]);
     }
     let mut parsed = vec![];
@@ -263,7 +263,7 @@ fn parse_hostnames(hostnames: &str) -> ParseResult<Vec<Hostname>> {
             pattern: hostname.to_string(),
             is_negated,
         };
-        trace!(target: "duck::git", ?host, "parsed normal host");
+        trace!(?host, "parsed normal host");
         parsed.push(Hostname::Normal(host));
     }
     Ok(parsed)

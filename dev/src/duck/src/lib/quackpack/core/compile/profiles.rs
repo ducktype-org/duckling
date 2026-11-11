@@ -232,7 +232,7 @@ determine_field!(
 impl Profile {
     /// Constructs a [`Profile`], given the profile's name and [`manifest::Profiles`].
     /// Unwinds the inheritance structure to determine each field of the profile.
-    #[tracing::instrument(level = "debug", skip_all, fields(profile = %profile_name))]
+    #[tracing::instrument(skip_all, fields(profile = %profile_name))]
     pub fn construct_profile(
         profile_name: StrId,
         manifest_profiles: &manifest::Profiles,
