@@ -94,7 +94,7 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
     endif()
 
     # Link llvm it will be ONLY used by JitDep.
-    llvm_map_components_to_libnames(llvm_libs
+    duck_llvm_libs(llvm_libs
         Core
         ExecutionEngine
         Interpreter

@@ -7,7 +7,8 @@ add_library(LLVMBackend
     src_private/backends/llvm_private/module_impl.cpp
 )
 
-llvm_map_components_to_libnames(llvm_libs
+target_include_directories(LLVMBackend PRIVATE ${LLVM_INCLUDE_DIRS})
+duck_llvm_libs(llvm_libs
     Core
     ExecutionEngine
     Interpreter
@@ -16,7 +17,6 @@ llvm_map_components_to_libnames(llvm_libs
     Passes
     Support
     nativecodegen)
-target_include_directories(LLVMBackend PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(LLVMBackend ${llvm_libs})
 
 make_module(LLVMBackend USES Base GlobalState QueryFramework LIR llvm_helpers Init Logger)

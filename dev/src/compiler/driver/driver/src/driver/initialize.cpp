@@ -8,6 +8,7 @@
 
 #include "options.hpp"
 
+#include <backends/llvm/llvm_backend.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
@@ -221,6 +222,7 @@ namespace compiler::driver {
 
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
+			backend_llvm::configureAssemblySyntax();
 		}
 
 		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {

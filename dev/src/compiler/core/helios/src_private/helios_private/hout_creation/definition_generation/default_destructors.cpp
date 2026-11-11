@@ -32,7 +32,7 @@ namespace compiler::helios::defgen {
 		 */
 		SymID boxFreeSymFor(query::Context& ctx, const tsh::AbstractType pointee_type) {
 			return bakeLanguagePrimitiveWithTypes(
-				ctx, LanguagePrimitive::BoxFree, { tsh::SymbolType<>::withDefaults(pointee_type) }
+				ctx, LanguagePrimitive::BoxFree, { tsh::SymbolType<>::withDefaultsMut(pointee_type) }
 			);
 		}
 	}
@@ -80,8 +80,8 @@ namespace compiler::helios::defgen {
 			// A `box T` owns its pointee and its heap storage. `boxFree` destroys the pointee and
 			// then frees the memory, so the box itself is all it needs.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				const auto pointee_type = tsh::SymbolType<>::withDefaults(type.getType());
-				const auto storage_type = tsh::SymbolType<>::withDefaults(
+				const auto pointee_type = tsh::SymbolType<>::withDefaultsMut(type.getType());
+				const auto storage_type = tsh::SymbolType<>::withDefaultsMut(
 					ctx.query<tsh::QueryPointerType>({ pointee_type })
 				);
 
@@ -173,9 +173,8 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
 
-				const auto payload_type = alternatives[i]
-				                              .withReferenceKind(tsh::ReferenceKind::Ref)
-				                              .withMutability(tsh::Mutability::Mutable);
+				const auto payload_type
+					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name                  = base::StrID(base::strConcat("__alternative_", i)),
@@ -224,7 +223,7 @@ namespace compiler::helios::defgen {
 
 			const auto i64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_type = tsh::SymbolType<>::withDefaults(i64_abs_type);
+			const auto i64_type = tsh::SymbolType<>::withDefaultsMut(i64_abs_type);
 
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name = base::StrID("__i"),

@@ -1,0 +1,39 @@
+# Divides by zero two calls below `main`, so the panic reports a stack trace of three frames.
+
+function divideByZero { i64 } -> { i64 } {
+	init_pany_type      zero, i64;
+	mov_p64_imm         zero, 0;
+	mov_p64_p64         ret0, arg0;
+	div_p64_p64         ret0, zero;
+
+	deinit; # zero
+	deinit; # arg0
+	ret;
+}
+
+function forward { i64 } -> { i64 } {
+	init_pany_type      divideByZero_ret0, i64;
+	init_pany_type      divideByZero_arg0, i64;
+	mov_p64_p64         divideByZero_arg0, arg0;
+
+	call_func           divideByZero;
+	mov_p64_p64         ret0, divideByZero_ret0;
+
+	deinit; # divideByZero ret0
+	deinit; # arg0
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type      forward_ret0, i64;
+	init_pany_type      forward_arg0, i64;
+	mov_p64_imm         forward_arg0, 13;
+
+	call_func           forward;
+	mov_p64_p64         ret0, forward_ret0;
+
+	deinit; # forward ret0
+	deinit; # argv*
+	deinit; # argc
+	ret;
+}
