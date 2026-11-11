@@ -197,20 +197,40 @@ impl<'duck> Fetcher<'duck> {
         let client = self.git_client()?;
         self.ctx.info(format!("cloning a repository at `{url}`"))?;
 
-        let data = client
-            .clone(url, reference, destination_directory)
+        let commit = self
+            .clone_from_git_to_directory_inner(client, url, reference, destination_directory)
             .map_err(|err| add_hint_for_using_git_cli(client, err))
-            .with_context(|| format!("failed to clone the repository at `{url}`"))?;
+            .with_context(|| format!("failed to clone the package from `{url}`"))?;
         let package = PackageLoader::find_at_exact_directory(destination_directory, self.ctx)
             .with_context(|| {
                 format!("failed to parse a package from repository cloned from `{url}`")
             })?
             .into_package()
             .unwrap_package();
-        Ok(types::ClonedPackage {
-            commit: data.commit,
-            package,
-        })
+        Ok(types::ClonedPackage { commit, package })
+    }
+
+    /// Helper for [`clone_from_git_to_directory`], to make attaching contexts easier.
+    /// Returns commit of the cloned repo.
+    ///
+    /// [`clone_from_git_to_directory`]: Self::clone_from_git_to_directory
+    fn clone_from_git_to_directory_inner(
+        &self,
+        client: &dyn git::GitClient,
+        url: &Url,
+        reference: GitReference,
+        destination_directory: &Path,
+    ) -> QuackResult<StrId> {
+        let repository = client
+            .clone(url, reference, destination_directory)
+            .with_context(|| format!("failed to clone the repository from `{url}`"))?;
+        repository.checkout(reference).with_context(|| {
+            format!("failed to checkout the repository cloned from `{url}` to the {reference}")
+        })?;
+        let commit = repository
+            .head_commit()
+            .context("failed to get HEAD commit of a repository")?;
+        Ok(commit)
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
