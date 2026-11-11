@@ -32,8 +32,12 @@ pub(super) fn freeze_from_solution(
     let mut all_realizations = all_realizations(&all_pkgs, &all_features, input)?;
     let mut pkg_freezes = HashMap::new();
     for pkg in all_pkgs {
-        let features = all_features.remove(&pkg).context_internal("todo")?;
-        let realizations = all_realizations.remove(&pkg).context_internal("todo")?;
+        let features = all_features
+            .remove(&pkg)
+            .with_context_internal(|| format!("no features for {pkg:?}"))?;
+        let realizations = all_realizations
+            .remove(&pkg)
+            .with_context_internal(|| format!("no realizations for {pkg:?}"))?;
         let pkg_freeze = SolverPackageFreeze {
             features,
             dependencies_realization: realizations,
@@ -112,7 +116,9 @@ fn all_realizations(
     let mut all_realizations = HashMap::new();
     for pkg in all_packages {
         let pkg_data = input.package_data(*pkg)?;
-        let features = all_features.get(pkg).with_context_internal(|| "todo")?;
+        let features = all_features
+            .get(pkg)
+            .with_context_internal(|| format!("no features for {pkg:?}"))?;
         let mut pkg_realizations = HashMap::new();
         for dep in pkg_data
             .manifest()
