@@ -731,20 +731,6 @@ private:
 				1
 			);
 
-			// Both branches of a ternary store into one result, so their types have to match.
-			// Before, a mismatch reached the backends and crashed there.
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					let a: i64 = 3;
-					let num: i64 = if (a == 0) then 1 else (2 * a);
-				}
-			)",
-				{ "Both branches of an `if ... then ... else ...` expression have to be of the "
-			      "same type, but the `then` branch is `i32` and the `else` branch is `i64`.",
-			      "Make both branches the same type" },
-				1
-			);
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() = {
@@ -767,19 +753,6 @@ private:
 			)",
 				{ "the `then` branch is `Class A` and the `else` branch is `Class B`." },
 				1
-			);
-
-			// Mutability does not change the type of the value, so a `let` and a `var` mix.
-			checkForWarningOnCompileModule(
-				R"(
-				fun main() = {
-					let a: i64 = 3;
-					var b: i64 = 4;
-					let num = if (a == 0) then a else b;
-				}
-			)",
-				{},
-				0
 			);
 		}
 

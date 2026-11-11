@@ -864,11 +864,10 @@ namespace compiler::helios::code {
 				auto if_true   = std::move(if_true_res).valueOrThrow();
 				auto if_false  = std::move(if_false_res).valueOrThrow();
 
-				// Both branches store their value into one shared result slot, so they have to
-				// agree on its type. There is no common-type inference: a mismatch reaches the
-				// backends as a move between differently sized places. Mutability is ignored, as
-				// it does not change the layout (`then let_local else var_local`).
-				// A `void` branch never produces a value, so it takes the other branch's type.
+				// Both if-else-then branches must produce the same type (note that backend may
+				// assume this). For now we just enforce it here by an error.
+				// @future In the future we might want to introduce some kind of common-type
+				// and coerce all branches to common type.
 				const auto true_type  = if_true->expression_type.getSymbolType();
 				const auto false_type = if_false->expression_type.getSymbolType();
 				const bool true_void  = true_type.getType().getKind() == tsh::Kind::Void;

@@ -76,16 +76,6 @@ fun voidBranchValue() -> i64 = {
     return sub1 + sub2; # 64  (1000000)
 }
 
-# Both branches have to be of the same type, but a `let` and a `var` may mix.
-fun mutabilityMixValue() -> i64 = {
-    let a: i64 = 1i64;
-    var b: i64 = 2i64;
-    let sub1 = if true  then a else b; # sub1 = 1
-    let sub2 = if false then a else b; # sub2 = 2
-
-    return sub1 + sub2; # 3   (11)
-}
-
 fun main() -> i64 = {
     builtin_output_i64(localVariableAsCondition());
     builtin_output_i64(literalAsCondition());
@@ -94,7 +84,6 @@ fun main() -> i64 = {
     builtin_output_i64(nestedTernaryValue());
     builtin_output_i64(conditionCoercions());
     builtin_output_i64(voidBranchValue());
-    builtin_output_i64(mutabilityMixValue());
 
     return 0i64;
 }

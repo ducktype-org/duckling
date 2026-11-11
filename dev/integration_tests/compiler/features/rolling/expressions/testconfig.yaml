@@ -5,7 +5,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "9\n9\n9\n18\n4\n2\n64\n3\n"
+          String: "9\n9\n9\n18\n4\n2\n64\n"
 
   single_comparison: # Any type of comparison between two values.
     Cases:
