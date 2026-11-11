@@ -65,13 +65,11 @@ impl GitClient for GitCliClient {
 
 impl GitRepository for GitCliRepository {
     fn checkout(&self, reference: GitReference) -> QuackResult<()> {
-        maybe_checkout_to_commit(reference, &self.0)?;
-        Ok(())
+        checkout(reference, &self.0)
     }
 
     fn head_commit(&self) -> QuackResult<StrId> {
-        let commit = get_current_commit(&self.0)?;
-        Ok(commit)
+        get_current_commit(&self.0)
     }
 }
 
@@ -99,7 +97,7 @@ fn clone_git_repository(url: &Url, reference: GitReference, destination: &Path) 
 }
 
 /// Checkout repo to the given commit, if we requested that.
-fn maybe_checkout_to_commit(reference: GitReference, path: &Path) -> QuackResult<()> {
+fn checkout(reference: GitReference, path: &Path) -> QuackResult<()> {
     if let GitReference::Rev(commit) = reference {
         validate_commit(commit, path)?;
     }

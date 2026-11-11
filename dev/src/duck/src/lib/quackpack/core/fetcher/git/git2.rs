@@ -9,7 +9,7 @@
 use std::path::Path;
 
 use git2::build::RepoBuilder;
-use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository};
+use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks};
 use tracing::{debug, trace};
 use url::Url;
 
@@ -145,13 +145,12 @@ impl GitClient for Git2Client<'_> {
 impl GitRepository for git2::Repository {
     fn checkout(&self, reference: GitReference) -> QuackResult<()> {
         if let GitReference::Rev(commit) = reference {
-            self.checkout_commit(commit.as_str())
-                .with_context(|| format!("failed to check out the commit `{}`", commit))?;
+            checkout_commit(self, commit.as_str())
         } else if let GitReference::Tag(tag) = reference {
-            self.checkout_tag(tag.as_str())
-                .with_context(|| format!("failed to check out the tag `{}`", tag))?;
+            checkout_tag(self, tag.as_str())
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     fn head_commit(&self) -> QuackResult<StrId> {
@@ -165,47 +164,41 @@ impl GitRepository for git2::Repository {
     }
 }
 
-/// A helper trait for repository methods.
-trait RepositoryExt {
-    /// Checkout `self` into a given commit.
-    fn checkout_commit(&self, commit: &str) -> QuackResult<()>;
-
-    /// Checkout `self` into a given tag.
-    fn checkout_tag(&self, tag: &str) -> QuackResult<()>;
+/// Checkout [`git2::Repository`] into a given commit.
+fn checkout_commit(repository: &git2::Repository, commit: &str) -> QuackResult<()> {
+    let oid = Oid::from_str(commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
+    let commit = repository
+        .find_commit(oid)
+        .with_context(|| format!("repository does not have a commit `{}", commit))?;
+    let tree = commit
+        .tree()
+        .context("failed to get tree of a repository")?;
+    repository
+        .checkout_tree(tree.as_object(), None)
+        .context("failed to checkout the tree")?;
+    repository
+        .set_head_detached(oid)
+        .context("failed to set detached HEAD")?;
+    Ok(())
 }
 
-impl RepositoryExt for Repository {
-    fn checkout_commit(&self, commit: &str) -> QuackResult<()> {
-        let oid =
-            Oid::from_str(commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
-        let commit = self
-            .find_commit(oid)
-            .with_context(|| format!("repository does not have a commit `{}", commit))?;
-        let tree = commit
-            .tree()
-            .context("failed to get tree of a repository")?;
-        self.checkout_tree(tree.as_object(), None)
-            .context("failed to checkout the tree")?;
-        self.set_head_detached(oid)
-            .context("failed to set detached HEAD")?;
-        Ok(())
-    }
+/// Checkout [`git2::Repository`] into a given tag.
+fn checkout_tag(repository: &git2::Repository, tag: &str) -> QuackResult<()> {
+    let refname = format!("refs/tags/{}", tag);
+    let reference = repository
+        .find_reference(&refname)
+        .with_context(|| format!("repository does not have a tag `{}`", tag))?;
 
-    fn checkout_tag(&self, tag: &str) -> QuackResult<()> {
-        let refname = format!("refs/tags/{}", tag);
-        let reference = self
-            .find_reference(&refname)
-            .with_context(|| format!("repository does not have a tag `{}`", tag))?;
+    let commit = reference
+        .peel_to_commit()
+        .with_context(|| format!("failed to get a commit of tag `{tag}`"))?;
 
-        let commit = reference
-            .peel_to_commit()
-            .with_context(|| format!("failed to get a commit of tag `{tag}`"))?;
+    repository
+        .checkout_tree(commit.as_object(), None)
+        .context("failed to checkout the tree")?;
 
-        self.checkout_tree(commit.as_object(), None)
-            .context("failed to checkout the tree")?;
-
-        self.set_head_detached(commit.id())
-            .context("failed to set detached HEAD")?;
-        Ok(())
-    }
+    repository
+        .set_head_detached(commit.id())
+        .context("failed to set detached HEAD")?;
+    Ok(())
 }

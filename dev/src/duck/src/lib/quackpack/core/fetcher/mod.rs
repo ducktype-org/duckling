@@ -224,9 +224,9 @@ impl<'duck> Fetcher<'duck> {
         let repository = client
             .clone(url, reference, destination_directory)
             .with_context(|| format!("failed to clone the repository from `{url}`"))?;
-        repository
-            .checkout(reference)
-            .with_context(|| format!("failed to checkout the repository cloned from `{url}`"))?;
+        repository.checkout(reference).with_context(|| {
+            format!("failed to checkout the repository cloned from `{url}` to the {reference}")
+        })?;
         let commit = repository
             .head_commit()
             .context("failed to get HEAD commit of a repository")?;
