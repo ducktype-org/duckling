@@ -866,7 +866,7 @@ namespace compiler::helios::code {
 
 				// Both if-else-then branches must produce the same type (note that backend may
 				// assume this). For now we just enforce it here by an error.
-				// @future In the future we might want to introduce some kind of common-type
+				// @TODO: #4029 In the future we might want to introduce some kind of common-type
 				// and coerce all branches to common type.
 				const auto true_type  = if_true->expression_type.getSymbolType();
 				const auto false_type = if_false->expression_type.getSymbolType();
