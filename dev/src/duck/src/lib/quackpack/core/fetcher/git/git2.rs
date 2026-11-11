@@ -264,10 +264,9 @@ fn update_submodules(
         let url = submodule
             .url()
             .with_context(|| format!("failed to get URL of a submodule `{submodule_name}`"))?;
-        if let Some(url) = url {
-            let url = url.to_url().with_context(|| {
-                format!("URL of a submodule `{submodule_name}` is not a valid URL")
-            })?;
+        if let Some(url) = url
+            && let Ok(url) = url.to_url()
+        {
             let mut fetch_options = FetchOptions::new();
             fetch_options.remote_callbacks(callbacks(ctx, &url));
             options.fetch(fetch_options);
@@ -281,13 +280,7 @@ fn update_submodules(
             continue;
         }
 
-        let path = repository
-            .workdir()
-            // `None` indicates bare repository. We shouldn't have them.
-            .context_internal("cloned a bare repository")?
-            .join(submodule.path());
-
-        let subrepository = git2::Repository::open(path).with_context(|| {
+        let subrepository = submodule.open().with_context(|| {
             format!("failed to open a repository of a submodule `{submodule_name}`")
         })?;
 
