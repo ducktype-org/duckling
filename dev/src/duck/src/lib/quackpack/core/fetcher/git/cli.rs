@@ -125,6 +125,7 @@ fn checkout(reference: GitReference, path: &Path) -> QuackResult<()> {
 fn initialize_submodules(options: GitSubmoduleOptions, path: &Path) -> QuackResult<()> {
     let mut command = git_cmd();
     set_cwd_on_git_cmd(&mut command, path);
+    command.arg("submodule");
     match options {
         GitSubmoduleOptions::Init => {
             command.arg("init");
