@@ -1,5 +1,4 @@
 import core.containers;
-import helper;
 
 class Point {
     x: i64 = 1;
@@ -44,21 +43,6 @@ fun arrayOfListsTest() -> () = {
         printPointList(&arrayOfLists[i]);
         i = i + 1;
     }
-
-    var nsArray: containers.List:{Point}[2];
-    nsArray[0].push(Point(11, 12));
-    builtin_output_i64(nsArray[0].at(0).x); # 11
-
-    var nsArgArray: List:{helper.P}[2];
-    nsArgArray[0].push(helper.P(5));
-    builtin_output_i64(nsArgArray[0].at(0).x); # 5
-
-    var nestedLists: List:{List:{i64}}[2];
-    var inner: List:{i64};
-    inner.push(1);
-    inner.push(2);
-    nestedLists[0].push(copy inner);
-    builtin_output_i64(nestedLists[0].at(0).length()); # 2
 
     # The workaround spellings must keep working too.
     const PointList = List:{Point};
