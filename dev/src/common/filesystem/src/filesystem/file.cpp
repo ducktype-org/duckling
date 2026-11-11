@@ -226,6 +226,10 @@ namespace fs {
 	// --- File methods (non-static, formerly FilePath) ---
 
 	base::SharedView File::getContent() const {
+		// A directory opens fine as a stream, but has no content to read.
+		if (isDirectory())
+			CORE_PANIC(base::strConcat("Cannot read `", path.string(), "`: it is a directory"));
+
 		if (type == FileType::Virtual) {
 			auto content = vfsOf(path)->readFile(path);
 
@@ -234,22 +238,25 @@ namespace fs {
 
 			return { r_array, content.size() };
 		} else {
+			// Ask the filesystem for the size instead of seeking to the end of the stream: on a
+			// path that is not a regular file the stream position is meaningless (a directory
+			// reports `LLONG_MAX`), and the allocation below would be that big.
+			std::error_code ec;
+			usize           file_size = std::filesystem::file_size(path.getPath(), ec);
+			if (ec)
+				CORE_PANIC(base::strConcat(
+					"Failed to get the size of file: ", path.string(), ", error: ", ec.message()
+				));
+
 			std::ifstream file(path.getPath(), std::ios::in | std::ios::binary);
-			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string() + ", error: ");
-
-			file.unsetf(std::ios::skipws);
-
-			auto fpos = file.tellg();
-			file.seekg(0, std::ios::end);
-			std::streamoff fsize     = file.tellg() - fpos;
-			auto           file_size = static_cast<usize>(fsize);
-			file.seekg(0, std::ios::beg);
+			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string());
 
 			// should read full file:
 			auto r_array = new byte[file_size];
 			file.read(reinterpret_cast<char*>(r_array), std::streamsize(file_size));
+			auto read_size = static_cast<usize>(file.gcount());
 
-			return { r_array, file_size };
+			return { r_array, read_size };
 		}
 		CORE_UNREACHABLE();
 	}
@@ -258,6 +265,11 @@ namespace fs {
 		if (!exists()) {
 			return std::unexpected(base::strConcat(
 				"Error: cannot get content of file `", path.native(), "` - file does not exist"
+			));
+		}
+		if (isDirectory()) {
+			return std::unexpected(base::strConcat(
+				"Error: cannot get content of file `", path.native(), "` - it is a directory"
 			));
 		}
 		return getContent();
