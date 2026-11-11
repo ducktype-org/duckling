@@ -730,6 +730,57 @@ private:
 				{ "Type `ref i32` cannot be converted to type `box i32`." },
 				1
 			);
+
+			// Both branches of a ternary store into one result, so their types have to match.
+			// Before, a mismatch reached the backends and crashed there.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					let a: i64 = 3;
+					let num: i64 = if (a == 0) then 1 else (2 * a);
+				}
+			)",
+				{ "Both branches of an `if ... then ... else ...` expression have to be of the "
+			      "same type, but the `then` branch is `i32` and the `else` branch is `i64`.",
+			      "Make both branches the same type" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i64 = 3;
+					let r: ref i64 = &a;
+					let num: i64 = if (a == 0) then a else r;
+				}
+			)",
+				{ "the `then` branch is `i64` and the `else` branch is `ref i64`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				class A { x: i64; }
+				class B { y: i64; }
+				fun main() = {
+					let a: i64 = 3;
+					let v = if (a == 0) then A(1i64) else B(2i64);
+				}
+			)",
+				{ "the `then` branch is `Class A` and the `else` branch is `Class B`." },
+				1
+			);
+
+			// Mutability does not change the type of the value, so a `let` and a `var` mix.
+			checkForWarningOnCompileModule(
+				R"(
+				fun main() = {
+					let a: i64 = 3;
+					var b: i64 = 4;
+					let num = if (a == 0) then a else b;
+				}
+			)",
+				{},
+				0
+			);
 		}
 
 		// ========================== Lexer errors ==========================
