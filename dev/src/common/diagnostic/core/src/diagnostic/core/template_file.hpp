@@ -15,6 +15,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>

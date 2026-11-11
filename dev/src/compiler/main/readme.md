@@ -8,14 +8,23 @@ artifact directory, and `--print-ir` for printing them to stdout. Printing suppo
 
 The dump categories are listed in compilation order:
 
-| Category | Extension | Backend |
-|----------|-----------|---------|
-| `hir`    | `.hir`    | Either |
-| `mir`    | `.mir`    | Either |
-| `lir`    | `.lir`    | Either |
-| `llvm`   | `.ll`     | LLVM |
-| `asm`    | `.s`      | LLVM |
-| `dbc`    | `.dbc`    | DVM |
+| Category   | Extension | Backend |
+|------------|-----------|---------|
+| `hir`      | `.hir`    | Either  |
+| `mir`      | `.mir`    | Either  |
+| `lir`      | `.lir`    | Either  |
+| `llvm`     | `.ll`     | LLVM    |
+| `llvm-opt` | `.opt.ll` | LLVM    |
+| `asm`      | `.s`      | LLVM    |
+| `dbc`      | `.dbc`    | DVM     |
+
+On x86, use `--asm-syntax intel` with `--dump-ir asm` to emit Intel syntax.
+Use `--asm-syntax att` to select the default AT&T syntax explicitly.
+
+`llvm` contains the raw LLVM IR before LLVM optimization. `llvm-opt` contains IR after applying
+the selected `-O` level and before code generation. They can be requested together, for example
+`--dump-ir asm,llvm,llvm-opt`, without changing the assembly's optimization level. At -O 0 no
+optimization passes run, so the .opt.ll file is the same as the .ll file.
 
 The same artifact location and dump options apply to these commands:
 

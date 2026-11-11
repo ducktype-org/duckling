@@ -6,6 +6,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments.hpp>
 #include <diagnostic/core/diagnostic_state.hpp>
 #include <diagnostic/core/template_evaluation.hpp>
@@ -560,7 +562,7 @@ pointer_messages:
 		auto it    = diagnostic.messages[1].pointer_messages.find(pm_id);
 		ASSERT_EQUAL(true, it != diagnostic.messages[1].pointer_messages.end());
 
-		const auto& pm = it->second;
+		const auto& pm = it->value;
 		ASSERT_EQUAL("no conversion found from string to i32", pm.content);
 
 		// Verify explore edges

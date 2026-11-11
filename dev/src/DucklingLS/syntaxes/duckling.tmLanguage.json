@@ -88,7 +88,7 @@
         {
           "name": "string.interpolated.duckling",
           "begin": "\\bf\"",
-          "end": "\"|$",
+          "end": "\"|(?=\\n)",
           "beginCaptures": {
             "0": {
               "name": "punctuation.definition.string.begin.duckling"
@@ -111,7 +111,7 @@
         {
           "name": "string.quoted.double.duckling",
           "begin": "\"",
-          "end": "\"|$",
+          "end": "\"|(?=\\n)",
           "beginCaptures": {
             "0": {
               "name": "punctuation.definition.string.begin.duckling"
@@ -135,7 +135,7 @@
         {
           "name": "string.quoted.single.duckling",
           "begin": "'",
-          "end": "'|$",
+          "end": "'|(?=\\n)",
           "beginCaptures": {
             "0": {
               "name": "punctuation.definition.string.begin.duckling"
@@ -158,7 +158,7 @@
       "patterns": [
         {
           "name": "constant.character.escape.duckling",
-          "match": "\\\\."
+          "match": "\\\\(?:.|\\n)"
         }
       ]
     },
@@ -216,7 +216,7 @@
       "patterns": [
         {
           "name": "constant.numeric.binary.duckling",
-          "match": "\\b0[bB][01]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "match": "\\b0[bB][01]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
           "captures": {
             "1": {
               "name": "storage.type.numeric.duckling"
@@ -225,7 +225,7 @@
         },
         {
           "name": "constant.numeric.octal.duckling",
-          "match": "\\b0[oO][0-7]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "match": "\\b0[oO][0-7]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
           "captures": {
             "1": {
               "name": "storage.type.numeric.duckling"
@@ -234,7 +234,7 @@
         },
         {
           "name": "constant.numeric.hex.duckling",
-          "match": "\\b0[xX][0-9A-Fa-f]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "match": "\\b0[xX][0-9A-Fa-f]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
           "captures": {
             "1": {
               "name": "storage.type.numeric.duckling"
@@ -243,7 +243,7 @@
         },
         {
           "name": "constant.numeric.decimal.duckling",
-          "match": "(?:\\b[0-9]++|(?<![\\w.])(?=\\.[0-9]))(?:\\.(?![-+*/%=<>!&|^~?:.\\\\])[0-9]*+)?(?:[eE][+-]?[0-9]++)?(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "match": "(?:\\b[0-9]++|(?<![\\w.])(?=\\.[0-9]))(?:\\.(?![-+*/%=<>!&|^~?:.\\\\`])[0-9]*+)?(?:[eE][+-]?[0-9]++)?(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
           "captures": {
             "1": {
               "name": "storage.type.numeric.duckling"
@@ -271,7 +271,7 @@
     "functionDeclarations": {
       "patterns": [
         {
-          "match": "\\b(fun|fundecl)\\b(?:\\s+(prefix|suffix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\]))?(?:\\s+([_\\p{L}][\\w]*))?",
+          "match": "\\b(fun|fundecl)\\b(?:\\s+(prefix|suffix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\`]))?(?:\\s+([_\\p{L}][\\w]*))?",
           "captures": {
             "1": {
               "name": "storage.type.function.duckling"
@@ -360,7 +360,11 @@
       "patterns": [
         {
           "name": "constant.language.duckling",
-          "match": "\\b(true|false|none)\\b"
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "support.constant.duckling",
+          "match": "\\bnone\\b"
         },
         {
           "name": "variable.language.self.duckling",
@@ -376,7 +380,7 @@
         },
         {
           "name": "keyword.operator.word.duckling",
-          "match": "\\b(as|sizeof|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|refof|ptrof)\\b"
+          "match": "\\b(as|sizeof|mut|imm|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|refof|ptrof)\\b"
         }
       ]
     },
@@ -400,19 +404,19 @@
       "patterns": [
         {
           "name": "punctuation.accessor.duckling",
-          "match": "\\.(?![-+*/%=<>!&|^~?:.\\\\])"
+          "match": "\\.(?![-+*/%=<>!&|^~?:.\\\\`])"
         },
         {
           "name": "punctuation.separator.colon.duckling",
-          "match": ":(?![-+*/%=<>!&|^~?:.\\\\])"
+          "match": ":(?![-+*/%=<>!&|^~?:.\\\\`])"
         },
         {
           "name": "keyword.operator.arrow.duckling",
-          "match": "(?:->|=>)(?![-+*/%=<>!&|^~?:.\\\\])"
+          "match": "(?:->|=>)(?![-+*/%=<>!&|^~?:.\\\\`])"
         },
         {
           "name": "keyword.operator.duckling",
-          "match": "[-+*/%=<>!&|^~?:.\\\\]+"
+          "match": "[-+*/%=<>!&|^~?:.\\\\`]+"
         }
       ]
     },

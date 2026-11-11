@@ -6,7 +6,7 @@
 
 #include "../../hierarchy/declarations/function.hpp"
 
-#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_expr.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

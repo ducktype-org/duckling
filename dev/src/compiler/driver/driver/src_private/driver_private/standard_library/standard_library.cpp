@@ -249,6 +249,10 @@ namespace compiler::driver {
 		return getStdLibArtifacts(".dbc").artifacts;
 	}
 
+	std::vector<artifacts::FileArtifact> getStdLibDebugInfoArtifacts() {
+		return getStdLibArtifacts(".di.json").artifacts;
+	}
+
 	std::vector<fs::FilePath> getStdLibDVMLinkingDependencies(
 		const options_types::StdLibOptions& standard_library_options
 	) {

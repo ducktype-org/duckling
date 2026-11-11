@@ -21,7 +21,9 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <iterator>
+#include <sstream>
 #include <string>
 
 using namespace compiler;
@@ -36,6 +38,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(compilesBothBackendsWithoutLinking);
 		TESTER_ADD_TEST(preservesDumpsAfterFailure);
+		TESTER_ADD_TEST(runOnDVMPanicShowsScriptLines);
 	}
 
 protected:
@@ -113,6 +116,52 @@ private:
 		const auto module_name = repl::getScriptModuleID(script).str();
 		checkDumps(module_name);
 		ASSERT_TRUE(!std::filesystem::exists(artifacts_path.getPath() / (module_name + ".o")));
+	}
+
+	void runOnDVMPanicShowsScriptLines() {
+		// The functions are statements of their own, so their lines must be moved back from the
+		// statement's file to the script's.
+		auto script = fs::FileManager::createRandomVirtualFile(
+			"fun divide(by: i64) -> i64 = {\n"
+			"    return 10 / by;\n"
+			"}\n"
+			"\n"
+			"fun forward(by: i64) -> i64 = {\n"
+			"    return divide(by);\n"
+			"}\n"
+			"\n"
+			"var x = forward(0);"
+		);
+		global_state::setters::setScriptContext(script);
+
+		// The panic is reported on `std::cerr` by the execution thread, which the run joins.
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		const auto        run           = driver::runScriptOnDVM(false);
+		std::cerr.rdbuf(original_cerr);
+
+		// A panic is an error of the run, which names it.
+		ASSERT_TRUE(!run.has_value());
+		assertTrue(run.error().contains("Panicked"), run.error());
+
+		// The innermost frame says where its function is, the callers where their call is.
+		const std::string stderr_output = captured.str();
+		const std::string script_path   = script.getFilePath().string();
+		assertTrue(
+			stderr_output.contains(base::strConcat(
+				"  #0 divide (defined at ",
+				script_path,
+				":1)\n",
+				"  #1 forward at ",
+				script_path,
+				":6\n"
+			)),
+			"Each frame shows its Duckling name and script line: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains(base::strConcat(" at ", script_path, ":9\n")),
+			"The script's own call is on its last line: " + stderr_output
+		);
 	}
 };
 

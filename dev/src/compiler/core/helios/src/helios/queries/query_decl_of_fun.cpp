@@ -16,7 +16,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -35,6 +35,7 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
@@ -108,15 +109,24 @@ namespace compiler::helios {
 			}
 		};
 
-		template<class StmtsAggregate>
-		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+		/**
+		 * @brief Whether every path through the (already collected) statements ends in a `return`.
+		 */
+		bool everyPathReturnsInStmts(query::Context& ctx, const StmtList<>& stmts) {
 			// A statement that always returns ends the block, so whatever follows is ignored.
-			for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts)) {
+			for (const auto& stmt: stmts) {
 				EveryPathReturnsVisitor visitor(ctx);
-				stmt.unlock(ctx)->acceptVisitor(visitor);
+				stmt->acceptVisitor(visitor);
 				if (visitor.every_path_returns) return true;
 			}
 			return false;
+		}
+
+		template<class StmtsAggregate>
+		bool everyPathReturns(query::Context& ctx, const StmtsAggregate& stmts) {
+			return everyPathReturnsInStmts(
+				ctx, getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts))
+			);
 		}
 
 		/**
@@ -165,8 +175,8 @@ namespace compiler::helios {
 
 			template<class Stmts>
 			void visitRecursion(const Stmts& stmts) {
-				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, stmts))
-					stmt.unlock(ctx)->acceptVisitor(*this);
+				for (const auto& stmt: getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, stmts)))
+					stmt->acceptVisitor(*this);
 			}
 
 			template<class FuncLike>
@@ -181,13 +191,11 @@ namespace compiler::helios {
 				// once.
 				initial_invocation = false;
 
-				auto fun_body = func_like->getBody();
+				auto fun_body = func_like->getBody().unlock(ctx);
 
-				if (fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
-					auto as_expr = fun_body.unlock(ctx)
-					                   ->getStmt()
-					                   .unlock(ctx)
-					                   .template dynamicCast<pst::ExprStmt>();
+				if (fun_body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt) {
+					auto as_expr
+						= fun_body->getStmt().unlock(ctx).template dynamicCast<pst::ExprStmt>();
 					if (as_expr) {
 						auto expr = ctx.query<QueryHoutOfExpr>(
 										   as_expr.value()->getExpr().unlock(ctx)->getExpr()
@@ -205,14 +213,16 @@ namespace compiler::helios {
 					}
 				} else {
 					CORE_ASSERT(
-						fun_body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
+						fun_body->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
 
-					body_always_returns = everyPathReturns(ctx, fun_body);
+					// Collect the statements once, and use them for both walks:
+					auto stmts = getStmtsFromStmtAggregate(ctx, fun_body);
 
-					for (const auto& stmt: getStmtsFromStmtAggregate(ctx, fun_body))
-						stmt.unlock(ctx)->acceptVisitor(*this);
+					body_always_returns = everyPathReturnsInStmts(ctx, stmts);
+
+					for (const auto& stmt: stmts) stmt->acceptVisitor(*this);
 				}
 			}
 
@@ -228,11 +238,7 @@ namespace compiler::helios {
 					output(expr->expression_type.getSymbolType());
 				} else {
 					// "void" return should actually deduce to unit type:
-					output(tsh::SymbolType<>{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					});
+					output(tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType()));
 				}
 			}
 
@@ -287,22 +293,18 @@ namespace compiler::helios {
 			case 0:
 				// there are no returns to deduce the type
 				// we default to unit type
-				return tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 			case 1:
 				// deduced type is conclusive (albeit there might still be a fallthrough to the
 				// end of the function, but it then does not contribute to return type deduction).
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
 					fun->getStablePosition()
-				));
+				);
 				return query::Failed();
 			}
 		}
@@ -312,75 +314,80 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
 
-	/**
-	 * This function verifies if the applied attributes are semantically correct
-	 * on the function. For example we check if the BackendDependent attribute has
-	 * some implementations.
-	 * This is needed, because some attributes can have additional requirements on the function
-	 * declaration and the surrounding code.
-	 */
-	static void verifyFunctionAttributes(
-		query::Context& ctx, pst::Access<pst::Stmt> pst_stmt, const HOUTFunctionDeclaration& fun_decl
-	) {
-		if (pst_stmt->getAttributes().empty()) return;
+	namespace {
+		/**
+		 * This function verifies if the applied attributes are semantically correct
+		 * on the function. For example we check if the BackendDependent attribute has
+		 * some implementations.
+		 * This is needed, because some attributes can have additional requirements on the function
+		 * declaration and the surrounding code.
+		 */
+		void verifyFunctionAttributes(
+			query::Context&                ctx,
+			pst::Access<pst::Stmt>         pst_stmt,
+			const HOUTFunctionDeclaration& fun_decl
+		) {
+			if (pst_stmt->getAttributes().empty()) return;
 
-		if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
-		    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
-			verifyBackendImplAttrUsage(ctx, fun_decl);
-			return;
+			if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
+			    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
+				verifyBackendImplAttrUsage(ctx, fun_decl);
+				return;
+			}
+			if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
+				verifyBackendDependentAttrUsage(ctx, fun_decl);
+				return;
+			}
 		}
-		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
-			verifyBackendDependentAttrUsage(ctx, fun_decl);
-			return;
-		}
-	}
 
-	/**
-	 * @brief Determines whether a user-declared function or method is an operator and validates its
-	 * fixity.
-	 *
-	 * @param arity Parameter count, including the implicit `self` parameter of non-static methods.
-	 */
-	static HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
-		query::Context&     ctx,
-		base::StrID         name,
-		u64                 arity,
-		pst::OperatorFixity fixity,
-		dia::StablePosition source_position
-	) {
-		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+		/**
+		 * @brief Determines whether a user-declared function or method is an operator and validates
+		 * its fixity.
+		 *
+		 * @param arity Parameter count, including the implicit `self` parameter of non-static
+		 * methods.
+		 */
+		HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
+			query::Context&     ctx,
+			base::StrID         name,
+			u64                 arity,
+			pst::OperatorFixity fixity,
+			dia::StablePosition source_position
+		) {
+			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
-		const bool is_operator = lexer::isOperatorSymbolString(name.strView());
-		if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
-			ctx.logInt(makeBox<InvalidOperatorFixityError>(source_position));
-			query::throwFailed();
-		}
-		if (!is_operator) return Operatoriness::None;
-
-		switch (arity) {
-		case 1:
-			switch (fixity) {
-			case pst::OperatorFixity::Prefix:
-				return Operatoriness::Prefix;
-			case pst::OperatorFixity::Suffix:
-				return Operatoriness::Suffix;
-			case pst::OperatorFixity::None:
-				ctx.logInt(makeBox<MissingUnaryOperatorFixityError>(source_position));
+			const bool is_operator = lexer::isOperatorSymbolString(name.strView());
+			if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
+				ctx.log<InvalidOperatorFixityError>(source_position);
 				query::throwFailed();
 			}
-			CORE_UNREACHABLE();
-		case 2:
-			return Operatoriness::Infix;
-		default:
-			return Operatoriness::None;
+			if (!is_operator) return Operatoriness::None;
+
+			switch (arity) {
+			case 1:
+				switch (fixity) {
+				case pst::OperatorFixity::Prefix:
+					return Operatoriness::Prefix;
+				case pst::OperatorFixity::Suffix:
+					return Operatoriness::Suffix;
+				case pst::OperatorFixity::None:
+					ctx.log<MissingUnaryOperatorFixityError>(source_position);
+					query::throwFailed();
+				}
+				CORE_UNREACHABLE();
+			case 2:
+				return Operatoriness::Infix;
+			default:
+				return Operatoriness::None;
+			}
 		}
-	}
 
-	static bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
-		const auto required_type = requiredMainReturnType(ctx);
+		bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
+			const auto required_type = requiredMainReturnType(ctx);
 
-		return return_type.getType() == required_type.getType()
-		    && return_type.getRefKind() == required_type.getRefKind();
+			return return_type.getType() == required_type.getType()
+			    && return_type.getRefKind() == required_type.getRefKind();
+		}
 	}
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
@@ -395,7 +402,7 @@ namespace compiler::helios {
 				  original_symbol(symbol) {}
 
 			void emplaceDeclaration(
-				pst::AccessLocked<pst::ParamList>                  param_list,
+				pst::Access<pst::ParamList>                        param_list,
 				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
 				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
@@ -403,60 +410,54 @@ namespace compiler::helios {
 				                                 && kind(original_symbol) == SymbolKind::Function;
 
 				// Default return type is a direct unit.
-				auto ret_type = tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto ret_type              = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 				code::ElementOrigin origin = code::generatedOrigin();
 
 				// Set return type if provided.
 				if (ret.has_value()) {
+					const auto ret_unlocked = ret.value().unlock(ctx);
 					const auto ret_type_ctv
-						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
+						= getTypeCTVFromPST(ctx, ret_unlocked->getExpr()).valueOrThrow();
 
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
 
 					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
-						ctx.logInt(makeBox<InvalidMainReturnTypeError>(
-							ret.value().unlock(ctx)->getStablePosition(),
+						ctx.log<InvalidMainReturnTypeError>(
+							ret_unlocked->getStablePosition(),
 							makeBox<InteractiveType>(ctx, ret_type)
-						));
+						);
 						query::throwFailed();
 					}
 
 					origin = code::multiplePstOriginOrdered({
-						param_list.unlock(ctx),
-						ret.value().unlock(ctx),
+						param_list,
+						ret_unlocked,
 					});
 				}
 				// A global main without an explicit return type is treated as `main -> i64`.
 				else if (global_main_definition) {
 					ret_type = requiredMainReturnType(ctx);
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 				// Deduce return type for ordinary functions.
 				else {
 					ret_type = ctx.query<QueryReturnTypeDeduction>(original_symbol)->valueOrThrow();
-					origin   = code::pstOrigin(param_list.unlock(ctx));
+					origin   = code::pstOrigin(param_list);
 				}
 
 				// Parameters:
 				std::vector<code::Parameter> parameters;
-				for (auto param: *param_list.unlock(ctx)) {
+				for (auto param_locked: *param_list) {
+					auto  param        = param_locked.unlock(ctx);
 					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
 
-					auto value = param.unlock(ctx)->getValue();
+					auto value = param->getValue();
 					if (value.empty()) {
 						parameters.emplace_back(
-							param_name,
-							param_type,
-							std::nullopt,
-							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							param_name, param_type, std::nullopt, param_symbol, code::pstOrigin(param)
 						);
 					} else {
 						auto initial_value
@@ -470,7 +471,7 @@ namespace compiler::helios {
 							param_type,
 							std::move(initial_value),
 							param_symbol,
-							code::pstOrigin(param.unlock(ctx))
+							code::pstOrigin(param)
 						);
 					}
 				}
@@ -485,51 +486,54 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size(),
+					params->size(),
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size(),
+					params->size(),
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
 				// We can't use the interface directly because the interface
 				// can use the declaration of function query, and we could get a cycle.
-				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				const auto params     = stmt->getParams().unlock(ctx);
 				if (specifiers.is_static) {
 					const auto operatoriness = operatorinessFromDeclaration(
 						ctx,
 						name(original_symbol),
-						stmt->getParams().unlock(ctx)->size(),
+						params->size(),
 						stmt->getOperatorFixity(),
 						stmt->getStablePosition()
 					);
-					emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+					emplaceDeclaration(params, stmt->getRet(), operatoriness);
 					return;
 				}
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					stmt->getParams().unlock(ctx)->size() + 1,
+					params->size() + 1,
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
 				// +1 for the implicit `self` parameter.
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
+				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -552,15 +556,11 @@ namespace compiler::helios {
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
 				emplaceDeclaration(
-					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
+					stmt->getParams().unlock(ctx), {}, HOUTFunctionDeclaration::Operatoriness::None
 				);
 
 				const auto class_type  = classMemberOwner(original_symbol);
-				this->out->return_type = tsh::SymbolType<>{
-					class_type,
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				this->out->return_type = tsh::SymbolType<>::withDefaultsMut(class_type);
 			}
 
 			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
@@ -582,7 +582,7 @@ namespace compiler::helios {
 					code::generatedOrigin()
 				);
 
-				const auto unit_ret = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+				const auto unit_ret = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 
 				this->out.emplace(HOUTFunctionDeclaration(
 					original_symbol,
@@ -618,11 +618,12 @@ namespace compiler::helios {
 				ctor_name = name(target_type.as<tsh::ClassAbstractType>().getSymbol());
 				break;
 			case tsh::Kind::Tuple:
-				ctor_name = ctx
-				                .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(
-									target_type.as<tsh::TupleAbstractType>()
-								))
-				                ->valueOrThrow();
+				ctor_name
+					= ctx
+				          .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaultsMut(
+							  target_type.as<tsh::TupleAbstractType>()
+						  ))
+				          ->valueOrThrow();
 				break;
 			default:
 				CORE_PANIC("Implicit ctor of type kind", target_type.getKind(), " is not handled.");
@@ -634,11 +635,7 @@ namespace compiler::helios {
 					   .generated_symbol_data
                 = Constructor{ .type = target_type, .kind = Constructor::Kind::Implicit },
             });
-			const auto  result_symbol_type = tsh::SymbolType<>{
-                target_type,
-                tsh::ReferenceKind::Direct,
-                tsh::Mutability::Mutable,
-			};
+			const auto  result_symbol_type = tsh::SymbolType<>::withDefaultsMut(target_type);
 
 			std::vector<code::Parameter> parameters;
 			parameters.reserve(num_fields);
@@ -667,11 +664,10 @@ namespace compiler::helios {
 						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
 					    ) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
-							auto       expr
-								= getHoutOfExprWithExpectedType(
-									  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
-								)
-						              .valueOrThrow();
+							auto       expr       = getHoutOfExprWithExpectedType(
+                                            ctx, expr_holder.unlock(ctx)->getExpr(), field_type
+                            )
+						                    .valueOrThrow();
 							return expr;
 						}
 					);
@@ -770,9 +766,8 @@ namespace compiler::helios {
 						case defgen::Constructor::Kind::Implicit:
 							return getImplicitCtorDecl(ctx, ctor_data);
 						case defgen::Constructor::Kind::Default: {
-							const auto return_type = tsh::SymbolType<>{ ctor_data.type,
-								                                        tsh::ReferenceKind::Direct,
-								                                        tsh::Mutability::Mutable };
+							const auto return_type
+								= tsh::SymbolType<>::withDefaultsMut(ctor_data.type);
 
 							return HOUTFunctionDeclaration{
 								key,

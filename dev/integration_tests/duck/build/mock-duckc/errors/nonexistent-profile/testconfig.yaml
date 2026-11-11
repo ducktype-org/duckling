@@ -10,6 +10,6 @@ Tests:
         ExitCode: 1
         Err:
           String: |+
-            error: Unknown profile \`nonexistent\`
+            error: unknown profile \`nonexistent\`
 
-            hint: In order to use a profile you have to define it in the manifest first
+            hint: in order to use a profile you have to define it in the manifest first

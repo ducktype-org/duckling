@@ -53,8 +53,8 @@ namespace {
 		// Numeric operators only work on direct values. When provided with references or box types
 		// we have to force a coercion to a direct type which will insert a DerefExpr. This is
 		// needed to handle cases like: var x = referenceA + referenceB.
-		auto lhs_direct = lhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
-		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
+		auto lhs_direct = lhs_type.toDirect();
+		auto rhs_direct = rhs_type.toDirect();
 
 		// Try to coerce both values to the rhs direct type.
 		Coercion lhs_to_rhs = coercions::coercionOf(ctx, lhs, rhs_direct);
@@ -113,11 +113,11 @@ namespace {
 		switch (op) {
 		case IntegerPow: {
 			if (!isLanguagePrimitivePresent(ctx, LanguagePrimitive::PowInt)) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
 					base::enumToStr(LanguagePrimitive::PowInt),
 					"' language primitive, but no such primitive was found."
-				)));
+				));
 				return query::Failed();
 			}
 			auto callee = bakeLanguagePrimitiveWithTypes(
@@ -137,18 +137,18 @@ namespace {
 			}();
 			if_opt_none(lang_primitive) {
 				// @TODO: #1498 handle other float types
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat("Float exponentiation on unhandled type. Only `f32` and `f64` "
 				                    "are handled for now.")
-				));
+				);
 				return query::Failed();
 			}
 			if (!isLanguagePrimitivePresent(ctx, lang_primitive.value())) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
 					base::enumToStr(lang_primitive.value()),
 					"' language primitive, but no such primitive was found."
-				)));
+				));
 				return query::Failed();
 			}
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
@@ -188,10 +188,9 @@ namespace compiler::helios::code {
 	base::Optional<std::tuple<BuiltinUnary, tsh::coercions::Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
-		auto operation_kind = expr->expression_type.getType().getKind();
-		auto direct_type
-			= expr->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Direct);
-		tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, expr, direct_type);
+		auto                     operation_kind = expr->expression_type.getType().getKind();
+		auto                     direct_type    = expr->expression_type.getSymbolType().toDirect();
+		tsh::coercions::Coercion coercion       = coercions::coercionOf(ctx, expr, direct_type);
 		if (not coercion.isValid()) return {};
 
 		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators
@@ -474,11 +473,7 @@ namespace compiler::helios::code {
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {
 		static auto provide(Context& ctx, QKey) -> PResult {
 			// Preamble
-			const auto bool_t = tsh::SymbolType<>{
-				tsh::getBoolType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto bool_t = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 			using enum HOUTFunctionDeclaration::Operatoriness;
 			using enum BuiltinUnary;
 			using enum BuiltinBinary;
@@ -519,11 +514,7 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
 
 			/// Meta constructions ///
-			const auto meta_t = tsh::SymbolType<>{
-				tsh::getMetaType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto meta_t = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
 
 			builtin_op(keywordToStr(Keyword::Ref), { meta_t }, meta_t, Ref, Prefix);
 			builtin_op(keywordToStr(Keyword::Box), { meta_t }, meta_t, Box, Prefix);
@@ -531,7 +522,8 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(Keyword::ManyPtr), { meta_t }, meta_t, ManyPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::CPtr), { meta_t }, meta_t, CPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::Slice), { meta_t }, meta_t, Slice, Prefix);
-			builtin_op(keywordToStr(Keyword::Const), { meta_t }, meta_t, Const, Prefix);
+			builtin_op(keywordToStr(Keyword::Mut), { meta_t }, meta_t, Mut, Prefix);
+			builtin_op(keywordToStr(Keyword::Imm), { meta_t }, meta_t, Imm, Prefix);
 
 			/// Meta comparisons ///
 			builtin_op(base::StrID("=="), { meta_t, meta_t }, bool_t, MetaEq, Infix);
@@ -546,16 +538,10 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("!="), { bool_t, bool_t }, bool_t, IntegerNeq, Infix);
 
 			/// Character arithmetic ///
-			const auto u8_t = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			const auto char_t = tsh::SymbolType<>{
-				tsh::getCharType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto u8_t = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
+			);
+			const auto char_t = tsh::SymbolType<>::withDefaults(tsh::getCharType());
 			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt, Infix);
 			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq, Infix);
 			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt, Infix);

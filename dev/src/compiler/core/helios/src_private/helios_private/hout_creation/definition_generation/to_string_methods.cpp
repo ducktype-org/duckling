@@ -52,7 +52,7 @@ namespace compiler::helios::defgen {
 		});
 	}
 
-#define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
+#define STRING_TYPE tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx))
 #define LANG_PRIMITIVE(primitive) \
 	ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
 
@@ -62,7 +62,7 @@ namespace compiler::helios::defgen {
 		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
 		auto       string_abstract_type = tsh::getStringType(ctx);
 		const auto expected_arg_type
-			= tsh::SymbolType<>::withDefaults(string_abstract_type)
+			= tsh::SymbolType<>::withDefaultsMut(string_abstract_type)
 		          .withReferenceKind(
 					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
 				  );
@@ -79,14 +79,14 @@ namespace compiler::helios::defgen {
 			const auto& params = fn_type.getParameterTypes();
 			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
-		ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+		ctx.log<dia::NotYetImplementedCodeError>(
 			base::strConcat(
 				"The String class language primitive doesn't have the `append(",
 				arg_by_reference ? "ref " : "",
 				"String)` method."
 			),
 			"This method is required for the compiler to work."
-		));
+		);
 		query::throwFailed();
 		CORE_UNREACHABLE();
 	}
@@ -114,7 +114,7 @@ namespace compiler::helios::defgen {
 			const bool is_signed
 				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
 			   == tsh::IntegralAbstractType::Signedness::Signed;
-			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+			const auto target_int_type = tsh::SymbolType<>::withDefaultsMut(tsh::getIntegralType(
 				ctx,
 				64,
 				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
@@ -161,7 +161,7 @@ namespace compiler::helios::defgen {
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
-				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
+				= tsh::SymbolType<>::withDefaultsMut(tsh::getFloatType(ctx, 64));
 			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
 
 			const Shorthand s{ ctx };
@@ -239,7 +239,7 @@ namespace compiler::helios::defgen {
 			const auto builtin_sym = bakeLanguagePrimitive(
 				ctx,
 				LanguagePrimitive::StringifyStaticArray,
-				{ tsh::SymbolType<>::withDefaults(array_type), size }
+				{ tsh::SymbolType<>::withDefaultsMut(array_type), size }
 			);
 
 			const Shorthand s{ ctx };
@@ -267,9 +267,8 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a `box` alternative
 				// is a reference to the pointee.
-				const auto payload_type = alternatives[i]
-				                              .withReferenceKind(tsh::ReferenceKind::Ref)
-				                              .withMutability(tsh::Mutability::Mutable);
+				const auto payload_type
+					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name = base::StrID(base::strConcat("__alternative_", i)),

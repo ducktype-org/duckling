@@ -20,6 +20,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
@@ -51,6 +52,13 @@ namespace compiler::helios {
 				{ "dvm_nullptr", BuiltinKind::DvmNullptr },
 			};
 			return mapping;
+		}
+
+		/**
+		 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
+		 */
+		base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
+			return builtinNameMapping().atMaybeCopy(name.strView());
 		}
 	}
 
@@ -88,21 +96,14 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
-	 */
-	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
-		return builtinNameMapping().atMaybeCopy(name.strView());
-	}
-
 	BuiltinKind parseBuiltinAttr(
 		query::Context& ctx, base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	) {
 		if_opt_none(args) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Attribute 'builtin' expects exactly one argument, got 0.",
 				base::Optional<dia::StablePosition>{}
-			));
+			);
 			query::throwFailed();
 		}
 
@@ -111,31 +112,31 @@ namespace compiler::helios {
 			                                                              arg_list->end() };
 
 		if (holders.size() != 1) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat(
 					"Attribute 'builtin' expects exactly one argument, got ", holders.size(), "."
 				),
 				arg_list->getStablePosition()
-			));
+			);
 			query::throwFailed();
 		}
 
 		auto holder  = holders.front().unlock(ctx);
 		auto str_lit = holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 		if_opt_none(str_lit) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				"Attribute 'builtin' expects a string literal naming the builtin.",
 				holder->getStablePosition()
-			));
+			);
 			query::throwFailed();
 		}
 
 		auto builtin = builtinKindFromStr(str_lit.value()->getValue().value);
 		if_opt_none(builtin) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Unknown builtin '", str_lit.value()->getValue().value.str(), "'."),
 				holder->getStablePosition()
-			));
+			);
 			query::throwFailed();
 		}
 
@@ -284,7 +285,7 @@ namespace compiler::helios {
 		using namespace code::shorthands;
 		const Shorthand s{ ctx };
 		const auto      pointee_type
-			= tsh::SymbolType<>::withDefaults(inner->expression_type.getSymbolType().getType());
+			= tsh::SymbolType<>::withDefaultsMut(inner->expression_type.getSymbolType().getType());
 		const SymID alloc_symbol
 			= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { pointee_type });
 
@@ -295,8 +296,6 @@ namespace compiler::helios {
 
 		// `boxAlloc` returns the storage as a `ptr T`; the box is that same pointer. The cast is
 		// representation-free and is the only way to spell a box from a pointer.
-		return withOrigin(
-			origin, s.cast(std::move(call), pointee_type.withReferenceKind(tsh::ReferenceKind::Box))
-		);
+		return withOrigin(origin, s.cast(std::move(call), pointee_type.toBox()));
 	}
 }

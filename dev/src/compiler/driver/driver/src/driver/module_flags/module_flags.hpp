@@ -9,12 +9,13 @@
 namespace compiler::driver {
 
 	struct DumpIROptions {
-		bool dump_llvm = false;
-		bool dump_asm  = false;
-		bool dump_dbc  = false;
-		bool dump_lir  = false;
-		bool dump_mir  = false;
-		bool dump_hir  = false;
+		bool dump_llvm     = false;
+		bool dump_llvm_opt = false;
+		bool dump_asm      = false;
+		bool dump_dbc      = false;
+		bool dump_lir      = false;
+		bool dump_mir      = false;
+		bool dump_hir      = false;
 	};
 
 	/**

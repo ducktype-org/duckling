@@ -12,7 +12,7 @@
 
 #include <abi/layout/compute_c_layout.hpp>
 #include <abi/type_system/type.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/errors/extern_c_class_empty.hpp>
 #include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -275,10 +275,10 @@ namespace compiler::tsl {
 			query::Context&                           ctx
 		) {
 			if (field_elements.empty()) {
-				ctx.logInt(makeBox<compiler::helios::ExternCClassEmptyError>(
+				ctx.log<compiler::helios::ExternCClassEmptyError>(
 					classDiagnosticPosition(class_type.getSymbol(), ctx),
 					std::string(compiler::helios::name(class_type.getSymbol()).strView())
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -292,13 +292,13 @@ namespace compiler::tsl {
 
 				if (!conversion.has_value()) {
 					any_failed = true;
-					ctx.logInt(makeBox<compiler::helios::FieldNotCCompatibleError>(
+					ctx.log<compiler::helios::FieldNotCCompatibleError>(
 						ctx,
 						fieldDiagnosticPosition(element.getSymbol(), class_type.getSymbol(), ctx),
 						std::string(compiler::helios::name(element.getSymbol()).strView()),
 						element.getType(ctx),
 						conversion.error()
-					));
+					);
 					continue;
 				}
 				abi_fields.emplace_back(base::CRef<abi::types::AbiType>(&conversion.value()));
@@ -372,7 +372,7 @@ namespace compiler::tsl {
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
 				  ->valueOrThrow()
 				  .getAlignment(),
-			  tsh::SymbolType<>::withDefaults(static_array_type),
+			  tsh::SymbolType<>::withDefaultsMut(static_array_type),
 			  ctx
 		  ),
 		  element_layout(
@@ -403,7 +403,7 @@ namespace compiler::tsl {
 
 		static Bits requiredTagSize(usize number_of_alternatives) {
 			// Zero denotes no active alternative, so the largest tag equals the count.
-			const usize needed_bits  = std::bit_width(number_of_alternatives);
+			const auto  needed_bits  = static_cast<usize>(std::bit_width(number_of_alternatives));
 			const usize needed_bytes = (needed_bits + 7) / 8;
 			return Bits(8 * std::bit_ceil(needed_bytes));
 		}
@@ -427,7 +427,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(
 			  bytes2bits(helper.offsets[1]) + helper.max_component_size,
-			  tsh::SymbolType<>::withDefaults(helper.variant_type),
+			  tsh::SymbolType<>::withDefaultsMut(helper.variant_type),
 			  ctx
 		  ),
 		  tag_offset{ 0 },  // 0 bytes
@@ -575,7 +575,7 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  helper.total_size,
 			  helper.max_alignment,
-			  tsh::SymbolType<>::withDefaults(helper.type),
+			  tsh::SymbolType<>::withDefaultsMut(helper.type),
 			  ctx
 		  ),
 		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
@@ -643,36 +643,34 @@ namespace compiler::tsl {
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::CPointer) {
 		auto& pointee_cabi_type
 			= ctx.query<QueryCAbiTypeOf>(pointer_type.getPointee())->valueOrThrow();
 		if (not pointee_cabi_type.has_value()) {
-			ctx.logInt(
-				makeBox<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error())
-			);
+			ctx.log<dia::PlaceholderError>("Invalid cptr type.", pointee_cabi_type.error());
 			query::throwFailed();
 		}
 	}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee_type(tsh::SymbolType<>::withDefaults(symbol_type.getType())),
+		  pointee_type(tsh::SymbolType<>::withDefaultsMut(symbol_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
@@ -689,9 +687,9 @@ namespace compiler::tsl {
 	FunctionalTypeLayout::FunctionalTypeLayout(
 		const tsh::FunctionAbstractType function_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(function_type), ctx) {
 		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
-			ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"Lowering of the closure function type `",
 					function_type.toString(),
@@ -699,7 +697,7 @@ namespace compiler::tsl {
 				),
 				"Use a raw function type, for example `funptr(i64) -> i64` instead of `(i64) -> "
 				"i64`."
-			));
+			);
 			query::throwFailed();
 		}
 	}

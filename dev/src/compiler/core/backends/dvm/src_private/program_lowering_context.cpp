@@ -46,10 +46,10 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	  ) {}
 
 CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
-	auto type_name      = typeName(dvm_type);
-	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
-	if (inserted) lowered_type_order.push_back(type_name);
-	return &it->second;
+	auto type_name = typeName(dvm_type);
+	auto kv        = type_storage.dvm_types.maybePut(type_name, std::move(dvm_type));
+	if (kv) lowered_type_order.push_back(type_name);
+	return &type_storage.dvm_types.at(type_name);
 }
 
 base::StrID ProgramLoweringContext::keepTslType(CRef<tsl::TypeLayout> layout) {
@@ -84,8 +84,8 @@ CRef<vm::code::TypeOfData> ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl:
 		);
 	});
 
-	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
-	if (inserted) lowered_type_order.push_back(type_name);
+	if (type_storage.dvm_types.maybePut(type_name, std::move(dvm_type)))
+		lowered_type_order.push_back(type_name);
 
 	CORE_DEV_LOG(REPL, "[DEBUG] lowered_type_order size=", lowered_type_order.size(), "\n");
 	for (const auto& lowered_type: lowered_type_order)
@@ -96,7 +96,7 @@ CRef<vm::code::TypeOfData> ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl:
 		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
 
-	return { &it->second };
+	return { &type_storage.dvm_types.at(type_name) };
 }
 
 base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepReturnTslType(
@@ -145,9 +145,9 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	auto lowered_pointer = lowerPointerType(pointee_name, kind);
 	auto name            = typeName(lowered_pointer);
 
-	auto result = type_storage.dvm_types.put(name, std::move(lowered_pointer));
-	if (result.second) lowered_type_order.push_back(name);
-	return result.first->second;
+	if (type_storage.dvm_types.maybePut(name, std::move(lowered_pointer)))
+		lowered_type_order.push_back(name);
+	return type_storage.dvm_types.at(name);
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
@@ -184,15 +184,15 @@ base::StrID ProgramLoweringContext::getAnonymousGlobalName(base::StrID name_hint
 const DVMPlace& ProgramLoweringContext::declareGlobal(
 	base::StrID name, const vm::code::TypeOfData& type
 ) {
-	auto [it, _] = global_name_to_dvm.put(name, DVMPlace(name, type, DVMPlace::AccessKind::Direct));
-	return it->second;
+	global_name_to_dvm.maybePut(name, DVMPlace(name, type, DVMPlace::AccessKind::Direct));
+	return global_name_to_dvm.at(name);
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::defineGlobal(vm::code::GlobalData global_data) {
-	auto name           = global_data.name;
-	auto [it, inserted] = global_name_to_dvm_data.put(name, std::move(global_data));
-	if (inserted) lowered_global_order.push_back(name);
-	return it->second;
+	auto name = global_data.name;
+	if (global_name_to_dvm_data.maybePut(base::StrID(name), std::move(global_data)))
+		lowered_global_order.push_back(name);
+	return global_name_to_dvm_data.at(name);
 }
 
 const DVMPlace& ProgramLoweringContext::insertStaticDataGlobal(
@@ -502,16 +502,28 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 				base::strConcat("arr_", element_name, "_", array_layout.getElementCount())
 			);
 		}
+		variant_case(tsl::FunctionalTypeLayout, function_layout) {
+			const auto  parameter_layouts  = function_layout.getParameterLayouts(**query_ctx);
+			std::string function_type_name = base::strConcat("fun", parameter_layouts.size());
+			for (const auto& parameter_layout: parameter_layouts)
+				function_type_name
+					= base::strConcat(function_type_name, "_", getTslNameInternal(parameter_layout));
+			return base::StrID(base::strConcat(
+				function_type_name,
+				"_ret_",
+				getTslNameInternal(function_layout.getReturnLayout(**query_ctx))
+			));
+		}
 		variant_default {
 			CORE_ASSERT(query_ctx.has_value(), "Query context must be set for error reporting");
-			query_ctx.value()->logInt(makeBox<dia::NotYetImplementedCodeError>(
+			query_ctx.value()->log<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"During TypeLayout lowering in DVM code generation - type not handled "
 					"yet: ",
 					layout->toStringDefinition(*query_ctx.value())
 				),
 				""
-			));
+			);
 			query::throwFailed();
 		}
 	}
@@ -587,6 +599,22 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 				array_layout.getElementCount(),
 			};
 		}
+		variant_case(tsl::FunctionalTypeLayout, function_layout) {
+			std::vector<base::StrID> parameters
+				= function_layout.getParameterLayouts(**query_ctx)
+			    | std::views::transform([&](CRef<tsl::TypeLayout> parameter_layout) {
+					  return keepTslType(parameter_layout);
+				  })
+			    | std::ranges::to<std::vector>();
+
+			std::vector<base::StrID>    result;
+			const CRef<tsl::TypeLayout> return_layout
+				= function_layout.getReturnLayout(**query_ctx);
+			if (not return_layout->is<tsl::EmptyTypeLayout>())
+				result.push_back(keepTslType(return_layout));
+
+			return vm::code::FunctionType{ name, std::move(parameters), std::move(result) };
+		}
 		variant_default { CORE_UNREACHABLE(); }
 	}
 	CORE_UNREACHABLE();
@@ -614,7 +642,8 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 		collection.global_data.push_back(global_name_to_dvm_data.at(global_name));
 
 	// Sorting types by their string identification to ensure deterministic output
-	collection.types = std::ranges::to<std::vector>(type_storage.dvm_types | std::views::values);
+	collection.types.reserve(type_storage.dvm_types.size());
+	for (const auto& [_, dvm_type]: type_storage.dvm_types) collection.types.push_back(dvm_type);
 	std::ranges::sort(
 		collection.types,
 		[](const vm::code::TypeOfData& lhs, const vm::code::TypeOfData& rhs) {

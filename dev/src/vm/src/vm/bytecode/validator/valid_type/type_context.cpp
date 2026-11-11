@@ -6,6 +6,8 @@
 
 #include "type_context.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
