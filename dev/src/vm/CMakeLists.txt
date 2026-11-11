@@ -1,10 +1,10 @@
 add_custom_test_pack(vm)
 
 # Sets `files` in the caller's scope to the given paths, relative to the calling CMakeLists.txt.
-# The previous value of `files` is replaced, not appended to.
+# The previous value of `files` is replaced.
 function(set_files)
   list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_LIST_DIR}/" OUTPUT_VARIABLE tmp)
-  set(files ${tmp} PARENT_SCOPE)
+set(files ${tmp} PARENT_SCOPE)
 endfunction()
 
 # Add vm files
