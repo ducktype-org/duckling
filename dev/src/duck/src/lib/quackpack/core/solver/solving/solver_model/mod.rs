@@ -150,13 +150,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
+    #[tracing::instrument(skip_all)]
     pub fn solve(self, main_pkg: PackageId) -> QuackResult<SolverFreeze> {
         let solve = self.model.minimize().solve();
         let Some(solution) = solve.best_sol() else {
             qp_bail!(NoSolutionError())
         };
-        debug!(target: "duck::solver", ?solution);
+        debug!(?solution);
         freeze_from_solution(
             self.package_vars,
             self.package_to_feature_vars,

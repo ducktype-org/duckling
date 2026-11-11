@@ -10,6 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use russcip::{Solution, Variable};
+use tracing::trace;
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
@@ -60,6 +61,7 @@ fn all_packages(
         }
     });
     all_pkgs.extend(solution_pkgs);
+    trace!(?all_packages);
     all_pkgs
 }
 
@@ -71,7 +73,7 @@ fn all_features(
     input: &SolverInput,
     solution: &Solution,
 ) -> HashMap<PackageId, HashSet<FeatureName>> {
-    let mut result = HashMap::new();
+    let mut all_features = HashMap::new();
     for pkg in all_packages {
         let mut features = HashSet::new();
         if let Some(preexisting) = input.preexisting_features_for_pkg(*pkg) {
@@ -87,9 +89,10 @@ fn all_features(
             });
             features.extend(solution_features);
         }
-        result.insert(*pkg, features);
+        all_features.insert(*pkg, features);
     }
-    result
+    trace!(?all_features);
+    all_features
 }
 
 /// Get a mapping from all packages to realizations of their dependencies that will be present in the [`SolverFreeze`].
@@ -105,7 +108,7 @@ fn all_realizations(
     all_features: &HashMap<PackageId, HashSet<FeatureName>>,
     input: &SolverInput,
 ) -> QuackResult<HashMap<PackageId, HashMap<StrId, PackageId>>> {
-    let mut result = HashMap::new();
+    let mut all_realizations = HashMap::new();
     for pkg in all_packages {
         let pkg_data = input.package_data(*pkg)?;
         let features = all_features.get(pkg).with_context_internal(|| "todo")?;
@@ -134,9 +137,10 @@ fn all_realizations(
                 }
             }
         }
-        result.insert(*pkg, pkg_realizations);
+        all_realizations.insert(*pkg, pkg_realizations);
     }
-    Ok(result)
+    trace!(?all_realizations);
+    Ok(all_realizations)
 }
 
 /// Helper function for determining whether the model did or did not put the variable into the solution.

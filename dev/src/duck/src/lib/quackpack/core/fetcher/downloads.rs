@@ -62,7 +62,7 @@ impl Downloads {
         let blob_path = destination.not_locked_path().join(&filename);
 
         if blob_path.exists() {
-            debug!(target: "duck::ducknest", "blob cache hit at `{}`", blob_path.display());
+            debug!("blob cache hit at `{}`", blob_path.display());
             return Ok(DownloadedEntry::Present(blob_path));
         }
 

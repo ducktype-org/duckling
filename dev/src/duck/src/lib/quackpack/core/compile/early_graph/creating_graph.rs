@@ -88,7 +88,7 @@ impl EarlyGraph {
     /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    #[tracing::instrument(level = "debug", skip_all)]
+    #[tracing::instrument(skip_all)]
     pub(super) fn new_early(
         bcx: &BuildContext<'_, '_>,
         pkgs: Vec<(PackageId, AnyPackage)>,

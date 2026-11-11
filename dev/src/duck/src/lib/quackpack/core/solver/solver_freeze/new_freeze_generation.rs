@@ -19,7 +19,7 @@ impl SolverFreeze {
     /// This can be used to either generate:
     ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
+    #[tracing::instrument(skip_all)]
     pub fn trim(
         self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
@@ -57,7 +57,7 @@ impl SolverFreeze {
         let base_pkg_features = self
             .current_pkg_features(new_pkg_freezes, base_pkg)?
             .clone();
-        trace!(target: "duck::solver", ?base_pkg);
+        trace!(?base_pkg);
 
         for dependency in base_manifest
             .dependencies()
