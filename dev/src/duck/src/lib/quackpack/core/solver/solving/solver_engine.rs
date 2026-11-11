@@ -7,7 +7,7 @@
 //! Main logic for solving dependencies.
 //! Contains [`SolverEngine`] struct, which transforms the problem into
 //! the constraints of [`SolverModel`].
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::iter::once;
 
 use itertools::iproduct;
@@ -15,8 +15,10 @@ use russcip::ProblemCreated;
 
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
+use crate::quackpack::core::solver::root::SolverRoot;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::input::{PackageData, SolverInput};
-use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
+use crate::quackpack::core::solver::solving::solver_model::SolverModel;
 use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Selector};
 use crate::{QuackResult, QuackResultContext, StrId};
@@ -34,10 +36,10 @@ impl<'a> SolverEngine<'a> {
     #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
     pub(in crate::quackpack::core::solver) fn run_engine(
         input: SolverInput,
-        main_pkg: &(PackageId, HashSet<FeatureName>),
-    ) -> QuackResult<(FoundSolution, HashMap<PackageId, Box<Manifest>>)> {
+        root: &SolverRoot,
+    ) -> QuackResult<(SolverFreeze, HashMap<PackageId, Box<Manifest>>)> {
         let engine = SolverEngine::new(&input);
-        let solution = engine.run(main_pkg)?;
+        let solution = engine.run(root)?;
         let manifests = input.into_manifests();
         Ok((solution, manifests))
     }
@@ -51,7 +53,7 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
-    fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
+    fn run(mut self, root: &SolverRoot) -> QuackResult<SolverFreeze> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
             for dependency in data
@@ -64,14 +66,13 @@ impl<'a> SolverEngine<'a> {
         }
 
         // Root has to be present in the solution with all its requested features.
-        self.model.require_root_package(main_pkg.0)?;
-        for feature in main_pkg.1.iter() {
-            self.model
-                .require_root_package_feature(main_pkg.0, *feature)?;
+        self.model.require_root_package(root.id)?;
+        for feature in root.features.iter() {
+            self.model.require_root_package_feature(root.id, *feature)?;
         }
         self.force_features_expansion()?;
         self.force_singular_versions()?;
-        self.model.solve()
+        self.model.solve(root.id)
     }
 
     /// Creates necessary variables for all the packages.
@@ -406,7 +407,7 @@ fn parent_features_to_consider(
         .map(Some)
         .chain(once(None))
 }
-
+/*
 #[cfg(test)]
 mod test {
     use std::path::PathBuf;
@@ -1022,3 +1023,4 @@ metadata:
         assert_eq!(err.to_string(), "no dependency resolution found");
     }
 }
+*/

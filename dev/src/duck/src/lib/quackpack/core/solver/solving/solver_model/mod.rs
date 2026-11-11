@@ -15,10 +15,9 @@ use russcip::prelude::var;
 use russcip::{Model, ProblemCreated, Variable, WithSolutions};
 use tracing::debug;
 
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::input::SolverInput;
-use crate::quackpack::core::solver::solving::solver_model::solution::{
-    new_edges, new_features, new_packages,
-};
+use crate::quackpack::core::solver::solving::solver_model::solution::freeze_from_solution;
 use crate::quackpack::core::{FeatureName, PackageId};
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail};
 
@@ -26,7 +25,6 @@ mod constraints;
 mod solution;
 
 pub use constraints::Constraint;
-pub use solution::FoundSolution;
 
 // @TODO: #3544 store information about minimal unsolvable subprogram and display it here.
 #[derive(Debug)]
@@ -153,31 +151,18 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
     #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
-    pub fn solve(self) -> QuackResult<FoundSolution> {
+    pub fn solve(self, main_pkg: PackageId) -> QuackResult<SolverFreeze> {
         let solve = self.model.minimize().solve();
         let Some(solution) = solve.best_sol() else {
             qp_bail!(NoSolutionError())
         };
         debug!(target: "duck::solver", ?solution);
-        let preexisting_packages = self.input.all_preexisting_pkgs();
-        let new_packages = new_packages(self.package_vars, &preexisting_packages, &solution);
-        let new_features = new_features(
-            &self.package_to_feature_vars,
-            &new_packages,
-            &preexisting_packages,
+        freeze_from_solution(
+            self.package_vars,
+            self.package_to_feature_vars,
             self.input,
             &solution,
-        );
-        let new_edges = new_edges(
-            &new_packages,
-            &new_features,
-            &preexisting_packages,
-            self.input,
-        )?;
-        Ok(FoundSolution {
-            new_packages,
-            new_features,
-            new_edges,
-        })
+            main_pkg,
+        )
     }
 }
