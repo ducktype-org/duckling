@@ -13,7 +13,7 @@ use std::process::{Command, Output};
 use tracing::{debug, trace, warn};
 use url::Url;
 
-use super::{GitClient, GitRepository, can_shallow_clone};
+use super::{GitClient, GitRepository, GitSubmoduleOptions, can_shallow_clone};
 use crate::quackpack::core::GitReference;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -71,6 +71,10 @@ impl GitRepository for GitCliRepository {
     fn head_commit(&self) -> QuackResult<StrId> {
         get_current_commit(&self.0)
     }
+
+    fn init_submodules(&self, options: GitSubmoduleOptions) -> QuackResult<()> {
+        initialize_submodules(options, &self.0)
+    }
 }
 
 /// Check that git binary exists.
@@ -115,6 +119,27 @@ fn checkout(reference: GitReference, path: &Path) -> QuackResult<()> {
         }
         GitReference::Branch(_) | GitReference::Default => Ok(()),
     }
+}
+
+/// Initialize git submodules, following `options`.
+fn initialize_submodules(options: GitSubmoduleOptions, path: &Path) -> QuackResult<()> {
+    let mut command = git_cmd();
+    set_cwd_on_git_cmd(&mut command, path);
+    match options {
+        GitSubmoduleOptions::Init => {
+            command.arg("init");
+        }
+        GitSubmoduleOptions::Update { init, recursive } => {
+            command.arg("update");
+            if init {
+                command.arg("--init");
+            }
+            if recursive {
+                command.arg("--recursive");
+            }
+        }
+    }
+    execute_git(&mut command)
 }
 
 fn validate_commit(commit: StrId, path: &Path) -> QuackResult<()> {
