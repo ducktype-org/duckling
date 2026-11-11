@@ -96,7 +96,7 @@ fn clone_git_repository(url: &Url, reference: GitReference, destination: &Path) 
     execute_git(&mut command)
 }
 
-/// Checkout repo to the given commit, if we requested that.
+/// Checkout repo to the given reference.
 fn checkout(reference: GitReference, path: &Path) -> QuackResult<()> {
     if let GitReference::Rev(commit) = reference {
         validate_commit(commit, path)?;
