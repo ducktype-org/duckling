@@ -19,6 +19,7 @@ use crate::quackpack::core::solver::solving::solver_model::FeaturesToVars;
 use crate::quackpack::core::{FeatureName, PackageId, Selector};
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
+/// Get a [`SolverFreeze`] from [`SolverInput`] and [`Solution`].
 pub(super) fn freeze_from_solution(
     package_vars: HashMap<PackageId, Rc<Variable>>,
     package_to_feature_vars: HashMap<PackageId, FeaturesToVars>,
@@ -61,7 +62,7 @@ fn all_packages(
         }
     });
     all_pkgs.extend(solution_pkgs);
-    trace!(?all_packages);
+    trace!(?all_pkgs);
     all_pkgs
 }
 
