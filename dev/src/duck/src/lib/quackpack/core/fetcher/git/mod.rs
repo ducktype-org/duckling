@@ -51,11 +51,11 @@ pub trait GitRepository {
 }
 
 #[derive(Debug, Clone, Copy)]
-/// Options for controlling how submdoules should be initialised.
+/// Options for controlling how submodules should be initialised.
 pub enum GitSubmoduleOptions {
     /// Equivalent to `git submodule init`.
     Init,
-    /// Equivalent to `git submodules update`.
+    /// Equivalent to `git submodule update`.
     Update {
         /// If `true`, behave as `update --init`.
         init: bool,

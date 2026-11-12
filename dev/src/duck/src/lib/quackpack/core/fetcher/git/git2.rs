@@ -224,7 +224,7 @@ fn checkout_tag(repository: &git2::Repository, tag: &str) -> QuackResult<()> {
 
 /// Initialise top-level submodules of the repository.
 ///
-/// This functions doesn't update them, nor is recursive.
+/// This function doesn't update them, nor is recursive.
 ///
 /// Use [`update_submodules`] for more granular control.
 fn initialize_submodules(repository: &git2::Repository) -> QuackResult<()> {
@@ -285,7 +285,7 @@ fn update_submodules(
         })?;
 
         update_submodules(&subrepository, init, recursive, ctx).with_context(|| {
-            format!("failed to updated recursively submodules of a submodule `{submodule_name}`")
+            format!("failed to recursively update submodules of a submodule `{submodule_name}`")
         })?;
     }
     Ok(())
