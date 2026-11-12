@@ -81,13 +81,19 @@ namespace base {
 	}
 
 	/**
-	 * @brief Helper function for extracting from variants
-	 * @TODO: #3073 change to ref
+	 * @brief Helper function for extracting from variants, returns a reference into `el`.
 	 */
 	template<typename T, typename U>
-	T choose(const U& el) {
+	const T& choose(const U& el) {
 		return std::get<T>(el);
 	}
+
+	/**
+	 * @brief Deleted: the returned reference would outlive the temporary variant. Use `std::get`
+	 * or copy the alternative out explicitly.
+	 */
+	template<typename T, typename U>
+	const T& choose(const U&& el) = delete;
 
 	template<typename T, typename U>
 	inline base::Optional<CRef<T>> maybeChoose(const U& el) {

@@ -8,6 +8,8 @@
 
 #include <tester/tester.hpp>
 
+#include <string>
+
 class T {
 	i32 data;
 
@@ -22,7 +24,10 @@ class VariantUtilsTest: public tester::TestSuite {
 #define TESTER_CLASS VariantUtilsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(chooseTest);
+	}
 
 	void simpleTest() {
 		std::variant<int, bool, char, T> v;
@@ -98,6 +103,26 @@ public:
 
 		assertTrue(std::get<i32>(v_2) == 6, "bad variant access");
 	}
+
+	void chooseTest() {
+		std::variant<i32, std::string> v = std::string("quack");
+
+		assertTrue(base::holds<std::string>(v), "should hold a string");
+		const auto& chosen = base::choose<std::string>(v);
+		assertTrue(&chosen == &std::get<std::string>(v), "choose should not copy");
+		assertEqual(chosen, std::string("quack"), "wrong value chosen");
+
+		std::get<std::string>(v) = "honk";
+		assertEqual(chosen, std::string("honk"), "reference should see the update");
+
+		static_assert(std::is_same_v<decltype(base::choose<i32>(v)), const i32&>);
+		static_assert(CAN_CHOOSE<const std::variant<i32, std::string>&>);
+		static_assert(not CAN_CHOOSE<std::variant<i32, std::string>>);
+	}
+
+private:
+	template<typename V>
+	static constexpr bool CAN_CHOOSE = requires(V&& v) { base::choose<i32>(std::forward<V>(v)); };
 };
 
 TESTER_COMMON_MAIN("/src/base/tests");

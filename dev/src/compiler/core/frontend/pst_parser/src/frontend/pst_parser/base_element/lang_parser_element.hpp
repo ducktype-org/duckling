@@ -274,8 +274,13 @@ namespace pst {
 		[[nodiscard]]
 		auto viewTokens() const {
 			using namespace std::views;
+
+			// `viewSubElements()` yields temporaries, so the token is copied out, not referenced.
+			constexpr auto GET_TOKEN
+				= [](const SubElement& t) -> SubToken { return base::choose<SubToken>(t); };
+
 			return viewSubElements() | filter(base::holds<SubToken, SubElement>)
-			     | transform(base::choose<SubToken, SubElement>);
+			     | transform(GET_TOKEN);
 		}
 
 		/*************************************************
