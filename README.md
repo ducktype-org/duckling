@@ -8,14 +8,6 @@
 
 -----
 
-<div align="center">
-    <picture>
-        <img alt="Co-founded by the European Union" src="https://ducktype.org/static/main/img/en/eu.png" width="50%">
-    </picture>
-</div>
-
------
-
 <p align="center">
   <a href="https://docs.duckling.pl/">Documentation</a>
   &nbsp;·&nbsp;
@@ -23,6 +15,14 @@
   &nbsp;·&nbsp;
   <a href="https://duckling.pl/get_involved/">Community</a>
 </p>
+
+-----
+
+<div align="center">
+    <picture>
+        <img alt="Co-founded by the European Union" src="https://ducktype.org/static/main/img/en/eu.png" width="80%">
+    </picture>
+</div>
 
 -----
 
