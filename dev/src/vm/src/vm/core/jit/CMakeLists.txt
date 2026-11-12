@@ -19,7 +19,7 @@ if (CNP_ENABLED)
     add_subdirectory(copy-and-patch/)
 endif()
 
-add_files(
+set_files(
     jit_helper.cpp
 )
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

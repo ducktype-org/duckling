@@ -730,6 +730,26 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	/**
+	 * @brief A class statement whose name cannot be parsed must not crash the parser.
+	 */
+	void classWithoutNameTests() {
+		for (const std::string_view code:
+		     { "class {}\n", "fun class() = {}\n", "let a: class = ()\n" }) {
+			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+
+			assertTrue(
+				parsed->hasErrors(),
+				base::strConcat("`", code, "` is invalid and should produce a diagnostic")
+			);
+			const std::string text = renderedDiagnostics(parsed.ref());
+			assertTrue(
+				text.find("Expected an identifier here") != std::string::npos,
+				base::strConcat("expected an identifier diagnostic, got:\n", text)
+			);
+		}
+	}
+
+	/**
 	 * @brief Parses a program with a single parsing error and checks that the broken statement was
 	 * dropped as a whole while the following code was parsed.
 	 */
@@ -816,6 +836,7 @@ public:
 		TESTER_ADD_TEST(exampleTests);
 		TESTER_ADD_TEST(diagnosticTests);
 		TESTER_ADD_TEST(sentinelMessageTests);
+		TESTER_ADD_TEST(classWithoutNameTests);
 		TESTER_ADD_TEST(contextRecoveryTests);
 		TESTER_ADD_TEST(rootAlwaysExistsTests);
 	}

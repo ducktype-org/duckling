@@ -7,7 +7,7 @@
 #include "vm_evaluator.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
-#include <backends/dvm/repl_lowering.hpp>
+#include <backends/dvm/incremental_dvm_code_builder.hpp>
 #include <ctv/ctv.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_abi.hpp>
@@ -132,7 +132,7 @@ namespace {
 		 * Code builder, uses repl for incremental loading - it automatically handles
 		 * deduplication and only lowers new elements.
 		 */
-		backend_vm::ReplDVMCodeBuilder code_builder;
+		backend_vm::IncrementalDVMCodeBuilder code_builder;
 
 	public:
 		/**

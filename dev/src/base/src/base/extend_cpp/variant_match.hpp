@@ -80,15 +80,6 @@ namespace base {
 		return std::holds_alternative<T>(el);
 	}
 
-	/**
-	 * @brief Helper function for extracting from variants
-	 * @TODO: #3073 change to ref
-	 */
-	template<typename T, typename U>
-	T choose(const U& el) {
-		return std::get<T>(el);
-	}
-
 	template<typename T, typename U>
 	inline base::Optional<CRef<T>> maybeChoose(const U& el) {
 		auto el_ptr = std::get_if<T>(&el);

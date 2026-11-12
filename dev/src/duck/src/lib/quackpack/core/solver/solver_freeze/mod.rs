@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 mod freeze_diagnosis;
-mod new_freeze_generation;
+mod trimming;
 
 use std::collections::{HashMap, HashSet};
 
@@ -26,9 +26,12 @@ pub struct SolverFreeze {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverPackageFreeze {
-    pub dependencies_realization: HashMap<StrId, PackageId>,
+    pub dependencies_realization: DepRealizations,
     pub features: HashSet<FeatureName>,
 }
+
+/// Mapping from effective name of dependencies to their realizations.
+pub type DepRealizations = HashMap<StrId, PackageId>;
 
 impl SolverPackageFreeze {
     pub fn new() -> Self {
@@ -69,7 +72,7 @@ impl SolverFreeze {
         root: PackageId,
         value: &'a VenvFreeze,
     ) -> Result<Self, MalformedFreezeError<'a>> {
-        trace!(target: "duck::solver", ?root, freeze = ?value);
+        trace!(?root, freeze = ?value);
         check_different_dependencies_identities(value)?;
         let mut expanded_pkgs_by_identity: HashMap<Identity, PackageId> = HashMap::new();
         for pkg_freeze in value.dependencies() {
@@ -142,7 +145,7 @@ fn check_different_dependencies_identities(
 
 impl SolverFreeze {
     pub fn empty_with_root(root: PackageId) -> QuackResult<Self> {
-        trace!(target: "duck::solver", ?root);
+        trace!(?root);
         Ok(Self {
             main_pkg: root,
             package_freezes: [(root, SolverPackageFreeze::default())].into(),
@@ -150,7 +153,7 @@ impl SolverFreeze {
     }
 
     pub fn generate_storage_freeze(&self) -> QuackResult<VenvFreeze> {
-        trace!(target: "duck::solver", root = ?self.main_pkg, freeze = ?self.package_freezes);
+        trace!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let Some(root_freeze) = self.package_freezes.get(&self.main_pkg).cloned() else {
             qp_bail_internal!("no main freeze: {self:#?}")

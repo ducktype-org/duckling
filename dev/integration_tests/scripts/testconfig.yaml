@@ -46,3 +46,4 @@ SubDirs:
   - declarations
   - standard_library
   - lists_and_arrays
+  - errors
