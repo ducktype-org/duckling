@@ -103,7 +103,7 @@ namespace compiler::mir::test_utils {
 				if (not visited.insert(block_id).second) return;
 				cfg_order.push_back(block_id);
 				for (BlockID successor:
-				     getTerminatorSuccessors(mir_func->blocks.at(block_id)->terminator))
+				     getTerminatorSuccessors(mir_func->blocks.at(block_id).terminator))
 					self(self, successor);
 			};
 			visit(visit, mir_func->block_order.front());
@@ -113,7 +113,7 @@ namespace compiler::mir::test_utils {
 				const auto& block = mir_func->blocks.at(block_id);
 
 				// Check instructions
-				for (const auto& instr: block->instructions) {
+				for (const auto& instr: block.instructions) {
 					if (event_idx >= events.size()) return;  // All events satisfied
 
 					flag_position = 0;  // Reset flag position for new instruction
@@ -127,7 +127,7 @@ namespace compiler::mir::test_utils {
 				if (event_idx < events.size()) {
 					flag_position = 0;  // Reset flag position for terminator
 					while (event_idx < events.size()
-					       && matchEvent(block->terminator, events[event_idx], mir_func))
+					       && matchEvent(block.terminator, events[event_idx], mir_func))
 						event_idx++;
 				}
 			}

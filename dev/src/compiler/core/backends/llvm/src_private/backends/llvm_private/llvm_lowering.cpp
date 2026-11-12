@@ -4,7 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <backends/llvm/llvm_backend.hpp>
 #include <backends/llvm_private/abi_converter.hpp>
+#include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <concepts>
@@ -22,6 +24,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
@@ -215,6 +218,17 @@ namespace {
 }
 
 namespace compiler::backend_llvm {
+
+	void configureAssemblySyntax() {
+		using AssemblySyntax     = global_state::BackendOptions::LLVMBackend::AssemblySyntax;
+		const auto& llvm_backend = global_state::getBackendOptions()->llvm_backend;
+		if (!llvm_backend || llvm_backend->asm_syntax != AssemblySyntax::Intel) return;
+
+		constexpr auto OPTION_NAME = "x86-asm-syntax";
+		auto*          option      = llvm::cl::getRegisteredOptions().lookup(OPTION_NAME);
+		if (!option || option->addOccurrence(0, OPTION_NAME, "intel"))
+			CORE_PANIC("LLVM error: unable to select Intel assembly syntax");
+	}
 
 	namespace {
 		std::once_flag llvm_init_flag;

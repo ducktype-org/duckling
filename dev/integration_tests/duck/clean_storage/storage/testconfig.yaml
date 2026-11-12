@@ -18,4 +18,3 @@ Tests:
             info: successfully cleaned the storage
             Removed 1 venv
               venv with id \`foo\`
-            Removed 0 packages

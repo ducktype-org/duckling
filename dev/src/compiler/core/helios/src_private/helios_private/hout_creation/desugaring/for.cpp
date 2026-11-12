@@ -54,13 +54,13 @@ namespace compiler::helios::desugaring {
 		};
 
 		tsh::SymbolType<> getI64(query::Context& ctx) {
-			return tsh::SymbolType<>::withDefaults(
+			return tsh::SymbolType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 		}
 
 		tsh::SymbolType<> getConstI64(query::Context& ctx) {
-			return tsh::SymbolType<>::withDefaults(
+			return tsh::SymbolType<>::withDefaultsMut(
 					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			)
 			    .withMutability(tsh::Mutability::Immutable);

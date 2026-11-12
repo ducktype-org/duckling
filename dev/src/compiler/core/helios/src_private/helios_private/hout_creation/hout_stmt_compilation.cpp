@@ -454,11 +454,7 @@ namespace compiler::helios {
 
 			// in the future we must also handle here different if-s variants
 			// for example: `if (let a = ...) {}`.
-			auto bool_type = tsh::SymbolType<>{
-				tsh::getBoolType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			auto bool_type        = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
 				is_failed = true;
@@ -495,11 +491,7 @@ namespace compiler::helios {
 		}
 
 		void visitWhile(pst::Access<pst::While> stmt) override {
-			auto bool_type = tsh::SymbolType<>{
-				tsh::getBoolType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			auto bool_type        = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 			auto control_flow_id  = getControlFlowID(ctx, stmt);
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {

@@ -41,9 +41,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
-	pushInstruction(instructions::Comment(base::StrID(
-		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
-	)));
+	// No `Comment` before the terminator: a `.dbc` file keeps comments only as text, so a loaded
+	// function has none, and every debug info instruction index after one would be off by one.
 	pushInstruction(lir_terminator);
 }
 

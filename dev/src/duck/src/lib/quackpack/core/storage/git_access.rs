@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 
 use super::paths::Storage;
 use crate::QuackResult;
+use crate::quackpack::core::PackageId;
 use crate::quackpack::core::solver::git_access::GitAccess;
-use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
@@ -26,16 +26,19 @@ impl<'paths> StorageGitAccess<'paths> {
 }
 
 impl GitAccess for StorageGitAccess<'_> {
-    fn git_path(&self, url: InternedUrl, commit: &str) -> PathBuf {
-        self.paths.git_dir(url, commit)
+    fn git_path(&self, package: PackageId) -> PathBuf {
+        package.debug_assert_git_package();
+        self.paths.pkg_dir(package)
     }
 
-    fn is_stored(&self, url: InternedUrl, commit: &str) -> bool {
-        self.paths.is_stored_git(url, commit)
+    fn is_stored(&self, package: PackageId) -> bool {
+        package.debug_assert_git_package();
+        self.paths.is_package_stored(package)
     }
 
-    fn store(&self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()> {
-        let dir = self.paths.git_dir(url, commit);
+    fn store(&self, package: PackageId, source_path: &Path) -> QuackResult<()> {
+        package.debug_assert_git_package();
+        let dir = self.paths.pkg_dir(package);
         if dir.exists() {
             remove_tree(&dir)?;
         }
@@ -43,7 +46,7 @@ impl GitAccess for StorageGitAccess<'_> {
             mkdir(parent, MkdirOptions::WithParents)?;
         }
         move_tree(source_path, &dir)?;
-        self.paths.mark_git_stored(url, commit)?;
+        self.paths.mark_as_stored(package)?;
         Ok(())
     }
 }

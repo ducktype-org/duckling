@@ -32,6 +32,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -49,6 +50,9 @@ namespace compiler::helios {
 	 * @brief This function collects all used symbols from the hout unit module
 	 * that should be appended to the module, for example some compiler generated symbols
 	 * or template instantiations in the future.
+	 *
+	 * Failed queries are not rethrown, since the callers do not catch query exceptions.
+	 * The failed symbol is skipped and the function returns BAD.
 	 */
 	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
 		// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
@@ -84,7 +88,7 @@ namespace compiler::helios {
 				if (implementsQueryCodeOfFun(used_fun)) {
 					// E.g. an instantiation of a template whose body doesn't compile for the
 					// given arguments. The error has been reported already.
-					auto code = ctx.query<QueryCodeOfFun>(used_fun);
+					const auto& code = ctx.query<QueryCodeOfFun>(used_fun);
 					if (code->hasFailed()) {
 						result = base::BAD;
 						continue;
@@ -98,7 +102,7 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_global);
-				auto global_data = ctx.query<QueryHOUTGlobalData>(used_global);
+				const auto& global_data = ctx.query<QueryHOUTGlobalData>(used_global);
 				if (global_data->hasFailed()) {
 					result = base::BAD;
 					continue;
@@ -393,14 +397,17 @@ namespace compiler::helios {
 			base::StrID                                      original_name,
 			dia::StablePosition                              stable_pos
 		) {
-			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
-			if (inserted) return false;
+			auto entry = seen_declarations.find(key_name);
+			if (entry == seen_declarations.end()) {
+				seen_declarations.put(key_name, stable_pos);
+				return false;
+			}
 
 			auto error = makeBox<dia::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
 			// Point the user at the previous declaration.
 			error->addAttachedMessage(
-				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
+				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->value)
 			);
 
 			ctx.log(std::move(error));
@@ -571,7 +578,7 @@ namespace compiler::helios {
 
 			for (auto submodule: *submodules) {
 				auto sub_hout
-					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
+					= ctx.query<QueryModuleHOUTRecursively>(submodule.value).valueOrThrow();
 				total_elements += sub_hout.size();
 
 				sub_results.emplace_back(std::move(sub_hout));

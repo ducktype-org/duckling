@@ -204,8 +204,8 @@ private:
 		using namespace compiler;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto unit_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
-			const auto i64_type  = tsh::SymbolType<>::withDefaults(
+			const auto unit_type = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+			const auto i64_type  = tsh::SymbolType<>::withDefaultsMut(
                 tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
             );
 			const tsh::VariantAbstractType variant_type

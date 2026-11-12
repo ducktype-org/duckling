@@ -76,7 +76,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         self.bcx.pcx.ctx()
     }
 
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     /// Drive the compilation with [`UnitRunner`].
     pub fn run(self) -> QuackResult<CompilationOutput> {
         let mut manager = self.profile_layout.fingerprint();
@@ -105,7 +105,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         Ok(output)
     }
 
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     /// Read the previous build fingerprint, generating [`RedGreenData`] from it.
     /// Saving the new fingerprint is postponed to the end of the whole builds, so this function returns a tuple,
     /// consisting of:
@@ -205,7 +205,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         Ok(())
     }
 
-    #[instrument(level = "debug", skip_all, fields(id = %id_in_graph, name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
+    #[instrument(skip_all, fields(id = %id_in_graph, name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
     /// Compile a single [`Unit`].
     /// May panic, if this [`Unit`] shouldn't be compiled ([`should_run`] returned `false`).
     ///
@@ -264,7 +264,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         })()
         .with_context(|| format!("failed to compile `{name}`"))?;
         if !status.success() {
-            debug!(target: "duck::duckc", %status, "`duckc` failed to compile `{name}`");
+            debug!(%status, "`duckc` failed to compile `{name}`");
             qp_bail!("failed to compile `{name}`")
         }
         debug!("successfully compiled the unit");
@@ -282,7 +282,6 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             .set_subcommand(DuckcSubcommand::CompilePackages)
             .set_manifest_path(&layout.dependency_json_path())
             .set_artifacts_dir(&layout.compiler_artifacts())
-            .set_c_std(profile.c_std)
             .set_opt_level(profile.opt_level)
             .set_incremental(profile.incremental)
             .set_workers_count(self.bcx.jobs);

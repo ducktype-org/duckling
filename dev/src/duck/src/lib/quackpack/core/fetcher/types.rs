@@ -58,12 +58,15 @@ impl From<&registry::Manifest> for Package {
 }
 
 #[derive(Debug)]
-/// Response of the [`GitClient::clone_blocking`](super::git::GitClient::clone_blocking).
-pub struct GitCloneResponse {
+/// Response of the [`Fetcher::clone_from_git_to_directory`] and [`Fetcher::clone_from_git`].
+///
+/// [`Fetcher::clone_from_git_to_directory`]: super::Fetcher::clone_from_git_to_directory
+/// [`Fetcher::clone_from_git`]: super::Fetcher::clone_from_git
+pub struct ClonedPackage {
     /// Hash of the checkout'd repository.
-    pub commit_hash: StrId,
+    pub commit: StrId,
     /// Parsed package at the repository checkout'd at the
-    /// [`commit_hash`](GitCloneResponse::commit_hash).
+    /// [`commit`](ClonedPackage::commit).
     pub package: core::Package,
 }
 

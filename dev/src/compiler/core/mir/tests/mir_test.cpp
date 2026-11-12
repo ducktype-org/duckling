@@ -23,6 +23,8 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
@@ -295,8 +297,11 @@ private:
 			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
-				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
-					preds.put(succ).first->second.push_back(block_id);
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator
+				     )) {
+					preds.maybePut(succ, std::vector<compiler::mir::BlockID>{});
+					preds.at(succ).push_back(block_id);
+				}
 
 			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
 			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(
@@ -348,8 +353,11 @@ private:
 			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
 			for (auto block_id: pre_mir.block_order)
 				for (auto succ:
-				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
-					preds.put(succ).first->second.push_back(block_id);
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id).terminator
+				     )) {
+					preds.maybePut(succ, std::vector<compiler::mir::BlockID>{});
+					preds.at(succ).push_back(block_id);
+				}
 
 			auto locals_by_scope = compiler::mir::collectLocalsByScope(pre_mir);
 			auto move_states     = compiler::mir::MoveStateData::calculateGlobalInMoveStateMap(

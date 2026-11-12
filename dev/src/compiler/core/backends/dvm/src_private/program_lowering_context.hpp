@@ -8,10 +8,12 @@
 
 #include "dvm_value.hpp"
 
-#include <backends/dvm/repl_lowering_snapshot.hpp>
+#include <backends/dvm/lowered_entities_snapshot.hpp>
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
+
+#include <base/collections/hashmap.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 

@@ -19,18 +19,33 @@ namespace pst {
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace internal {
-		static bool isStatementStartOrSpecifier(const TokenStream& state, i64 fwd) {
+		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
+
+		/**
+		 * @brief Whether the token `fwd` tokens ahead is a keyword that always starts a statement.
+		 *
+		 * `const` right after `if` belongs to an `if const` statement or ternary, so it does not
+		 * start a new statement. Only keyword tokens count: a string literal such as `"while"`
+		 * shares its text with a keyword but never starts a statement.
+		 */
+		bool isStmtStartKeyword(const TokenStream& state, i64 fwd) {
 			if (!state[fwd].isKeyword()) return false;
-			auto flags = keywordFlags(state[fwd].asKeyword());
-			return flags.contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-			    || flags.contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
+			return keywordFlags(state[fwd].asKeyword())
+			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}
 
-		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
+		/** @brief Whether the token `fwd` tokens ahead is a specifier keyword, e.g. `pub`. */
+		static bool isSpecifierKeyword(const TokenStream& state, i64 fwd) {
+			return state[fwd].isKeyword()
+			    && keywordFlags(state[fwd].asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
 
 		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
 			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-			    || state[fwd - 1].is(Special::Semicolon) || isStatementStartOrSpecifier(state, fwd);
+			    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
+			    || isSpecifierKeyword(state, fwd);
 		}
 
 		template<class T>
@@ -50,8 +65,8 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || isStatementStartOrSpecifier(state, fwd)
+				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
+				    || isSpecifierKeyword(state, fwd)
 				    || (Conditions::isBlockGroup(state, fwd - 1)
 				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
@@ -73,7 +88,10 @@ namespace pst {
 
 				if (state[fwd - 1].is(Special::Semicolon)) return true;
 
-				if (isStatementStartOrSpecifier(state, fwd)) return true;
+				if (isStmtStartKeyword(state, fwd)) return true;
+
+				if (isSpecifierKeyword(state, fwd))
+					return true;
 
 				// When we have two curly bracket blocks as consecutive tokens, it probably means
 				// that the user intended to write two statements
@@ -99,8 +117,8 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || isStatementStartOrSpecifier(state, fwd);
+				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
+				    || isSpecifierKeyword(state, fwd);
 			}
 		};
 

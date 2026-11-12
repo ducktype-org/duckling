@@ -1,0 +1,3 @@
+# On a working std this prints "Hello". The test runs it against a std that fails to parse,
+# so duckc must stop after the std diagnostics with code 1 and never run it.
+print("Hello");

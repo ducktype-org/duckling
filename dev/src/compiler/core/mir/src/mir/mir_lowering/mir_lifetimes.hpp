@@ -12,6 +12,8 @@
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 
+#include <base/collections/hashmap.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::mir {

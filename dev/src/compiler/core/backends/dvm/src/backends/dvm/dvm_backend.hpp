@@ -82,9 +82,9 @@ namespace compiler::backend_vm {
 
 	private:
 		/**
-		 * We friend ReplDVMCodeBuilder, so it can access program_context directly.
+		 * We friend IncrementalDVMCodeBuilder, so it can access program_context directly.
 		 */
-		friend class ReplDVMCodeBuilder;
+		friend class IncrementalDVMCodeBuilder;
 
 		/**
 		 * A Boxed pointer to allow forward declaration in order to hide implementation details.

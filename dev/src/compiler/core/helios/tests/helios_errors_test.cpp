@@ -313,7 +313,9 @@ private:
 				fun a(x: i32) -> i32 = 0;
 				fun b() = a(1.0);
 			)",
-				{ "given argument type `f32` cannot be converted", "Function declared here." },
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:2:9\n" },
 				1
 			);
 
@@ -322,7 +324,26 @@ private:
 				fundecl a(x: i32) -> i32;
 				fun b() = a(1.0);
 			)",
-				{ "given argument type `f32` cannot be converted", "Function declared here." },
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:2:13\n" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class P {
+					x: i64;
+					fun m(y: i32) = {}
+				}
+				fun b() = {
+					var p = P(x=1);
+					p.m(1.0);
+				}
+			)",
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:4:10\n" },
 				1
 			);
 
@@ -754,6 +775,30 @@ private:
 				}
 			)",
 				{ "Type `ref i32` cannot be converted to type `box i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i64 = 3;
+					let r: ref i64 = &a;
+					let num: i64 = if (a == 0) then a else r;
+				}
+			)",
+				{ "the `then` branch is `i64` and the `else` branch is `ref i64`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				class A { x: i64; }
+				class B { y: i64; }
+				fun main() = {
+					let a: i64 = 3;
+					let v = if (a == 0) then A(1i64) else B(2i64);
+				}
+			)",
+				{ "the `then` branch is `Class A` and the `else` branch is `Class B`." },
 				1
 			);
 		}
@@ -2262,6 +2307,35 @@ private:
 			1
 		);
 
+		// The caller does not depend on the instantiation's body (the return type is explicit), so
+		// only the replicated instantiation fails. The module must fail, not panic.
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				fun foo() -> i64 = {
+					return a + b;
+				}
+
+				fun main() -> i64 = foo[1]();
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
+		// The same for replicated global data of an instantiation.
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N {
+					const c: i64 = a + b;
+				}
+
+				fun main() -> i64 = N[1].c;
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
 		// ============================ Errors inside arguments ============================
 
 		checkForErrorOnCompileModule(
@@ -2791,11 +2865,7 @@ private:
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			auto st = tsh::SymbolType{
-				int32_type,
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			auto st = tsh::SymbolType<>::withDefaultsMut(int32_type);
 
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(

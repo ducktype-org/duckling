@@ -299,7 +299,7 @@ namespace compiler::helios {
 		const SymID none_sym
 			= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::OptionalNone })
 		          ->valueOrThrow();
-		return tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryClassType>(none_sym));
+		return tsh::SymbolType<>::withDefaultsMut(ctx.query<tsh::QueryClassType>(none_sym));
 	}
 
 	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {

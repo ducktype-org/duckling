@@ -9,69 +9,18 @@ use std::collections::{HashMap, HashSet};
 use tracing::trace;
 
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-use crate::quackpack::core::solver::solving::FoundSolution;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Selector};
 use crate::util::extend::QpExtend;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 impl SolverFreeze {
-    /// Generates a new freeze from the previous one and the solution found by solver.
-    /// Trims the resulting freeze to contain only the necessary packages and features.
-    /// The new freeze assumes that the main package is compiled with all its manifest-listed features.
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
-    pub fn new_freeze(
-        mut self,
-        manifests: &HashMap<PackageId, Box<Manifest>>,
-        solver_output: FoundSolution,
-    ) -> QuackResult<Self> {
-        self.add_solver_output(solver_output)?;
-        let Some(main_pkg) = manifests.get(&self.main_pkg) else {
-            qp_bail_internal!(
-                "main package `{:?}` without a manifest: {manifests:#?}",
-                self.main_pkg
-            )
-        };
-        let main_features = main_pkg.features().all_features().keys().copied().collect();
-        self.find_minimal_dep_solution(manifests, main_features)
-    }
-
-    /// Adds the solver output to the freeze.
-    fn add_solver_output(self: &mut SolverFreeze, solver_output: FoundSolution) -> QuackResult<()> {
-        for new_pkg in solver_output.new_packages {
-            self.package_freezes
-                .insert(new_pkg, SolverPackageFreeze::default());
-        }
-        for (pkg, new_features) in solver_output.new_features {
-            let Some(pkg) = self.package_freezes.get_mut(&pkg) else {
-                qp_bail_internal!(
-                    "feature added to a package absent in the previous freeze and in the new packages set: {pkg:?}, {:#?}",
-                    self.package_freezes
-                )
-            };
-            pkg.features.extend(new_features);
-        }
-        for (dependency_edge, destination) in solver_output.new_edges {
-            let Some(parent) = self.package_freezes.get_mut(&dependency_edge.parent) else {
-                qp_bail_internal!(
-                    "new dependency realization added to a package absent in the previous freeze and in the new packages set: {dependency_edge:?}, {:#?}",
-                    self.package_freezes,
-                )
-            };
-            parent.dependencies_realization.insert(
-                dependency_edge.dep_ename,
-                PackageId::new(dependency_edge.dep_identity, destination),
-            );
-        }
-        Ok(())
-    }
-
     /// Trims the freeze to contain the minimal sufficient set of packages and features.
     /// Assumes that the freeze is correct, but potentially unnecessary large.
     /// This can be used to either generate:
     ///     * the new freeze (main_pkg_features equals to all manifest-specified main package features).
     ///     * a compilation graph from the new freeze (main_pkg_features equals to features provided by the build command).
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
-    pub fn find_minimal_dep_solution(
+    #[tracing::instrument(skip_all)]
+    pub fn trim(
         self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
         main_pkg_features: HashSet<FeatureName>,
@@ -92,7 +41,7 @@ impl SolverFreeze {
         })
     }
 
-    /// Recursive DFS-like helper for [`SolverFreeze::find_minimal_dep_solution`], to construct trimmed package to [`SolverPackageFreeze`] map.
+    /// Recursive DFS-like helper for [`SolverFreeze::trim`], to construct trimmed package to [`SolverPackageFreeze`] map.
     /// For a given package, it iterates over its dependencies and,
     /// for each realization, determines what features of the child are forced.
     /// If some new feature of the child is forced, the function calls itself, with that package as the base.
@@ -108,7 +57,7 @@ impl SolverFreeze {
         let base_pkg_features = self
             .current_pkg_features(new_pkg_freezes, base_pkg)?
             .clone();
-        trace!(target: "duck::solver", ?base_pkg);
+        trace!(?base_pkg);
 
         for dependency in base_manifest
             .dependencies()
@@ -204,9 +153,7 @@ mod test {
     use tempfile::{TempDir, tempdir};
 
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-    use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-    use crate::quackpack::core::solver::solving::FoundSolution;
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops::{touch, try_fsync_dir, write_file};
@@ -219,96 +166,6 @@ mod test {
         write_file(&manifest, contents).unwrap();
         try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
-    }
-
-    #[test]
-    fn add_solver_output() {
-        let (_dir_a, path_a) = prepare_manifest(
-            r#"
-metadata:
-  name: a
-  version: '1'
-
-dependencies:
-  b:
-    version: '2'
-    features: [xd]
-  c:
-    version: '3'
-"#,
-        );
-        let (_dir_b, path_b) = prepare_manifest(
-            r#"
-metadata:
-  name: b
-  version: '2'
-
-features:
-  xd: []
-"#,
-        );
-        let (_dir_c, path_c) = prepare_manifest(
-            r#"
-metadata:
-  name: c
-  version: '3'
-"#,
-        );
-        let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
-        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
-        let identity_a = FullIdentity::new("a".into(), registry_origin);
-        let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let identity_c = FullIdentity::new("c".into(), registry_origin);
-        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
-        let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
-        let manifests = HashMap::from([
-            (pkg_a, manifest_a),
-            (pkg_b, manifest_b),
-            (pkg_c, manifest_c),
-        ]);
-        let prev_a_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
-            features: HashSet::new(),
-        };
-        let prev_b_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::new(),
-            features: HashSet::new(),
-        };
-        let prev_freeze = SolverFreeze {
-            package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
-            main_pkg: pkg_a,
-        };
-
-        let solver_output = FoundSolution {
-            new_packages: HashSet::from([pkg_c]),
-            new_features: HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xd")]))]),
-            new_edges: HashMap::from([(
-                DependencyEdge {
-                    parent: pkg_a,
-                    dep_identity: identity_c,
-                    dep_ename: StrId::new("c"),
-                },
-                Version::new(3, 0, 0),
-            )]),
-        };
-
-        let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
-        let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
-        let freeze_b = new_freeze.package_freezes.get(&pkg_b).unwrap();
-        let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
-        assert_eq!(
-            freeze_a.dependencies_realization,
-            HashMap::from([(StrId::new("b"), pkg_b), (StrId::new("c"), pkg_c),])
-        );
-        assert!(freeze_a.features.is_empty());
-        assert!(freeze_b.dependencies_realization.is_empty());
-        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
-        assert!(freeze_c.dependencies_realization.is_empty());
-        assert!(freeze_c.features.is_empty());
     }
 
     #[test]
@@ -382,12 +239,7 @@ metadata:
             main_pkg: pkg_a,
         };
 
-        let solver_output = FoundSolution {
-            new_packages: HashSet::new(),
-            new_features: HashMap::new(),
-            new_edges: HashMap::new(),
-        };
-        let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
+        let new_freeze = prev_freeze.trim(&manifests, HashSet::new()).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&pkg_b).unwrap();
         assert!(!new_freeze.package_freezes.contains_key(&pkg_c));
@@ -473,12 +325,7 @@ metadata:
             main_pkg: pkg_a,
         };
 
-        let solver_output = FoundSolution {
-            new_packages: HashSet::new(),
-            new_features: HashMap::new(),
-            new_edges: HashMap::new(),
-        };
-        let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
+        let new_freeze = prev_freeze.trim(&manifests, HashSet::new()).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
@@ -561,12 +408,7 @@ metadata:
             main_pkg: pkg_a,
         };
 
-        let solver_output = FoundSolution {
-            new_packages: HashSet::new(),
-            new_features: HashMap::new(),
-            new_edges: HashMap::new(),
-        };
-        let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
+        let new_freeze = prev_freeze.trim(&manifests, HashSet::new()).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
@@ -631,12 +473,7 @@ metadata:
             main_pkg: pkg_a,
         };
 
-        let solver_output = FoundSolution {
-            new_packages: HashSet::new(),
-            new_features: HashMap::new(),
-            new_edges: HashMap::new(),
-        };
-        let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
+        let new_freeze = prev_freeze.trim(&manifests, ["xd".into()].into()).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&pkg_b).unwrap();
         assert_eq!(
