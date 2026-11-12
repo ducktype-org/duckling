@@ -227,6 +227,14 @@ impl<'duck> Fetcher<'duck> {
         repository.checkout(reference).with_context(|| {
             format!("failed to checkout the repository cloned from `{url}` to the {reference}")
         })?;
+        repository
+            .init_submodules(git::GitSubmoduleOptions::Update {
+                init: true,
+                recursive: true,
+            })
+            .with_context(|| {
+                format!("failed to update submodules of the repository cloned from `{url}`")
+            })?;
         let commit = repository
             .head_commit()
             .context("failed to get HEAD commit of a repository")?;
