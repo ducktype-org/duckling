@@ -20,7 +20,7 @@
 
 <div align="center">
     <picture>
-        <img alt="Co-founded by the European Union" src="https://ducktype.org/static/main/img/en/eu.png" width="80%">
+        <img alt="Co-founded by the European Union" src="https://ducktype.org/static/main/img/en/eu.png" width="60%">
     </picture>
 </div>
 
