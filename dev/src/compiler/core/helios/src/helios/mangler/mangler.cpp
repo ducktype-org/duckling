@@ -431,9 +431,9 @@ namespace compiler::helios::mangler {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(
 							PstImplementedSemantics,
-						PstInferredSemantics,
-						ClassMemberSemantics,
-						BuiltinSemantics
+							PstInferredSemantics,
+							ClassMemberSemantics,
+							BuiltinSemantics
 						) {
 							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
 							return getPSTElementParent(ctx, ancestor);
@@ -636,9 +636,9 @@ namespace compiler::helios::mangler {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(
 							PstImplementedSemantics,
-						PstInferredSemantics,
-						ClassMemberSemantics,
-						BuiltinSemantics
+							PstInferredSemantics,
+							ClassMemberSemantics,
+							BuiltinSemantics
 						) {
 							// If the symbol originates from the PST (including builtins), use its path.
 							return path(ctx, symbol_id) + func(ctx, symbol_id);

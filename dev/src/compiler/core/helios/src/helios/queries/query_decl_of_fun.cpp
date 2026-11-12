@@ -489,7 +489,7 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto       params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
@@ -502,7 +502,7 @@ namespace compiler::helios {
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto       params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
@@ -517,8 +517,8 @@ namespace compiler::helios {
 			void visitMethod(pst::Access<pst::Method> stmt) final {
 				// We can't use the interface directly because the interface
 				// can use the declaration of function query, and we could get a cycle.
-				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
-				auto params        = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
+				auto specifiers = getClassMemberSpecifiers(ctx, original_symbol);
+				auto params     = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow();
 				if (specifiers.is_static) {
 					const auto operatoriness = operatorinessFromDeclaration(
 						ctx,

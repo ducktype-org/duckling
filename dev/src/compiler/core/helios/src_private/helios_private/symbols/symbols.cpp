@@ -458,264 +458,263 @@ namespace compiler::helios {
 		}
 	}
 
-		/**
-		 * @brief Return the name, kind and lookup flags of the symbol declared by the given
-		 * statement, that is everything about the symbol that depends on the kind of the statement.
-		 * It should use a visitor, or only depend on StmtKind and virtual methods.
-		 */
-		query::QResult<CommonSymbolData> commonSymbolDataFromStatement(
-			query::Context& ctx, pst::Access<pst::Stmt> stmt
-		) {
-			switch (stmt->getStmtKind()) {
-			case pst::StmtKind::Fun: {
-				auto function = stmt.dynamicCast<pst::Fun>().value();
-				return CommonSymbolData{
-					.name = function->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Function,
-				};
-			}
-			case pst::StmtKind::FunDecl: {
-				auto function = stmt.dynamicCast<pst::FunDecl>().value();
-				return CommonSymbolData{
-					.name = function->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::FunctionDeclaration,
-				};
-			}
-			case pst::StmtKind::Namespace: {
-				auto namespace_stmt = stmt.dynamicCast<pst::Namespace>().value();
-				return CommonSymbolData{
-					.name = namespace_stmt->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Namespace,
-				};
-			}
-			case pst::StmtKind::Const: {
-				auto const_stmt = stmt.dynamicCast<pst::Const>().value();
-				return CommonSymbolData{
-					.name = const_stmt->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Const,
-				};
-			}
-			case pst::StmtKind::Class: {
-				auto class_stmt = stmt.dynamicCast<pst::Class>().value();
-				return CommonSymbolData{
-					.name = class_stmt->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Class,
-				};
-			}
-			case pst::StmtKind::Using: {
-				auto using_stmt = stmt.dynamicCast<pst::Using>().value();
-				auto selector   = firstSelector(ctx, using_stmt->getSelectors(), "using");
-				auto first_name = selector->getNameByIndex(0).unlock(ctx)->unwrap();
-				auto last_name
-					= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
-
-				switch (selector->getTailKind()) {
-				case pst::SelectorTail::Star:
-					if (selector->numberOfHides() > 0)
-						logSelectorNotSupported(ctx, selector, "`hides` in `using`");
-					return CommonSymbolData{
-						.name
-						= base::StrID(base::strConcat("<WILDCARD USING> ", first_name).c_str()),
-						.kind = SymbolKind::Using,
-					};
-				case pst::SelectorTail::As:
-					// `using a.b as c;` gives `a.b` a new name.
-					return CommonSymbolData{
-						.name = selector->getAsName().value().unlock(ctx)->unwrap(),
-						.kind = SymbolKind::Using,
-					};
-				case pst::SelectorTail::Nested:
-					logSelectorNotSupported(ctx, selector, "A nested selector list in `using`");
-					[[fallthrough]];
-				case pst::SelectorTail::None:
-					return CommonSymbolData{
-						.name = last_name,
-						.kind = SymbolKind::Using,
-					};
-				}
-				CORE_PANIC("Unhandled selector tail kind");
-			}
-			case pst::StmtKind::Variable: {
-				auto variable = stmt.dynamicCast<pst::Variable>().value();
-				return CommonSymbolData{
-					.name = variable->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Variable,
-				};
-			}
-			case pst::StmtKind::Import: {
-				// @TODO: #2791 finish this, note that this may require bigger refactor to unify the
-				// logic with other similar constructs (e.g. usings), and because imports may
-				// introduce multiple names now. We could extend wildcard machinery to keep the
-				// general assumption of one-stmt=one-symbol while handling the above.
-				auto import   = stmt.dynamicCast<pst::Import>().value();
-				auto selector = firstSelector(ctx, import->getSelectors(), "import");
-				auto last_name
-					= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
-
-				switch (selector->getTailKind()) {
-				case pst::SelectorTail::None:
-				case pst::SelectorTail::As:
-					return CommonSymbolData{
-						.name = selector->getDeclaredName().value().unlock(ctx)->unwrap(),
-						.kind = SymbolKind::Import,
-					};
-				case pst::SelectorTail::Star:
-					// import a.b.c.*;
-					if (selector->numberOfHides() > 0)
-						logSelectorNotSupported(ctx, selector, "`hides` in `import`");
-					return CommonSymbolData{
-						.name = last_name,
-						.kind = SymbolKind::Import,
-					};
-				case pst::SelectorTail::Nested:
-					// import a.b.c.{...};
-					logSelectorNotSupported(ctx, selector, "A nested selector list in `import`");
-					return CommonSymbolData{
-						.name = last_name,
-						.kind = SymbolKind::Import,
-					};
-				}
-				CORE_PANIC("Unhandled selector tail kind");
-			}
-			case pst::StmtKind::Method: {
-				auto method = stmt.dynamicCast<pst::Method>().value();
-				return CommonSymbolData{
-					.name = method->getName().unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Method,
-				};
-			}
-			case pst::StmtKind::Field: {
-				auto field = stmt.dynamicCast<pst::Field>().value();
-				return CommonSymbolData{
-					.name      = field->getName().unlock(ctx)->unwrap(),
-					.kind      = SymbolKind::Field,
-					.dependent = true,
-				};
-			}
-			case pst::StmtKind::Constructor: {
-				auto constructor = stmt.dynamicCast<pst::Constructor>().value();
-				return CommonSymbolData{
-					.name = constructor->getIdentifier()
-					          ? constructor->getIdentifier()->unlock(ctx)->unwrap()
-					          : base::StrID("create"),
-					.kind = SymbolKind::Constructor,
-				};
-			}
-			case pst::StmtKind::CopyConstructor: {
-				return CommonSymbolData{
-					.name = lang_def::keywordToStr(lang_def::Keyword::Copy),
-					.kind = SymbolKind::Constructor,
-				};
-			}
-			case pst::StmtKind::Destructor: {
-				return CommonSymbolData{
-					.name = base::StrID("destroy"),
-					.kind = SymbolKind::Destructor,
-				};
-			}
-			case pst::StmtKind::CodeDecl: {
-				// CodeDecl include things like named ifs, whiles, fors and code blocks.
-				// Note that this function should only be called if the statement creates a symbol,
-				// so we can assume that it is only named ones.
-				return CommonSymbolData{
-					.name = stmt->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
-					.kind = SymbolKind::NamedCodeElement,
-				};
-			}
-			case pst::StmtKind::TemplateStmt: {
-				auto template_decl   = stmt.dynamicCast<pst::TemplateStmt>().value();
-				auto inner_statement = template_decl->getInnerStatement().unlock(ctx);
-
-				auto inner_statement_kind = inner_statement->getStmtKind();
-				if (inner_statement_kind != pst::StmtKind::Fun
-				    && inner_statement_kind != pst::StmtKind::FunDecl
-				    && inner_statement_kind != pst::StmtKind::Class
-				    && inner_statement_kind != pst::StmtKind::Namespace
-				    && inner_statement_kind != pst::StmtKind::Const) {
-					ctx.log<dia::NotYetImplementedCodeError>(
-						"Templates are only supported for functions, classes, namespaces and "
-						"consts",
-						template_decl->getStablePosition()
-					);
-					return query::Failed();
-				}
-
-				return CommonSymbolData{
-					.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
-					.kind = SymbolKind::Template,
-				};
-			}
-			default:
-				break;
-			}
-			[[maybe_unused]] auto stmt_ptr = &*stmt;
-			CORE_PANIC(base::strConcat(
-				"commonSymbolDataFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
-			));
+	/**
+	 * @brief Return the name, kind and lookup flags of the symbol declared by the given
+	 * statement, that is everything about the symbol that depends on the kind of the statement.
+	 * It should use a visitor, or only depend on StmtKind and virtual methods.
+	 */
+	query::QResult<CommonSymbolData> commonSymbolDataFromStatement(
+		query::Context& ctx, pst::Access<pst::Stmt> stmt
+	) {
+		switch (stmt->getStmtKind()) {
+		case pst::StmtKind::Fun: {
+			auto function = stmt.dynamicCast<pst::Fun>().value();
+			return CommonSymbolData{
+				.name = function->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Function,
+			};
 		}
+		case pst::StmtKind::FunDecl: {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			return CommonSymbolData{
+				.name = function->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::FunctionDeclaration,
+			};
+		}
+		case pst::StmtKind::Namespace: {
+			auto namespace_stmt = stmt.dynamicCast<pst::Namespace>().value();
+			return CommonSymbolData{
+				.name = namespace_stmt->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Namespace,
+			};
+		}
+		case pst::StmtKind::Const: {
+			auto const_stmt = stmt.dynamicCast<pst::Const>().value();
+			return CommonSymbolData{
+				.name = const_stmt->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Const,
+			};
+		}
+		case pst::StmtKind::Class: {
+			auto class_stmt = stmt.dynamicCast<pst::Class>().value();
+			return CommonSymbolData{
+				.name = class_stmt->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Class,
+			};
+		}
+		case pst::StmtKind::Using: {
+			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
+			auto selector   = firstSelector(ctx, using_stmt->getSelectors(), "using");
+			auto first_name = selector->getNameByIndex(0).unlock(ctx)->unwrap();
+			auto last_name
+				= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
 
-		/**
-		 * @brief SymbolData Factory.
-		 * Make symbols from PST statements.
-		 *
-		 * @param scope
-		 * @param stmt
-		 * @return Ref<SymbolData>
-		 */
-		query::QResult<SymbolData> makeSymbolFromStatement(
-			query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
-		) {
-			// Attribute handling
-			auto attributes           = attributesFromPSTStatement(ctx, stmt);
-			bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
-
-			// Check if it is a builtin.
-			if_opt_some(getAttrInVector<attributes::Builtin>(attributes), builtin_data) {
-				auto function = stmt.dynamicCast<pst::FunDecl>().value();
-				return SymbolData::makeBuiltinSymbolData(
-					{
-						.name                 = function->getName().unlock(ctx)->unwrap(),
-						.kind                 = SymbolKind::FunctionDeclaration,
-						.is_ignored_by_lookup = is_ignored_by_lookup,
-						.attributes           = std::move(attributes),
-
-					},
-					BuiltinSemantics{
-						scope,
-						stmt->getHash(),
-						builtin_data->builtin,
-					}
-				);
+			switch (selector->getTailKind()) {
+			case pst::SelectorTail::Star:
+				if (selector->numberOfHides() > 0)
+					logSelectorNotSupported(ctx, selector, "`hides` in `using`");
+				return CommonSymbolData{
+					.name = base::StrID(base::strConcat("<WILDCARD USING> ", first_name).c_str()),
+					.kind = SymbolKind::Using,
+				};
+			case pst::SelectorTail::As:
+				// `using a.b as c;` gives `a.b` a new name.
+				return CommonSymbolData{
+					.name = selector->getAsName().value().unlock(ctx)->unwrap(),
+					.kind = SymbolKind::Using,
+				};
+			case pst::SelectorTail::Nested:
+				logSelectorNotSupported(ctx, selector, "A nested selector list in `using`");
+				[[fallthrough]];
+			case pst::SelectorTail::None:
+				return CommonSymbolData{
+					.name = last_name,
+					.kind = SymbolKind::Using,
+				};
 			}
+			CORE_PANIC("Unhandled selector tail kind");
+		}
+		case pst::StmtKind::Variable: {
+			auto variable = stmt.dynamicCast<pst::Variable>().value();
+			return CommonSymbolData{
+				.name = variable->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Variable,
+			};
+		}
+		case pst::StmtKind::Import: {
+			// @TODO: #2791 finish this, note that this may require bigger refactor to unify the
+			// logic with other similar constructs (e.g. usings), and because imports may
+			// introduce multiple names now. We could extend wildcard machinery to keep the
+			// general assumption of one-stmt=one-symbol while handling the above.
+			auto import   = stmt.dynamicCast<pst::Import>().value();
+			auto selector = firstSelector(ctx, import->getSelectors(), "import");
+			auto last_name
+				= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
 
-			UNPACK_QRESULT_MOVE(CommonSymbolData common =, commonSymbolDataFromStatement(ctx, stmt));
-			common.is_ignored_by_lookup = is_ignored_by_lookup;
-			common.attributes           = std::move(attributes);
+			switch (selector->getTailKind()) {
+			case pst::SelectorTail::None:
+			case pst::SelectorTail::As:
+				return CommonSymbolData{
+					.name = selector->getDeclaredName().value().unlock(ctx)->unwrap(),
+					.kind = SymbolKind::Import,
+				};
+			case pst::SelectorTail::Star:
+				// import a.b.c.*;
+				if (selector->numberOfHides() > 0)
+					logSelectorNotSupported(ctx, selector, "`hides` in `import`");
+				return CommonSymbolData{
+					.name = last_name,
+					.kind = SymbolKind::Import,
+				};
+			case pst::SelectorTail::Nested:
+				// import a.b.c.{...};
+				logSelectorNotSupported(ctx, selector, "A nested selector list in `import`");
+				return CommonSymbolData{
+					.name = last_name,
+					.kind = SymbolKind::Import,
+				};
+			}
+			CORE_PANIC("Unhandled selector tail kind");
+		}
+		case pst::StmtKind::Method: {
+			auto method = stmt.dynamicCast<pst::Method>().value();
+			return CommonSymbolData{
+				.name = method->getName().unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Method,
+			};
+		}
+		case pst::StmtKind::Field: {
+			auto field = stmt.dynamicCast<pst::Field>().value();
+			return CommonSymbolData{
+				.name      = field->getName().unlock(ctx)->unwrap(),
+				.kind      = SymbolKind::Field,
+				.dependent = true,
+			};
+		}
+		case pst::StmtKind::Constructor: {
+			auto constructor = stmt.dynamicCast<pst::Constructor>().value();
+			return CommonSymbolData{
+				.name = constructor->getIdentifier()
+				          ? constructor->getIdentifier()->unlock(ctx)->unwrap()
+				          : base::StrID("create"),
+				.kind = SymbolKind::Constructor,
+			};
+		}
+		case pst::StmtKind::CopyConstructor: {
+			return CommonSymbolData{
+				.name = lang_def::keywordToStr(lang_def::Keyword::Copy),
+				.kind = SymbolKind::Constructor,
+			};
+		}
+		case pst::StmtKind::Destructor: {
+			return CommonSymbolData{
+				.name = base::StrID("destroy"),
+				.kind = SymbolKind::Destructor,
+			};
+		}
+		case pst::StmtKind::CodeDecl: {
+			// CodeDecl include things like named ifs, whiles, fors and code blocks.
+			// Note that this function should only be called if the statement creates a symbol,
+			// so we can assume that it is only named ones.
+			return CommonSymbolData{
+				.name = stmt->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
+				.kind = SymbolKind::NamedCodeElement,
+			};
+		}
+		case pst::StmtKind::TemplateStmt: {
+			auto template_decl   = stmt.dynamicCast<pst::TemplateStmt>().value();
+			auto inner_statement = template_decl->getInnerStatement().unlock(ctx);
 
-			if (not isClassMember(common.kind))
-				return SymbolData::makePSTSymbolData(
-					std::move(common), PstImplementedSemantics(scope, stmt->getHash())
-				);
-
-			auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
-			if_opt_none(owner_class_element) {
-				ctx.log<dia::PlaceholderError>(
-					"Class member declared outside of a class.", stmt->getStablePosition()
+			auto inner_statement_kind = inner_statement->getStmtKind();
+			if (inner_statement_kind != pst::StmtKind::Fun
+			    && inner_statement_kind != pst::StmtKind::FunDecl
+			    && inner_statement_kind != pst::StmtKind::Class
+			    && inner_statement_kind != pst::StmtKind::Namespace
+			    && inner_statement_kind != pst::StmtKind::Const) {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Templates are only supported for functions, classes, namespaces and "
+					"consts",
+					template_decl->getStablePosition()
 				);
 				return query::Failed();
 			}
 
-			return SymbolData::makeClassMemberSymbolData(
-				std::move(common),
-				ClassMemberSemantics(
+			return CommonSymbolData{
+				.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
+				.kind = SymbolKind::Template,
+			};
+		}
+		default:
+			break;
+		}
+		[[maybe_unused]] auto stmt_ptr = &*stmt;
+		CORE_PANIC(base::strConcat(
+			"commonSymbolDataFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
+		));
+	}
+
+	/**
+	 * @brief SymbolData Factory.
+	 * Make symbols from PST statements.
+	 *
+	 * @param scope
+	 * @param stmt
+	 * @return Ref<SymbolData>
+	 */
+	query::QResult<SymbolData> makeSymbolFromStatement(
+		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
+	) {
+		// Attribute handling
+		auto attributes           = attributesFromPSTStatement(ctx, stmt);
+		bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
+
+		// Check if it is a builtin.
+		if_opt_some(getAttrInVector<attributes::Builtin>(attributes), builtin_data) {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			return SymbolData::makeBuiltinSymbolData(
+				{
+					.name                 = function->getName().unlock(ctx)->unwrap(),
+					.kind                 = SymbolKind::FunctionDeclaration,
+					.is_ignored_by_lookup = is_ignored_by_lookup,
+					.attributes           = std::move(attributes),
+
+				},
+				BuiltinSemantics{
 					scope,
 					stmt->getHash(),
-					ctx.query<tsh::QueryClassType>(
-						ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
-					)
-				)
+					builtin_data->builtin,
+				}
 			);
 		}
+
+		UNPACK_QRESULT_MOVE(CommonSymbolData common =, commonSymbolDataFromStatement(ctx, stmt));
+		common.is_ignored_by_lookup = is_ignored_by_lookup;
+		common.attributes           = std::move(attributes);
+
+		if (not isClassMember(common.kind))
+			return SymbolData::makePSTSymbolData(
+				std::move(common), PstImplementedSemantics(scope, stmt->getHash())
+			);
+
+		auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
+		if_opt_none(owner_class_element) {
+			ctx.log<dia::PlaceholderError>(
+				"Class member declared outside of a class.", stmt->getStablePosition()
+			);
+			return query::Failed();
+		}
+
+		return SymbolData::makeClassMemberSymbolData(
+			std::move(common),
+			ClassMemberSemantics(
+				scope,
+				stmt->getHash(),
+				ctx.query<tsh::QueryClassType>(
+					ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+				)
+			)
+		);
+	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
