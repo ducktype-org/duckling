@@ -231,6 +231,10 @@ namespace compiler::helios::defgen {
 		const std::vector<SymID>&      fields,
 		const ComparisonKind           kind
 	) {
+		CORE_ASSERT(
+			kind == ComparisonKind::Equal || kind == ComparisonKind::NotEqual,
+			"Expected an equality or inequality comparison."
+		);
 		const Shorthand s{ ctx };
 		// Compare the fields in order, return if the comparison decides the result.
 		for (const SymID field: fields)
@@ -262,41 +266,84 @@ namespace compiler::helios::defgen {
 	}
 
 	/**
-	 * @brief Compares two aggregate values for `<`, `<=`, `>` or `>=` field by field,
-	 * returning `true` or `false` as soon as the result is known.
+	 * @brief Compares two aggregate values for `<` or `>` field by field, using only the same
+	 * operator of the fields, returning `true` or `false` as soon as the result is known.
+	 * @note Fields which are not ordered either way, like two NaNs, count as equal.
 	 * @param fields The fields to compare, in order.
 	 */
-	void buildAggregateOrdComparison(
+	void buildAggregateStrictOrdComparison(
 		std::vector<Box<code::Stmt>>&  out_body,
 		query::Context&                ctx,
 		const HOUTFunctionDeclaration& decl,
 		const std::vector<SymID>&      fields,
 		const ComparisonKind           kind
 	) {
+		CORE_ASSERT(
+			kind == ComparisonKind::Lesser || kind == ComparisonKind::Greater,
+			"Expected a strict ordering comparison."
+		);
 		const Shorthand s{ ctx };
-		const auto      strict_kind
-			= kind == ComparisonKind::Lesser || kind == ComparisonKind::LesserEqual
-		        ? ComparisonKind::Lesser
-		        : ComparisonKind::Greater;
-		const bool accept_equality = kind != strict_kind;
 
 		// Compare the fields in order, return if the comparison decides the result.
-		// There are two strict comparisons per pair of fields, one in each direction.
+		// There are two comparisons per pair of fields, one in each direction.
 		for (const SymID field: fields) {
 			out_body.emplace_back(s.ifStmt(
-				getSubComparison(
-					ctx, fieldOf(s, decl, 0, field), fieldOf(s, decl, 1, field), strict_kind
-				),
+				getSubComparison(ctx, fieldOf(s, decl, 0, field), fieldOf(s, decl, 1, field), kind),
 				{ s.ret(s.litBool(true)) }
 			));
 			out_body.emplace_back(s.ifStmt(
-				getSubComparison(
-					ctx, fieldOf(s, decl, 1, field), fieldOf(s, decl, 0, field), strict_kind
-				),
+				getSubComparison(ctx, fieldOf(s, decl, 1, field), fieldOf(s, decl, 0, field), kind),
 				{ s.ret(s.litBool(false)) }
 			));
 		}
-		out_body.emplace_back(s.ret(s.litBool(accept_equality)));
+		// The values are equal.
+		out_body.emplace_back(s.ret(s.litBool(false)));
+	}
+
+	/**
+	 * @brief Compares two aggregate values for `<=` or `>=` field by field, using only the same
+	 * operator of the fields, returning `true` or `false` as soon as the result is known.
+	 * @note Fields which are not ordered either way, like two NaNs, make the result `false`.
+	 * @param fields The fields to compare, in order.
+	 */
+	void buildAggregateLooseOrdComparison(
+		std::vector<Box<code::Stmt>>&  out_body,
+		query::Context&                ctx,
+		const HOUTFunctionDeclaration& decl,
+		const std::vector<SymID>&      fields,
+		const ComparisonKind           kind
+	) {
+		CORE_ASSERT(
+			kind == ComparisonKind::LesserEqual || kind == ComparisonKind::GreaterEqual,
+			"Expected a non-strict ordering comparison."
+		);
+		const Shorthand s{ ctx };
+
+		// Compare the fields in order, return if the comparison decides the result.
+		// There are two comparisons per pair of fields, one in each direction. When both hold,
+		// the fields are equal and the next pair decides.
+		for (const SymID field: fields) {
+			out_body.emplace_back(s.ifStmt(
+				s.unOp(
+					code::BuiltinUnary::BooleanNot,
+					getSubComparison(
+						ctx, fieldOf(s, decl, 0, field), fieldOf(s, decl, 1, field), kind
+					)
+				),
+				{ s.ret(s.litBool(false)) }
+			));
+			out_body.emplace_back(s.ifStmt(
+				s.unOp(
+					code::BuiltinUnary::BooleanNot,
+					getSubComparison(
+						ctx, fieldOf(s, decl, 1, field), fieldOf(s, decl, 0, field), kind
+					)
+				),
+				{ s.ret(s.litBool(true)) }
+			));
+		}
+		// The values are equal.
+		out_body.emplace_back(s.ret(s.litBool(true)));
 	}
 
 	void buildAggregateComparison(
@@ -326,10 +373,12 @@ namespace compiler::helios::defgen {
 			buildAggregateEqComparison(out_body, ctx, decl, fields, kind);
 			break;
 		case ComparisonKind::Lesser:
-		case ComparisonKind::LesserEqual:
 		case ComparisonKind::Greater:
+			buildAggregateStrictOrdComparison(out_body, ctx, decl, fields, kind);
+			break;
+		case ComparisonKind::LesserEqual:
 		case ComparisonKind::GreaterEqual:
-			buildAggregateOrdComparison(out_body, ctx, decl, fields, kind);
+			buildAggregateLooseOrdComparison(out_body, ctx, decl, fields, kind);
 			break;
 		}
 	}

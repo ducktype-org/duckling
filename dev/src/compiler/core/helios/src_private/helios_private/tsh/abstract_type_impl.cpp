@@ -34,7 +34,7 @@ namespace compiler::tsh {
 		bool supportsComparison(
 			query::Context&                             ctx,
 			AbstractType                                type,
-			const TypeInterface&                        declared,
+			CRef<TypeInterface>                         declared,
 			const helios::defgen::ComparisonMethodInfo& comparison
 		);
 
@@ -54,7 +54,8 @@ namespace compiler::tsh {
 				    ->getSpecialElement(comparison.special_kind)
 				    .has_value();
 			// Only tuples and classes need their declared interface.
-			return supportsComparison(ctx, field_type, TypeInterface{}, comparison);
+			static const TypeInterface no_fields{};
+			return supportsComparison(ctx, field_type, &no_fields, comparison);
 		}
 
 		/**
@@ -277,7 +278,7 @@ namespace compiler::tsh {
 			}
 
 			const TypeInterface default_interface
-				= getDefaultTypeInterfaceForType(ctx, key, *declared);
+				= getDefaultTypeInterfaceForType(ctx, key, declared);
 			for (auto& elem: default_interface.getElements()) {
 				if (elem.specialKind() != MemberSpecialKind::None
 				    && declared_specials.contains(elem.specialKind()))

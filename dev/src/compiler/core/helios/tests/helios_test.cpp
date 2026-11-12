@@ -3796,14 +3796,15 @@ private:
 			expect_inline(negated(condition_at(class_equal, i)), BuiltinBinary::IntegerEq);
 		expect_returns(class_equal, true);
 
-		// `>=` is generated field by field like `<`, using the strict `>` of the fields, and
-		// accepts equal operands.
+		// `>=` is generated field by field like `<`, but using `>=` of the fields: it returns
+		// `false` when a field is not `>=` the other one, `true` when the other one is not `>=`
+		// it, and accepts equal operands.
 		const SymID class_greater_equal
 			= operator_called_from(getChain("classGreaterEqual", root_scope).back());
 		expect_generated(class_greater_equal, Kind::GreaterEqual, OwnerKind::Class);
 		ASSERT_EQUAL(5, body_of(class_greater_equal).size());
 		for (usize i = 0; i < 4; ++i)
-			expect_inline(condition_at(class_greater_equal, i), BuiltinBinary::IntegerGt);
+			expect_inline(negated(condition_at(class_greater_equal, i)), BuiltinBinary::IntegerGteq);
 		expect_returns(class_greater_equal, true);
 
 		// A user-defined `==` replaces the generated one in the type's interface.
