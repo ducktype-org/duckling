@@ -277,7 +277,7 @@ namespace pst {
 
 			// `viewSubElements()` yields temporaries, so the token is copied out, not referenced.
 			constexpr auto GET_TOKEN
-				= [](const SubElement& t) -> SubToken { return base::choose<SubToken>(t); };
+				= [](const SubElement& t) -> SubToken { return std::get<SubToken>(t); };
 
 			return viewSubElements() | filter(base::holds<SubToken, SubElement>)
 			     | transform(GET_TOKEN);
