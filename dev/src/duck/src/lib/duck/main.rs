@@ -68,9 +68,10 @@ fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal)
 
 /// Print [`QuackError`] as a message.
 fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
+    let mut should_follow_with_newline = true;
     // NOTE: We intentionally ignore any printing errors here.
     for (i, error) in msgs.sources().enumerate() {
-        if i > 0 {
+        if i > 0 && should_follow_with_newline {
             let _ = term.print("");
         }
         let msg = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
@@ -86,12 +87,15 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
         };
         match error.error_type() {
             ErrorType::Hint => {
+                should_follow_with_newline = false;
                 let _ = term.hint(msg);
             }
             ErrorType::Note => {
+                should_follow_with_newline = false;
                 let _ = term.note(msg);
             }
             ErrorType::BareMessage => {
+                should_follow_with_newline = false;
                 let _ = term.print(msg);
             }
             error_type => qp_bail_internal!(
@@ -110,6 +114,7 @@ fn print_error(error: &QuackError, term: &Terminal) {
 
 /// Print stack of [`QuackError`]s.
 fn print_errors_stack(error: &QuackError, term: &Terminal) {
+    let mut should_follow_with_newline = true;
     for (i, error) in error.sources().enumerate() {
         let (msg, is_clap) = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
             (
@@ -133,22 +138,29 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
                 let _ = term.error(msg);
             }
         } else {
-            let _ = term.print("");
+            if should_follow_with_newline {
+                let _ = term.print("");
+            }
             match error.error_type() {
                 ErrorType::Hint => {
+                    should_follow_with_newline = false;
                     let _ = term.hint(msg);
                 }
                 ErrorType::Note => {
+                    should_follow_with_newline = false;
                     let _ = term.note(msg);
                 }
                 ErrorType::BareMessage => {
+                    should_follow_with_newline = false;
                     let _ = term.print(msg);
                 }
                 ErrorType::Error => {
+                    should_follow_with_newline = true;
                     let _ = term.print(indent("Caused by:", 2));
                     let _ = term.print(indent(msg.as_str(), 4));
                 }
                 ErrorType::Internal => {
+                    should_follow_with_newline = true;
                     let _ = term.print(indent("Caused by:", 2));
                     let _ = term.print(indent(msg.as_str(), 4));
                 }
