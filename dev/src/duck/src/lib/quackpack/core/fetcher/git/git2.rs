@@ -114,7 +114,7 @@ impl<'a> GitCredentialsCallbackDataInner<'a> {
     fn add_notes_to_clone_error(&self, error: &mut QuackError) {
         if self.tried_ssh {
             error.add_note("tried SSH authentication, but failed");
-            error.add_note("SSH keys needs to be in an SSH agent to work");
+            error.add_note("SSH keys need to be in an SSH agent to work");
             error.add_hint("try adding your SSH keys to the SSH agent");
         }
         if self.tried_plaintext {
@@ -122,7 +122,9 @@ impl<'a> GitCredentialsCallbackDataInner<'a> {
         }
 
         if self.tried_cred_helper {
-            error.add_note("tried git's credential helper authentication, but failed");
+            error.add_note(
+                "tried git's credential helper (`credential.helper`) authentication, but failed",
+            );
         }
 
         if self.tried_default {
