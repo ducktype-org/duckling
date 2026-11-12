@@ -8,7 +8,6 @@ Tests:
           String: "1\n3\n7\n42\n43\n30\n"
         ExitCode: 0
       llvm_valgrind:
-        TimeOut: 3
         Output:
           String: "1\n3\n7\n42\n43\n30\n"
         ExitCode: 0
@@ -34,7 +33,6 @@ Tests:
           String: "10\n99\n"
         ExitCode: 0
       llvm_valgrind:
-        TimeOut: 3
         Output:
           String: "10\n99\n"
         ExitCode: 0

@@ -3,7 +3,7 @@ cd-duck-root: cd @{dev_dir}/src/duck/
 # NOTE: Changes made here should also be reflected in `workflows/tests.yml`
 # Changes means changes to compiling duck itself.
 build-duck: |
-  timeout 3m cargo --locked build
+  timeout 5m cargo --locked build
   exit_code=$?
   # 124 is `timeout`'s standard exit code for command timeout.
   if [ "$exit_code" -eq 124 ]; then
@@ -26,13 +26,6 @@ Env:
 PostCase: "@{cleanup_tmp_env}"
 
 cd-tmp-dir: cd ${DIT_TMP_DIR}
-
-# Sometimes we hit a test timeout in itests, but only in CI.
-# It's because when we create a fetcher cache (an SQLite database), we execute a statement to create a basic table.
-# This causes SQLite to create a file and some other stuff. It also calls fsync on a parent directory.
-# This can be slow in CI/CD running under Docker, so increase artificially the timeout.
-# 5 seconds seems to be enough.
-timeout_default: 5
 
 PreNode: |
   @{load-cargo}

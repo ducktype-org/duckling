@@ -37,8 +37,6 @@ class RunContext:
     # Keep core dumps enabled for test commands (they are disabled by
     # default; see `dit_exec_command`).
     core_dumps: bool
-    # Multiplies every resolved `TimeOut`.
-    timeout_scale: float
     output: CompletionOutput | OrderedOutput
     # Executes the group-start and case tasks; None when `sequential`
     # (groups then run inline on the calling thread).

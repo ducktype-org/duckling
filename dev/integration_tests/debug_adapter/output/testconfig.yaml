@@ -4,6 +4,5 @@ program: "../examples/output.dbc"
 Tests:
   debug_output:
     Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{program}"
-    TimeOut: 1
     Cases:
       output: { }

@@ -59,7 +59,6 @@ def dit_exec_command(
     dry: bool = False,
     verbose: bool = False,
     env: dict[str, str] | None = None,
-    timeout: float | None = None,
     core_dumps: bool = False,
 ) -> tuple[bytes, bytes]:
     # A crashing command does not exit until the system core-dump handler
@@ -76,5 +75,4 @@ def dit_exec_command(
         verbose=verbose,
         decode=False,
         env=env,
-        timeout=timeout,
     )

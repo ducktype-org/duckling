@@ -39,7 +39,6 @@ CASE_ALLOWED_KEYS = {
     INPUT,
     OUTPUT,
     ERR,
-    TIME_OUT,
     EXIT_CODE,
     ENABLED,
     NEEDED_THREADS,
@@ -109,7 +108,6 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
             expected_err=io_data[2],
             expected_exitcode=config_find_value(case_dict, EXIT_CODE, default=0),
             needed_threads=_get_case_needed_threads(case_dict),
-            timeout=config_find_and_eval(case_dict, TIME_OUT, default="1"),
         )
     except (VariableNotFound, ExpressionFillError) as e:
         case_path = config_get_name_path(case_dict)

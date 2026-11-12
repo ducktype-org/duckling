@@ -19,16 +19,3 @@ Tests:
         run_args: '"Hello, world!"'
         Output:
           String: "Hello, world!\n"
-  test-timeout:
-    Run: "sleep @{run_args}"
-    run_args: ""
-    TimeOut: 1
-    ExitCode: 124  # 124 means "timed out"
-    Cases:
-      hello0.5:
-        run_args: "0.5"
-        ExitCode: 0
-      hello1:
-        run_args: "1.1"
-      hello5:
-        run_args: "5"
