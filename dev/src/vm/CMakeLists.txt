@@ -1,12 +1,9 @@
 add_custom_test_pack(vm)
 
-function(add_files)
-  math(EXPR indices "${ARGC} - 1")
-
-  foreach(index RANGE ${indices})
-    set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
-  endforeach()
-
+# Sets `files` in the caller's scope to the given paths, relative to the calling CMakeLists.txt.
+# The previous value of `files` is replaced.
+function(set_files)
+  list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_LIST_DIR}/" OUTPUT_VARIABLE tmp)
   set(files ${tmp} PARENT_SCOPE)
 endfunction()
 
@@ -94,7 +91,7 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
     endif()
 
     # Link llvm it will be ONLY used by JitDep.
-    llvm_map_components_to_libnames(llvm_libs
+    duck_llvm_libs(llvm_libs
         Core
         ExecutionEngine
         Interpreter

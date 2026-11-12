@@ -18,7 +18,7 @@ The primary components in this flow are:
 - Global variable initializer wrappers emit the construction of the declared initial value, so that it runs in statement order. The storage itself is a separate [`queryReplEmptyVariableSymbol`](./repl_queries.hpp) symbol holding an empty (zero) value, mangled to the name of the declared variable.
 - The wrapped statement is identified by its stable PST hash, recovered with `pst::LangElement::getByStableHash`.
 - Script main wrapper sequences wrapper calls for side effects and satisfies executable entrypoint conventions.
-- Wrapper functions are lowered incrementally via DVM `ReplDVMCodeBuilder`, which snapshots the
+- Wrapper functions are lowered incrementally via DVM `IncrementalDVMCodeBuilder`, which snapshots the
 	program state and emits only newly-lowered code for each REPL/script statement batch.
 
 ## Related Documentation

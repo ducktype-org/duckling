@@ -16,10 +16,10 @@ namespace formatter {
 		using lexer::Token;
 		using Bracket = Token::BracketType;
 
-		usize startLine(const Token& t) { return t.getPosition().getStartLineColumn().first; }
-
 		usize endLine(const Token& t) { return t.getPosition().getEndLineColumn().first; }
 	}
+
+	usize startLine(const Token& t) { return t.getPosition().getStartLineColumn().first; }
 
 	std::string atomText(const Token& t) {
 		switch (t.getType()) {

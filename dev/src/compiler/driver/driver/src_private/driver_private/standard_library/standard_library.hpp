@@ -51,6 +51,11 @@ namespace compiler::driver {
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
 
 	/**
+	 * @brief The existing debug info (`.di.json`) artifacts of the compiled standard library.
+	 */
+	std::vector<artifacts::FileArtifact> getStdLibDebugInfoArtifacts();
+
+	/**
 	 * @brief Returns whether all the standard library artifact files are present.
 	 * @note It is used to determine if we can skip std compilation.
 	 * @TODO: #3158 A generic dependency no-recompile solution may replace this.

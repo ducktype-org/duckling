@@ -76,7 +76,7 @@ impl DependencyGraph {
 
 impl EarlyGraph {
     /// Recursively populate enabled features, starting from the root of the graph.
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     pub(super) fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
         let root_package = self.package_mut(&self.graph.root());
         let root_features =
@@ -148,7 +148,7 @@ impl EarlyGraph {
     /// Removes disabled dependency from the graph.
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
-    #[instrument(level = "debug", skip_all)]
+    #[instrument(skip_all)]
     pub(super) fn remove_disabled_dependencies(&mut self) {
         self.graph.remove_disabled_dependencies(&self.packages);
         self.graph.remove_unreachable_dependencies();

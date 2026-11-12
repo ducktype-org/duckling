@@ -118,7 +118,7 @@ impl ManifestCache {
     /// Create a new [ManifestCache] at location pointed by [CacheLocation].
     /// Note that this is a blocking operation.
     pub fn new(location: CacheLocation<'_>) -> QuackResult<Self> {
-        debug!(target: "duck::sqlite", ?location, "initializing fetcher cache");
+        debug!(?location, "initializing fetcher cache");
         let mut connection = match location {
             CacheLocation::Memory => rusqlite::Connection::open_in_memory(),
             CacheLocation::Path(path) => {

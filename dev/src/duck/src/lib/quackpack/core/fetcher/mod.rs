@@ -9,8 +9,9 @@
 //! It incorporates [`DucknestClient`](ducknest::DucknestClient) with
 //! [`ManifestCache`](cache::ManifestCache), and provides another layer of abstraction over the
 //! [`GitClient`](git::GitClient).
+
 use std::cell::{OnceCell, RefCell};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::LazyLock;
 
@@ -18,15 +19,15 @@ use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
 
-use crate::quackpack::core::GitReference;
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
+use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::LockedFile;
 use crate::util::once_ext::OnceExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 pub mod cache;
 pub mod downloads;
@@ -47,7 +48,7 @@ pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: OnceCell<ducknest::DucknestClient<'duck>>,
     http_client: OnceCell<Rc<AsyncHttpClient<'duck>>>,
-    git_client: OnceCell<git::GitClient<'duck>>,
+    git_client: OnceCell<Box<dyn git::GitClient + 'duck>>,
     git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
     /// SQL cache is not lazily initialized, as failures leave `OnceCell` initialized, which makes
     /// every call to [`get_package_metadata`]/[`get_package_all_metadata`]:
@@ -102,16 +103,16 @@ impl<'duck> Fetcher<'duck> {
     /// Retrieve metadata for `package` from a given Ducknest instance.
     ///
     /// Exact cache hit takes precedence over HTTP requests.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn get_package_metadata(
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<FetcherResponse<registry::Manifest>> {
         if let Some(cached) = self.cache.borrow().get_manifest(package)? {
-            debug!(target: "duck::ducknest", "metadata cache hit");
+            debug!("metadata cache hit");
             return Ok(FetcherResponse::Some(cached));
         }
-        debug!(target: "duck::ducknest", "metadata cache miss");
+        debug!("metadata cache miss");
         if self.ctx.is_offline() {
             return Ok(FetcherResponse::Offline);
         }
@@ -138,14 +139,14 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn get_package_all_metadata(
         &self,
         url: InternedUrl,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
-            debug!(target: "duck::ducknest", "offline, using only the cached metadata");
+            debug!("offline, using only the cached metadata");
             let package = PackageWithUrl {
                 name: package_name,
                 version: 1.into(),
@@ -184,17 +185,60 @@ impl<'duck> Fetcher<'duck> {
             })
     }
 
-    /// Clone a git repository pointed by `source` to the `destination_directory`.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url))]
+    /// Clone a git repository pointed by `url` to the `destination_directory`.
+    #[tracing::instrument(skip(self, url), fields(%url))]
+    #[track_caller] // Because of `.unwrap_package()`.
     pub fn clone_from_git_to_directory(
         &self,
         url: &Url,
         reference: GitReference,
-        destination_directory: &std::path::Path,
-    ) -> QuackResult<types::GitCloneResponse> {
-        self.git_client()
-            .clone_blocking(url, reference, destination_directory)
-            .with_context(|| format!("failed to clone the repository at `{url}`"))
+        destination_directory: &Path,
+    ) -> QuackResult<types::ClonedPackage> {
+        let client = self.git_client()?;
+        self.ctx.info(format!("cloning a repository at `{url}`"))?;
+
+        let commit = self
+            .clone_from_git_to_directory_inner(client, url, reference, destination_directory)
+            .map_err(|err| add_hint_for_using_git_cli(client, err))
+            .with_context(|| format!("failed to clone the package from `{url}`"))?;
+        let package = PackageLoader::find_at_exact_directory(destination_directory, self.ctx)
+            .with_context(|| {
+                format!("failed to parse a package from repository cloned from `{url}`")
+            })?
+            .into_package()
+            .unwrap_package();
+        Ok(types::ClonedPackage { commit, package })
+    }
+
+    /// Helper for [`clone_from_git_to_directory`], to make attaching contexts easier.
+    /// Returns commit of the cloned repo.
+    ///
+    /// [`clone_from_git_to_directory`]: Self::clone_from_git_to_directory
+    fn clone_from_git_to_directory_inner(
+        &self,
+        client: &dyn git::GitClient,
+        url: &Url,
+        reference: GitReference,
+        destination_directory: &Path,
+    ) -> QuackResult<StrId> {
+        let repository = client
+            .clone(url, reference, destination_directory)
+            .with_context(|| format!("failed to clone the repository from `{url}`"))?;
+        repository.checkout(reference).with_context(|| {
+            format!("failed to checkout the repository cloned from `{url}` to the {reference}")
+        })?;
+        repository
+            .init_submodules(git::GitSubmoduleOptions::Update {
+                init: true,
+                recursive: true,
+            })
+            .with_context(|| {
+                format!("failed to update submodules of the repository cloned from `{url}`")
+            })?;
+        let commit = repository
+            .head_commit()
+            .context("failed to get HEAD commit of a repository")?;
+        Ok(commit)
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
@@ -206,7 +250,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: &Url,
         reference: GitReference,
-    ) -> QuackResult<(types::GitCloneResponse, TempDir)> {
+    ) -> QuackResult<(types::ClonedPackage, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
         let result = self.clone_from_git_to_directory(url, reference, dir.path())?;
         Ok((result, dir))
@@ -228,7 +272,7 @@ impl<'duck> Fetcher<'duck> {
         self.ctx
     }
 
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     /// Fetch a package from ducknest with retries.
     pub async fn fetch_package_blob_with_retries(
         &self,
@@ -257,12 +301,12 @@ impl<'duck> Fetcher<'duck> {
         for attempt in 1..=calls {
             match self.fetch_package_blob(package, guard.file()).await {
                 Ok(()) => {
-                    debug!(target: "duck::ducknest", "fetched on attempt {attempt}/{calls}");
+                    debug!("fetched on attempt {attempt}/{calls}");
                     guard.disarm();
                     return Ok(guard.file().path().to_path_buf());
                 }
                 Err(e) => {
-                    debug!(target: "duck::ducknest", error = %e, "attempt {attempt}/{calls} failed");
+                    debug!(error = %e, "attempt {attempt}/{calls} failed");
                     self.ctx.warning(format!(
                         "failed to download `{}` version {} from `{}`: {e}",
                         package.name, package.version, package.url
@@ -314,9 +358,22 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Get or initialize a new [`git::GitClient`].
-    fn git_client(&self) -> &git::GitClient<'duck> {
+    /// It chooses the right client based on the user configuration.
+    fn git_client(&self) -> QuackResult<&(dyn git::GitClient + 'duck)> {
         self.git_client
-            .get_or_init(|| git::GitClient::new(self.ctx))
+            .try_init_with(|| {
+                let network_config = self.ctx.duck_cfg().network()?;
+                let client: Box<dyn git::GitClient + 'duck> =
+                    if network_config.use_git_cli == Some(true) {
+                        debug!("using git cli backend");
+                        Box::new(git::cli::GitCliClient::new()?)
+                    } else {
+                        debug!("using git2 backend");
+                        Box::new(git::git2::Git2Client::new(self.ctx))
+                    };
+                Ok(client)
+            })
+            .map(|b| &**b)
     }
 
     /// Get or initialize a new [`git::fast_path::GitFastPathClient`].
@@ -324,4 +381,12 @@ impl<'duck> Fetcher<'duck> {
         self.git_fastpath_client
             .get_or_init(|| git::fast_path::GitFastPathClient::new(self.http_client().clone()))
     }
+}
+
+fn add_hint_for_using_git_cli(client: &dyn git::GitClient, mut error: QuackError) -> QuackError {
+    if client.uses_cli() {
+        return error;
+    }
+    error.add_hint("set `network.use-git-cli: true` in `config.yaml` to use the `git` binary");
+    error
 }

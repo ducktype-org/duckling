@@ -260,10 +260,8 @@ namespace compiler::mir {
 	 */
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addConditionTmp(ScopeRef scope) {
-		auto type = tsh::SymbolType<>(
-			tsh::getBoolType(), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
-		);
-		auto tmp = addTmp(type, scope);
+		auto type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+		auto tmp  = addTmp(type, scope);
 		tmp->lifetime_flags |= LifetimeFlag::ConditionTmpValue | LifetimeFlag::NoDestructor;
 		return tmp;
 	}

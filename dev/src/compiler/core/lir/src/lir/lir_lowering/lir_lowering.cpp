@@ -1296,12 +1296,8 @@ namespace compiler::lir {
 		const base::StrID&                 mangled_name
 	) {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
-			.parameter_types={},
-			.result_type=tsh::SymbolType{
-				tsh::getUnitType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			},
+			.parameter_types = {},
+			.result_type     = tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
 		});
 
 		auto layouts = getFunctionLayouts(ctx, function_type);

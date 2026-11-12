@@ -87,9 +87,7 @@ Otherwise we add a constraint that at most one version is present.
 
 Outcome
 -------
-The [``solver engine``](solver_engine.rs) yields which new packages (outside of `Prev`) have to be added, with what features (and what features to add to `Prev`) and what new dependencies have been realised and how.
-It is the case that `Prev` union'd with this output is a correct resolution, but it may be possible to trim it, since we have accounted for the added/changed dependencies, but haven't removed dependencies removed from the manifest since the last compilation.
+The new freeze, which consists of previous-freeze packages and features, as well as the packages and features chosen by the solution to the ILP.
 
-So for example, if our project depended on `a` and `b`, and then we have removed the dependency on `b` and added the dependency on `c`, `a` and `b` belong to `Prev` and [``solver engine``](solver_engine.rs) finds a solution to the dependency on `c`, reusing as many packages added for `a` and `b` as needed. But now, the packages used only to satisfy the dependencies of `b` can be simply removed, and this is done in the `new_freeze_generation` module.
-
-Note that we create variables for preexisting packages (just in case) but do not care whether they are set to `1` or `0`.
+Note that we create variables for preexisting packages (just in case) but do not care whether they are set to `1` or `0`,
+we always put them into the new freeze.

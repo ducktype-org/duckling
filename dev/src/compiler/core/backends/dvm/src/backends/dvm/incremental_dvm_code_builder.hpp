@@ -21,11 +21,12 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief A stateful collection of code lowered into VM bytecode dedicated for REPL/scripts
-	 * compilation and compile-time evaluation use. It exposes an interface for incremental DVM code
-	 * emission, allowing REPL statements, and the functions evaluated at compile time, to be
-	 * compiled and loaded one at a time. Raw bytecode (i.e. code not coming from LIR, like the
-	 * extern C functions operating on meta types) can be loaded into the same module as well.
+	 * @brief A stateful collection of code lowered into VM bytecode, built up incrementally. It is
+	 * used by REPL/scripts compilation and by compile-time evaluation. It exposes an interface for
+	 * incremental DVM code emission, allowing REPL statements, and the functions evaluated at
+	 * compile time, to be compiled and loaded one at a time. Raw bytecode (i.e. code not coming
+	 * from LIR, like the extern C functions operating on meta types) can be loaded into the same
+	 * module as well.
 	 *
 	 * @note Underneath it uses ProgramLoweringContext snapshot API that was added specifically for
 	 * this use case, and DVMCodeBuilder lowering API.
@@ -34,29 +35,31 @@ namespace compiler::backend_vm {
 	 *
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 *
-	 * The wrapper maintains a persistent DVMCodeBuilder state across REPL statements.
+	 * The wrapper maintains a persistent DVMCodeBuilder state across insertions (e.g. REPL
+	 * statements or compile-time evaluations).
 	 * It enables incremental bytecode loading without recompiling entire modules from scratch.
 	 *
 	 * @TODO: #2872 Move repl specific logic from ProgramLoweringContext into this wrapper, so that
 	 * ProgramLoweringContext can be used for other purposes without carrying unnecessary
 	 * REPL-specific state, logic and API. Maybe think a little bit more generally about
 	 * implementation of this wrapper and its relation to ProgramLoweringContext and DVMCodeBuilder.
-	 * One idea is to just remove ReplDVMCodeBuilder and add snapshotting api to DVMCodeBuilder.
+	 * One idea is to just remove IncrementalDVMCodeBuilder and add snapshotting api to
+	 * DVMCodeBuilder.
 	 */
-	class ReplDVMCodeBuilder final {
+	class IncrementalDVMCodeBuilder final {
 	public:
 		/**
 		 * @param is_comp_time_lowering Whether the lowered code is going to be run by the
 		 * compile-time DVM instance instead of being emitted as a part of the compiled program.
 		 */
-		explicit ReplDVMCodeBuilder(query::Context& query_ctx, bool is_comp_time_lowering);
-		~ReplDVMCodeBuilder();
+		explicit IncrementalDVMCodeBuilder(query::Context& query_ctx, bool is_comp_time_lowering);
+		~IncrementalDVMCodeBuilder();
 
 		// Non-copyable, movable
-		ReplDVMCodeBuilder(const ReplDVMCodeBuilder&)            = delete;
-		ReplDVMCodeBuilder& operator=(const ReplDVMCodeBuilder&) = delete;
-		ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept;
-		ReplDVMCodeBuilder& operator=(ReplDVMCodeBuilder&&) noexcept;
+		IncrementalDVMCodeBuilder(const IncrementalDVMCodeBuilder&)            = delete;
+		IncrementalDVMCodeBuilder& operator=(const IncrementalDVMCodeBuilder&) = delete;
+		IncrementalDVMCodeBuilder(IncrementalDVMCodeBuilder&&) noexcept;
+		IncrementalDVMCodeBuilder& operator=(IncrementalDVMCodeBuilder&&) noexcept;
 
 
 		/**
@@ -101,7 +104,7 @@ namespace compiler::backend_vm {
 	private:
 		/**
 		 * The DVMCodeBuilder instance used for lowering LIR units into DVM bytecode.
-		 * @note DVMCodeBuilder friends ReplDVMCodeBuilder, so it can access program_context
+		 * @note DVMCodeBuilder friends IncrementalDVMCodeBuilder, so it can access program_context
 		 * directly, which is necessary for the snapshotting logic.
 		 */
 		DVMCodeBuilder code_builder;

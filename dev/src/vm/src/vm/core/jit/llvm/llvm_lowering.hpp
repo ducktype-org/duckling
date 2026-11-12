@@ -18,6 +18,7 @@
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 #include <algorithm>
+#include <bit>
 #include <cstdint>
 #include <string>
 #include <unordered_set>
@@ -173,6 +174,21 @@ namespace vm::jit {
 			builder.CreateStore(bc_ptr, instr_arg);
 		}
 
+		/**
+		 * @brief Sets the instruction argument to the address of instruction `idx` in `bc` itself.
+		 * @details `bc` is the function's pristine bytecode (`LowFuncData::orig_bc`), which lives
+		 * as long as the function, so the address stays valid. It already has the format of this
+		 * interpreter variant (SC or TC).
+		 */
+		void setInstructionPtrToBytecode(
+			const low::MicroBytecode& bc, llvm::IRBuilder<>& builder, usize idx
+		) {
+			llvm::Value* address = builder.CreateIntToPtr(
+				builder.getInt64(std::bit_cast<u64>(&bc.at(idx))), builder.getPtrTy()
+			);
+			builder.CreateStore(address, instr_arg);
+		}
+
 		void lowerBlockBody(
 			const low::MicroBytecode&        bc,
 			llvm::IRBuilder<>&               ir_builder,
@@ -194,12 +210,10 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::call_func_off:
 				case vm::low::MicroOpcode::call_p64_off:
 				case vm::low::MicroOpcode::virtualCall_pptr_method: {
-					// Trampoline uses VM functions, instructions have to have correct type.
-#ifdef USE_SWITCH_CASE
-					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
-#else
-					setInstructionPtr<false>(bc, ir_builder, instr_idx, func_or_loop_name);
-#endif
+					// The trampoline runs the call in the interpreter, so it needs the call's own
+					// slot in the function's bytecode, not a copy: when a runtime error escapes the
+					// call, it uses that address to give the caller frame its call site back.
+					setInstructionPtrToBytecode(bc, ir_builder, instr_idx);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction("trampoline"),
