@@ -9,13 +9,20 @@
 use std::path::Path;
 
 use git2::build::RepoBuilder;
-use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks};
+use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, SubmoduleUpdateOptions};
 use tracing::{debug, trace};
 use url::Url;
 
-use super::{GitClient, GitRepository, can_shallow_clone};
+use super::{GitClient, GitRepository, GitSubmoduleOptions, can_shallow_clone};
 use crate::quackpack::core::GitReference;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
+
+/// An implementation of [`GitRepository`], which also keeps [`DuckContext`].
+struct Git2Repository<'duck> {
+    ctx: &'duck DuckContext,
+    repository: git2::Repository,
+}
 
 #[derive(Debug)]
 /// Client implementing interaction with Git repositories.
@@ -40,15 +47,16 @@ impl<'duck> Git2Client<'duck> {
             fetch_options.depth(1);
         }
 
-        fetch_options.remote_callbacks(self.callbacks(url));
+        fetch_options.remote_callbacks(callbacks(self.ctx, url));
         fetch_options
     }
+}
 
-    /// Create callbacks for authentication.
-    fn callbacks(&self, url: &Url) -> RemoteCallbacks<'_> {
-        let attempts = std::cell::RefCell::new(0);
-        let mut callbacks = RemoteCallbacks::new();
-        callbacks.credentials(move |_url, username_from_url, cred_types| {
+/// Create callbacks for authentication.
+fn callbacks<'duck>(ctx: &'duck DuckContext, url: &Url) -> RemoteCallbacks<'duck> {
+    let attempts = std::cell::RefCell::new(0);
+    let mut callbacks = RemoteCallbacks::new();
+    callbacks.credentials(move |_url, username_from_url, cred_types| {
             let mut attempts = attempts.borrow_mut();
             *attempts += 1;
             if *attempts > MAX_AUTHENTICATION_NUMBER {
@@ -62,30 +70,27 @@ impl<'duck> Git2Client<'duck> {
             } else if cred_types.contains(CredentialType::SSH_KEY) {
                 ssh_callback(username_from_url)
             } else if cred_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
-                self.username_and_password_callback()
+                username_and_password_callback(ctx)
             } else {
                 Err(git2::Error::from_str("unsupported authentication method"))
             }
         });
-        let port = url.port();
-        callbacks.certificate_check(move |cert, host| {
-            super::known_hosts::check_certificate(self.ctx, cert, host, port)
-        });
-        callbacks
-    }
+    let port = url.port();
+    callbacks.certificate_check(move |cert, host| {
+        super::known_hosts::check_certificate(ctx, cert, host, port)
+    });
+    callbacks
+}
 
-    /// Callback for simple username + password authentication.
-    fn username_and_password_callback(&self) -> Result<Cred, git2::Error> {
-        let username = self
-            .ctx
-            .prompt_once("username")
-            .map_err(|_| git2::Error::from_str("failed to get username"))?;
-        let password = self
-            .ctx
-            .password_once("password")
-            .map_err(|_| git2::Error::from_str("failed to get password"))?;
-        Cred::userpass_plaintext(&username, &password)
-    }
+/// Callback for simple username + password authentication.
+fn username_and_password_callback(ctx: &DuckContext) -> Result<Cred, git2::Error> {
+    let username = ctx
+        .prompt_once("username")
+        .map_err(|_| git2::Error::from_str("failed to get username"))?;
+    let password = ctx
+        .password_once("password")
+        .map_err(|_| git2::Error::from_str("failed to get password"))?;
+    Cred::userpass_plaintext(&username, &password)
 }
 
 /// Callback for ssh authentication.
@@ -100,7 +105,7 @@ impl GitClient for Git2Client<'_> {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<Box<dyn GitRepository>> {
+    ) -> QuackResult<Box<dyn GitRepository + '_>> {
         let mut builder = RepoBuilder::new();
 
         builder.fetch_options(self.fetch_options_for(url, reference));
@@ -134,7 +139,10 @@ impl GitClient for Git2Client<'_> {
                 builder.clone(url.as_str(), destination)?
             }
         };
-        Ok(Box::new(repository))
+        Ok(Box::new(Git2Repository {
+            repository,
+            ctx: self.ctx,
+        }))
     }
 
     fn uses_cli(&self) -> bool {
@@ -142,13 +150,13 @@ impl GitClient for Git2Client<'_> {
     }
 }
 
-impl GitRepository for git2::Repository {
+impl GitRepository for Git2Repository<'_> {
     fn checkout(&self, reference: GitReference) -> QuackResult<()> {
         // We only checkout to tag or commit, since we can clone to branch.
         if let GitReference::Rev(commit) = reference {
-            checkout_commit(self, commit.as_str())
+            checkout_commit(&self.repository, commit.as_str())
         } else if let GitReference::Tag(tag) = reference {
-            checkout_tag(self, tag.as_str())
+            checkout_tag(&self.repository, tag.as_str())
         } else {
             Ok(())
         }
@@ -156,12 +164,22 @@ impl GitRepository for git2::Repository {
 
     fn head_commit(&self) -> QuackResult<StrId> {
         let commit = self
+            .repository
             .head()
             .context("failed to get HEAD")?
             .peel_to_commit()
             .context("failed to peel HEAD to a commit")?
             .id();
         Ok(commit.to_string().into())
+    }
+
+    fn init_submodules(&self, options: GitSubmoduleOptions) -> QuackResult<()> {
+        match options {
+            GitSubmoduleOptions::Init => initialize_submodules(&self.repository),
+            GitSubmoduleOptions::Update { init, recursive } => {
+                update_submodules(&self.repository, init, recursive, self.ctx)
+            }
+        }
     }
 }
 
@@ -201,5 +219,74 @@ fn checkout_tag(repository: &git2::Repository, tag: &str) -> QuackResult<()> {
     repository
         .set_head_detached(commit.id())
         .context("failed to set detached HEAD")?;
+    Ok(())
+}
+
+/// Initialise top-level submodules of the repository.
+///
+/// This function doesn't update them, nor is recursive.
+///
+/// Use [`update_submodules`] for more granular control.
+fn initialize_submodules(repository: &git2::Repository) -> QuackResult<()> {
+    for mut submodule in repository
+        .submodules()
+        .context("failed to load submodules")?
+    {
+        let submodule_name = submodule.name_bytes();
+        let submodule_name = String::from_utf8_lossy(submodule_name).to_string();
+        submodule
+            .init(false)
+            .with_context(|| format!("failed to initialize a submodule `{submodule_name}`"))?;
+    }
+    Ok(())
+}
+
+/// Update git submodules.
+///
+/// If `init` is true, also initialise them.
+/// If `recursive` is true, also recur into submodules.
+fn update_submodules(
+    repository: &git2::Repository,
+    init: bool,
+    recursive: bool,
+    ctx: &DuckContext,
+) -> QuackResult<()> {
+    for mut submodule in repository
+        .submodules()
+        .context("failed to load submodules")?
+    {
+        let submodule_name = submodule.name_bytes();
+        let submodule_name = String::from_utf8_lossy(submodule_name).to_string();
+
+        let mut options = SubmoduleUpdateOptions::new();
+        // There are submodules without URLs...
+        // They are indicated by `Ok(None)`.
+        let url = submodule
+            .url()
+            .with_context(|| format!("failed to get URL of a submodule `{submodule_name}`"))?;
+        if let Some(url) = url
+            && let Ok(url) = url.to_url()
+        {
+            let mut fetch_options = FetchOptions::new();
+            fetch_options.remote_callbacks(callbacks(ctx, &url));
+            options.fetch(fetch_options);
+        }
+
+        submodule
+            .update(init, Some(&mut options))
+            .with_context(|| format!("failed to update a submodule `{submodule_name}`"))?;
+
+        if !recursive {
+            continue;
+        }
+
+        let subrepository = submodule.open().with_context(|| {
+            format!("failed to open a repository of a submodule `{submodule_name}`")
+        })?;
+
+        update_submodules(&subrepository, init, recursive, ctx).with_context(|| {
+            format!("failed to recursively update submodules of a submodule `{submodule_name}`")
+        })?;
+    }
     Ok(())
 }

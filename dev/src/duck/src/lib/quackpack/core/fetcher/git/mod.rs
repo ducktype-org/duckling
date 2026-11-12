@@ -30,7 +30,7 @@ pub trait GitClient: fmt::Debug {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<Box<dyn GitRepository>>;
+    ) -> QuackResult<Box<dyn GitRepository + '_>>;
 
     /// Returns `true` if the client uses git CLI.
     fn uses_cli(&self) -> bool;
@@ -45,6 +45,23 @@ pub trait GitRepository {
 
     /// Get current HEAD commit.
     fn head_commit(&self) -> QuackResult<StrId>;
+
+    /// Initialise submodules.
+    fn init_submodules(&self, options: GitSubmoduleOptions) -> QuackResult<()>;
+}
+
+#[derive(Debug, Clone, Copy)]
+/// Options for controlling how submodules should be initialised.
+pub enum GitSubmoduleOptions {
+    /// Equivalent to `git submodule init`.
+    Init,
+    /// Equivalent to `git submodule update`.
+    Update {
+        /// If `true`, behave as `update --init`.
+        init: bool,
+        /// If `true`, behave as `update --recursive`.
+        recursive: bool,
+    },
 }
 
 /// Check, if we can shallow clone a `reference` from `url`.
