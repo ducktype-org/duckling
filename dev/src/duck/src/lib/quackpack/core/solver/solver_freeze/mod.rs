@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 mod freeze_diagnosis;
-mod new_freeze_generation;
+mod trimming;
 
 use std::collections::{HashMap, HashSet};
 
@@ -26,9 +26,12 @@ pub struct SolverFreeze {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverPackageFreeze {
-    pub dependencies_realization: HashMap<StrId, PackageId>,
+    pub dependencies_realization: DepRealizations,
     pub features: HashSet<FeatureName>,
 }
+
+/// Mapping from effective name of dependencies to their realizations.
+pub type DepRealizations = HashMap<StrId, PackageId>;
 
 impl SolverPackageFreeze {
     pub fn new() -> Self {

@@ -4,8 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Module for translating the solution to the ILP
-//! into information which packages and features should be added to the freeze.
+//! Module for constructing a new [`SolverFreeze`], based on the solution to the ILP describing dependency constraints.
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -14,105 +13,122 @@ use russcip::{Solution, Variable};
 use tracing::trace;
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
+use crate::quackpack::core::solver::solver_freeze::{
+    DepRealizations, SolverFreeze, SolverPackageFreeze,
+};
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::solver_model::FeaturesToVars;
-use crate::quackpack::core::{FeatureName, PackageId, Selector, Version};
-use crate::{QuackResult, qp_bail_internal};
+use crate::quackpack::core::{FeatureName, PackageId, Selector};
+use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 
-// @TODO: #3986 simplify this, return the whole SolverFreeze here.
-/// Output of the solver model, contains new packages to be put into the freeze, with their features.
-#[derive(Debug)]
-pub struct FoundSolution {
-    pub new_packages: HashSet<PackageId>,
-    pub new_features: HashMap<PackageId, HashSet<FeatureName>>,
-    pub new_edges: HashMap<DependencyEdge, Version>,
+/// Get a [`SolverFreeze`] from [`SolverInput`] and [`Solution`].
+pub(super) fn freeze_from_solution(
+    package_vars: HashMap<PackageId, Rc<Variable>>,
+    package_to_feature_vars: HashMap<PackageId, FeaturesToVars>,
+    input: &SolverInput,
+    solution: &Solution,
+    main_pkg: PackageId,
+) -> QuackResult<SolverFreeze> {
+    let all_pkgs = all_packages(package_vars, input, solution);
+    let mut all_features = all_features(&package_to_feature_vars, &all_pkgs, input, solution);
+    let mut all_realizations = all_realizations(&all_pkgs, &all_features, input)?;
+    let mut pkg_freezes = HashMap::new();
+    for pkg in all_pkgs {
+        let features = all_features
+            .remove(&pkg)
+            .with_context_internal(|| format!("no features for {pkg:?}"))?;
+        let realizations = all_realizations
+            .remove(&pkg)
+            .with_context_internal(|| format!("no realizations for {pkg:?}"))?;
+        let pkg_freeze = SolverPackageFreeze {
+            features,
+            dependencies_realization: realizations,
+        };
+        pkg_freezes.insert(pkg, pkg_freeze);
+    }
+    Ok(SolverFreeze {
+        package_freezes: pkg_freezes,
+        main_pkg,
+    })
 }
 
-/// Helper for determining which new packages have been chosen by the model.
-pub(super) fn new_packages(
+/// Get all the packages that will be present in the [`SolverFreeze`].
+/// Those are previous freeze packages and packages chosen in the [`Solution`].
+fn all_packages(
     package_vars: HashMap<PackageId, Rc<Variable>>,
-    preexisting_packages: &HashSet<PackageId>,
+    input: &SolverInput,
     solution: &Solution,
 ) -> HashSet<PackageId> {
-    trace!(?preexisting_packages, ?package_vars);
-    let new_packages = package_vars
-        .into_iter()
-        .filter_map(|(pkg, var)| {
-            if is_one(&var, solution) {
-                Some(pkg)
-            } else {
-                None
-            }
-        })
-        .collect::<HashSet<PackageId>>()
-        .difference(preexisting_packages)
-        .copied()
-        .collect::<HashSet<PackageId>>();
-    trace!(?new_packages);
-    new_packages
+    let mut all_pkgs = input.all_preexisting_pkgs();
+    let solution_pkgs = package_vars.into_iter().filter_map(|(pkg, var)| {
+        if is_one(var.as_ref(), solution) {
+            Some(pkg)
+        } else {
+            None
+        }
+    });
+    all_pkgs.extend(solution_pkgs);
+    trace!(?all_pkgs);
+    all_pkgs
 }
 
-/// Helper for determining which new features of all the packages have been chosen by the model.
-pub(super) fn new_features(
+/// Get a mapping from all packages to all of their features that will be present in the [`SolverFreeze`].
+/// Those are previous freeze features and features chosen in the [`Solution`].
+fn all_features(
     package_to_feature_vars: &HashMap<PackageId, FeaturesToVars>,
-    new_packages: &HashSet<PackageId>,
-    preexisting_packages: &HashSet<PackageId>,
+    all_packages: &HashSet<PackageId>,
     input: &SolverInput,
     solution: &Solution,
 ) -> HashMap<PackageId, HashSet<FeatureName>> {
-    let mut new_features = HashMap::new();
-    for pkg in preexisting_packages.iter().chain(new_packages.iter()) {
-        let mut pkg_features = HashSet::new();
-        if let Some(features_to_vars) = package_to_feature_vars.get(pkg) {
-            pkg_features = features_to_vars
-                .iter()
-                .filter_map(|(feature, var)| {
-                    if is_one(var, solution) {
-                        Some(feature)
-                    } else {
-                        None
-                    }
-                })
-                .copied()
-                .collect();
+    let mut all_features = HashMap::new();
+    for pkg in all_packages {
+        let mut features = HashSet::new();
+        if let Some(preexisting) = input.preexisting_features_for_pkg(*pkg) {
+            features.extend(preexisting.iter().copied());
         }
-        if let Some(features) = input.preexisting_features_for_pkg(*pkg) {
-            pkg_features = pkg_features.difference(features).cloned().collect();
+        if let Some(feature_vars) = package_to_feature_vars.get(pkg) {
+            let solution_features = feature_vars.iter().filter_map(|(feature, var)| {
+                if is_one(var.as_ref(), solution) {
+                    Some(feature)
+                } else {
+                    None
+                }
+            });
+            features.extend(solution_features);
         }
-        if !pkg_features.is_empty() {
-            new_features.insert(*pkg, pkg_features);
-        }
+        all_features.insert(*pkg, features);
     }
-    new_features
+    trace!(?all_features);
+    all_features
 }
 
-/// Helper for determining what new realizations of any dependencies have been chosen by the model.
-pub(super) fn new_edges(
-    new_packages: &HashSet<PackageId>,
-    new_features: &HashMap<PackageId, HashSet<FeatureName>>,
-    preexisting_packages: &HashSet<PackageId>,
+/// Get a mapping from all packages to realizations of their dependencies that will be present in the [`SolverFreeze`].
+/// Note
+/// ----
+/// Here we heavily rely on the assumption that each package to be in the freeze
+/// has a unique [`Identity`](crate::quackpack::core::package_identifiers::identity::Identity).
+/// Thus we can choose a non-preexisting realization by looking at all the packages with the given
+/// [`FullIdentity`](crate::quackpack::core::package_identifiers::full_identity::FullIdentity) and
+/// take the unique one present in the solution.
+fn all_realizations(
+    all_packages: &HashSet<PackageId>,
+    all_features: &HashMap<PackageId, HashSet<FeatureName>>,
     input: &SolverInput,
-) -> QuackResult<HashMap<DependencyEdge, Version>> {
-    let mut new_edges = HashMap::new();
-    for pkg in preexisting_packages.iter().chain(new_packages.iter()) {
+) -> QuackResult<HashMap<PackageId, DepRealizations>> {
+    let mut all_realizations = HashMap::new();
+    for pkg in all_packages {
         let pkg_data = input.package_data(*pkg)?;
-        let mut features = new_features.get(pkg).cloned().unwrap_or_default();
-        features.extend(
-            input
-                .preexisting_features_for_pkg(*pkg)
-                .into_iter()
-                .flatten()
-                .copied(),
-        );
+        let features = all_features
+            .get(pkg)
+            .with_context_internal(|| format!("no features for {pkg:?}"))?;
+        let mut pkg_realizations = HashMap::new();
         for dep in pkg_data
             .manifest()
             .dependencies()
-            .select(&Selector::EnabledBy(&features))
+            .select(&Selector::EnabledBy(features))
         {
-            if pkg_data
-                .dependency_preexists(dep.effective_name())
-                .is_some()
-            {
+            if let Some(realization) = pkg_data.dependency_preexists(dep.effective_name()) {
+                pkg_realizations.insert(dep.effective_name(), realization);
                 continue;
             }
             let Some(edge) = DependencyEdge::from_manifest_and_parent(
@@ -122,18 +138,24 @@ pub(super) fn new_edges(
             ) else {
                 qp_bail_internal!("no dependency edge for {pkg:?} and {dep:?}");
             };
+            let mut realization_found = false;
             for version in input.all_versions(edge.dep_identity)? {
                 let realization = PackageId::new(edge.dep_identity, *version);
-                if preexisting_packages.contains(&realization)
-                    || new_packages.contains(&realization)
-                {
-                    new_edges.insert(edge, *version);
+                if all_packages.contains(&realization) {
+                    pkg_realizations.insert(dep.effective_name(), realization);
+                    realization_found = true;
                     break;
                 }
             }
+            if !realization_found {
+                // No realization found, this should never happen.
+                qp_bail_internal!("no realization found for {edge:?}");
+            }
         }
+        all_realizations.insert(*pkg, pkg_realizations);
     }
-    Ok(new_edges)
+    trace!(?all_realizations);
+    Ok(all_realizations)
 }
 
 /// Helper function for determining whether the model did or did not put the variable into the solution.
