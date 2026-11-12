@@ -8,7 +8,11 @@
 
 #include <base/types/ints.hpp>
 
+#include <diagnostic/module_flags/module_flags.hpp>
 #include <tester/tester.hpp>
+
+#include <iostream>
+#include <sstream>
 
 class SplitInputIntoStatementsTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -21,6 +25,7 @@ public:
 		TESTER_ADD_TEST(testMultipleStatements);
 		TESTER_ADD_TEST(testIdempotency);
 		TESTER_ADD_TEST(testParseError);
+		TESTER_ADD_TEST(testParseErrorRenderedOnce);
 	}
 
 private:
@@ -155,6 +160,31 @@ private:
 		// Error recovery: a valid statement followed by a broken one
 		// — the whole input must still be rejected
 		check_error("var x: i32 = 1;\n{", "valid then unclosed brace");
+	}
+
+	void testParseErrorRenderedOnce() {
+		// Route both the global immediate-print stream and `std::cerr` (where the old code
+		// also dumped the log) into a single buffer, then count how many times the message
+		// is rendered.
+		std::stringstream captured;
+		dia::configureImmediatePrint(&captured);
+		std::streambuf* const previous_cerr = std::cerr.rdbuf(captured.rdbuf());
+
+		auto result = compiler::repl::splitInputIntoStatements("fun a {}");
+
+		std::cerr.rdbuf(previous_cerr);
+		dia::configureImmediatePrint(nullptr);
+
+		ASSERT_NO_VALUE(result, "Expected parse error for `fun a {}`");
+
+		const std::string text   = captured.str();
+		const std::string needle = "parameter list";
+		usize             count  = 0;
+		for (std::size_t pos = text.find(needle); pos != std::string::npos;
+		     pos             = text.find(needle, pos + needle.size()))
+            ++count;
+
+		ASSERT_EQUAL(1UL, count);
 	}
 
 public:
