@@ -50,6 +50,9 @@ namespace compiler::helios {
 	 * @brief This function collects all used symbols from the hout unit module
 	 * that should be appended to the module, for example some compiler generated symbols
 	 * or template instantiations in the future.
+	 *
+	 * Failed queries are not rethrown, since the callers do not catch query exceptions.
+	 * The failed symbol is skipped and the function returns BAD.
 	 */
 	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
 		// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
@@ -83,9 +86,6 @@ namespace compiler::helios {
 
 				added_symbols.insert(used_fun);
 				if (implementsQueryCodeOfFun(used_fun)) {
-					// Replicated functions (e.g. template instantiations) reach the module only
-					// through this walk, so a failure here must be reported like the failure of
-					// any other function of the module instead of being rethrown.
 					const auto& code = ctx.query<QueryCodeOfFun>(used_fun);
 					if (code->hasFailed()) {
 						result = base::BAD;
