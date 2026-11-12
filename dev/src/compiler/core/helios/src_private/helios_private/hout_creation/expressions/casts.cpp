@@ -85,6 +85,11 @@ namespace compiler::helios::code {
 		    && to.getRefKind() == ReferenceKind::Direct)
 			return cast_expr(std::move(value));
 
+		// E.g. `list.at(i) as i32`: the value is read out of the reference, then cast.
+		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
+		    && from.getRefKind() == ReferenceKind::Ref && to.getRefKind() == ReferenceKind::Direct)
+			return cast_expr(makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(value)));
+
 		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
 			return cast_expr(std::move(value));
 

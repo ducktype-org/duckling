@@ -86,6 +86,8 @@ namespace compiler::helios {
 
 				added_symbols.insert(used_fun);
 				if (implementsQueryCodeOfFun(used_fun)) {
+					// E.g. an instantiation of a template whose body doesn't compile for the
+					// given arguments. The error has been reported already.
 					const auto& code = ctx.query<QueryCodeOfFun>(used_fun);
 					if (code->hasFailed()) {
 						result = base::BAD;

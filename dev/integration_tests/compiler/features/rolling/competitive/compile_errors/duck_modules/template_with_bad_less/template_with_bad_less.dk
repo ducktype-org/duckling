@@ -1,0 +1,17 @@
+import exp.algorithms.*;
+
+# `sort` needs a `<` that returns `bool`. This one returns `i64`, so the body of the `sort`
+# instantiation does not compile.
+class Pair {
+    a: i64;
+    b: i64;
+
+    fun <(other: ref Pair) -> i64 = a - other.a;
+}
+
+fun main() -> i64 = {
+    var pairs: List[Pair];
+    pairs.push(Pair(2, 1));
+    sort[Pair](&pairs);
+    return 0;
+}

@@ -713,7 +713,7 @@ namespace compiler::helios::code {
 				));
 			} else {
 				auto main_msg = makeBox<AmbiguousMatchesError>(
-					pst_origin.whole_call_origin.getStablePosition().value()
+					pst_origin.whole_call_origin.getStablePosition().value(), true
 				);
 				appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, false);
 				ctx.log(std::move(main_msg));

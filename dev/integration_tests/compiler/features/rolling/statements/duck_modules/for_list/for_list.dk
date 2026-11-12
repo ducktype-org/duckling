@@ -1,0 +1,81 @@
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+fun printSeparator() -> () = {
+    builtin_output_i64(888);
+}
+
+fun makeList() -> List[i64] = {
+    var l: List[i64];
+    l.push(7);
+    l.push(8);
+    return l;
+}
+
+fun sum(l: ref List[i64]) -> i64 = {
+    var total = 0i64;
+    for (x in l) total = total + x;
+    return total;
+}
+
+fun main() -> i64 = {
+    var numbers: List[i64];
+    numbers.push(1);
+    numbers.push(2);
+    numbers.push(3);
+
+    printSeparator();
+    for (x in numbers) {
+        builtin_output_i64(x);          # 1, 2, 3
+    }
+
+    printSeparator();
+    for (x in numbers) {
+        x = x + 100;                    # The iterator is a copy of the element.
+        builtin_output_i64(x);          # 101, 102, 103
+    }
+    builtin_output_i64(numbers.at(0));  # 1, the list is unchanged
+
+    printSeparator();
+    for (x in makeList()) {             # An r-value list.
+        builtin_output_i64(x);          # 7, 8
+    }
+
+    printSeparator();
+    builtin_output_i64(sum(&numbers));  # 6, through a reference
+
+    printSeparator();
+    var empty: List[i64];
+    for (x in empty) {
+        builtin_output_i64(999);
+    }
+
+    printSeparator();
+    var names: List[String];
+    names.push(f"duck");
+    names.push(f"ling");
+    for (name in names) {
+        name.append('!');               # Changes the copy, not the element.
+        print(&name);
+        print('\n');                    # duck!, ling!
+    }
+    print(names.at(0));
+    print('\n');                        # duck
+
+    printSeparator();
+    var points: List[Point];
+    points.push(Point(1, 2));
+    points.push(Point(3, 4));
+    for (p in points) {
+        builtin_output_i64(p.x + p.y);  # 3, 7
+    }
+
+    printSeparator();
+    for (x in numbers) {
+        if (x == 2) continue;
+        builtin_output_i64(x);          # 1, 3
+    }
+    return 0;
+}

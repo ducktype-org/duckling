@@ -1,0 +1,10 @@
+fun for_continue_test() -> i64 = {
+    var arr: i64[2];
+    var sum: i64 = 0;
+    for named (x in arr) {
+        if (x == 0) continue for;
+        sum = sum + x;
+        continue named;
+    }
+    return sum;
+}

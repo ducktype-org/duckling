@@ -25,19 +25,27 @@ namespace pst {
 		 * @brief Whether the token `fwd` tokens ahead is a keyword that always starts a statement.
 		 *
 		 * `const` right after `if` belongs to an `if const` statement or ternary, so it does not
-		 * start a new statement.
+		 * start a new statement. Only keyword tokens count: a string literal such as `"while"`
+		 * shares its text with a keyword but never starts a statement.
 		 */
 		bool isStmtStartKeyword(const TokenStream& state, i64 fwd) {
+			if (!state[fwd].isKeyword()) return false;
 			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
 			return keywordFlags(state[fwd].asKeyword())
 			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}
 
+		/** @brief Whether the token `fwd` tokens ahead is a specifier keyword, e.g. `pub`. */
+		static bool isSpecifierKeyword(const TokenStream& state, i64 fwd) {
+			return state[fwd].isKeyword()
+			    && keywordFlags(state[fwd].asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
+
 		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
 			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 			    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-			    || keywordFlags(state[fwd].asKeyword())
-			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+			    || isSpecifierKeyword(state, fwd);
 		}
 
 		template<class T>
@@ -58,8 +66,7 @@ namespace pst {
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+				    || isSpecifierKeyword(state, fwd)
 				    || (Conditions::isBlockGroup(state, fwd - 1)
 				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
@@ -83,9 +90,7 @@ namespace pst {
 
 				if (isStmtStartKeyword(state, fwd)) return true;
 
-				if (keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier))
-					return true;
+				if (isSpecifierKeyword(state, fwd)) return true;
 
 				// When we have two curly bracket blocks as consecutive tokens, it probably means
 				// that the user intended to write two statements
@@ -112,8 +117,7 @@ namespace pst {
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+				    || isSpecifierKeyword(state, fwd);
 			}
 		};
 
@@ -125,6 +129,22 @@ namespace pst {
 			 */
 			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
 				return 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(base + 1);
+			}
+		};
+
+		template<>
+		struct StmtFinder<Action> {
+			/**
+			 * @brief Like the general one, but `break block;` / `continue loop;` is exactly three
+			 * tokens: the target keyword is a statement start, so it would end the statement.
+			 * Tokens past the end of the stream are sentinels, so no size check is needed.
+			 */
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				if ((state[base].is(Keyword::Break) || state[base].is(Keyword::Continue))
+				    && state[base + 1].isKeyword() && state[base + 2].is(Special::Semicolon)
+				    && isControlFlowTargetKeyword(state[base + 1].asKeyword()))
+					return 3;
+				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(base + 1);
 			}
 		};
 

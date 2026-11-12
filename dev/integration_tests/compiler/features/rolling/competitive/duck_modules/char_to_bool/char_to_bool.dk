@@ -1,0 +1,6 @@
+fun main() -> i64 = {
+    let c: char = 65 as char;
+    let b: bool = c;
+    print(b);
+    return 0;
+}
