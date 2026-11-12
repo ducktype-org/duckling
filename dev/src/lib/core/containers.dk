@@ -583,6 +583,54 @@ class List {
 
     fun length() -> i64 = len;
 
+    #{
+        Lists are equal when they hold equal elements. This replaces the
+        generated comparison, which would compare the buffers instead.
+    #}
+    fun ==(rhs: ref listType[T]()) -> bool = {
+        if (len != rhs.len) return false;
+        var i = 0i64;
+        while (i < len) {
+            if (not (pointer[i] == rhs.pointer[i])) return false;
+            i = i + 1i64;
+        }
+        return true;
+    }
+
+    #{
+        Orders lists lexicographically by their elements. A proper prefix
+        comes before the longer list.
+    #}
+    fun <(rhs: ref listType[T]()) -> bool = {
+        var i = 0i64;
+        while (i < len and i < rhs.len) {
+            if (pointer[i] < rhs.pointer[i]) return true;
+            if (rhs.pointer[i] < pointer[i]) return false;
+            i = i + 1i64;
+        }
+        return len < rhs.len;
+    }
+
+    #{
+        The remaining comparisons are defined in terms of `==` and `<`. The
+        generated ones would compare the buffers instead.
+    #}
+    fun !=(rhs: ref listType[T]()) -> bool = {
+        return not (self == rhs);
+    }
+
+    fun <=(rhs: ref listType[T]()) -> bool = {
+        return not (rhs < self);
+    }
+
+    fun >(rhs: ref listType[T]()) -> bool = {
+        return rhs < self;
+    }
+
+    fun >=(rhs: ref listType[T]()) -> bool = {
+        return not (self < rhs);
+    }
+
     fun toString() -> String = {
         var result = stringification.stringifyStr("[");
         var i      = 0;
