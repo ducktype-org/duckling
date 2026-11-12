@@ -59,10 +59,10 @@ private:
 	}
 
 	/**
-	 * @brief `cmpEq`/`cmpNeq`/`ucmp*` on two `pptr` places: pointers into one block compare by
-	 * offset, a null pointer comes first, and pointers into different blocks are never equal.
+	 * @brief `cmpEq`/`cmpNeq` on two `pptr` places: equal means same block and same offset, a null
+	 * pointer only equals null, and pointers into different blocks are never equal.
 	 */
-	void pointerComparisonTest() { runTestOnVm("pointer_comparison.dbc", "", "101101101101"); }
+	void pointerComparisonTest() { runTestOnVm("pointer_comparison.dbc", "", "101101010"); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/runtime/pointers/");

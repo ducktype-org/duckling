@@ -1192,18 +1192,7 @@ class FunctionValidator {
 
 			instr_case_novalue(Op_cmpNull_pptr) {}
 			instr_case_novalue(
-				Op_cmpEq_pptr_pptr,
-				Op_cmpNeq_pptr_pptr,
-				Op_ucmpGt_pptr_pptr,
-				Op_ucmpGe_pptr_pptr,
-				Op_ucmpLt_pptr_pptr,
-				Op_ucmpLe_pptr_pptr,
-				Op_cmpEq_pcptr_pcptr,
-				Op_cmpNeq_pcptr_pcptr,
-				Op_ucmpGt_pcptr_pcptr,
-				Op_ucmpGe_pcptr_pcptr,
-				Op_ucmpLt_pcptr_pcptr,
-				Op_ucmpLe_pcptr_pcptr
+				Op_cmpEq_pptr_pptr, Op_cmpNeq_pptr_pptr, Op_cmpEq_pcptr_pcptr, Op_cmpNeq_pcptr_pcptr
 			) {}
 
 			instr_case_novalue(Op_fadd_p64_p64) {

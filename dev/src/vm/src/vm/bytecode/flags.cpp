@@ -435,16 +435,8 @@ namespace vm::code {
 			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
 			FLAGS_CMP(cmpEq_pptr_pptr)
 			FLAGS_CMP(cmpNeq_pptr_pptr)
-			FLAGS_CMP(ucmpGt_pptr_pptr)
-			FLAGS_CMP(ucmpGe_pptr_pptr)
-			FLAGS_CMP(ucmpLt_pptr_pptr)
-			FLAGS_CMP(ucmpLe_pptr_pptr)
 			FLAGS_CMP(cmpEq_pcptr_pcptr)
 			FLAGS_CMP(cmpNeq_pcptr_pcptr)
-			FLAGS_CMP(ucmpGt_pcptr_pcptr)
-			FLAGS_CMP(ucmpGe_pcptr_pcptr)
-			FLAGS_CMP(ucmpLt_pcptr_pcptr)
-			FLAGS_CMP(ucmpLe_pcptr_pcptr)
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }

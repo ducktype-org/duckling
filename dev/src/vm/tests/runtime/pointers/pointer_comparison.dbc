@@ -15,7 +15,6 @@ function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type py, ptr_i64;
 	init_pany_type nul, ptr_i64;
 	init_pany_type r, i64;
-	init_pany_type r2, i64;
 
 	structLea_pptr_pste_field pa, s, Pair.a;    # pa := &s.a
 	structLea_pptr_pste_field pb, s, Pair.b;    # pb := &s.b
@@ -40,59 +39,38 @@ function main { i64, ptr_argv } -> { i64 } {
 	cmov_p64_imm r, 1;
 	output_p64 r;                               # 1
 
-	# Inside one block the order is the offset order.
-	mov_p64_imm r, 0;
-	ucmpLt_pptr_pptr pa, pb;
-	cmov_p64_imm r, 1;
-	output_p64 r;                               # 1
-
-	mov_p64_imm r, 0;
-	ucmpGt_pptr_pptr pa, pb;
-	cmov_p64_imm r, 1;
-	output_p64 r;                               # 0
-
-	mov_p64_imm r, 0;
-	ucmpGe_pptr_pptr pb, pa;
-	cmov_p64_imm r, 1;
-	output_p64 r;                               # 1
-
-	mov_p64_imm r, 0;
-	ucmpLe_pptr_pptr pa, pa2;
-	cmov_p64_imm r, 1;
-	output_p64 r;                               # 1
-
-	mov_p64_imm r, 0;
-	ucmpLt_pptr_pptr pa, pa2;
-	cmov_p64_imm r, 1;
-	output_p64 r;                               # 0
-
-	# A null pointer comes before every other pointer and equals another null pointer.
-	mov_p64_imm r, 0;
-	ucmpLt_pptr_pptr nul, pa;
-	cmov_p64_imm r, 1;
-	output_p64 r;                               # 1
-
+	# A null pointer equals another null pointer and differs from a live pointer.
 	mov_p64_imm r, 0;
 	cmpEq_pptr_pptr nul, nul;
 	cmov_p64_imm r, 1;
 	output_p64 r;                               # 1
 
-	# Different blocks: not equal, and exactly one of `<` and `>` holds.
+	mov_p64_imm r, 0;
+	cmpEq_pptr_pptr nul, pa;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 0
+
+	mov_p64_imm r, 0;
+	cmpNeq_pptr_pptr pa, nul;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 1
+
+	# Different blocks: never equal.
 	mov_p64_imm r, 0;
 	cmpEq_pptr_pptr px, py;
 	cmov_p64_imm r, 1;
 	output_p64 r;                               # 0
 
 	mov_p64_imm r, 0;
-	ucmpLt_pptr_pptr px, py;
+	cmpNeq_pptr_pptr px, py;
 	cmov_p64_imm r, 1;
-	mov_p64_imm r2, 0;
-	ucmpGt_pptr_pptr px, py;
-	cmov_p64_imm r2, 1;
-	add_p64_p64 r, r2;
 	output_p64 r;                               # 1
 
-	deinit;     # r2
+	mov_p64_imm r, 0;
+	cmpNeq_pptr_pptr pa, pa2;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 0
+
 	deinit;     # r
 	deinit;     # nul
 	deinit;     # py

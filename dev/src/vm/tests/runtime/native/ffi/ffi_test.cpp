@@ -261,18 +261,13 @@ private:
 		);
 	}
 
-	// `cmpEq`/`cmpNeq`/`ucmp*` on two `pcptr` places compare the native addresses as unsigned
-	// integers, so the null cpointer comes before a live allocation.
+	// `cmpEq`/`cmpNeq` on two `pcptr` places compare the native addresses.
 	void cptrCompare() {
 		std::string checks;
 		for (const auto* instr: { "cmpEq_pcptr_pcptr buf, buf2",
 		                          "cmpEq_pcptr_pcptr buf, nul",
 		                          "cmpNeq_pcptr_pcptr buf, nul",
-		                          "ucmpLt_pcptr_pcptr nul, buf",
-		                          "ucmpGt_pcptr_pcptr nul, buf",
-		                          "ucmpGe_pcptr_pcptr buf, nul",
-		                          "ucmpLe_pcptr_pcptr buf, buf2",
-		                          "ucmpLt_pcptr_pcptr buf, buf2" }) {
+		                          "cmpNeq_pcptr_pcptr buf, buf2" }) {
 			checks += std::string("    mov_p64_imm r, 0;\n    ") + instr
 			        + ";\n    cmov_p64_imm r, 1;\n    output_p64 r;\n";
 		}
@@ -294,7 +289,7 @@ private:
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
-			"10110110"
+			"1010"
 		);
 	}
 

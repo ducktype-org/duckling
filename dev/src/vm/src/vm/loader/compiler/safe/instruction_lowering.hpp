@@ -400,13 +400,9 @@ namespace vm::loader::compiler::safe::detail {
 				// A null cpointer is the native address 0.
 				addLow<Op_cmpEq_p64_imm>(i.ptr, vm::opargs::Immediate{ 0 });
 			}
-			// A cpointer is a native address, compared as an unsigned 64-bit integer.
+			// A cpointer is a native address, so equality is 64-bit integer equality.
 			instr_case(high::Op_cmpEq_pcptr_pcptr, i) { addLow<Op_cmpEq_p64_p64>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_pcptr_pcptr, i) { addLow<Op_cmpNeq_p64_p64>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpGt_pcptr_pcptr, i) { addLow<Op_ucmpGt_p64_p64>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpGe_pcptr_pcptr, i) { addLow<Op_ucmpGe_p64_p64>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpLt_pcptr_pcptr, i) { addLow<Op_ucmpLt_p64_p64>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpLe_pcptr_pcptr, i) { addLow<Op_ucmpLe_p64_p64>(i.lhs, i.rhs); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_mov_pvnt_pvnt, i) { addLow<Op_mov_bvnt_bvnt>(i.dst, i.src); }
@@ -654,10 +650,6 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cmpNull_pptr, i) { addLow<Op_cmpNull_pptr>(i.ptr); }
 			instr_case(high::Op_cmpEq_pptr_pptr, i) { addLow<Op_cmpEq_pptr_pptr>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNeq_pptr_pptr, i) { addLow<Op_cmpNeq_pptr_pptr>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpGt_pptr_pptr, i) { addLow<Op_ucmpGt_pptr_pptr>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpGe_pptr_pptr, i) { addLow<Op_ucmpGe_pptr_pptr>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpLt_pptr_pptr, i) { addLow<Op_ucmpLt_pptr_pptr>(i.lhs, i.rhs); }
-			instr_case(high::Op_ucmpLe_pptr_pptr, i) { addLow<Op_ucmpLe_pptr_pptr>(i.lhs, i.rhs); }
 			instr_case(high::Op_variantSetInner_pvnt_type, i) {
 				addLow<Op_variantSetInner_bvnt_type>(i.variant, i.inner_type);
 				opargs::Type variant_type = getPlaceType(i.variant)->getName();
