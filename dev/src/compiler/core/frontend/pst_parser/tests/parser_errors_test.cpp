@@ -694,7 +694,8 @@ class PSTErrorTests: public tester::TestSuite {
 	 * @brief A class statement whose name cannot be parsed must not crash the parser.
 	 */
 	void classWithoutNameTests() {
-		for (const std::string_view code: { "fun class() = {}\n", "let a: class = ()\n" }) {
+		for (const std::string_view code:
+		     { "class {}\n", "fun class() = {}\n", "let a: class = ()\n" }) {
 			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 
 			assertTrue(
