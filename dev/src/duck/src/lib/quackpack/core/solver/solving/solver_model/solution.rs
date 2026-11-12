@@ -138,15 +138,19 @@ fn all_realizations(
             ) else {
                 qp_bail_internal!("no dependency edge for {pkg:?} and {dep:?}");
             };
+            let mut realization_found = false;
             for version in input.all_versions(edge.dep_identity)? {
                 let realization = PackageId::new(edge.dep_identity, *version);
                 if all_packages.contains(&realization) {
                     pkg_realizations.insert(dep.effective_name(), realization);
+                    realization_found = true;
                     break;
                 }
             }
-            // No realization found, this should never happen.
-            qp_bail_internal!("no realization found for {edge:?}");
+            if !realization_found {
+                // No realization found, this should never happen.
+                qp_bail_internal!("no realization found for {edge:?}");
+            }
         }
         all_realizations.insert(*pkg, pkg_realizations);
     }
