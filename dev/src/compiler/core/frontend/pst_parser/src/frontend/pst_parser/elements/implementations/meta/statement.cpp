@@ -341,6 +341,11 @@ namespace pst {
 
 			exitFallback(state);
 
+			// A failed statement leaves its trailing semicolon unconsumed (the statement-length
+			// heuristic often ends the window before it). Drop it here so the top-level loop
+			// doesn't misreport the statement's own terminator as a duplicate semicolon.
+			if (not out && state[0].is(Special::Semicolon)) state.tokens().skip();
+
 			PST_RETURN out;
 		}
 

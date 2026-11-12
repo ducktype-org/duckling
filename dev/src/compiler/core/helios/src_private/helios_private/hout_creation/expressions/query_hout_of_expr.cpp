@@ -177,6 +177,14 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx, pstOrigin(elem));
 			}
 
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> stmt) override {
+				// Block expressions are only lowered as statements; there is no expression
+				// lowering for them yet. Report it instead of hitting the panicky visitor.
+				ctx.log(makeBox<dia::NotYetImplementedCodeError>(
+					"Block expressions are not yet supported.", stmt->getStablePosition()
+				));
+			}
+
 			/**
 			 * @brief Creates the numeric @p literal, which may be negative if @p sign says so.
 			 * For a negative literal, @p origin and @p position also cover the `-`.
