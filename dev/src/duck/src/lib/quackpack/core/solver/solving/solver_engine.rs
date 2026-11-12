@@ -7,7 +7,7 @@
 //! Main logic for solving dependencies.
 //! Contains [`SolverEngine`] struct, which transforms the problem into
 //! the constraints of [`SolverModel`].
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::iter::once;
 
 use itertools::iproduct;
@@ -15,8 +15,10 @@ use russcip::ProblemCreated;
 
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
+use crate::quackpack::core::solver::root::SolverRoot;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::input::{PackageData, SolverInput};
-use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
+use crate::quackpack::core::solver::solving::solver_model::SolverModel;
 use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Selector};
 use crate::{QuackResult, QuackResultContext, StrId};
@@ -34,10 +36,10 @@ impl<'a> SolverEngine<'a> {
     #[tracing::instrument(skip_all)]
     pub(in crate::quackpack::core::solver) fn run_engine(
         input: SolverInput,
-        main_pkg: &(PackageId, HashSet<FeatureName>),
-    ) -> QuackResult<(FoundSolution, HashMap<PackageId, Box<Manifest>>)> {
+        root: &SolverRoot,
+    ) -> QuackResult<(SolverFreeze, HashMap<PackageId, Box<Manifest>>)> {
         let engine = SolverEngine::new(&input);
-        let solution = engine.run(main_pkg)?;
+        let solution = engine.run(root)?;
         let manifests = input.into_manifests();
         Ok((solution, manifests))
     }
@@ -51,7 +53,7 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
-    fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
+    fn run(mut self, root: &SolverRoot) -> QuackResult<SolverFreeze> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
             for dependency in data
@@ -64,14 +66,13 @@ impl<'a> SolverEngine<'a> {
         }
 
         // Root has to be present in the solution with all its requested features.
-        self.model.require_root_package(main_pkg.0)?;
-        for feature in main_pkg.1.iter() {
-            self.model
-                .require_root_package_feature(main_pkg.0, *feature)?;
+        self.model.require_root_package(root.id)?;
+        for feature in root.features.iter() {
+            self.model.require_root_package_feature(root.id, *feature)?;
         }
         self.force_features_expansion()?;
         self.force_singular_versions()?;
-        self.model.solve()
+        self.model.solve(root.id)
     }
 
     /// Creates necessary variables for all the packages.
@@ -409,6 +410,7 @@ fn parent_features_to_consider(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashSet;
     use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
@@ -416,6 +418,7 @@ mod test {
     use super::*;
     use crate::DuckContext;
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+    use crate::quackpack::core::solver::solver_freeze::SolverPackageFreeze;
     use crate::quackpack::core::solver::solving::input::{PackageData, PreexistenceData};
     use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
@@ -428,6 +431,20 @@ mod test {
         write_file(&manifest, contents).unwrap();
         try_fsync_dir(dir.path()).unwrap();
         (dir, manifest)
+    }
+
+    /// Builds the [`SolverRoot`] for `id`, taking its manifest from `input`.
+    fn solver_root(
+        input: &SolverInput,
+        id: PackageId,
+        features: HashSet<FeatureName>,
+    ) -> SolverRoot {
+        SolverRoot {
+            id,
+            path: PathBuf::new(),
+            manifest: Box::new(input.package_data(id).unwrap().manifest().clone()),
+            features,
+        }
     }
 
     #[test]
@@ -479,20 +496,28 @@ metadata:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
-        assert!(output.new_features.is_empty());
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
-            output.new_edges,
-            HashMap::from([(
-                DependencyEdge {
-                    parent: pkg_a,
-                    dep_identity: identity_b,
-                    dep_ename: StrId::new("b"),
-                },
-                Version::new(2, 0, 0)
-            )])
+            output.package_freezes,
+            [
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("b".into(), pkg_b)].into(),
+                        features: [].into()
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [].into(),
+                        features: [].into()
+                    }
+                ),
+            ]
+            .into()
         );
     }
 
@@ -548,33 +573,28 @@ dependencies:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
-            output.new_features,
-            HashMap::from([(pkg_a, HashSet::from([FeatureName::new("xd")]))])
-        );
-        assert_eq!(
-            output.new_edges,
-            HashMap::from([
+            output.package_freezes,
+            [
                 (
-                    DependencyEdge {
-                        parent: pkg_a,
-                        dep_identity: identity_b,
-                        dep_ename: StrId::new("b"),
-                    },
-                    Version::new(2, 0, 0)
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("b".into(), pkg_b)].into(),
+                        features: ["xd".into()].into()
+                    }
                 ),
                 (
-                    DependencyEdge {
-                        parent: pkg_b,
-                        dep_identity: identity_a,
-                        dep_ename: StrId::new("a"),
-                    },
-                    Version::new(1, 0, 0)
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("a".into(), pkg_a)].into(),
+                        features: [].into()
+                    }
                 ),
-            ])
+            ]
+            .into()
         );
     }
 
@@ -632,13 +652,29 @@ features:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([pkg_a]));
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
-            output.new_features,
-            HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xd")]))])
-        )
+            output.package_freezes,
+            [
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("b".into(), pkg_b)].into(),
+                        features: [].into()
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [].into(),
+                        features: ["xd".into(), "xdd".into()].into()
+                    }
+                ),
+            ]
+            .into()
+        );
     }
 
     #[test]
@@ -695,13 +731,29 @@ features:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([pkg_a]));
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
-            output.new_features,
-            HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xd")]))])
-        )
+            output.package_freezes,
+            [
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("b".into(), pkg_b)].into(),
+                        features: [].into()
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [].into(),
+                        features: ["xd".into()].into()
+                    }
+                ),
+            ]
+            .into()
+        );
     }
 
     #[test]
@@ -792,16 +844,36 @@ features:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([pkg_a]));
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
-            output.new_features,
-            HashMap::from([
-                (pkg_b, HashSet::from([FeatureName::new("xd")])),
-                (pkg_c, HashSet::from([FeatureName::new("xdd")]))
-            ])
-        )
+            output.package_freezes,
+            [
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("b".into(), pkg_b)].into(),
+                        features: [].into()
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("c".into(), pkg_c)].into(),
+                        features: ["xd".into()].into()
+                    }
+                ),
+                (
+                    pkg_c,
+                    SolverPackageFreeze {
+                        dependencies_realization: [].into(),
+                        features: ["xdd".into()].into()
+                    }
+                ),
+            ]
+            .into()
+        );
     }
 
     #[test]
@@ -854,23 +926,28 @@ features:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
-            output.new_features,
-            [(pkg_b, ["f".into(), "g".into()].into()),].into()
-        );
-        assert_eq!(
-            output.new_edges,
-            HashMap::from([(
-                DependencyEdge {
-                    parent: pkg_a,
-                    dep_identity: identity_b,
-                    dep_ename: StrId::new("b"),
-                },
-                Version::new(2, 0, 0)
-            )])
+            output.package_freezes,
+            [
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("b".into(), pkg_b)].into(),
+                        features: [].into()
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [].into(),
+                        features: ["f".into(), "g".into()].into()
+                    }
+                ),
+            ]
+            .into()
         );
     }
 
@@ -954,8 +1031,8 @@ metadata:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, HashSet::new());
-        let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
+        let root = solver_root(&input, pkg_a, HashSet::new());
+        let err = SolverEngine::run_engine(input, &root).unwrap_err();
         assert_eq!(err.to_string(), "no dependency resolution found");
     }
 
@@ -1017,8 +1094,8 @@ metadata:
             source_to_origin_resolver,
         };
 
-        let main_pkg = (pkg_a, ["new".into()].into());
-        let err = SolverEngine::run_engine(input, &main_pkg).unwrap_err();
+        let root = solver_root(&input, pkg_a, ["new".into()].into());
+        let err = SolverEngine::run_engine(input, &root).unwrap_err();
         assert_eq!(err.to_string(), "no dependency resolution found");
     }
 }
