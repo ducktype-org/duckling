@@ -35,59 +35,101 @@ pub struct Git2Client<'duck> {
 
 #[derive(Clone, Copy)]
 /// Summary and data of called functions in [`RemoteCallbacks::credentials`].
-struct GitCredentialsCallbackData<'a> {
-    /// Maximal number of tried callbacks.
-    max_auth_number: u32,
+struct GitCredentialsCallbackDataInner<'a> {
     /// Number of actually executed callbacks.
     attempted_auth_callbacks: u32,
     /// `true` if have tried SSH.
     tried_ssh: bool,
     /// `true` if have tried plaintext password.
     tried_plaintext: bool,
+    /// `true` if have tried plaintext password via credentials helper.
+    tried_cred_helper: bool,
     /// `true` if have tried default credentials helper.
     tried_default: bool,
 
     /// Config for used in credentials.
     config: &'a git2::Config,
+
+    /// Possible credentials supported by/requested by the server.
+    possible_creds: CredentialType,
 }
 
-impl<'a> GitCredentialsCallbackData<'a> {
+type GitCredentialsCallbackData<'a> = Rc<RefCell<GitCredentialsCallbackDataInner<'a>>>;
+
+impl<'a> GitCredentialsCallbackDataInner<'a> {
     /// Create a new [`GitCredentialsCallbackData`], with maximal authentication number,
     /// [`git2::Config`], and defaults.
-    fn new(max_auth_number: u32, config: &'a git2::Config) -> Self {
+    fn new(config: &'a git2::Config) -> Self {
         Self {
-            max_auth_number,
             attempted_auth_callbacks: 0,
             tried_ssh: false,
             tried_plaintext: false,
             tried_default: false,
+            tried_cred_helper: false,
+            possible_creds: CredentialType::empty(),
             config,
         }
     }
 
-    /// Returns `true` if we can proceed to shallow clone.
+    /// Returns `true` if we can proceed to full clone.
     ///
     /// We might not want to proceed, if we failed due to authentication.
-    fn should_try_shallow_clone(&self) -> bool {
-        self.attempted_auth_callbacks == 0
+    fn can_proceed_to_full_clone(&self) -> bool {
+        !self.attempted_every_callback()
+    }
+
+    /// Returns `true` if attempted every supported authentication method (by both client (us) and
+    /// server).
+    fn attempted_every_callback(&self) -> bool {
+        trace!(ssh = ?self.tried_ssh,
+            default = ?self.tried_default,
+            cred_helper = ?self.tried_cred_helper,
+            plaintext = ?self.tried_plaintext,
+            cred_types = ?self.possible_creds
+        );
+        if self.possible_creds.is_ssh_key() && !self.tried_ssh {
+            trace!("didn't try SSH but could");
+            return false;
+        }
+
+        if self.possible_creds.is_user_pass_plaintext() {
+            if !self.tried_cred_helper {
+                trace!("didn't try cred helper but could");
+                return false;
+            }
+            if !self.tried_plaintext {
+                trace!("didn't try plaitnext but could");
+                return false;
+            }
+        }
+
+        if self.possible_creds.is_default() && !self.tried_default {
+            trace!("didn't try default but could");
+            return false;
+        }
+        true
     }
 
     /// Add notes about appropriate failures to the [`QuackError`].
     fn add_notes_to_clone_error(&self, error: &mut QuackError) {
         if self.tried_ssh {
             error.add_note("tried SSH authentication, but failed");
+            error.add_note("SSH keys needs to be in an SSH agent to work");
+            error.add_hint("try adding your SSH keys to the SSH agent");
         }
         if self.tried_plaintext {
             error.add_note("tried username + password authentication, but failed");
         }
-        if self.tried_default {
+
+        if self.tried_cred_helper {
             error.add_note("tried git's credential helper authentication, but failed");
+        }
+
+        if self.tried_default {
+            error.add_note("tried default authentication, but failed");
         }
     }
 }
-
-/// Maximal number of authentication attempts.
-const MAX_AUTHENTICATION_NUMBER: u32 = 3;
 
 impl<'duck> Git2Client<'duck> {
     pub fn new(ctx: &'duck DuckContext) -> Self {
@@ -100,17 +142,15 @@ impl<'duck> Git2Client<'duck> {
         url: &Url,
         reference: GitReference,
         config: &'a git2::Config,
-    ) -> (
-        FetchOptions<'a>,
-        Rc<RefCell<GitCredentialsCallbackData<'a>>>,
-    ) {
+        old_data: Option<GitCredentialsCallbackData<'a>>,
+    ) -> (FetchOptions<'a>, GitCredentialsCallbackData<'a>) {
         let mut fetch_options = FetchOptions::new();
         if can_shallow_clone(url, reference) {
             trace!("using a shallow clone");
             fetch_options.depth(1);
         }
 
-        let (callbacks, data) = callbacks(self.ctx, config, url);
+        let (callbacks, data) = callbacks(self.ctx, config, url, old_data);
         fetch_options.remote_callbacks(callbacks);
         (fetch_options, data)
     }
@@ -126,36 +166,49 @@ fn callbacks<'a>(
     ctx: &'a DuckContext,
     config: &'a git2::Config,
     url: &Url,
-) -> (
-    RemoteCallbacks<'a>,
-    Rc<RefCell<GitCredentialsCallbackData<'a>>>,
-) {
+    old_data: Option<GitCredentialsCallbackData<'a>>,
+) -> (RemoteCallbacks<'a>, GitCredentialsCallbackData<'a>) {
     let mut callbacks = RemoteCallbacks::new();
-    let data = GitCredentialsCallbackData::new(MAX_AUTHENTICATION_NUMBER, config);
-    let data = Rc::new(RefCell::new(data));
+    let data = old_data.unwrap_or_else(|| {
+        let data = GitCredentialsCallbackDataInner::new(config);
+        Rc::new(RefCell::new(data))
+    });
     let data_copy = Rc::clone(&data);
     callbacks.credentials(move |url, username_from_url, cred_types| {
-            let mut data = data_copy.borrow_mut();
-            data.attempted_auth_callbacks += 1;
-            if data.attempted_auth_callbacks > data.max_auth_number {
-                let mut err = git2::Error::from_str("too many authentication attempts; make sure the repository supports chosen authentication method");
-                err.set_code(git2::ErrorCode::Auth);
-                err.set_class(git2::ErrorClass::Callback);
-                return Err(err);
-            }
-            if !data.tried_ssh && cred_types.contains(CredentialType::SSH_KEY) {
+        trace!(?cred_types);
+        let mut data = data_copy.borrow_mut();
+        data.possible_creds = cred_types;
+        data.attempted_auth_callbacks += 1;
+        if !data.tried_ssh && cred_types.is_ssh_key() {
+            trace!("trying SSH");
             data.tried_ssh = true;
-                ssh_callback(username_from_url)
-            } else if !data.tried_plaintext && cred_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
-            data.tried_plaintext = true;
-            git2::Cred::credential_helper(data.config, url, username_from_url)
-        } else if !data.tried_default && cred_types.contains(CredentialType::DEFAULT) {
-            data.tried_default = true;
-        Cred::default()
-            } else {
-                Err(git2::Error::from_str("unsupported authentication method"))
+            return ssh_callback(username_from_url);
+        }
+
+        if cred_types.is_user_pass_plaintext() {
+            if !data.tried_cred_helper {
+                trace!("trying cred helper");
+                data.tried_cred_helper = true;
+                return git2::Cred::credential_helper(data.config, url, username_from_url);
             }
-        });
+            if !data.tried_plaintext {
+                trace!("trying plaintext");
+                data.tried_plaintext = true;
+                return username_and_password_callback(ctx);
+            }
+        }
+
+        if !data.tried_default && cred_types.is_default() {
+            trace!("trying default");
+            data.tried_default = true;
+            return Cred::default();
+        }
+
+        let mut err = git2::Error::from_str("unsupported authentication method");
+        err.set_code(git2::ErrorCode::Auth);
+        err.set_class(git2::ErrorClass::Callback);
+        Err(err)
+    });
     let port = url.port();
     callbacks.certificate_check(move |cert, host| {
         super::known_hosts::check_certificate(ctx, cert, host, port)
@@ -169,6 +222,17 @@ fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
     Cred::ssh_key_from_agent(username)
 }
 
+/// Callback for simple username + password authentication.
+fn username_and_password_callback(ctx: &DuckContext) -> Result<Cred, git2::Error> {
+    let username = ctx
+        .prompt_once("username")
+        .map_err(|_| git2::Error::from_str("failed to get username"))?;
+    let password = ctx
+        .password_once("password")
+        .map_err(|_| git2::Error::from_str("failed to get password"))?;
+    Cred::userpass_plaintext(&username, &password)
+}
+
 impl GitClient for Git2Client<'_> {
     fn clone(
         &self,
@@ -179,7 +243,7 @@ impl GitClient for Git2Client<'_> {
         let config = load_git2_config()?;
         let mut builder = RepoBuilder::new();
 
-        let (opts, data) = self.fetch_options_for(url, reference, &config);
+        let (opts, data) = self.fetch_options_for(url, reference, &config, None);
         builder.fetch_options(opts);
         // git2-rs doesn't support cloning with a given tag :(.
         if let GitReference::Branch(branch) = reference {
@@ -191,13 +255,12 @@ impl GitClient for Git2Client<'_> {
             Err(e) => {
                 debug!(error = %e, "failed to clone the repository");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
-                if matches!(e.code(), git2::ErrorCode::Auth) {
-                    return Err(e.into());
-                }
-                if !can_shallow_clone(url, reference) {
-                    return Err(e.into());
-                }
-                if !data.borrow().should_try_shallow_clone() {
+
+                let can_perform_full_clone = data.borrow().can_proceed_to_full_clone()
+                    && !matches!(e.code(), git2::ErrorCode::Auth)
+                    && can_shallow_clone(url, reference);
+
+                if !can_perform_full_clone {
                     let mut e = e.into();
                     data.borrow().add_notes_to_clone_error(&mut e);
                     return Err(e);
@@ -209,7 +272,8 @@ impl GitClient for Git2Client<'_> {
                 ))?;
                 self.ctx
                     .info_verbose("retrying with a full clone instead of a shallow clone")?;
-                let (mut fetch_options, data) = self.fetch_options_for(url, reference, &config);
+                let (mut fetch_options, data) =
+                    self.fetch_options_for(url, reference, &config, Some(data));
                 // Here we always want to perform full clone, so set depth to 0.
                 fetch_options.depth(0);
                 builder.fetch_options(fetch_options);
@@ -356,7 +420,7 @@ fn update_submodules(
             && let Ok(url) = url.to_url()
         {
             let mut fetch_options = FetchOptions::new();
-            let (callbacks, data) = callbacks(ctx, config, &url);
+            let (callbacks, data) = callbacks(ctx, config, &url, None);
             fetch_options.remote_callbacks(callbacks);
             options.fetch(fetch_options);
             Some(data)
