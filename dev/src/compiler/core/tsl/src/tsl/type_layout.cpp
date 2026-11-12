@@ -268,9 +268,6 @@ namespace compiler::tsl {
 		 * On any conversion failure the function reports a diagnostic per
 		 * offending field and fails the layout query, which aborts compilation
 		 * of the offending module.
-		 *
-		 * Validating here assumes that the LIR queries will return a `QResult`, so that
-		 * a failed layout query is propagated instead of panicking in LIR lowering.
 		 */
 		PickedClassLayout cAbiPickedLayout(
 			tsh::ClassAbstractType                    class_type,
