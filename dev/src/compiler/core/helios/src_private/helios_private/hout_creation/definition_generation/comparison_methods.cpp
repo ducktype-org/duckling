@@ -63,24 +63,6 @@ namespace compiler::helios::defgen {
 	|   HELPERS   |
 	**************/
 
-	[[noreturn]] void comparisonNotYetImplemented(
-		query::Context& ctx, const ComparisonKind kind, const tsh::AbstractType type
-	) {
-		ctx.log<dia::NotYetImplementedCodeError>(
-			base::strConcat(
-				"The `",
-				comparisonMethodInfo(kind).spelling,
-				"` operator is not yet implemented for the type `",
-				type.toString(),
-				"`."
-			),
-			"Comparison operators are generated for numbers, characters, booleans, pointers, "
-			"tuples and classes. Values of type `type` can only be compared for equality."
-		);
-		query::throwFailed();
-		CORE_UNREACHABLE();
-	}
-
 	/**
 	 * @brief Get the builtin operation corresponding to a comparison operator for a given type.
 	 * @note Assumes that the types is a simple, data-carrying type. Panics otherwise.
@@ -143,11 +125,12 @@ namespace compiler::helios::defgen {
 			case ComparisonKind::NotEqual:
 				return code::BuiltinBinary::MetaNeq;
 			default:
-				comparisonNotYetImplemented(ctx, comp_kind, tsh::getMetaType());
+				// Other comparison methods are not present for the meta type.
+				CORE_UNREACHABLE();
 			}
 		}
 		default:
-			comparisonNotYetImplemented(ctx, comp_kind, type);
+			CORE_UNREACHABLE();
 		}
 	}
 
@@ -399,8 +382,8 @@ namespace compiler::helios::defgen {
 			         || owner_type.getKind() == tsh::Kind::Class)
 				buildAggregateComparison(body, ctx, decl->valueOrThrow(), comp_kind);
 			else
-				// Other kinds (e.g. static arrays or variants) have no fields to compare.
-				comparisonNotYetImplemented(ctx, comp_kind, owner_type);
+				// Unsupported comparisons are not present in the type interfaces.
+				CORE_UNREACHABLE();
 
 			return HOUTFunction(
 				code::generatedOrigin(),

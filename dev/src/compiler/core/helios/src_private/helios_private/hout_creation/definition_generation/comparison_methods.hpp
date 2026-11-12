@@ -40,8 +40,8 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * @brief The comparison operators that every type has in its default interface, in the order
-	 * of ComparisonKind.
+	 * @brief The comparison operators that most types (ideally all types) have
+	 * in its default interface, in the order of ComparisonKind.
 	 */
 	inline constexpr std::array<ComparisonMethodInfo, 6> COMPARISON_METHODS{ {
 		{ .kind         = ComparisonKind::Equal,
