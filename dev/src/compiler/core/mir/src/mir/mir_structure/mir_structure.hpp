@@ -13,9 +13,9 @@
 #include <ctv/ctv.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -153,7 +153,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
 	CreateBox,
 	CreateRef,
-	CreateConst,
+	CreateMut,
+	CreateImm,
 	CreatePtr,
 	CreateManyPtr,
 	CreateCPtr,
@@ -873,7 +874,7 @@ namespace compiler::mir {
 		 * @note Block with ID "0" should always be the one with FunctionEnd (@p
 		 * finalizeFunctionEnd)
 		 */
-		base::StableHashMap<BlockID, Block> blocks;
+		base::HashMap<BlockID, Block> blocks;
 
 		/**
 		 * @brief The generated order of blocks in the function.
@@ -923,16 +924,16 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                         name,
-			tsh::SymbolType<>                   return_type,
-			std::vector<tsh::SymbolType<>>      parameter_types,
-			base::StableHashMap<BlockID, Block> blocks,
-			std::vector<BlockID>                block_order,
-			base::StableVector<const MIRLocal>  local_list,
-			u64                                 next_local_id,
-			LifetimeScopeTree                   lifetime_scope_tree,
-			ScopeRef                            no_lifetime_scope,
-			HSymID                              helios_id
+			base::StrID                        name,
+			tsh::SymbolType<>                  return_type,
+			std::vector<tsh::SymbolType<>>     parameter_types,
+			base::HashMap<BlockID, Block>      blocks,
+			std::vector<BlockID>               block_order,
+			base::StableVector<const MIRLocal> local_list,
+			u64                                next_local_id,
+			LifetimeScopeTree                  lifetime_scope_tree,
+			ScopeRef                           no_lifetime_scope,
+			HSymID                             helios_id
 		);
 
 		[[nodiscard]]

@@ -524,7 +524,7 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<VariableStmt>(
 				generatedOrigin(),
 				consume(std::move(init)),
-				tsh::SymbolType<>::withDefaults(type),
+				tsh::SymbolType<>::withDefaultsMut(type),
 				symbol
 			);
 		}

@@ -7,7 +7,7 @@
 #include "copy_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -96,9 +96,8 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a reference-like
 				// alternative is the stored reference itself.
-				const auto payload_type = alternatives[i]
-				                              .withReferenceKind(tsh::ReferenceKind::Ref)
-				                              .withMutability(tsh::Mutability::Mutable);
+				const auto payload_type
+					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name                  = base::StrID(base::strConcat("__alternative_", i)),
@@ -172,9 +171,7 @@ namespace compiler::helios::defgen {
 
 			const auto i64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_type = tsh::SymbolType<>{ i64_abs_type,
-				                                     tsh::ReferenceKind::Direct,
-				                                     tsh::Mutability::Mutable };
+			const auto i64_type = tsh::SymbolType<>::withDefaultsMut(i64_abs_type);
 
 			// The elements of the aggregate differ only in the index they copy, so the whole array
 			// is built by a single value that reads the index off a variable, advanced once per
@@ -238,12 +235,12 @@ namespace compiler::helios::defgen {
 				);
 				break;
 			default:
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"Default copy constructor for type `", owner_type.toString(), "`."
 					),
 					""
-				));
+				);
 				return query::Failed();
 			}
 

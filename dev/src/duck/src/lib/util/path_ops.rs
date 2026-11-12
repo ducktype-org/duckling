@@ -11,7 +11,7 @@ use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::SystemTime;
 
-use tracing::warn;
+use tracing::{trace, warn};
 
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
@@ -249,6 +249,50 @@ fn copy_file_inner(from: &Path, to: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// Copy the contents of a single file or of a whole directory.
+/// Important
+/// ---------
+/// This may override contents of `to`.
+pub fn copy_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+    copy_tree_inner(from, to).with_context(|| {
+        format!(
+            "failed to copy contents from `{}` to `{}`",
+            from.display(),
+            to.display()
+        )
+    })
+}
+
+/// Helper for [`copy_tree`].
+/// Returns pure [`io::Result`], without any context.
+fn copy_tree_inner(from: &Path, to: &Path) -> io::Result<()> {
+    copy_tree_rec(from, to)
+}
+
+/// Recursive helper for [`copy_tree_inner`].
+/// If `from` is a single file copies it.
+/// If it is a directory, iterates over its contents, calling itself on them.
+fn copy_tree_rec(from: &Path, to: &Path) -> io::Result<()> {
+    if from.is_file() {
+        std::fs::copy(from, to).map(|_| ())
+    } else {
+        fs::create_dir(to)?;
+        for entry in from.read_dir()? {
+            let entry = entry?;
+            let entry_type = entry.file_type()?;
+            let new_to = to.join(entry.file_name());
+            if entry_type.is_file() || entry_type.is_dir() {
+                copy_tree_rec(&entry.path(), &new_to)?;
+            } else {
+                return Err(io::Error::other("copying symlinks is unsupported"));
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Expand `~` into the `ctx.user_home()`.
 pub fn expand_tilde(path: impl AsRef<Path>, ctx: &DuckContext) -> PathBuf {
     expand_tilde_with(path, ctx.user_home())
@@ -306,6 +350,43 @@ fn is_executable_inner(path: &Path) -> bool {
 #[cfg(not(any(unix, windows)))]
 fn is_executable_inner(_path: &Path) -> bool {
     false
+}
+
+/// Move the contents from one path into another one.
+/// This first tries to use [`fs::rename`], and if it fails due to different filesystems,
+/// falls back to copying and removing.
+/// Thus in most cases this should be preferred over [`rename`].
+/// Important
+/// ---------
+/// If this ends in an error, the contents of `to` might be arbitrary partial results.
+pub fn move_tree(from: impl AsRef<Path>, to: impl AsRef<Path>) -> QuackResult<()> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+    move_tree_inner(from, to).with_context(|| {
+        format!(
+            "failed to move contents from `{}` to `{}`",
+            from.display(),
+            to.display()
+        )
+    })
+}
+
+/// Helper for [`move_tree`].
+/// Returns pure [`io::Result`], without any context.
+fn move_tree_inner(from: &Path, to: &Path) -> io::Result<()> {
+    if let Err(io_err) = fs::rename(from, to) {
+        if io_err.kind() == std::io::ErrorKind::CrossesDevices {
+            // Different filesystems, fallback to copy + remove.
+            trace!(from = ?from.display(), to = ?to.display(), "moving files between different filesystems, falling back to copy + remove");
+            ignore_not_found(fs::remove_dir_all(to))?;
+            copy_tree_inner(from, to)?;
+            fs::remove_dir_all(from)?;
+        } else {
+            // The error was not caused by different filesystems, simply return it.
+            return Err(io_err);
+        }
+    }
+    Ok(())
 }
 
 /// Normalize `self` fully, as best as possible.

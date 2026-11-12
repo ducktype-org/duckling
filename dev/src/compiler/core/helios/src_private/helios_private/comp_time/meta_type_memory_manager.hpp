@@ -8,6 +8,7 @@
 
 #include <helios/tsh/symbol_type.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 

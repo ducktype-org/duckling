@@ -249,10 +249,10 @@ pub struct DepIdWithAlias {
 
 impl DepIdWithAlias {
     /// Create new [`DepIdWithAlias`].
-    pub fn new(effective_name: StrId, identity: Identity) -> Self {
-        if effective_name != identity.name() {
+    pub fn new(ename: StrId, identity: Identity) -> Self {
+        if ename != identity.name() {
             Self {
-                alias: Some(effective_name),
+                alias: Some(ename),
                 id: identity,
             }
         } else {

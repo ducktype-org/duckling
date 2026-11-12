@@ -34,10 +34,10 @@ pub(crate) fn parse(
     let Some(schema) = schema else {
         return Ok(());
     };
-    for (name, dep_schema) in schema {
-        let guard = scope.push(name.into());
+    for (ename, dep_schema) in schema {
+        let guard = scope.push(ename.into());
         dependencies.push(parse_single_dependency(
-            name.into(),
+            ename.into(),
             dep_schema,
             mode,
             kind,
@@ -51,7 +51,7 @@ pub(crate) fn parse(
 
 /// Parse single [`Dependency`] from its [`DependencySchema`].
 fn parse_single_dependency(
-    manifest_name: StrId,
+    effective_name: StrId,
     schema: &DependencySchema,
     mode: ParseMode<'_>,
     kind: DependencyKind,
@@ -59,25 +59,25 @@ fn parse_single_dependency(
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
-    trace!(?schema, "parsing the dependency `{manifest_name}`");
-    let name = parse_name(schema).unwrap_or(manifest_name);
-    let alias = if name == manifest_name {
+    trace!(?schema, "parsing the dependency `{effective_name}`");
+    let name = parse_name(schema).unwrap_or(effective_name);
+    let alias = if name == effective_name {
         None
     } else {
-        Some(manifest_name)
+        Some(effective_name)
     };
     validate_package_name(&name)
         .with_context(|| {
             if alias.is_none() {
-                format!("dependency `{manifest_name}` has an invalid name")
+                format!("{kind}dependency `{effective_name}` has an invalid name")
             } else {
-                format!("aliased dependency `{manifest_name}` points to a package `{name}` with an invalid name")
+                format!("{kind}dependency `{effective_name}` points to a package `{name}` with an invalid name")
             }
         })
         .with_context(|| scope.make_context_string())?;
     if let Some(alias) = alias {
         validate_package_name(&alias)
-            .with_context(|| format!("dependency `{name}` has an invalid alias name `{alias}`"))
+            .with_context(|| format!("{kind}dependency `{alias}` has an invalid alias"))
             .with_context(|| scope.make_context_string())?;
     }
     let guard = scope.push("source".into());
@@ -91,7 +91,7 @@ fn parse_single_dependency(
 
     let features = parse_features(schema.features.as_ref());
     let pinned = schema.pinned.unwrap_or(false);
-    let name = parse_name(schema).unwrap_or(manifest_name);
+    let name = parse_name(schema).unwrap_or(effective_name);
 
     let conditions = schema.conditions.as_ref().map(parse_conditions);
     Dependency::new(

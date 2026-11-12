@@ -8,6 +8,8 @@
 
 #include "flag_context.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>

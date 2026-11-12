@@ -69,7 +69,7 @@ namespace compiler::helios {
 		tsh::SymbolType<> ReplInputWrapper::getReturnType() const {
 			variant_match(element) {
 				variant_case_novalue(Instruction) {
-					return tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+					return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 				}
 				variant_case(Expression, expr) {
 					return expr.expr->expression_type.getSymbolType();

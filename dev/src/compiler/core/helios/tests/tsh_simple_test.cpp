@@ -275,7 +275,7 @@ private:
 			assertTrue(int_st.isCopyable(ctx), "Int should be copyable.");
 			assertTrue(int_st.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
 
-			const auto int_ref_st = int_st.withReferenceKind(ReferenceKind::Ref);
+			const auto int_ref_st = int_st.toRef();
 			assertFalse(
 				int_ref_st.isDefaultConstructible(ctx),
 				"Reference to Int should NOT be default constructible."
@@ -289,7 +289,7 @@ private:
 				int_ref_st.isTriviallyCopyable(ctx), "Reference to Int should be trivially copyable."
 			);
 
-			const auto int_box_st = int_st.withReferenceKind(ReferenceKind::Box);
+			const auto int_box_st = int_st.toBox();
 			assertFalse(
 				int_box_st.isDefaultConstructible(ctx),
 				"Box of Int should NOT be default constructible."
@@ -600,7 +600,7 @@ private:
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
 		const auto var_boxed = query::entryPoint<QueryVariantType>({
-			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+			{ st(int_16), st(int_32).toBox() },
 		});
 
 

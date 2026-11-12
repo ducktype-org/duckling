@@ -7,7 +7,7 @@
 //! Removing files from a storage.
 use std::collections::HashSet;
 use std::fs::DirEntry;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -15,27 +15,24 @@ use storage::paths::Storage;
 use storage::{locks, paths};
 use tracing::{debug, trace, warn};
 
-use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::quackpack::util::dir_iterator::DirContents;
+use crate::quackpack::core::{PackageId, storage};
 use crate::util::error::ErrorsLogger;
 use crate::util::path_ops::{remove_file, remove_tree};
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 #[derive(Debug)]
 /// An output of a [`clean_storage`].
 pub struct CleanOutput {
     /// Ids of removed venvs.
     pub removed_venvs: Vec<VenvId>,
-    /// Paths to the removed packages.
-    pub removed_packages: Vec<PathBuf>,
     /// Errors encountered during this clean operation.
     pub encountered_errors: ErrorsLogger,
 }
 
 /// Delete a virtual environment from storage.
-#[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display(), id = %venv.to_venv_id()))]
+#[tracing::instrument(skip_all, fields(root = %storage_root.display(), id = %venv.to_venv_id()))]
 pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
@@ -62,7 +59,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
 }
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
-#[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display()))]
+#[tracing::instrument(skip_all, fields(root = %storage_root.display()))]
 pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
     let storage = paths::Storage::new(storage_root);
@@ -91,50 +88,23 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     let _ =
         logger.log_result(locks::cleanup_locks(&storage).context("failed to cleanup some locks"));
     trace!(?all_deps, "used dependencies");
-    let all_pkgs = logger
-        .log_result(storage.iter_pkgs())
-        .unwrap_or(DirContents::Empty);
-    let all_pkgs = logger
-        .log_result(
-            all_pkgs
-                .map(|entry| entry.map_err(QuackError::from))
-                .collect::<Result<Vec<_>, _>>(),
-        )
-        .unwrap_or_default();
-    trace!(?all_pkgs, "all known packages");
-    let packages_to_remove = all_pkgs
-        .into_iter()
-        .flat_map(|pkg| {
-            let venv_id: StrId = pkg.file_name().into();
-            if !all_deps.contains(venv_id.as_str()) {
-                Some(pkg.path())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-    debug!(?packages_to_remove, "removing unused packages");
-    for pkg in packages_to_remove.iter() {
-        let _ = logger.log_result(remove_tree(pkg));
-    }
     ctx.info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
-        removed_packages: packages_to_remove,
         encountered_errors: logger,
     })
 }
 
 /// Remove a single venv from a storage.
 /// A helper for [`clean_storage`].
-#[tracing::instrument(level = "debug", skip_all, fields(id = %dir.file_name().to_venv_id()))]
+#[tracing::instrument(skip_all, fields(id = %dir.file_name().to_venv_id()))]
 fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,
     temporary_lifetime: Duration,
     now: DateTime<Utc>,
     removed_venvs: &mut Vec<VenvId>,
-    all_deps: &mut HashSet<String>,
+    all_deps: &mut HashSet<PackageId>,
     ctx: &DuckContext,
 ) -> QuackResult<()> {
     let venv_id = dir.file_name().to_venv_id();
@@ -143,7 +113,7 @@ fn clean_venv_from_storage(
         warn!("failed to fix and load the venv, removing it anyway");
         remove_tree(dir.path()).with_context(|| {
             format!(
-                "while removing venv `{venv_id}` at `{}`",
+                "failed to remove the venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;
@@ -175,7 +145,7 @@ fn clean_venv_from_storage(
         debug!("removing the venv, as it is ephemeral and too old");
         remove_tree(dir.path()).with_context(|| {
             format!(
-                "while removing venv `{venv_id}` at `{}`",
+                "failed to remove the venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;
@@ -191,7 +161,7 @@ fn clean_venv_from_storage(
         if dep.identity().origin().kind().is_local() {
             None
         } else {
-            Some(dep.to_package_id().storage_name())
+            Some(dep.to_package_id())
         }
     }));
     Ok(())

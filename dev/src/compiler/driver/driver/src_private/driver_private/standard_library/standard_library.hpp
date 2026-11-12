@@ -32,7 +32,8 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * @brief The existing compiled standard library binaries for native targets.
+	 * @brief The existing compiled standard library binaries for native targets, in linking
+	 * order: each library comes before the libraries it depends on.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
 
@@ -48,6 +49,11 @@ namespace compiler::driver {
 	 * @brief The existing compiled standard library DVM artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
+
+	/**
+	 * @brief The existing debug info (`.di.json`) artifacts of the compiled standard library.
+	 */
+	std::vector<artifacts::FileArtifact> getStdLibDebugInfoArtifacts();
 
 	/**
 	 * @brief Returns whether all the standard library artifact files are present.
