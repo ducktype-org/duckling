@@ -180,9 +180,9 @@ namespace compiler::helios::code {
 			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> stmt) override {
 				// Block expressions are only lowered as statements; there is no expression
 				// lowering for them yet. Report it instead of hitting the panicky visitor.
-				ctx.log(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"Block expressions are not yet supported.", stmt->getStablePosition()
-				));
+				);
 			}
 
 			/**
