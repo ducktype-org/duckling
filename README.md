@@ -4,7 +4,14 @@
         <source media="(prefers-color-scheme: light)" srcset="images/readme_logo_dark.svg">
         <img alt="Duckling programming language" src="images/readme_logo_dark.svg" width="50%">
     </picture>
-    <!-- <p>Duckling is the in-development programming language</p> -->
+</div>
+
+-----
+
+<div align="center">
+    <picture>
+        <img alt="Co-founded by the European Union" src="https://ducktype.org/static/main/img/en/eu.png" width="50%">
+    </picture>
 </div>
 
 -----
