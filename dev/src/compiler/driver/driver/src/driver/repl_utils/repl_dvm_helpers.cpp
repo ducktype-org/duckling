@@ -6,7 +6,7 @@
 
 #include "repl_dvm_helpers.hpp"
 
-#include <backends/dvm/repl_lowering.hpp>
+#include <backends/dvm/incremental_dvm_code_builder.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
@@ -38,16 +38,16 @@ namespace compiler::repl {
 	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
 
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
-		query::Context&                 ctx,
-		const helios::HOUTUnit&         hout_unit,
-		std::string_view                module_name,
-		backend_vm::ReplDVMCodeBuilder& lowering_context
+		query::Context&                        ctx,
+		const helios::HOUTUnit&                hout_unit,
+		std::string_view                       module_name,
+		backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	) {
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
 			active_ctx.has_value() && active_ctx.value().get() == &ctx,
-			"ReplDVMCodeBuilder's active query context must match the ctx parameter passed to "
-			"compileHOUTUnitToDVMCode()"
+			"IncrementalDVMCodeBuilder's active query context must match the ctx parameter "
+			"passed to compileHOUTUnitToDVMCode()"
 		);
 
 		for (const auto& hout_func: hout_unit.functions) {
@@ -120,11 +120,11 @@ namespace compiler::repl {
 	}
 
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&                 ctx,
-		const helios::HOUTUnit&         hout_unit,
-		std::string_view                module_name,
-		vm::PID                         pid,
-		backend_vm::ReplDVMCodeBuilder& lowering_context
+		query::Context&                        ctx,
+		const helios::HOUTUnit&                hout_unit,
+		std::string_view                       module_name,
+		vm::PID                                pid,
+		backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	) {
 		return compileHOUTUnitToDVMCode(ctx, hout_unit, module_name, lowering_context)
 		    .and_then([&](const vm::code::CodeCollection& code) {
@@ -133,7 +133,7 @@ namespace compiler::repl {
 	}
 
 	std::expected<void, std::string> preloadStandardLibrary(
-		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
+		query::Context& ctx, vm::PID pid, backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	) {
 		const auto root_modules = frontend::packages::standardLibraryRootModules(ctx);
 		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
