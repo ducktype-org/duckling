@@ -22,6 +22,23 @@
 
 namespace compiler::helios {
 	namespace defgen {
+		bool isComparisonMethodKind(const Method::Kind kind) {
+			switch (kind) {
+			case Method::Kind::Equal:
+			case Method::Kind::NotEqual:
+			case Method::Kind::Lesser:
+			case Method::Kind::LesserEqual:
+			case Method::Kind::Greater:
+			case Method::Kind::GreaterEqual:
+				return true;
+			case Method::Kind::DefaultDestructor:
+			case Method::Kind::LengthMethod:
+			case Method::Kind::ToString:
+				return false;
+			}
+			CORE_UNREACHABLE();
+		}
+
 		base::Bit256 Constructor::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
 				type.queryUnstablePerfectHash(), static_cast<u64>(kind)
