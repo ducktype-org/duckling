@@ -20,7 +20,7 @@
 #include <utility>
 
 namespace compiler::helios::defgen {
-	enum class ComparisonKind: unsigned {
+	enum class ComparisonKind : unsigned {
 		Equal,
 		NotEqual,
 		Lesser,
