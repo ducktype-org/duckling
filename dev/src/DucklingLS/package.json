@@ -51,6 +51,10 @@
                     ".dk",
                     ".dks"
                 ],
+                "icon": {
+                    "light": "./images/file-icon.svg",
+                    "dark": "./images/file-icon.svg"
+                },
                 "configuration": "./language-configuration.json"
             }
         ],
