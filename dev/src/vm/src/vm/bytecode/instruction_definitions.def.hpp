@@ -372,6 +372,16 @@ DEF_INSTR(fcmpLe_p32_imm, (vm::opargs::Place32, lhs), (vm::opargs::Immediate, rh
 // sets the flag if pointer is null
 DEF_INSTR(cmpNull_pptr, (vm::opargs::PlacePtr, ptr))
 
+/// Pointer comparisons: set the flag if `lhs OP rhs`. Two pointers are equal when they point into
+/// the same block at the same offset. The order is the offset order inside one block, a null
+/// pointer comes first, and pointers into different blocks get an unspecified but stable order.
+DEF_INSTR(cmpEq_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(cmpNeq_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(ucmpGt_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(ucmpGe_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(ucmpLt_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(ucmpLe_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+
 // ========= VARIANT OPERATIONS ========
 
 
@@ -662,6 +672,15 @@ DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, 
 
 /// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
 DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
+
+/// C pointer comparisons: set the flag if `lhs OP rhs`, comparing the native addresses as unsigned
+/// integers. Works with any two cpointer types.
+DEF_INSTR(cmpEq_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(cmpNeq_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(ucmpGt_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(ucmpGe_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(ucmpLt_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(ucmpLe_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
 
 /// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
 /// arithmetic).`

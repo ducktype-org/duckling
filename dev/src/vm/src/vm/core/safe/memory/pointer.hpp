@@ -13,6 +13,8 @@
 
 #include <vm/core/safe/exceptions.hpp>
 
+#include <compare>
+
 namespace vm {
 
 	template<typename EntryT>
@@ -77,6 +79,22 @@ namespace vm {
 		static constexpr Pointer null() { return {}; }
 
 		constexpr bool operator==(const Pointer&) const = default;
+
+		/**
+		 * @brief Orders pointers by their block first, then by their offset.
+		 *
+		 * Inside one block this is the address order. A null pointer comes before every other
+		 * pointer. Pointers into different blocks get an order that is unspecified but stable
+		 * while both blocks are alive.
+		 */
+		[[nodiscard]]
+		std::strong_ordering operator<=>(const Pointer& other) const {
+			const Block* lhs_block = isNull() ? nullptr : &*block;
+			const Block* rhs_block = other.isNull() ? nullptr : &*other.block;
+			if (const auto order = std::compare_three_way{}(lhs_block, rhs_block); order != 0)
+				return order;
+			return offset <=> other.offset;
+		}
 	};
 
 	static_assert(sizeof(Pointer) == 16);
