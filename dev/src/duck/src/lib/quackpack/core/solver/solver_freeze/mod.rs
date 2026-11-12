@@ -26,9 +26,12 @@ pub struct SolverFreeze {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverPackageFreeze {
-    pub dependencies_realization: HashMap<StrId, PackageId>,
+    pub dependencies_realization: DepRealizations,
     pub features: HashSet<FeatureName>,
 }
+
+/// Mapping from effective name of dependencies to their realizations.
+pub type DepRealizations = HashMap<StrId, PackageId>;
 
 impl SolverPackageFreeze {
     pub fn new() -> Self {

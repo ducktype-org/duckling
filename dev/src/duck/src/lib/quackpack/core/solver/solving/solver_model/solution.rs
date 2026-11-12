@@ -13,11 +13,13 @@ use russcip::{Solution, Variable};
 use tracing::trace;
 
 use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
-use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::solver_freeze::{
+    DepRealizations, SolverFreeze, SolverPackageFreeze,
+};
 use crate::quackpack::core::solver::solving::input::SolverInput;
 use crate::quackpack::core::solver::solving::solver_model::FeaturesToVars;
 use crate::quackpack::core::{FeatureName, PackageId, Selector};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Get a [`SolverFreeze`] from [`SolverInput`] and [`Solution`].
 pub(super) fn freeze_from_solution(
@@ -112,7 +114,7 @@ fn all_realizations(
     all_packages: &HashSet<PackageId>,
     all_features: &HashMap<PackageId, HashSet<FeatureName>>,
     input: &SolverInput,
-) -> QuackResult<HashMap<PackageId, HashMap<StrId, PackageId>>> {
+) -> QuackResult<HashMap<PackageId, DepRealizations>> {
     let mut all_realizations = HashMap::new();
     for pkg in all_packages {
         let pkg_data = input.package_data(*pkg)?;
