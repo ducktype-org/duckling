@@ -34,7 +34,7 @@ pub(super) fn new_packages(
     preexisting_packages: &HashSet<PackageId>,
     solution: &Solution,
 ) -> HashSet<PackageId> {
-    trace!(target: "duck::solver", ?preexisting_packages, ?package_vars);
+    trace!(?preexisting_packages, ?package_vars);
     let new_packages = package_vars
         .into_iter()
         .filter_map(|(pkg, var)| {
@@ -48,7 +48,7 @@ pub(super) fn new_packages(
         .difference(preexisting_packages)
         .copied()
         .collect::<HashSet<PackageId>>();
-    trace!(target: "duck::solver", ?new_packages);
+    trace!(?new_packages);
     new_packages
 }
 

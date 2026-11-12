@@ -31,7 +31,7 @@ pub struct SolverEngine<'a> {
 impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
+    #[tracing::instrument(skip_all)]
     pub(in crate::quackpack::core::solver) fn run_engine(
         input: SolverInput,
         main_pkg: &(PackageId, HashSet<FeatureName>),

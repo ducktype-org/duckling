@@ -730,6 +730,30 @@ private:
 				{ "Type `ref i32` cannot be converted to type `box i32`." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i64 = 3;
+					let r: ref i64 = &a;
+					let num: i64 = if (a == 0) then a else r;
+				}
+			)",
+				{ "the `then` branch is `i64` and the `else` branch is `ref i64`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				class A { x: i64; }
+				class B { y: i64; }
+				fun main() = {
+					let a: i64 = 3;
+					let v = if (a == 0) then A(1i64) else B(2i64);
+				}
+			)",
+				{ "the `then` branch is `Class A` and the `else` branch is `Class B`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================

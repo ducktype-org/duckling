@@ -1,4 +1,4 @@
-add_files(
+set_files(
 		vm.cpp
 		data/api_error.cpp
 		data/function_source_info.cpp
