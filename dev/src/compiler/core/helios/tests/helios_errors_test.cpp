@@ -2284,6 +2284,35 @@ private:
 			1
 		);
 
+		// The caller does not depend on the instantiation's body (the return type is explicit), so
+		// only the replicated instantiation fails. The module must fail, not panic.
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				fun foo() -> i64 = {
+					return a + b;
+				}
+
+				fun main() -> i64 = foo[1]();
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
+		// The same for replicated global data of an instantiation.
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N {
+					const c: i64 = a + b;
+				}
+
+				fun main() -> i64 = N[1].c;
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
 		// ============================ Errors inside arguments ============================
 
 		checkForErrorOnCompileModule(
