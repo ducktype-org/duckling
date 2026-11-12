@@ -1069,7 +1069,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 				if (not base::holds<DefaultAbi>(
-						query_ctx.query<QuerySymbolABI>(symbol)->valueOrThrow().withoutValidation()
+						query_ctx.query<QuerySymbolABI>(symbol)->valueOrThrow()
 					)) {
 					query_ctx.log<FunctionRefBuiltinError>(
 						chain_elements.at(index).unlock(query_ctx)->getStablePosition()

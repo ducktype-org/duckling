@@ -71,40 +71,51 @@ namespace compiler::lir {
 	};
 
 	namespace {
+		/**
+		 * @brief Computes the LIR ABI of the function @p sym with the layout @p function_layout.
+		 *
+		 * Panics when a parameter or the return type has no C-ABI type. This assumes that the
+		 * LIR queries will return a `QResult`, so that the C-ABI validation done in TSL is
+		 * reported as a query failure instead.
+		 */
 		LIRAbi getLIRAbi(
 			query::Context& ctx, helios::SymID sym, const tsl::FunctionalTypeLayout& function_layout
 		) {
-			auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)
-			                   ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
-			                   .withoutValidation();
+			auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
+				"Handling errors in MIR is not supported yet"
+			);
 			if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
 				return { LIRAbi::DefaultAbi{} };
 
-			CORE_ASSERT(
-				v_matches(sym_abi, helios::CAbi, helios::MainAbi), "There are more than 4 abis."
-			);
-			base::Optional<u64> fixed_params;
-			v_if_matches(sym_abi, helios::CAbi, c_abi_info) {
-				fixed_params = c_abi_info->fixed_params;
-			}
+			CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+			const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
 
-			auto abi_type_of = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
-				return &ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
-				            ->valueOrPanic()
-				            .value();
+			auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
+				auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
+				                   ->valueOrPanicMsg("Query failure.");
+				if (not result.has_value())
+					CORE_PANIC(base::strConcat(
+						"Function type is not compatible with CABI: `",
+						result.error(),
+						"` in symbol `",
+						helios::name(sym),
+						"`."
+					));
+				return &result.value();
 			};
 
 			auto return_abi_or_empty
 				= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
 				if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
-				return abi_type_of(type);
+				return abi_type_or_panic(type);
 			};
 
 			abi::calling_conv::FunctionType abi_fun_type{
 				.return_type = return_abi_or_empty(function_layout.getReturnLayout(ctx)),
 				.param_types = function_layout.getParameterLayouts(ctx)
-				             | std::views::transform(abi_type_of) | std::ranges::to<std::vector>(),
-				.num_fixed_params = fixed_params,
+				             | std::views::transform(abi_type_or_panic)
+				             | std::ranges::to<std::vector>(),
+				.num_fixed_params = c_abi_info.fixed_params,
 			};
 			return { LIRAbi::CAbi{
 				.function_info

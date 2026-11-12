@@ -488,17 +488,9 @@ namespace compiler::helios {
 					}
 				}
 
-				auto abi_wrapped = ctx.query<QuerySymbolABI>(original_symbol)->valueOrThrow();
-
 				HOUTFunctionDeclaration output(
-					original_symbol,
-					operatoriness,
-					ret_type,
-					std::move(parameters),
-					abi_wrapped.withoutValidation(),
-					origin
+					original_symbol, operatoriness, ret_type, std::move(parameters), origin
 				);
-				abi_wrapped.withValidation(ctx, &output).valueOrThrow();
 
 				this->out.emplace(std::move(output));
 			}
@@ -613,7 +605,6 @@ namespace compiler::helios {
 					HOUTFunctionDeclaration::Operatoriness::None,
 					unit_ret,
 					std::move(parameters),
-					DefaultAbi{},
 					code::pstOrigin(stmt)
 				));
 			}
@@ -730,9 +721,11 @@ namespace compiler::helios {
 
 			// Return the declaration.
 			return HOUTFunctionDeclaration{
-				ctor_symbol,        HOUTFunctionDeclaration::Operatoriness::None,
-				result_symbol_type, std::move(parameters),
-				DefaultAbi{},       code::generatedOrigin(),
+				ctor_symbol,
+				HOUTFunctionDeclaration::Operatoriness::None,
+				result_symbol_type,
+				std::move(parameters),
+				code::generatedOrigin(),
 			};
 		}
 
@@ -766,8 +759,7 @@ namespace compiler::helios {
 				i++;
 			}
 			return HOUTFunctionDeclaration{
-				fun,          operatoriness,           return_type, std::move(parameters),
-				DefaultAbi{}, code::generatedOrigin(),
+				fun, operatoriness, return_type, std::move(parameters), code::generatedOrigin(),
 			};
 		}
 
@@ -798,9 +790,11 @@ namespace compiler::helios {
 								                                        tsh::Mutability::Mutable };
 
 							return HOUTFunctionDeclaration{
-								key,          HOUTFunctionDeclaration::Operatoriness::None,
-								return_type,  {},
-								DefaultAbi{}, code::generatedOrigin(),
+								key,
+								HOUTFunctionDeclaration::Operatoriness::None,
+								return_type,
+								{},
+								code::generatedOrigin(),
 							};
 						}
 						case defgen::Constructor::Kind::Copy:

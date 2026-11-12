@@ -383,8 +383,7 @@ namespace compiler::tsh {
 	}
 
 	compiler::helios::SymbolABI ClassAbstractTypeImpl::getABI(query::Context& ctx) const {
-		return ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow().withoutValidation(
-		);
+		return ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
 	}
 
 	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
