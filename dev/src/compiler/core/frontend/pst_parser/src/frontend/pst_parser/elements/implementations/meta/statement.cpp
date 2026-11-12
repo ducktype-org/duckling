@@ -90,8 +90,7 @@ namespace pst {
 
 				if (isStmtStartKeyword(state, fwd)) return true;
 
-				if (isSpecifierKeyword(state, fwd))
-					return true;
+				if (isSpecifierKeyword(state, fwd)) return true;
 
 				// When we have two curly bracket blocks as consecutive tokens, it probably means
 				// that the user intended to write two statements
