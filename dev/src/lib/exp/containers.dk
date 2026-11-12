@@ -1,7 +1,6 @@
 import core.builtins as builtins;
 import core.containers as containers;
 import core.panicking as panicking;
-import exp.compare as compare;
 
 #{
     Experimental containers. `Stack`, `Queue` and `Deque` only use `List`'s own `push`, `pop`,
@@ -263,7 +262,8 @@ fun mapNodeType() -> type = MapNode[K, V];
 
 #{
     Ordered map from `K` to `V`, a balanced binary search tree (AVL tree). Keys are ordered with
-    `compare.cmp[K]`, so `K` must follow that convention (see `exp.compare`). `insert`, `at`,
+    `<`: two keys are the same key when neither is less than the other. Numbers, strings,
+    tuples and classes all have `<`, and a class can define its own. `insert`, `at`,
     `contains` and `remove` are O(log n), `keys` and `values` list everything in key order.
 
     Every node has its own allocation and stays where it is until its key is removed. So a
@@ -340,9 +340,9 @@ class Map {
                 MapNode[K, V](move key, move value, no_child, no_child, 1i64));
         }
 
-        if (compare.cmp[K](&key, &(*p).key)) {
+        if (key < (*p).key) {
             (*p).left = insertAt((*p).left, move key, move value);
-        } else if (compare.cmp[K](&(*p).key, &key)) {
+        } else if ((*p).key < key) {
             (*p).right = insertAt((*p).right, move key, move value);
         } else {
             (*p).value = move value;
@@ -371,11 +371,11 @@ class Map {
     fun removeAt(p: ptr MapNode[K, V], key: ref K) -> ptr MapNode[K, V] = {
         if (not isNode(p)) return p;
 
-        if (compare.cmp[K](&key, &(*p).key)) {
+        if (key < (*p).key) {
             (*p).left = removeAt((*p).left, &key);
             return rebalance(p);
         }
-        if (compare.cmp[K](&(*p).key, &key)) {
+        if ((*p).key < key) {
             (*p).right = removeAt((*p).right, &key);
             return rebalance(p);
         }
@@ -407,8 +407,8 @@ class Map {
         if (len == 0i64) return pointers[MapNode[K, V]].null();
         var p = root;
         while (isNode(p)) {
-            if (compare.cmp[K](&key, &(*p).key)) p = (*p).left;
-            else if (compare.cmp[K](&(*p).key, &key)) p = (*p).right;
+            if (key < (*p).key) p = (*p).left;
+            else if ((*p).key < key) p = (*p).right;
             else return p;
         }
         return p;
@@ -563,7 +563,7 @@ template(K: type, V: type)
 fun mapType() -> type = Map[K, V];
 
 #{
-    Elements come out smallest first, ordered by `compare.cmp[T]` (see `exp.compare`). `push`
+    Elements come out smallest first, ordered by `<`. `push`
     and `pop` are O(log n), `top` is O(1). Equal elements come out in no particular order.
 
     It is a binary heap: the element at position `i` comes no later than the ones at
@@ -577,7 +577,7 @@ class PriorityQueue {
     fun before(i: i64, j: i64) -> bool = {
         let a: ptr T = items.at(i);
         let b: ptr T = items.at(j);
-        return compare.cmp[T](&(*a), &(*b));
+        return *a < *b;
     }
 
     fun swap(i: i64, j: i64) -> () = {

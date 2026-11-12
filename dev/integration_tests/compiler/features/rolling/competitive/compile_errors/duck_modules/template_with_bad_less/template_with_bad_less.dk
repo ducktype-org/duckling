@@ -1,9 +1,12 @@
 import exp.algorithms.*;
 
-# `sort` needs a `cmp` method, which `Pair` lacks.
+# `sort` needs a `<` that returns `bool`. This one returns `i64`, so the body of the `sort`
+# instantiation does not compile.
 class Pair {
     a: i64;
     b: i64;
+
+    fun <(other: ref Pair) -> i64 = a - other.a;
 }
 
 fun main() -> i64 = {

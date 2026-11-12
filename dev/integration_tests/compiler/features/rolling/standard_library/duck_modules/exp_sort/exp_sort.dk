@@ -1,14 +1,14 @@
 import exp.algorithms.*;
 
 #{
-    A task ordered by `priority` only, through its own `cmp` method. Two tasks with the same
+    A task ordered by `priority` only, through its own `<`. Two tasks with the same
     priority are equal, so a stable sort keeps them in their original order.
 #}
 class Task {
     priority: i64;
     name: String;
 
-    fun cmp(other: ref Task) -> bool = priority < other.priority;
+    fun <(other: ref Task) -> bool = priority < other.priority;
 }
 
 fun printBool(b: bool) -> () = {

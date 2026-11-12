@@ -8,7 +8,7 @@ PreCase: "mkdir -p @{case_build}"
 Run: "@{compile_llvm_backend_cmd}"
 
 Tests:
-  template_without_cmp: # The error is inside an instantiation of `exp.compare.cmp`.
+  template_with_bad_less: # The error is inside an instantiation of `exp.algorithms.sort`.
     Cases:
       llvm:
         ExitCode: 1

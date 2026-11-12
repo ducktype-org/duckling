@@ -1,14 +1,13 @@
 import core.builtins as builtins;
 import core.containers as containers;
-import exp.compare as compare;
 
 #{
-    Experimental algorithms. Everything that orders values uses `compare.cmp[T]`, the same
-    convention `exp.containers.Map` and `PriorityQueue` use (see `exp.compare`).
+    Experimental algorithms. Everything that orders values uses `<`, like
+    `exp.containers.Map` and `PriorityQueue`.
 #}
 
 #{
-    Sorts `list` in place, smallest first by `compare.cmp[T]`. The sort is stable: equal elements
+    Sorts `list` in place, smallest first by `<`. The sort is stable: equal elements
     keep their order. It takes O(n log n) comparisons, also in the worst case.
 
     It is a bottom-up merge sort. Every pass moves all elements from one flat buffer into the
@@ -59,7 +58,7 @@ fun mergeRuns(source: manyptr T, target: manyptr T, lo: i64, mid: i64, hi: i64) 
     var right = mid;
     var k     = lo;
     while (left < mid and right < hi) {
-        if (compare.cmp[T](&source[right], &source[left])) {
+        if (source[right] < source[left]) {
             builtins.move_in[T](ptrof target[k], builtins.move_out[T](ptrof source[right]));
             right = right + 1i64;
         } else {

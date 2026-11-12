@@ -1,16 +1,22 @@
 import exp.containers.*;
 
 #{
-    A point ordered by `x`, then by `y`, through its own `cmp` method.
+    A point ordered by `x`, then by `y`, through the generated `<`.
 #}
 class Point {
     x: i64;
     y: i64;
+}
 
-    fun cmp(other: ref Point) -> bool = {
-        if (x != other.x) return x < other.x;
-        return y < other.y;
-    }
+#{
+    A task ordered by `priority` only, through its own `<`. Two tasks with the same priority
+    are the same key, whatever their names.
+#}
+class Task {
+    priority: i64;
+    name: String;
+
+    fun <(other: ref Task) -> bool = priority < other.priority;
 }
 
 fun printBool(b: bool) -> () = {
@@ -165,6 +171,34 @@ fun customKeysTest() -> () = {
     printSeparator();
 }
 
+fun tupleKeysTest() -> () = {
+    var map: Map[(i64, i64), String];
+    map.insert((2, 1), f"c");
+    map.insert((1, 5), f"b");
+    map.insert((1, 2), f"a");
+    map.insert((1, 5), f"B");
+
+    builtin_output_i64(map.length()); # 3
+    print(map.values().toString());   # [a,B,c]
+    print("\n");
+    printBool(map.contains((1, 2))); # true
+    printBool(map.contains((2, 2))); # false
+    printSeparator();
+}
+
+fun customLessTest() -> () = {
+    var map: Map[Task, i64];
+    map.insert(Task(2, f"swim"), 20);
+    map.insert(Task(1, f"eat"), 10);
+    map.insert(Task(2, f"quack"), 22);
+
+    builtin_output_i64(map.length());          # 2, both priority 2 tasks are the same key
+    builtin_output_i64(map.at(Task(2, f"x"))); # 22
+    printBool(map.contains(Task(1, f"y")));    # true
+    printBool(map.contains(Task(3, f"eat")));  # false
+    printSeparator();
+}
+
 #{
     `fifty` points into `map`. Every node has its own allocation, so the reference survives
     other inserts and removes.
@@ -214,6 +248,8 @@ fun main() -> i64 = {
     manyTest();
     stringsTest();
     customKeysTest();
+    tupleKeysTest();
+    customLessTest();
     referencesTest();
     copyTest();
     return 0;

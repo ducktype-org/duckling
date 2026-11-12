@@ -1,13 +1,13 @@
 import exp.containers.*;
 
 #{
-    A task ordered by `priority` only, through its own `cmp` method.
+    A task ordered by `priority` only, through its own `<`.
 #}
 class Task {
     priority: i64;
     name: String;
 
-    fun cmp(other: ref Task) -> bool = priority < other.priority;
+    fun <(other: ref Task) -> bool = priority < other.priority;
 }
 
 fun printBool(b: bool) -> () = {
