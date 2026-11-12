@@ -744,6 +744,39 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 	/**
+	 * @brief A block expression initializer is not implemented; every spelling must
+	 * produce one Not-Yet-Implemented diagnostic rather than the recovery cascade.
+	 */
+	void blockExprInInitializerTests() {
+		for (const std::string_view code:
+		     { "let a = {1};\n", "let a = {1;};\n", "let a = {1;}\n" }) {
+			auto              parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+			const std::string text   = renderedDiagnostics(parsed.ref());
+
+			assertTrue(
+				text.find("Block expressions are not yet supported.") != std::string::npos,
+				base::strConcat(
+					"expected the Not-Yet-Implemented diagnostic for `", code, "`, got:\n", text
+				)
+			);
+			assertTrue(
+				text.find("Empty expression") == std::string::npos,
+				base::strConcat("expected no recovery cascade for `", code, "`, got:\n", text)
+			);
+			assertTrue(
+				text.find("Expected special `;` here") == std::string::npos,
+				base::strConcat("expected no recovery cascade for `", code, "`, got:\n", text)
+			);
+			assertTrue(
+				text.find("Duplicate semicolon") == std::string::npos,
+				base::strConcat(
+					"expected no duplicate-semicolon warning for `", code, "`, got:\n", text
+				)
+			);
+		}
+	}
+
+	/**
 	 * @brief Parses a program with a single parsing error and checks that the broken statement was
 	 * dropped as a whole while the following code was parsed.
 	 */
@@ -831,6 +864,7 @@ public:
 		TESTER_ADD_TEST(diagnosticTests);
 		TESTER_ADD_TEST(sentinelMessageTests);
 		TESTER_ADD_TEST(classWithoutNameTests);
+		TESTER_ADD_TEST(blockExprInInitializerTests);
 		TESTER_ADD_TEST(contextRecoveryTests);
 		TESTER_ADD_TEST(rootAlwaysExistsTests);
 	}
