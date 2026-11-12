@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 mod freeze_diagnosis;
-mod new_freeze_generation;
+mod trimming;
 
 use std::collections::{HashMap, HashSet};
 

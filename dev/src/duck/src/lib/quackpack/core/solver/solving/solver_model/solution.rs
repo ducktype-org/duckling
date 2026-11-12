@@ -106,7 +106,7 @@ fn all_features(
 /// Note
 /// ----
 /// Here we heavily rely on the assumption that each package to be in the freeze
-/// has a unique [`Idenitity`](crate::quackpack::core::package_identifiers::identity::Identity).
+/// has a unique [`Identity`](crate::quackpack::core::package_identifiers::identity::Identity).
 /// Thus we can choose a non-preexisting realization by looking at all the packages with the given
 /// [`FullIdentity`](crate::quackpack::core::package_identifiers::full_identity::FullIdentity) and
 /// take the unique one present in the solution.
@@ -145,6 +145,8 @@ fn all_realizations(
                     break;
                 }
             }
+            // No realization found, this should never happen.
+            qp_bail_internal!("no realization found for {edge:?}");
         }
         all_realizations.insert(*pkg, pkg_realizations);
     }
