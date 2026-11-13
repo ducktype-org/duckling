@@ -47,13 +47,14 @@ private:
 			// these values might need to be updated.
 
 			assertTrue(
-				my_class_interface->getElements().size() == 8,
-				"There should be exactly six declared members, plus the generated constructor and "
-				"the generated parameterless constructor"
+				my_class_interface->getElements().size() == 14,
+				"There should be exactly six declared members, plus the generated constructor, "
+				"the generated parameterless constructor and the six comparison operators"
 			);
 			assertTrue(
-				my_class_interface->getElementsByName().size() == 5,
-				"There should be exactly four unique names, plus the generated destructor"
+				my_class_interface->getElementsByName().size() == 11,
+				"There should be exactly four unique names, plus the generated destructor and "
+				"the six comparison operators"
 			);
 
 			assertTrue(
@@ -242,11 +243,12 @@ private:
 			ASSERT_EQUAL(1, std::ranges::distance(interface->getStaticFieldsView()));
 			ASSERT_EQUAL(5, std::ranges::distance(interface->getAnyFieldsView()));
 
-			// `getPub`, `setPub`, `insidePrivate`, the user destructor and the generated one.
-			ASSERT_EQUAL(5, std::ranges::distance(interface->getMethodsView()));
+			// `getPub`, `setPub`, `insidePrivate`, the user destructor, the generated one and the
+			// six comparison operators.
+			ASSERT_EQUAL(11, std::ranges::distance(interface->getMethodsView()));
 			// `make`, the copy constructor and the two generated constructors.
 			ASSERT_EQUAL(4, std::ranges::distance(interface->getStaticMethodsView()));
-			ASSERT_EQUAL(9, std::ranges::distance(interface->getAnyMethodsView()));
+			ASSERT_EQUAL(15, std::ranges::distance(interface->getAnyMethodsView()));
 
 			ASSERT_HAS_VALUE(interface->getSpecialElement(MemberSpecialKind::CopyConstructor));
 			ASSERT_HAS_VALUE(interface->getSpecialElement(MemberSpecialKind::UserDestructor));
