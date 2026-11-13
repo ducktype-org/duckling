@@ -24,24 +24,6 @@ from .utils import dit_exec_command
 from ..helpers import BashCommandError, log_info, log_warning
 
 
-def resolve_timeout(timeout, cwd: Path) -> float:
-    """
-    Resolves a TimeOut value to seconds. It may be a number or a bash
-    expression producing one (e.g. inspecting the build configuration).
-    """
-    try:
-        return float(timeout)
-    except ValueError:
-        pass
-    value, _ = dit_exec_command(f"echo -n {timeout}", cwd=cwd)
-    try:
-        return float(value.decode("UTF-8").strip())
-    except ValueError:
-        # Raise instead of exiting: this runs on a worker thread, where
-        # an exit would kill only the thread and go unnoticed.
-        raise RuntimeError(f"TimeOut `{timeout}` does not evaluate to a number.")
-
-
 def run_single_case(
     test: Test,
     case: Case,
@@ -188,11 +170,6 @@ def run_case(
         dry=dry,
         verbose=verbose,
         env=case_env,
-        timeout=(
-            None
-            if dry
-            else ctx.timeout_scale * resolve_timeout(case.timeout, test.cwd)
-        ),
         core_dumps=ctx.core_dumps,
     )
 

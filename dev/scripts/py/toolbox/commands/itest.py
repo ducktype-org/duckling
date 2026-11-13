@@ -97,13 +97,6 @@ from click import command, option
     "core-dump handler.",
 )
 @option(
-    "--timeout-scale",
-    type=float,
-    default=1.0,
-    help="Multiply every resolved TimeOut by this factor, e.g. on slow or heavily "
-    "loaded machines.",
-)
-@option(
     "--custom-values",
     type=str,
     default="{}",

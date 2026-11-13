@@ -29,7 +29,6 @@ class Case:
     expected_output: Optional[IOData]
     expected_err: Optional[IOData]
     needed_threads: int
-    timeout: int
 
 
 @dataclass

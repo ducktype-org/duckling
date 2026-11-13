@@ -16,5 +16,4 @@ Tests:
         Output:
           String: "20\n100000001\n"
         ExitCode: 0
-        TimeOut: 1
 

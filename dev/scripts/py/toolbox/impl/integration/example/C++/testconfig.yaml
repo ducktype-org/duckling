@@ -9,7 +9,6 @@ PostTest: "echo \"This is a post run message about @{program_name}!\""
 Clean: "rm @{program_name}"
 
 ExitCode: 0
-TimeOut: 10
 
 Tests:
   fib-tests:

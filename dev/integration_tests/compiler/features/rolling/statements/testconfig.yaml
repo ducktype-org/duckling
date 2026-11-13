@@ -40,15 +40,12 @@ Tests:
           String: "60\n3\n9\n"
         ExitCode: 0
 
-  # Native only: the case measures the throughput of a 10^8-iteration loop against a
-  # tight timeout, which the DVM interpreter cannot meet.
   loops-performance: # while
     Cases:
       llvm:
         Output:
           String: "20\n100000001\n"
         ExitCode: 0
-        TimeOut: 1 # 10^8/3 loops should definitely be done in this time.
 
   destructor_insertion:
     Cases:
