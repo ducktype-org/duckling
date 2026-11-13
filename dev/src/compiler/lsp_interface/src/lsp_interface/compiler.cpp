@@ -418,9 +418,7 @@ namespace duck_ls {
 				collected, updatePositionWithHashCodeLocation
 			);
 
-			EvaluationContext ctx(
-				main_path.string(), queried_file_opt.copyValueOr(main_path).genericString(), files
-			);
+			EvaluationContext ctx(main_path, queried_file_opt.copyValueOr(main_path), files);
 
 			// The queried file always gets an entry, so that fixing its last error clears it.
 			published.emplace(ctx.resolve(ctx.queried_file), std::vector<lsp::Diagnostic>{});

@@ -30,9 +30,9 @@ namespace tokenizer {
 
 	public:
 		AsciiByteError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte) {
-			dia::CodeLocationArgument::FileLocation loc{
-				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
-			};
+			dia::CodeLocationArgument::FileLocation loc{ .file   = file->getFile().getFilePath(),
+				                                         .line   = 0,
+				                                         .column = 0 };
 			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
 			addArgument<dia::TextArgument>("byte", std::to_string(byte));
 			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
@@ -51,9 +51,9 @@ namespace tokenizer {
 		Utf8UnexpectedContinuationError(
 			Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte
 		) {
-			dia::CodeLocationArgument::FileLocation loc{
-				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
-			};
+			dia::CodeLocationArgument::FileLocation loc{ .file   = file->getFile().getFilePath(),
+				                                         .line   = 0,
+				                                         .column = 0 };
 			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
 			addArgument<dia::TextArgument>("byte", std::to_string(byte));
 			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
@@ -70,9 +70,9 @@ namespace tokenizer {
 
 	public:
 		Utf8BadByteStartError(Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte) {
-			dia::CodeLocationArgument::FileLocation loc{
-				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
-			};
+			dia::CodeLocationArgument::FileLocation loc{ .file   = file->getFile().getFilePath(),
+				                                         .line   = 0,
+				                                         .column = 0 };
 			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
 			addArgument<dia::TextArgument>("byte", std::to_string(byte));
 			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
@@ -91,9 +91,9 @@ namespace tokenizer {
 		Utf8BadNonContinuationError(
 			Ref<tokenizer::TokenSource> file, usize byte, usize bad_byte, usize code_point_start
 		) {
-			dia::CodeLocationArgument::FileLocation loc{
-				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
-			};
+			dia::CodeLocationArgument::FileLocation loc{ .file   = file->getFile().getFilePath(),
+				                                         .line   = 0,
+				                                         .column = 0 };
 			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
 			addArgument<dia::TextArgument>("byte", std::to_string(byte));
 			addArgument<dia::TextArgument>("bad_byte", base::toHexString(bad_byte, 2));
@@ -111,9 +111,9 @@ namespace tokenizer {
 
 	public:
 		Utf8BadEofError(Ref<tokenizer::TokenSource> file, usize byte, usize code_point_start) {
-			dia::CodeLocationArgument::FileLocation loc{
-				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
-			};
+			dia::CodeLocationArgument::FileLocation loc{ .file   = file->getFile().getFilePath(),
+				                                         .line   = 0,
+				                                         .column = 0 };
 			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
 			addArgument<dia::TextArgument>("byte", std::to_string(byte));
 			addArgument<dia::TextArgument>("code_point_start", std::to_string(code_point_start));
@@ -130,9 +130,9 @@ namespace tokenizer {
 
 	public:
 		Utf8UndefinedCodepointError(Ref<tokenizer::TokenSource> file, usize byte, UChar32 value) {
-			dia::CodeLocationArgument::FileLocation loc{
-				.file = file->getFile().getFilePath().string(), .line = 0, .column = 0
-			};
+			dia::CodeLocationArgument::FileLocation loc{ .file   = file->getFile().getFilePath(),
+				                                         .line   = 0,
+				                                         .column = 0 };
 			addArgument<dia::CodeLocationArgument>("code_location", std::move(loc));
 			addArgument<dia::TextArgument>("byte", std::to_string(byte));
 			addArgument<dia::TextArgument>(

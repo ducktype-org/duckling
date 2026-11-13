@@ -32,6 +32,7 @@ public:
 		TESTER_ADD_TEST(reloadedStdPackageKeepsItsIdTest);
 		TESTER_ADD_TEST(semanticErrorRangeInUtf16Test);
 		TESTER_ADD_TEST(lexerErrorRangeInUtf16Test);
+		TESTER_ADD_TEST(decodeErrorRangeAtFileStartTest);
 		// @TODO: #4032 Restore this test once the compile-time DVM no longer reuses code lowered
 		// before a reload. It crashes intermittently on the dangling types that code returns.
 		// TESTER_ADD_TEST(reloadingStdUsedByLoadedPackageTest);
@@ -266,6 +267,42 @@ private:
 		assertTrue(session.hasErrors(main_uri), "The emoji identifier must report an error");
 		const auto& diagnostic = session.pushed.at(main_uri).front();
 		assertRange(diagnostic.range, { 1, 22 }, { 1, 24 });
+	}
+
+	/**
+	 * @brief A UTF-8 decoding error, which names its file but no line, is published at the
+	 * start of the file.
+	 */
+	void decodeErrorRangeAtFileStartTest() {
+		constexpr auto CONTENT
+			= "fun main() -> i64 = {\n"
+			  "    return 0; \xff\n"
+			  "}\n";
+		duck_ls_test::VfsWorkspace workspace("lsp_compiler_decode_error_ws");
+		workspace.add("pkg/pkg.dk", CONTENT);
+		const auto main_uri = workspace.uriOf("pkg/pkg.dk");
+
+		compiler.addWorkspace(workspace.uriOf());
+		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
+		compiler.publishDiagnostics(main_uri);
+
+		assertTrue(session.hasErrors(main_uri), "The invalid byte must report an error");
+		for (const auto& diagnostic: session.pushed.at(main_uri))
+			assertTrue(
+				diagnostic.range.start.line <= 2 && diagnostic.range.end.line <= 2,
+				"Every range must lie within the file, got line "
+					+ std::to_string(diagnostic.range.start.line)
+			);
+		assertTrue(
+			std::ranges::any_of(
+				session.pushed.at(main_uri),
+				[](const lsp::Diagnostic& diagnostic) {
+					return diagnostic.range.start.line == 0 && diagnostic.range.start.character == 0
+			            && diagnostic.range.end.line == 0 && diagnostic.range.end.character == 0;
+				}
+			),
+			"The decoding error must be published at the start of the file"
+		);
 	}
 
 	/**

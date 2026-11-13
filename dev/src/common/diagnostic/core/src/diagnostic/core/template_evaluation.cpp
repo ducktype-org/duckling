@@ -345,18 +345,18 @@ namespace dia {
 		if (!content.has_value())
 			throw TemplateEvaluationException("CodeBlock evaluation returned no component.");
 
-		base::Optional<CodeLocation> location;
-		if (el.location.ref().toOpt().has_value()) {
-			el.location.ref().toOpt().value()->acceptVisitor(*this);
-			if (auto loc_res = std::move(res).toOptBox(); loc_res.has_value()) {
-				if (auto loc_comp
-				    = dynamic_cast<state::CodeLocationComponent*>(loc_res.value().get())) {
-					location = loc_comp->location;
-				}
-			}
-		}
+		el.location->acceptVisitor(*this);
+		auto location = std::move(res).toOptBox();
+		auto location_component
+			= location.has_value()
+		        ? dynamic_cast<state::CodeLocationComponent*>(location.value().get())
+		        : nullptr;
+		if (location_component == nullptr)
+			throw TemplateEvaluationException("CodeBlock location is not a code location.");
 
-		res = base::makeBox<state::CodeBlockComponent>(std::move(content).value(), location);
+		res = base::makeBox<state::CodeBlockComponent>(
+			std::move(content).value(), location_component->location
+		);
 	}
 
 	void EvaluateTemplateFileVisitor::visitMessageLinkComponent(

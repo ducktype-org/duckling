@@ -69,10 +69,9 @@ namespace dia::template_file {
 
 	Box<CodeBlockComponent> CodeBlockComponent::fromYaml(const YAML::Node& elem_node) {
 		YAML_ASSUME_HAS(elem_node, "codeblock");
-		auto                  code_elements = Component::fromYaml(elem_node["codeblock"]);
-		base::MBox<Component> location;
-		if (elem_node["location"])
-			location = base::MBox<Component>(Component::fromYaml(elem_node["location"]));
+		YAML_ASSUME_HAS(elem_node, "location");
+		auto code_elements = Component::fromYaml(elem_node["codeblock"]);
+		auto location      = Component::fromYaml(elem_node["location"]);
 		return base::makeBox<CodeBlockComponent>(std::move(code_elements), std::move(location));
 	}
 

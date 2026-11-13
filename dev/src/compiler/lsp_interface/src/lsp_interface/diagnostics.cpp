@@ -36,25 +36,11 @@ namespace duck_ls {
 	 * separately until then.
 	 */
 	struct SectionLocation final {
-		std::string file;
-		Range       range;
+		fs::FilePath file;
+		Range        range;
 	};
 
 	namespace {
-		/**
-		 * @brief Normalizes a path a diagnostic carries to the file it names on disk.
-		 *
-		 * The path arrives as a bare string that has already lost its type, and can be empty, so
-		 * neither conversion may be applied blindly.
-		 */
-		std::string toPhysicalPathString(const std::string& file) {
-			if (file.empty()) return {};
-
-			fs::FilePath path(file);
-			if (path.isVirtual()) return path.toPhysicalPath().string();
-			return path.string();
-		}
-
 		/**
 		 * @brief A zero-length range at the start of a file, for diagnostics with no location.
 		 */
@@ -78,24 +64,14 @@ namespace duck_ls {
 		}
 
 		/**
-		 * @brief The source the compiler parsed for @p file, empty for a diagnostic without a
-		 * file.
+		 * @brief The source the compiler parsed for @p file.
 		 *
-		 * A virtual path spelled as text no longer knows its filesystem, so it is bound back
-		 * the way the compiler resolves files: to the cache overlay for an open document and
-		 * as spelled otherwise. Panics when the compiler parsed no source for the file.
+		 * Panics when the compiler parsed no source for the file.
 		 */
-		base::Optional<CRef<tokenizer::TokenSource>> findTokenSource(
-			const std::string& file, const EvaluationContext& evaluation_ctx
-		) {
-			if (file.empty()) return {};
-
-			fs::FilePath path(file);
-			if (evaluation_ctx.files->isOpened(path)) path = evaluation_ctx.files->cachePath(path);
-
-			auto source_files = compiler::frontend::SourceFile::getSourceFilesFromPath(path);
+		CRef<tokenizer::TokenSource> findTokenSource(const fs::FilePath& file) {
+			auto source_files = compiler::frontend::SourceFile::getSourceFilesFromPath(file);
 			if (source_files.empty())
-				CORE_PANIC("No parsed source for the diagnostic file " + path.string());
+				CORE_PANIC("No parsed source for the diagnostic file " + file.string());
 			return source_files.front()->getPST()->getFile();
 		}
 
@@ -106,35 +82,28 @@ namespace duck_ls {
 		 * columns in UTF-16 code units and the end position is exclusive.
 		 *
 		 * The columns are converted on the source the compiler parsed, so they stay
-		 * consistent with positions updated after a reparse. A diagnostic without a file keeps
-		 * them in code points.
+		 * consistent with positions updated after a reparse. A location on line 0 names the
+		 * whole file and maps to its start.
 		 */
-		SectionLocation extractLocation(
-			const dia::term_ui_view::CodeSection& section, const EvaluationContext& evaluation_ctx
-		) {
-			const auto source    = findTokenSource(section.location.file, evaluation_ctx);
-			const auto character = [&](u64 line, u64 code_points) -> Uint {
-				if_opt_some(source, token_source) {
-					return utf16Character(*token_source, line, code_points);
-				}
-				return static_cast<Uint>(code_points);
-			};
+		SectionLocation extractLocation(const dia::term_ui_view::CodeSection& section) {
+			const auto& location = section.location;
+			if (location.line == 0) return { .file = location.file, .range = wholeFileStart() };
+
+			const auto source = findTokenSource(location.file);
 
 			Range range{};
+			range.start.line      = static_cast<Uint>(location.line - 1);
+			range.start.character = utf16Character(*source, location.line, location.column - 1);
 
-			range.start.line      = static_cast<Uint>(section.location.line - 1);
-			range.start.character = character(section.location.line, section.location.column - 1);
-
-			if (section.location.end_line.has_value() && section.location.end_column.has_value()) {
-				range.end.line      = static_cast<Uint>(section.location.end_line.value() - 1);
-				range.end.character = character(
-					section.location.end_line.value(), section.location.end_column.value()
+			if (location.end_line.has_value() && location.end_column.has_value()) {
+				range.end.line      = static_cast<Uint>(location.end_line.value() - 1);
+				range.end.character = utf16Character(
+					*source, location.end_line.value(), location.end_column.value()
 				);
 			} else {
 				range.end = range.start;
 			}
-			return SectionLocation{ .file  = toPhysicalPathString(section.location.file),
-				                    .range = range };
+			return { .file = location.file, .range = range };
 		}
 
 		/**
@@ -155,18 +124,19 @@ namespace duck_ls {
 		) {
 			std::string     content            = "";
 			bool            found_code_section = false;
-			SectionLocation loc{};
+			SectionLocation loc{ .file  = evaluation_ctx.default_error_location,
+				                 .range = wholeFileStart() };
 
 			for (const auto& section: message.sections) {
 				variant_match(section) {
 					variant_case(dia::term_ui_view::TextSection, text) { content += text + "\n"; }
 					variant_case(dia::term_ui_view::CodeSection, section) {
 						if (not found_code_section) {
-							loc                = extractLocation(section, evaluation_ctx);
+							loc                = extractLocation(section);
 							found_code_section = true;
 						} else {
 							if (content.empty()) continue;
-							SectionLocation section_loc = extractLocation(section, evaluation_ctx);
+							SectionLocation section_loc = extractLocation(section);
 
 							related_information.push_back(DiagnosticRelatedInformation{
 								.location
@@ -178,9 +148,6 @@ namespace duck_ls {
 					}
 				}
 			}
-			if (not found_code_section)
-				loc = SectionLocation{ .file  = evaluation_ctx.default_error_location,
-					                   .range = wholeFileStart() };
 			return loc;
 		}
 

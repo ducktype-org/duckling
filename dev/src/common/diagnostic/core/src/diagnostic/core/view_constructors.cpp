@@ -108,13 +108,7 @@ namespace dia {
 			StyleType                                                            style_type
 		) {
 			CodeSection section;
-			if (block.location.has_value()) {
-				section.location = block.location.value();
-			} else {
-				section.location.file   = "";
-				section.location.line   = 0;
-				section.location.column = 0;
-			}
+			section.location = block.location;
 
 			CodeSectionBuilder builder(section.lines);
 			block.content->acceptVisitor(builder);

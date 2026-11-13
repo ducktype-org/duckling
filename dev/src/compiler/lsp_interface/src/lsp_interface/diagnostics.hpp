@@ -36,9 +36,8 @@ namespace duck_ls {
 	/**
 	 * @brief Everything needed to evaluate a diagnostic into a language server message.
 	 *
-	 * Diagnostics carry a file as a bare path, and some carry no location at all, so evaluation
-	 * needs both a fallback file and the files cache that names a path with the URI to answer
-	 * the client with.
+	 * Some diagnostics carry no location at all, so evaluation needs both a fallback file and
+	 * the files cache that names a path with the URI to answer the client with.
 	 */
 	class EvaluationContext {
 	public:
@@ -48,24 +47,24 @@ namespace duck_ls {
 		 * @param files The cache naming paths with the URIs the client knows them by.
 		 */
 		EvaluationContext(
-			std::string default_error_location, std::string query_file, base::Ref<FilesCache> files
+			fs::FilePath default_error_location, fs::FilePath query_file, base::Ref<FilesCache> files
 		):
 			  default_error_location(std::move(default_error_location)),
 			  queried_file(std::move(query_file)),
 			  files(files) {}
 
 		/**
-		 * @brief Resolves a path to its URI, falling back to the default location when empty.
+		 * @brief Resolves a path to the URI the client knows it by.
 		 */
-		[[nodiscard]] ::lsp::Uri resolve(const std::string& path) const {
-			return files->uriFor(fs::FilePath(path.empty() ? default_error_location : path));
+		[[nodiscard]] ::lsp::Uri resolve(const fs::FilePath& path) const {
+			return files->uriFor(path);
 		}
 
 		/// The default file path to use for diagnostics without location.
-		std::string default_error_location{};
+		fs::FilePath default_error_location;
 
 		/// The path of the file we are querying diagnostics for.
-		std::string queried_file{};
+		fs::FilePath queried_file;
 
 		/// Names paths with the URIs the client knows them by.
 		base::Ref<FilesCache> files;

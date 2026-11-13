@@ -71,7 +71,7 @@ namespace dia::dia_args {
 	json CodeLocationComponent::toJson() const {
 		json result;
 		result["type"]   = typeName();
-		result["file"]   = location.file;
+		result["file"]   = location.file.string();
 		result["line"]   = location.line;
 		result["column"] = location.column;
 		if (location.end_line.has_value()) result["end_line"] = location.end_line.value();
@@ -98,7 +98,7 @@ namespace dia::dia_args {
 		CodeLocation                     location;
 		base::Optional<HashCodeLocation> hash_location{};
 
-		location.file   = elem["file"];
+		location.file   = fs::FilePath(elem["file"].get<std::string>());
 		location.line   = elem["line"];
 		location.column = elem["column"];
 		if (elem.contains("end_line")) {

@@ -295,10 +295,9 @@ content:
 		auto* code_block
 			= dynamic_cast<const state::CodeBlockComponent*>(concat->components[0].get());
 		ASSERT_EQUAL(false, code_block == nullptr);
-		ASSERT_HAS_VALUE(code_block->location);
-		ASSERT_EQUAL("example.dk", code_block->location.value().file);
-		ASSERT_EQUAL(1, code_block->location.value().line);
-		ASSERT_EQUAL(1, code_block->location.value().column);
+		ASSERT_EQUAL("example.dk", code_block->location.file.string());
+		ASSERT_EQUAL(1, code_block->location.line);
+		ASSERT_EQUAL(1, code_block->location.column);
 	}
 
 	void evaluatePointerMessageTemplate() {

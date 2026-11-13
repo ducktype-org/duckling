@@ -116,7 +116,11 @@ namespace term_ui {
 		// Print location
 		out << std::string(tab_space, ' ');
 		std::println(
-			out, "> {}:{}:{}", section.location.file, section.location.line, section.location.column
+			out,
+			"> {}:{}:{}",
+			section.location.file.string(),
+			section.location.line,
+			section.location.column
 		);
 
 		if (section.lines.empty()) return;

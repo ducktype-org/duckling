@@ -20,7 +20,7 @@ using namespace dia::term_ui_view;
 
 // NOLINTBEGIN(missing-field-initializers)
 
-constexpr dia::CodeLocation SAMPLE_LOCATION{
+const dia::CodeLocation SAMPLE_LOCATION{
 	.file = "main.dk", .line = 15, .column = 16, .end_line = {}, .end_column = {}
 };
 

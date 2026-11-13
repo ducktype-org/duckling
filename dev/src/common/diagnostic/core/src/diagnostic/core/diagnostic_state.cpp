@@ -99,8 +99,8 @@ namespace dia::state {
 	}
 
 	void CodeLocationComponent::debugPrint(std::ostream& out, usize indent) const {
-		out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file << ":"
-			<< location.line << ":" << location.column << ")\n";
+		out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file.string()
+			<< ":" << location.line << ":" << location.column << ")\n";
 	}
 
 	void Diagnostic::debugPrint(std::ostream& out) const {
@@ -130,9 +130,7 @@ namespace dia::state {
 		  Component(),
 		  location(std::move(location)) {}
 
-	CodeBlockComponent::CodeBlockComponent(
-		Box<Component> content, base::Optional<CodeLocation> location
-	):
+	CodeBlockComponent::CodeBlockComponent(Box<Component> content, CodeLocation location):
 		  Component(),
 		  content(std::move(content)),
 		  location(std::move(location)) {

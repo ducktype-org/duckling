@@ -200,10 +200,10 @@ namespace dia::state {
 	private:
 
 	public:
-		Box<Component>               content;
-		base::Optional<CodeLocation> location;
+		Box<Component> content;
+		CodeLocation   location;
 
-		CodeBlockComponent(Box<Component> content, base::Optional<CodeLocation> location = {});
+		CodeBlockComponent(Box<Component> content, CodeLocation location);
 
 		void acceptVisitor(ComponentVisitor& visitor) const final;
 
