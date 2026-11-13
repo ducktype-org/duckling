@@ -22,31 +22,11 @@ namespace vm::fast {
 #include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR
 
-		constexpr static void eval(INSTRFUN_ARGS_BASE) noexcept {
-#ifdef USE_TAIL_CALLS
-			frame->ip->id(state, local_stack, frame, thread, *frame->ip);
-#else
-			bool run = true;
-			while (run) {
-				switch (frame->ip->id) {
-	#define HANDLE_INSTR(NAME)                                                        \
-	case vm::fast::InstrID::NAME: {                                                   \
-		if constexpr (std::string_view(#NAME) != "exit") {                            \
-			Instr_##NAME(state, local_stack, frame, thread, frame->ip->instr_##NAME); \
-		} else {                                                                      \
-			run = false;                                                              \
-		}                                                                             \
-		break;                                                                        \
-	}
-	#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
-	#undef HANDLE_INSTR
-				default:
-					CORE_ASSERT_NOEXCEPT(
-						false, "Unknown instruction ID: ", static_cast<u64>(frame->ip->id)
-					);
-				}
-			}
-#endif
-		}
+		/**
+		 * @brief Runs from `frame->ip` until `exit`. Defined next to the handlers so the switch
+		 * loop inlines them. In tail-call mode it calls the first dispatcher, which cannot be
+		 * `noexcept` (see `executable.cpp`).
+		 */
+		static void eval(INSTRFUN_ARGS_BASE) IF_NOT_TC(noexcept);
 	};
 }

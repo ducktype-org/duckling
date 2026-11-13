@@ -18,6 +18,8 @@
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
+#include <iostream>
+
 
 using namespace vm;
 
@@ -55,13 +57,15 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	case Trap::Stopped:
 		applyEvent(thread_event::Kill{});
 		break;
-	case Trap::HostError:
-		applyEvent(thread_event::Panic{
-			base::strConcat(trapMessage(runtime_data.trap), ": ", runtime_data.trap_message) });
+	default: {
+		// Matches what `IVMThread::safeRun` prints for a safe-mode panic.
+		std::string message = runtime_data.trap == Trap::HostError
+		                        ? runtime_data.trap_message
+		                        : std::string(trapMessage(runtime_data.trap));
+		std::cerr << "VMThread has panicked: " << message << "\n";
+		applyEvent(thread_event::Panic{ std::move(message) });
 		break;
-	default:
-		applyEvent(thread_event::Panic{ trapMessage(runtime_data.trap) });
-		break;
+	}
 	}
 }
 
@@ -118,6 +122,8 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 i64 vm::fast::FastVMThread::executeFunction(const exec::ExecFunction& start_function, const RunArguments&) {
 	runtime_data.trap = Trap::None;
 	runtime_data.trap_message.clear();
+	runtime_data.resetFrames();
+	runtime_data.exit_instruction = &start_function.data.back();
 	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
 	byte*  local_stack = runtime_data.local_stack_base;
 	FastExecutor::eval(runtime_data, local_stack, frame, *this);

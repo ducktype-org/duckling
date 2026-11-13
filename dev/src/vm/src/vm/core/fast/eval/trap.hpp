@@ -19,8 +19,9 @@ namespace vm::fast {
 		StackOverflow,
 		VTableUnset,
 		NullFunctionPointer,
-		Stopped,    ///< A stop request was observed; the thread ends as Stopped, not Panicked.
-		HostError,  ///< A helper caught an exception; the message is in the runtime state.
+		Stopped,        ///< A stop request was observed; the thread ends as Stopped, not Panicked.
+		HostError,      ///< A helper caught an exception; the message is in the runtime state.
+		InternalError,  ///< A broken VM invariant, checked only in development builds.
 	};
 
 	constexpr const char* trapMessage(Trap trap) noexcept {
@@ -39,6 +40,8 @@ namespace vm::fast {
 			return "Stopped";
 		case Trap::HostError:
 			return "Host error";
+		case Trap::InternalError:
+			return "Internal fast-mode error";
 		}
 		return "Unknown trap";
 	}

@@ -18,13 +18,17 @@ namespace vm::fast {
 	 * @brief Out-of-line work of the helper instructions (D-11 in core/fast/readme.md).
 	 *
 	 * Every helper is `noexcept`, returns a `Trap` and wraps its body in `FAST_HELPER_BOUNDARY`,
-	 * so exceptions never leave it. Helpers are defined in their own translation unit to never be
-	 * inlined into handlers, and they never touch the instruction pointer or frames.
+	 * so exceptions never leave it. Helpers are `noinline`, also under LTO, so their exception
+	 * handling never lands in a handler, and they never touch the instruction pointer or frames.
 	 */
 	class FastHelpers final {
 	public:
-		static Trap inputI64(ThreadRuntimeState& state, FastVMThread& thread, i64& value) noexcept;
+		[[gnu::noinline]] static Trap inputI64(
+			ThreadRuntimeState& state, FastVMThread& thread, i64& value
+		) noexcept;
 
-		static Trap outputU64(ThreadRuntimeState& state, FastVMThread& thread, u64 value) noexcept;
+		[[gnu::noinline]] static Trap outputU64(
+			ThreadRuntimeState& state, FastVMThread& thread, u64 value
+		) noexcept;
 	};
 }

@@ -62,9 +62,16 @@ namespace vm::fast {
 		// @TODO: #2729 This should be a valid pointer.
 		byte* const global_data_buffer_base = nullptr;
 
-		/// Set by a trapping handler before it jumps to `exec::TRAP_INSTRUCTION`.
+		/// Set by a trapping handler before it jumps to `exit_instruction`.
 		Trap        trap = Trap::None;
 		std::string trap_message;
+
+		/**
+		 * The `exit` ending the running start function, where a trap jumps to. It is not a global
+		 * constant on purpose: a known `exit` dispatcher makes GCC speculate every tail-call
+		 * dispatch on it, doubling the dispatchers.
+		 */
+		const exec::Instruction* exit_instruction = nullptr;
 
 		Frame* pushFrame(const exec::ExecFunction* function, byte* local_stack_base) {
 			top_frame++;
@@ -74,13 +81,15 @@ namespace vm::fast {
 			return top_frame;
 		}
 
-		Frame* popFrame() {
-			CORE_ASSERT_NOEXCEPT(
-				top_frame > frame_stack.data(), "Cannot pop frame from an empty stack"
-			);
+		[[nodiscard]] bool canPopFrame() const noexcept { return top_frame > frame_stack.data(); }
+
+		Frame* popFrame() noexcept {
 			top_frame--;
 			return top_frame;
 		}
+
+		/// Drops the frames a trap left behind.
+		void resetFrames() noexcept { top_frame = frame_stack.data(); }
 
 		[[nodiscard]] const exec::Instruction& currentInstruction() const { return *top_frame->ip; }
 
