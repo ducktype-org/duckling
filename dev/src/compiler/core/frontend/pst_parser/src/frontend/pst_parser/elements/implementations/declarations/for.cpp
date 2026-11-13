@@ -12,11 +12,48 @@
 #include "preamble.hpp"
 
 namespace pst {
-	CLONE_SUB_ELEMENTS_DEF(For, name, iterator, type, iterable, body);
+	CLONE_SUB_ELEMENTS_DEF(ForIteration, iterator, type, iterable);
+	CLONE_SUB_ELEMENTS_DEF(For, name, iteration, body);
 
 	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
 		    || state[fwd].is(Keyword::In);
+	}
+
+	MBox<ForIteration> ForIteration::parse(LangParserState& state) {
+		auto out = makeBox<ForIteration>(state);
+
+		PARSE().one(&out->iterator);
+
+		if (PARSE().tryEat(NamedOperator::Colon)) {
+			PARSE().one(&out->type);
+			PARSE().tryEat(Keyword::In);
+		} else {
+			PARSE().one(Keyword::In);
+		}
+
+		PARSE().one(&out->iterable);
+
+		PST_RETURN out;
+	}
+
+	void ForIteration::dprint(std::ostream& out) const {
+		out << "{";
+		out << R"("identifier": )";
+		nullAwareDprint(iterator, out);
+		out << R"(, "type": )";
+		nullAwareDprint(type, out);
+		out << R"(, "iterable": )";
+		nullAwareDprint(iterable, out);
+		out << "}";
+	}
+
+	HashAlg& ForIteration::addElementDataToStableHash(HashAlg& partial_hash) const {
+		return partial_hash;
+	}
+
+	void ForIteration::acceptVisitor(PstVisitor& visitor) const {
+		visitor.visitForIteration(*this);
 	}
 
 	MBox<For> For::parse(LangParserState& state) {
@@ -36,16 +73,7 @@ namespace pst {
 			else if (PARSE().tryEat(Keyword::Let))
 				out->is_const = true;
 
-			PARSE().one(&out->iterator);
-
-			if (PARSE().tryEat(NamedOperator::Colon)) {
-				PARSE().one(&out->type);
-				PARSE().tryEat(Keyword::In);
-			} else {
-				PARSE().one(Keyword::In);
-			}
-
-			PARSE().one(&out->iterable);
+			PARSE().one(&out->iteration);
 
 			PARSE().goUpAndSkip();
 		}
@@ -60,21 +88,22 @@ namespace pst {
 
 	void For::dprint(std::ostream& out) const {
 		out << "{";
+		bool has_previous_field = false;
 		if (name.has_value()) {
 			out << R"("name":)";
 			nullAwareDprint(name.value(), out);
-			out << ",";
+			has_previous_field = true;
 		}
-		out << R"("identifier": )";
-		nullAwareDprint(iterator, out);
 
-		if (is_const.has_value())
-			out << R"(, "is_const": )" << (is_const.value() ? "true" : "false");
+		if (is_const.has_value()) {
+			if (has_previous_field) out << ",";
+			out << R"("is_const": )" << (is_const.value() ? "true" : "false");
+			has_previous_field = true;
+		}
 
-		out << R"(, "type": )";
-		nullAwareDprint(type, out);
-		out << R"(, "iterable": )";
-		nullAwareDprint(iterable, out);
+		if (has_previous_field) out << ",";
+		out << R"("iteration": )";
+		nullAwareDprint(iteration, out);
 		out << R"(, "body": )";
 		nullAwareDprint(body, out);
 		out << "}";

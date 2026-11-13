@@ -34,8 +34,8 @@ namespace pst {
 		FunDecl,
 		Pattern,
 		For,
+		ForIteration,
 		Variable,
-		IdentifierWrapper,  // @TODO: #2782 Remove this.
 		If,
 		While,
 		Method,

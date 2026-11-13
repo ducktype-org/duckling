@@ -159,24 +159,12 @@ namespace compiler::helios {
 				setTypeOfSymbolByAbstractType(ab_type);
 			}
 
-			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
-				// @TODO: #2782 Remove this function.
-				auto parent_opt = ident->getParent();
-				CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without in type query");
-
-				auto parent_elem = parent_opt.value().unlock(ctx);
-				if (auto for_stmt_opt = parent_elem.dynamicCast<pst::For>()) {
-					handleForIterator(for_stmt_opt.value());
-					return;
-				}
-				if (auto binding_opt = parent_elem.dynamicCast<pst::BindingPattern>()) {
-					handleMatchBinding(binding_opt.value());
-					return;
-				}
-				CORE_PANIC("IdentifierWrapper with unsupported parent in QueryTypeOfSymbol");
-			}
-
-			void handleMatchBinding(pst::Access<pst::BindingPattern> binding) {
+			/**
+			 * @brief Get the type of a match symbol inferred from a binding pattern.
+			 * Note that this is called on a parent of an identifier wrapper - an actual pst node
+			 * associated with the symbol.
+			 */
+			void visitBindingPattern(pst::Access<pst::BindingPattern> binding) final {
 				// The binding's type is the type constraint of the enclosing flow pattern
 				// (`case x : T`). Bindings without a constraint are not supported yet.
 				auto flow_parent = binding->getParent();
@@ -203,9 +191,16 @@ namespace compiler::helios {
 				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr());
 			}
 
-			void handleForIterator(pst::Access<pst::For> stmt) {
+			/**
+			 * @brief Get the type of the iterator symbol inferred from a for loop.
+			 * Note that this is called on a parent of an identifier wrapper - an actual pst node
+			 * associated with the symbol.
+			 */
+			void setTypeOfForIterator(
+				pst::Access<pst::ForIteration> iteration, base::Optional<bool> maybe_is_const
+			) {
 				// Get the element type from the iterable.
-				auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
+				auto iterable_pst  = iteration->getIterable().unlock(ctx)->getExpr();
 				auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst });
 				if (iterable_hout->hasFailed()) {
 					setFailed();
@@ -237,7 +232,7 @@ namespace compiler::helios {
 
 				// Now look for the explicit type annotation which will potentially override the
 				// deduced type.
-				if (auto type_holder_opt = stmt->getIteratorType().unlockOpt(ctx)) {
+				if (auto type_holder_opt = iteration->getIteratorType().unlockOpt(ctx)) {
 					if (auto maybe_iter_type_pst
 					    = type_holder_opt.value()->getExpr().unlockOpt(ctx)) {
 						// If a type exists we use it.
@@ -250,7 +245,7 @@ namespace compiler::helios {
 					}
 				}
 
-				if (auto maybe_is_const = stmt->getIsConst(); maybe_is_const.has_value()) {
+				if (maybe_is_const.has_value()) {
 					iter_type = iter_type.withMutability(
 						maybe_is_const.value() ? tsh::Mutability::Immutable
 											   : tsh::Mutability::Mutable
@@ -260,6 +255,18 @@ namespace compiler::helios {
 					// If the array stores a const than the iterator is const.
 				}
 				setTypeOfSymbol(iter_type);
+			}
+
+			void visitFor(pst::Access<pst::For> stmt) final {
+				setTypeOfForIterator(stmt->getIteration().unlock(ctx), stmt->getIsConst());
+			}
+
+			void visitForIteration(pst::Access<pst::ForIteration> iteration) final {
+				auto parent = iteration->getParent();
+				CORE_ASSERT(parent.has_value(), "ForIteration without parent");
+				auto for_stmt = parent.value().unlock(ctx).dynamicCast<pst::For>();
+				CORE_ASSERT(for_stmt.has_value(), "ForIteration parent is not For");
+				setTypeOfForIterator(iteration, for_stmt.value()->getIsConst());
 			}
 		};
 
@@ -288,6 +295,11 @@ namespace compiler::helios {
 					PstVisitor_GetTypeOf visitor(ctx);
 					maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
 
+					return visitor.symbol_type_qresult;
+				}
+				variant_case(PstInferredSemantics, data) {
+					PstVisitor_GetTypeOf visitor(ctx);
+					data.getParent(ctx).unlock(ctx)->acceptVisitor(visitor);
 					return visitor.symbol_type_qresult;
 				}
 				variant_case(defgen::Constructor, ctor) {

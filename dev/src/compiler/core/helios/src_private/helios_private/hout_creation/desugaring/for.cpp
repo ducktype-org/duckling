@@ -64,7 +64,8 @@ namespace compiler::helios::desugaring {
 			query::Context& ctx, pst::Access<pst::For> stmt
 		) {
 			// Get the iterable and it's type.
-			auto iterable_pst      = stmt->getIterable().unlock(ctx);
+			auto iteration         = stmt->getIteration().unlock(ctx);
+			auto iterable_pst      = iteration->getIterable().unlock(ctx);
 			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst->getExpr() });
 			if (iterable_hout_res->hasFailed()) return {};
 
@@ -85,12 +86,12 @@ namespace compiler::helios::desugaring {
 			}
 
 			return ForDesugarCtx{
-				.ctx                   = ctx,
-				.stmt                  = stmt,
-				.loop_origin           = code::pstOrigin(stmt),
-				.iterable_origin       = code::pstOrigin(iterable_pst),
-				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
-				.iterable_type         = iterable_type,
+				.ctx             = ctx,
+				.stmt            = stmt,
+				.loop_origin     = code::pstOrigin(stmt),
+				.iterable_origin = code::pstOrigin(iterable_pst),
+				.iterator_origin = code::pstOrigin(iteration->getIteratorIdentifier().unlock(ctx)),
+				.iterable_type   = iterable_type,
 				.collection_is_l_value = not iterable_is_r_value,
 				.iterable_hout         = std::move(iterable_hout),
 			};
@@ -177,7 +178,11 @@ namespace compiler::helios::desugaring {
 			Box<code::Expr> raw_element
 				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(base_expr), idx_ref());
 
-			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
+			auto iter_pst_pos = ctx.stmt->getIteration()
+			                        .unlock(ctx.ctx)
+			                        ->getIterable()
+			                        .unlock(ctx.ctx)
+			                        ->getStablePosition();
 			auto element_sym_type = raw_element->expression_type.getSymbolType();
 			auto element_expr     = coercions::coerceFromBox(
                 ctx.ctx,
@@ -256,10 +261,9 @@ namespace compiler::helios::desugaring {
 		};
 
 		return {
-			.iterator
-			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
-			.index  = get_generated_local(base::StrID("__index"), getI64(ctx)),
-			.length = get_generated_local(base::StrID("__len"), getConstI64(ctx)),
+			.iterator = ctx.query<QueryInferredSymbols>(stmt).valueOrThrow().at(0),
+			.index    = get_generated_local(base::StrID("__index"), getI64(ctx)),
+			.length   = get_generated_local(base::StrID("__len"), getConstI64(ctx)),
 		};
 	}
 

@@ -21,6 +21,7 @@ namespace pst {
 	class ArrayLiteralList;
 	// Not Statements
 	class Param;
+	class ForIteration;
 	class DottedName;
 	class Selector;
 	class Attribute;
