@@ -7,6 +7,7 @@
 #pragma once
 
 #include <vm/api/data/process_info.hpp>
+#include <vm/core/safe/memory/frame.hpp>
 #include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
@@ -31,6 +32,10 @@ namespace vm {
 	 * deinitialized. 2) with `SafeVMProcess::createOwnedVMValue()` - ownership is transferred to
 	 * the caller, who is responsible for freeing the data (the destructor does not free it).
 	 * Outside of the VM that is done with `api::freeVMValue`.
+	 *
+	 * @note A value keeps its bytes inside itself and gets a memory block only when it is filled
+	 * from data that has child blocks (e.g. a variant's payload view). Reading a value never
+	 * creates a block, see `SafeDataLocation`.
 	 */
 	class SafeVMValue final: public IVMValue {
 	private:
@@ -39,26 +44,42 @@ namespace vm {
 		friend class OpFuns;
 
 		/**
-		 * @brief Creates an empty SafeVMValue of the specified type.
+		 * @brief Creates a zeroed SafeVMValue of the specified type.
 		 */
 		SafeVMValue(SafeVMProcess& process, TypeCRef type);
 
-		/**
-		 * @brief Creates a SafeVMValue of specified type and fills it with the bytes from the `src`
-		 * pointer.
-		 */
-		SafeVMValue(SafeVMProcess& process, TypeCRef type, Pointer src);
+		SharedBox<SafeVMValueBytes> value_bytes;
+		Ref<SafeVMProcess>          my_process;  /// The process for which the SafeVMValue exists.
+		Ref<Memory>                 memory;
 
-		std::vector<byte>  data;        /// data.size() == type.getSize()
-		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
-		Ref<Memory>        memory;
+		/// Null until the data needs a block, see the class note.
+		Block* block = nullptr;
 
 		/// True when the VMValue is owned by the process (i.e. function return values). The process
 		/// frees them on it's own.
 		bool owned_by_process = false;
 
+		[[nodiscard]] byte* storage() const { return value_bytes->data(); }
+
+		[[nodiscard]] base::TypedModRawView<byte> bytesView() const {
+			return { storage(), type->getSize().asInt() };
+		}
+
+		/// @throws exceptions::VMUseAfterFreeException if the value is freed.
+		void checkNotFreed() const;
+
+		/// The value's block, created over its bytes when it has none yet.
+		[[nodiscard]] Pointer ensurePointer();
+
+		/// Replaces the value with plain bytes that have no child blocks.
+		void importBytes(const byte* src);
+
+		/// Replaces the value with the data of `src_block` when there is one, else `src_bytes`.
+		void importFrom(Block* src_block, const byte* src_bytes);
+
 		/**
-		 * @brief Frees the data of the SafeVMValue (deinitializes the blocks in the memory module).
+		 * @brief Frees the data of the SafeVMValue: runs its destructors and releases its block, if
+		 * it has one.
 		 * This function has to be called manually when using values created with the
 		 * `SafeVMProcess::createOwnedVMValue()` function (process-owned values are freed for you).
 		 *
@@ -72,10 +93,11 @@ namespace vm {
 		void freeData();
 
 	public:
+		// Always boxed, nothing needs to move one.
 		SafeVMValue(const SafeVMValue&)            = delete;
-		SafeVMValue(SafeVMValue&&)                 = default;
+		SafeVMValue(SafeVMValue&&)                 = delete;
 		SafeVMValue& operator=(const SafeVMValue&) = delete;
-		SafeVMValue& operator=(SafeVMValue&&)      = default;
+		SafeVMValue& operator=(SafeVMValue&&)      = delete;
 
 		~SafeVMValue() override;
 
@@ -84,6 +106,23 @@ namespace vm {
 
 		/** @brief Fills the value's data with the bytes pointed to by `src`. */
 		void importData(Pointer src);
+
+		/**
+		 * @brief Copies the value into a local variable. A variable without a block gets none,
+		 * unless the value holds child blocks.
+		 */
+		void exportToSlot(LocalSlot& slot) const;
+
+		/**
+		 * @brief Fills the value from a local variable, without creating a block for the
+		 * variable.
+		 */
+		void importFromSlot(const LocalSlot& slot);
+
+		[[nodiscard]] bool isFreed() const { return value_bytes->freed; }
+
+		/// Whether the value has a memory block yet, see the class note.
+		[[nodiscard]] bool hasBlock() const { return block != nullptr; }
 
 		/** @copydoc IVMValue::importDataFrom */
 		void importDataFrom(const IVMValue& source) override;
@@ -103,10 +142,6 @@ namespace vm {
 		/// Safe VM runtime type metadata of the stored value.
 		TypeCRef type;
 
-	private:
-		Pointer pointer;
-
-	public:
 		[[nodiscard]] byte* getBytes() override;
 
 		[[nodiscard]] const byte* getBytes() const override;

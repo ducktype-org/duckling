@@ -279,19 +279,20 @@ namespace vm {
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
-		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
-		value->owned_by_process = true;
-		owned_vm_values.emplace_back(std::move(value));
-		return owned_vm_values.back().refMut();
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(const LocalSlot& slot) {
+		auto value = createVMValue(TypeCRef(slot.type));
+		value->importFromSlot(slot);
+		return value;
 	}
 
 	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type) {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 	}
 
-	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type, Pointer src) {
-		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(const LocalSlot& slot) {
+		auto value = createOwnedVMValue(TypeCRef(slot.type));
+		value->importFromSlot(slot);
+		return value;
 	}
 
 	SafeVMProcess::SafeVMProcess(
@@ -652,8 +653,7 @@ namespace vm {
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMValueForType(
 		const std::string& type_name
 	) {
-		// Constructing VMValue allocates a block in memory, so it must be guarded against every
-		// other memory-touching endpoint.
+		// Reads the loaded program's types, so it must be guarded against loads.
 		std::unique_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_err(error) return std::unexpected(error);
@@ -675,8 +675,8 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::freeVMValue(Ref<IVMValue> vm_value) {
-		// Freeing a VMValue deallocates its block in memory, so it must be synchronized against
-		// every other memory-touching endpoint.
+		// Freeing a VMValue releases what it points to (and its block, if it has one), so it must
+		// be synchronized against every other memory-touching endpoint.
 		std::unique_lock lock(api_lock);
 		match_optional(assertProcessCanRespond()) {
 			opt_err(error) return std::unexpected(error);
@@ -695,7 +695,7 @@ namespace vm {
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "VMValue is owned by the process" } });
 
-				if (safe_value->pointer.isNull())
+				if (safe_value->isFreed())
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "VMValue was already freed" } });
 
