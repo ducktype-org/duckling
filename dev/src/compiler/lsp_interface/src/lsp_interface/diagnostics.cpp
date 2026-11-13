@@ -78,29 +78,30 @@ namespace duck_ls {
 		}
 
 		/**
-		 * @brief The source the compiler parsed for @p file, empty when it parsed none.
+		 * @brief The source the compiler parsed for @p file, empty for a diagnostic without a
+		 * file.
 		 *
-		 * A virtual path spelled as text no longer knows its filesystem, so it is looked up as
-		 * the cache overlay twin first and then as the source file behind it.
+		 * A virtual path spelled as text no longer knows its filesystem, so it is bound back
+		 * the way the compiler resolves files: to the cache overlay for an open document and to
+		 * the source filesystem otherwise. Panics when the compiler parsed no source for the
+		 * file.
 		 */
 		base::Optional<CRef<tokenizer::TokenSource>> findTokenSource(
 			const std::string& file, const EvaluationContext& evaluation_ctx
 		) {
 			if (file.empty()) return {};
 
-			fs::FilePath              path(file);
-			std::vector<fs::FilePath> candidates{ path };
+			const auto&  files = evaluation_ctx.files;
+			fs::FilePath path(file);
 			if (path.isVirtual()) {
-				const auto cache_path = evaluation_ctx.files->cachePath(path);
-				candidates = { cache_path, evaluation_ctx.files->sourcePath(cache_path) };
+				const auto cache_path = files->cachePath(path);
+				path = cache_path.isRegularFile() ? cache_path : files->sourcePath(cache_path);
 			}
 
-			for (const auto& candidate: candidates) {
-				auto source_files
-					= compiler::frontend::SourceFile::getSourceFilesFromPath(candidate);
-				if (!source_files.empty()) return source_files.front()->getPST()->getFile();
-			}
-			return {};
+			auto source_files = compiler::frontend::SourceFile::getSourceFilesFromPath(path);
+			if (source_files.empty())
+				CORE_PANIC("No parsed source for the diagnostic file " + path.string());
+			return source_files.front()->getPST()->getFile();
 		}
 
 		/**
@@ -110,8 +111,8 @@ namespace duck_ls {
 		 * columns in UTF-16 code units and the end position is exclusive.
 		 *
 		 * The columns are converted on the source the compiler parsed, so they stay
-		 * consistent with positions updated after a reparse. Without that source they are
-		 * left in code points.
+		 * consistent with positions updated after a reparse. A diagnostic without a file keeps
+		 * them in code points.
 		 */
 		SectionLocation extractLocation(
 			const dia::term_ui_view::CodeSection& section, const EvaluationContext& evaluation_ctx
