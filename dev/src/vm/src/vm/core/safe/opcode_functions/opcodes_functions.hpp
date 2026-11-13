@@ -297,6 +297,12 @@ namespace vm {
 			popLocalSlot(frame);
 		}
 
+		/// Like `performDeinit`, but a variable without a block has its destructors run too.
+		static VM_OPFUN_INLINE void performDeinitDtor(Frame*& frame, SafeVMThread& thread) {
+			releaseLocalSlot(topLocalSlot(frame), thread.process_memory);
+			popLocalSlot(frame);
+		}
+
 		static VM_OPFUN_INLINE void setVariantType(
 			SafeVMThread& thread, Pointer variant_pointer, TypeCRef wanted_type, TypeCRef variant_type
 		) {

@@ -797,18 +797,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
-		{
-			if (frame->local_slot_stack_end[-1].block == nullptr) {
-				// Without a block there is nothing to run the destructors off, so they are run
-				// over the variable's bytes directly.
-				const LocalSlot& slot = topLocalSlot(frame);
-				thread.process_memory.runDataDestructors(
-					{ slot.data, slot.type->getSize().asInt() }, slot.type
-				);
-			}
-
-			performDeinit(frame, thread);
-		}
+		{ performDeinitDtor(frame, thread); }
 		FUNCTION_CONT(1);
 	}
 

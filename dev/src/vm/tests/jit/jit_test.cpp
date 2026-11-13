@@ -9,7 +9,18 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/extern_c_function.hpp>
+#include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
+
+namespace jit_extc {
+	DEF_VM_EXT_C_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
+
+	DEF_VM_EXT_C_FUNC(i64, "i64", panicAtZero, (i64, "i64", a)) {
+		if (a == 0) throw vm::exceptions::VMPanicException();
+		return a;
+	}
+}
 
 /**
  * @brief What belongs here: programs that get JIT-compiled. Each one calls a function enough times
@@ -40,6 +51,8 @@ public:
 		TESTER_ADD_TEST(testCalls);
 		TESTER_ADD_TEST(testVirtualCalls);
 		TESTER_ADD_TEST(testRecursiveCalls);
+		TESTER_ADD_TEST(testExtCCalls);
+		TESTER_ADD_TEST(testExtCPanic);
 
 		// Executing code within a compiled function
 		TESTER_ADD_TEST(testUnconditionalJumps);
@@ -75,6 +88,41 @@ private:
 	}
 
 	void testRecursiveCalls() { runTestOnVm("call_recursive_test.dbc", "10", "55342113853211"); }
+
+	void testExtCCalls() {
+		runTestOnVm(loadWithExtC("cfunc_test.dbc"), { "10" }, { "20191817161514131211" });
+	}
+
+	/// The panic unwinds out of the C++ function through the compiled caller.
+	void testExtCPanic() {
+		auto result = runTestOnVmGetResult(loadWithExtC("cfunc_panic_test.dbc"), "10");
+
+		auto output = vm::api::output(result.pid);
+		assertSucceeded(output, "output");
+		ASSERT_EQUAL_PRINT(std::string("10987654321"), output->output);
+
+		assertExecutionPanickedWithAndKill(result, vm::exceptions::VMPanicException::ERR_MSG);
+	}
+
+	vm::PID loadWithExtC(const std::string& file) {
+		auto pid = initProcess();
+		assertSucceeded(
+			vm::api::loadCode(
+				pid,
+				{ .functions   = {},
+		          .types       = {},
+		          .global_data = {},
+		          .external_c_functions
+		          = { VM_INSTANCE_EXT_C_FUNC(add, jit_extc::add, pid),
+		              VM_INSTANCE_EXT_C_FUNC(panicAtZero, jit_extc::panicAtZero, pid) },
+		          .ffi_functions = {},
+		          .object_files  = {} }
+			),
+			"Registering the C functions"
+		);
+		assertSucceeded(vm::api::loadFiles(pid, { fs::File(path(file)) }), "Load of the program");
+		return pid;
+	}
 
 	void testFixedArray() { runTestOnVm("fixed_array_test.dbc", "10", ""); }
 
