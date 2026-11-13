@@ -197,6 +197,7 @@ namespace compiler::helios {
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::ForIteration:
 				case pst::ElementKind::RoundGroupExpr:
 				case pst::ElementKind::ArrayLiteralList:
 				case pst::ElementKind::CallList:
@@ -775,11 +776,12 @@ namespace compiler::helios {
 			void visitFor(pst::Access<pst::For> for_stmt) override {
 				// For loop only infers iterator variable, other variables created during desugaring
 				// are compiler internal helpers, not user-facing symbols.
-				auto                    iterator = for_stmt->getIteratorIdentifier().unlock(ctx);
-				std::vector<SymbolData> out      = { SymbolData::makePSTInferredSymbolData(
+				auto                    iteration = for_stmt->getIteration().unlock(ctx);
+				auto                    iterator  = iteration->getIteratorIdentifier().unlock(ctx);
+				std::vector<SymbolData> out       = { SymbolData::makePSTInferredSymbolData(
                     {
-							 .name = iterator->unwrap(),
-							 .kind = SymbolKind::Variable,
+							  .name = iterator->unwrap(),
+							  .kind = SymbolKind::Variable,
                     },
                     PstInferredSemantics(scope, iterator->getHash())
                 ) };

@@ -196,9 +196,11 @@ namespace compiler::helios {
 			 * Note that this is called on a parent of an identifier wrapper - an actual pst node
 			 * associated with the symbol.
 			 */
-			void visitFor(pst::Access<pst::For> stmt) final {
+			void setTypeOfForIterator(
+				pst::Access<pst::ForIteration> iteration, base::Optional<bool> maybe_is_const
+			) {
 				// Get the element type from the iterable.
-				auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
+				auto iterable_pst  = iteration->getIterable().unlock(ctx)->getExpr();
 				auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst });
 				if (iterable_hout->hasFailed()) {
 					setFailed();
@@ -230,7 +232,7 @@ namespace compiler::helios {
 
 				// Now look for the explicit type annotation which will potentially override the
 				// deduced type.
-				if (auto type_holder_opt = stmt->getIteratorType().unlockOpt(ctx)) {
+				if (auto type_holder_opt = iteration->getIteratorType().unlockOpt(ctx)) {
 					if (auto maybe_iter_type_pst
 					    = type_holder_opt.value()->getExpr().unlockOpt(ctx)) {
 						// If a type exists we use it.
@@ -243,7 +245,7 @@ namespace compiler::helios {
 					}
 				}
 
-				if (auto maybe_is_const = stmt->getIsConst(); maybe_is_const.has_value()) {
+				if (maybe_is_const.has_value()) {
 					iter_type = iter_type.withMutability(
 						maybe_is_const.value() ? tsh::Mutability::Immutable
 											   : tsh::Mutability::Mutable
@@ -253,6 +255,18 @@ namespace compiler::helios {
 					// If the array stores a const than the iterator is const.
 				}
 				setTypeOfSymbol(iter_type);
+			}
+
+			void visitFor(pst::Access<pst::For> stmt) final {
+				setTypeOfForIterator(stmt->getIteration().unlock(ctx), stmt->getIsConst());
+			}
+
+			void visitForIteration(pst::Access<pst::ForIteration> iteration) final {
+				auto parent = iteration->getParent();
+				CORE_ASSERT(parent.has_value(), "ForIteration without parent");
+				auto for_stmt = parent.value().unlock(ctx).dynamicCast<pst::For>();
+				CORE_ASSERT(for_stmt.has_value(), "ForIteration parent is not For");
+				setTypeOfForIterator(iteration, for_stmt.value()->getIsConst());
 			}
 		};
 

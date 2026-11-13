@@ -34,6 +34,7 @@ namespace pst {
 		FunDecl,
 		Pattern,
 		For,
+		ForIteration,
 		Variable,
 		If,
 		While,

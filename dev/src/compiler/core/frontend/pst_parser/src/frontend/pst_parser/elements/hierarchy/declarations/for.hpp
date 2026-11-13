@@ -11,6 +11,44 @@
 #include <base/collections/optional.hpp>
 
 namespace pst {
+	class ForIteration final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ForIteration, NotStmt);
+		CLONE_SUBELEMENTS();
+
+	protected:
+		NAMED_CHILD(iterator, IdentifierWrapper);
+		NAMED_CHILD(type, ForTypeExprHolder);
+		NAMED_CHILD(iterable, CommaExprHolder);
+
+	protected:
+		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
+	public:
+		explicit ForIteration(LangElementConstructionData state): NotStmt(state) {
+			element_kind = ElementKind::ForIteration;
+		}
+
+		static MBox<ForIteration> parse(LangParserState& state);
+		void                      dprint(std::ostream& out) const final;
+		void                      acceptVisitor(PstVisitor& visitor) const override;
+		~ForIteration() final = default;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "For Iteration";
+		}
+
+		[[nodiscard]] AccessLocked<IdentifierWrapper> getIteratorIdentifier() const {
+			return iterator.give();
+		}
+
+		[[nodiscard]] AccessLocked<ForTypeExprHolder> getIteratorType() const {
+			return type.give();
+		}
+
+		[[nodiscard]] AccessLocked<CommaExprHolder> getIterable() const { return iterable.give(); }
+	};
+
 	/**
 	 * @brief For declaration
 	 */
@@ -20,9 +58,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
-		NAMED_CHILD(iterator, IdentifierWrapper);
-		NAMED_CHILD(type, ForTypeExprHolder);
-		NAMED_CHILD(iterable, CommaExprHolder);
+		NAMED_CHILD(iteration, ForIteration);
 		NAMED_CHILD(body, CodeBlockOrAnyStmt);
 		base::Optional<bool> is_const;
 
@@ -53,15 +89,7 @@ namespace pst {
 			return name.map([](const auto& acc) { return acc.give(); });
 		}
 
-		[[nodiscard]] AccessLocked<IdentifierWrapper> getIteratorIdentifier() const {
-			return iterator.give();
-		}
-
-		[[nodiscard]] AccessLocked<ForTypeExprHolder> getIteratorType() const {
-			return type.give();
-		}
-
-		[[nodiscard]] AccessLocked<CommaExprHolder> getIterable() const { return iterable.give(); }
+		[[nodiscard]] AccessLocked<ForIteration> getIteration() const { return iteration.give(); }
 
 		[[nodiscard]] AccessLocked<CodeBlockOrStmt> getBody() const { return body.give(); }
 

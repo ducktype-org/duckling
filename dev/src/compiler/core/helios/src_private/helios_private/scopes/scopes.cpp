@@ -111,6 +111,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
 		case pst::ElementKind::Attribute:
+		case pst::ElementKind::ForIteration:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
