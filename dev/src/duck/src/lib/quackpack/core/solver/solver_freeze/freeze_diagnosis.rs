@@ -86,7 +86,7 @@ impl SolverFreeze {
     /// Main entry point.
     /// Removes all the unnecessary or false information from the freeze, as described in the module documentation.
     /// Returns a pair consisting of the modified freeze and whether all enabled deps of main package are satisfied.
-    pub async fn find_maximal_correct_dep_solution(
+    pub async fn retain_valid_fragment(
         mut self,
         main_features: HashSet<FeatureName>,
         manifests: &HashMap<PackageId, Box<Manifest>>,
@@ -101,7 +101,7 @@ impl SolverFreeze {
         Ok((self, root_satisfied))
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_valid_fragment`].
     /// Change main package features to `main_features`.
     fn substitute_root_features(&mut self, main_features: HashSet<FeatureName>) -> QuackResult<()> {
         let Some(main_freeze) = self.package_freezes.get_mut(&self.main_pkg) else {
@@ -111,7 +111,7 @@ impl SolverFreeze {
         Ok(())
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_valid_fragment`].
     /// Removes packages for which manifest is not consistent with the freeze.
     fn remove_immediatelly_flawed_packages(
         &mut self,
@@ -146,7 +146,7 @@ impl SolverFreeze {
                 })
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_valid_fragment`].
     /// Removes from the freeze all dependecy realizations that:
     /// - no longer realize any dependency,
     /// - the dependency is disabled with freeze-present features,
@@ -234,7 +234,7 @@ impl SolverFreeze {
             .is_superset(&HashSet::from_iter(forced_child_features)))
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_valid_fragment`].
     /// Finds which packages have all of their enabled dependencies correctly realized.
     /// Note:
     /// -----
@@ -269,7 +269,7 @@ impl SolverFreeze {
         Ok(result)
     }
 
-    /// Helper for [`Self::find_maximal_correct_dep_solution`].
+    /// Helper for [`Self::retain_valid_fragment`].
     /// Removes flawed non-main packages and flawed realizations of the main package.
     fn retain_not_flawed_pkgs(
         &mut self,
@@ -410,7 +410,7 @@ features:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+        let (new_freeze, _) = block_on(prev_freeze.clone().retain_valid_fragment(
             ["foo".into()].into(),
             &manifests,
             &fetcher,
@@ -470,7 +470,7 @@ metadata:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+        let (new_freeze, _) = block_on(prev_freeze.clone().retain_valid_fragment(
             ["foo".into()].into(),
             &manifests,
             &fetcher,
@@ -547,12 +547,8 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(prev_freeze.find_maximal_correct_dep_solution(
-            [].into(),
-            &manifests,
-            &fetcher,
-        ))
-        .unwrap();
+        let (new_freeze, _) =
+            block_on(prev_freeze.retain_valid_fragment([].into(), &manifests, &fetcher)).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -645,12 +641,8 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(prev_freeze.find_maximal_correct_dep_solution(
-            [].into(),
-            &manifests,
-            &fetcher,
-        ))
-        .unwrap();
+        let (new_freeze, _) =
+            block_on(prev_freeze.retain_valid_fragment([].into(), &manifests, &fetcher)).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&pkg_d).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -703,7 +695,7 @@ features:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+        let (new_freeze, _) = block_on(prev_freeze.clone().retain_valid_fragment(
             [].into(),
             &manifests,
             &fetcher,
@@ -788,7 +780,7 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = block_on(prev_freeze.clone().find_maximal_correct_dep_solution(
+        let (new_freeze, _) = block_on(prev_freeze.clone().retain_valid_fragment(
             [].into(),
             &manifests,
             &fetcher,

@@ -207,11 +207,17 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, true> suffix_operator_fundecl{ "fundecl suffix +*(a: i64) -> i64" };
 	Example<pst::Class, true>   operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
 	Example<pst::Class, true> suffix_operator_method{ "class Foo { fun suffix +*() -> Foo = {} }" };
-	Example<pst::Fun, false>  assignment_operator_function1{ "fun +*=(a: i64) = {}" };
-	Example<pst::Fun, false>  bare_assign_operator_function{ "fun =(a: i64) = {}" };
-	Example<pst::Fun, false>  comparison_operator_function1{ "fun <(a: i64) = {}" };
-	Example<pst::Fun, false>  special_operator_function1{ "fun ->(a: i64) = {}" };
-	Example<pst::Fun, false>  special_operator_function2{ "fun .?(a: i64) = {}" };
+
+	Example<pst::Fun, true> comparison_operator_function{ "fun <(a: i64, b: i64) -> bool = {}" };
+	Example<pst::FunDecl, true> comparison_operator_fundecl{ "fundecl ==(a: i64, b: i64) -> bool" };
+	Example<pst::Class, true>   comparison_operator_method{
+        "class Foo { fun >=(rhs: Foo) -> bool = {} }"
+	};
+
+	Example<pst::Fun, false> assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false> bare_assign_operator_function{ "fun =(a: i64) = {}" };
+	Example<pst::Fun, false> special_operator_function1{ "fun ->(a: i64) = {}" };
+	Example<pst::Fun, false> special_operator_function2{ "fun .?(a: i64) = {}" };
 
 	Example<pst::Fun, true> ternary_simple_expr{
 		"fun foo(t: type) -> type = if x then {return b;} else 2;"
@@ -219,7 +225,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, false> normal_if_stmt{
 		"fun foo(t: type) -> type = if (x) {return a;} else 2;"
 	};
-	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
+	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ->(a: i64) -> i64" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
 	Example<pst::Pattern, true> simple_pattern2{
@@ -598,7 +604,7 @@ class PSTErrorTests: public tester::TestSuite {
 		);
 		testDiagnosticMessage<pst::NoExternArgumentError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::ReservedOperatorFunNameError>(
-			ss, dia::SourcePosition::fakePosition(), std::string("==")
+			ss, dia::SourcePosition::fakePosition(), std::string("->")
 		);
 		testDiagnosticMessage<pst::AssignmentOperatorFunNameError>(
 			ss, dia::SourcePosition::fakePosition(), std::string("+*=")

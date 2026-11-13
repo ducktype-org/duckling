@@ -159,19 +159,54 @@ namespace compiler::helios::code {
 	using MatchResult = std::variant<Match, NoMatch>;
 
 	namespace {
+
+		/**
+		 * @brief The mode of coercion to use for overload resolution.
+		 *
+		 * This is different from CoercionMode because it determines the behaviour to be used for
+		 * all arguments, not just a single one. This is useful, for example, for certain
+		 * operators, such as comparison operators, where all arguments may be implicitly
+		 * taken by reference.
+		 *
+		 * This may disappear in the future, once passing arguments by reference is refined.
+		 */
+		enum class OverloadCoercionMode {
+			/// Only the regular implicit coercions.
+			Default,
+			/// Self may be implicitly taken by `ref`.
+			ImplicitRefOfSelf,
+			/// All arguments may be implicitly taken by `ref`.
+			ImplicitRefOfAll
+		};
+
+		CoercionMode coercionModeForArg(
+			const OverloadCoercionMode overload_mode, const usize arg_index
+		) {
+			switch (overload_mode) {
+			case OverloadCoercionMode::Default:
+				return CoercionMode::Default;
+			case OverloadCoercionMode::ImplicitRefOfSelf:
+				return arg_index == 0 ? CoercionMode::ImplicitRefOf : CoercionMode::Default;
+			case OverloadCoercionMode::ImplicitRefOfAll:
+				return CoercionMode::ImplicitRefOf;
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+
 		/**
 		 * Checks if a function can be called with the given arguments for overload resolution
 		 * based on function declaration.
 		 *
-		 * @param first_argument_mode The coercion mode of the first positional argument, which
-		 * allows the `self` argument of a method to be implicitly taken by `ref`.
+		 * @param coercion_mode The coercion mode of the positional arguments, which allows the
+		 * `self` argument or all arguments of a method to be implicitly taken by `ref`.
 		 */
 		MatchResult matchOverloadCandidate(
 			query::Context&                                        ctx,
 			SymID                                                  fun,
 			const std::vector<Box<Expr>>&                          positional_arguments,
 			const std::vector<std::tuple<base::StrID, Box<Expr>>>& named_arguments,
-			const CoercionMode                                     first_argument_mode
+			const OverloadCoercionMode                             coercion_mode
 		) {
 			auto& decl = ctx.query<QueryDeclOfFun>(fun)->valueOrThrow();
 			std::vector<base::Optional<ArgumentOrigin>> argument_origin(decl.parameters.size());
@@ -190,13 +225,12 @@ namespace compiler::helios::code {
 			// Go over positional arguments.
 			for (usize i{ 0 }; i < positional_arguments.size(); i++) {
 				const tsh::SymbolType expected_type = decl.parameters[i].type;
-				const CoercionMode    mode = i == 0 ? first_argument_mode : CoercionMode::Default;
-				Coercion              coercion = coercions::coercionOf(
+				Coercion              coercion      = coercions::coercionOf(
                     ctx,
                     positional_arguments[i].ref(),
                     expected_type,
                     coercions::HandOverKind::Regular,
-                    mode
+                    coercionModeForArg(coercion_mode, i)
                 );
 
 				if (coercion.isRefused()) {
@@ -577,6 +611,8 @@ namespace compiler::helios::code {
 		 *
 		 * @param method_candidates The candidates which are methods, so their first positional
 		 * argument is `self` and may be implicitly taken by `ref`.
+		 * @param method_coercion_mode The coercion mode to be applied to method candidates.
+		 * Besides `self`, this includes the right-hand side of a binary operator method.
 		 * @return The function symbol, the argument origins, and the coercions.
 		 */
 		query::QResult<OverloadResolutionResult> doOverloadResolution(
@@ -584,7 +620,8 @@ namespace compiler::helios::code {
 			const std::vector<SymID>& candidates,
 			const CallArguments&      call_arguments,
 			const CallPstOrigin&      pst_origin,
-			const std::vector<SymID>& method_candidates = {}
+			const std::vector<SymID>& method_candidates = {},
+			const OverloadCoercionMode method_coercion_mode = OverloadCoercionMode::ImplicitRefOfSelf
 		) {
 			if (candidates.empty()) {
 				ctx.log<NoCandidatesFoundError>(
@@ -603,8 +640,8 @@ namespace compiler::helios::code {
 					call_arguments.positional_arguments,
 					call_arguments.named_arguments,
 					std::ranges::contains(method_candidates, candidate)
-						? CoercionMode::ImplicitRefOf
-						: CoercionMode::Default
+						? method_coercion_mode
+						: OverloadCoercionMode::Default
 				);
 
 				variant_match(match) {
@@ -943,9 +980,16 @@ namespace compiler::helios::code {
 		call_arguments.positional_arguments.emplace_back(std::move(lhs));
 		call_arguments.positional_arguments.emplace_back(std::move(rhs));
 
-		// Resolve overloads and construct call expression
-		auto overload_resolution_qresult
-			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, method_candidates);
+		// Resolve overloads and construct call expression.
+		// An operator method may take both `self` and the right-hand side by `ref`.
+		auto overload_resolution_qresult = doOverloadResolution(
+			ctx,
+			candidates,
+			call_arguments,
+			pst_origin,
+			method_candidates,
+			OverloadCoercionMode::ImplicitRefOfAll
+		);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
 

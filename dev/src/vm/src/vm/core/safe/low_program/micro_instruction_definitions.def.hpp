@@ -393,6 +393,10 @@ DEF_MICRO_INSTR(fcmpLe_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immed
 // sets the flag if pointer is null
 DEF_MICRO_INSTR(cmpNull_pptr, vm::low::opargs::PlacePtr)
 
+// pointer equality, see `vm::Pointer::operator==`
+DEF_MICRO_INSTR(cmpEq_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(cmpNeq_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+
 // ========= VARIANT OPERATIONS ========
 
 
