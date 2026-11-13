@@ -15,9 +15,7 @@ class LspPositionsTest: public tester::TestSuite {
 #define TESTER_CLASS LspPositionsTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(codePointOffsetTest);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(codePointOffsetTest); }
 
 private:
 	/**
