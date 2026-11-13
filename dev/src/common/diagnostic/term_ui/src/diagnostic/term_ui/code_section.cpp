@@ -10,6 +10,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/term_ui/code_line.hpp>
+#include <diagnostic/term_ui/display_width.hpp>
 #include <diagnostic/term_ui/highlight.hpp>
 #include <diagnostic/term_ui/line.hpp>
 
@@ -77,7 +78,7 @@ namespace term_ui {
 				}
 
 				// Last piece in the group, but the message doesn't fit after highlight.
-				if (!str.isEmptyOn(end, msg.text.size() + 2)) {
+				if (!str.isEmptyOn(end, displayWidth(msg.text) + 2)) {
 					str.tryInsert(beg, intoLinePiece(msg, PointerStage::HighlightWithLowering, len));
 					return HighlightResult::LowerMessageMedium;
 				}
