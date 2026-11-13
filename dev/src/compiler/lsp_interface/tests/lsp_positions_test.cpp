@@ -41,6 +41,11 @@ private:
 		assertTrue(at("abc\n", 0, 3).value() == 3, "The column right at the line end");
 		assertTrue(at("abc\n", 0, 99).value() == 3, "A long column clamps to the line end");
 		assertTrue(at("abc", 2, 0).empty(), "A missing line has no offset");
+		assertTrue(at("abc\n", 1, 0).value() == 4, "The empty line after a final newline exists");
+		assertTrue(at("abc\r", 1, 0).value() == 4, "A final lone CR also starts a line");
+		assertTrue(
+			at("abc\r\ndef", 0, 99).value() == 3, "Clamping stops before CR, not between CR and LF"
+		);
 	}
 };
 

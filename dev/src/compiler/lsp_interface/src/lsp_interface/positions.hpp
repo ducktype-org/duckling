@@ -20,7 +20,7 @@ namespace duck_ls {
 	 *
 	 * The client gives a line and a column. Lines are counted from zero, and a line ends with
 	 * `\n`, `\r\n` or `\r` (all three are line breaks in LSP). The column is counted in UTF-16
-	 * code units.
+	 * code units, the encoding `ServerSession::position_encoding` reports in `initialize`.
 	 *
 	 * The compiler counts code points from the start of the file, and line breaks are code
 	 * points too: `\n` and `\r` are one code point each, `\r\n` is two. This is the same count
