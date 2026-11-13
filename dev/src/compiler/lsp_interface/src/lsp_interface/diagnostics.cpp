@@ -82,21 +82,16 @@ namespace duck_ls {
 		 * file.
 		 *
 		 * A virtual path spelled as text no longer knows its filesystem, so it is bound back
-		 * the way the compiler resolves files: to the cache overlay for an open document and to
-		 * the source filesystem otherwise. Panics when the compiler parsed no source for the
-		 * file.
+		 * the way the compiler resolves files: to the cache overlay for an open document and
+		 * as spelled otherwise. Panics when the compiler parsed no source for the file.
 		 */
 		base::Optional<CRef<tokenizer::TokenSource>> findTokenSource(
 			const std::string& file, const EvaluationContext& evaluation_ctx
 		) {
 			if (file.empty()) return {};
 
-			const auto&  files = evaluation_ctx.files;
 			fs::FilePath path(file);
-			if (path.isVirtual()) {
-				const auto cache_path = files->cachePath(path);
-				path = cache_path.isRegularFile() ? cache_path : files->sourcePath(cache_path);
-			}
+			if (evaluation_ctx.files->isOpened(path)) path = evaluation_ctx.files->cachePath(path);
 
 			auto source_files = compiler::frontend::SourceFile::getSourceFilesFromPath(path);
 			if (source_files.empty())
