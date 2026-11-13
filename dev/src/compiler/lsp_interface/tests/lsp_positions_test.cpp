@@ -47,6 +47,28 @@ private:
 			at("abc\r\ndef", 0, 99).value() == 3, "Clamping stops before CR, not between CR and LF"
 		);
 	}
+
+	/**
+	 * @brief Checks that `toByteOffset` finds the same place as `toCodePointOffset`, counted in
+	 * UTF-8 bytes.
+	 */
+	void byteOffsetTest() {
+		auto at = [](std::string_view text, u32 line, u32 character) {
+			return duck_ls::toByteOffset(
+				text, lsp::Position{ .line = line, .character = character }
+			);
+		};
+
+		assertTrue(at("abc\ndef", 1, 1).value() == 5, "ASCII bytes and code points are the same");
+		assertTrue(at("źó\nx", 1, 0).value() == 5, "A two-byte character is two bytes");
+		assertTrue(at("a🦆b", 0, 3).value() == 5, "An emoji is four bytes");
+		assertTrue(at("a🦆b", 0, 2).value() == 1, "A column inside a pair stays before it");
+		assertTrue(
+			at("abc\r\ndef", 0, 99).value() == 3, "Clamping stops before CR, not between CR and LF"
+		);
+		assertTrue(at("abc\rdef", 1, 0).value() == 4, "A lone CR is a line break");
+		assertTrue(at("abc", 2, 0).empty(), "A missing line has no offset");
+	}
 };
 
 TESTER_COMMON_MAIN("/src/compiler/lsp_interface/tests/");

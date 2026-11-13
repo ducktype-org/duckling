@@ -36,4 +36,16 @@ namespace duck_ls {
 	 * @return Empty when `text` has no such line.
 	 */
 	base::Optional<usize> toCodePointOffset(std::string_view text, const lsp::Position& position);
+
+	/**
+	 * @brief Converts an LSP client position to a byte index in the `text` document.
+	 *
+	 * Finds the same place as `toCodePointOffset`, by the same rules, but counts the UTF-8 bytes
+	 * before it instead of the code points.
+	 *
+	 * @param text The whole document in UTF-8.
+	 * @param position The position the client sent.
+	 * @return Empty when `text` has no such line.
+	 */
+	base::Optional<usize> toByteOffset(std::string_view text, const lsp::Position& position);
 }

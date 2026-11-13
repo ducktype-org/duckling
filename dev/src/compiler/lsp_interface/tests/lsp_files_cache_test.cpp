@@ -19,6 +19,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(incrementalSyncTest);
 		TESTER_ADD_TEST(multiByteSyncTest);
+		TESTER_ADD_TEST(lineBreakSyncTest);
 		TESTER_ADD_TEST(wholeDocumentSyncTest);
 		TESTER_ADD_TEST(changeOutOfRangeTest);
 		TESTER_ADD_TEST(outOfOrderVersionTest);
@@ -82,6 +83,16 @@ private:
 		auto result = updateDocumentWithChanges("źód\n", { partialChange(0, 2, 0, 3, "D") });
 
 		assertTrue(result == "źóD\n", "Wrong buffer after a multi byte edit");
+	}
+
+	void lineBreakSyncTest() {
+		// An edit past the end of a CRLF line lands before the CR, so the line break stays whole.
+		auto crlf = updateDocumentWithChanges("abc\r\ndef", { partialChange(0, 99, 0, 99, "!") });
+		assertTrue(crlf == "abc!\r\ndef", "An edit must not split a CRLF line break");
+
+		// A lone CR ends a line, so the line after it exists.
+		auto cr = updateDocumentWithChanges("abc\rdef", { partialChange(1, 0, 1, 0, "!") });
+		assertTrue(cr == "abc\r!def", "A lone CR must start a new line");
 	}
 
 	void wholeDocumentSyncTest() {
