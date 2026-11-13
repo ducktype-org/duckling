@@ -46,3 +46,11 @@ Tests:
         Output:
           String: "1\n0\n"
         ExitCode: 0
+
+  pointer_comparisons:
+    Description: Pointer fields are compared by address.
+    Cases:
+      all:
+        Output:
+          String: "1\n0\n1\n1\n1\n"
+        ExitCode: 0
