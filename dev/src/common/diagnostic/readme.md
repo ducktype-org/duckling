@@ -44,7 +44,6 @@ The compiler has to generate the arguments for those diagnostic templates.
 * `./core` - the core library with template deserialization, diagnostic arguments file structures, template evaluation and view construction
 * `./dia_templates` - the diagnostic template files and their access layer (filesystem or embedded)
 * `./term_ui` - the library that takes a `terminal view` and prints it statically to the output
-* `./lsp_ui` - the library that converts a diagnostic into its LSP representation
 
 ## Interactivity
 

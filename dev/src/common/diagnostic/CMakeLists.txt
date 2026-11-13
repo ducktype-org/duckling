@@ -2,7 +2,6 @@
 add_subdirectory(core)
 add_subdirectory(dia_templates)
 add_subdirectory(term_ui)
-add_subdirectory(lsp_ui)
 
 add_library(Diagnostic STATIC
         src/diagnostic/message.cpp

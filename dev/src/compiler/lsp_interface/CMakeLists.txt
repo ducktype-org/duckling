@@ -2,10 +2,11 @@ add_library(LspInterface
 	src/lsp_interface/files_cache.cpp
 	src/lsp_interface/server_session.cpp
 	src/lsp_interface/compiler.cpp
+	src/lsp_interface/diagnostics.cpp
 )
 
 make_module(LspInterface USES Base Init Lexer PstParser Clah Version HELIOS QueryFramework
-	DiagnosticLspUI Driver GlobalState lsp)
+	DiagnosticCore Driver GlobalState lsp)
 
 add_executable(duck_ls src/lsp_interface/main.cpp)
 target_link_libraries(duck_ls PUBLIC LspInterface)

@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "lsp_ui.hpp"
+#include <lsp_interface/diagnostics.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-namespace dia::lsp {
+namespace duck_ls {
 	using ::lsp::Diagnostic;
 	using ::lsp::DiagnosticRelatedInformation;
 	using ::lsp::DiagnosticSeverity;
@@ -161,9 +161,9 @@ namespace dia::lsp {
 	}
 
 	LSPDiagnosticResult evaluateToLanguageServerMessage(
-		CRef<dia_args::Diagnostic> diagnostic_args, const EvaluationContext& evaluation_ctx
+		CRef<dia::dia_args::Diagnostic> diagnostic_args, const EvaluationContext& evaluation_ctx
 	) {
-		term_ui_view::Diagnostic view;
+		dia::term_ui_view::Diagnostic view;
 		try {
 			auto state = dia::evaluateDiagnostic(*diagnostic_args);
 			view       = dia::constructTreeView(state);
