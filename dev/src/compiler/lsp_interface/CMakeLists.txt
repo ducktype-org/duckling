@@ -3,6 +3,7 @@ add_library(LspInterface
 	src/lsp_interface/server_session.cpp
 	src/lsp_interface/compiler.cpp
 	src/lsp_interface/diagnostics.cpp
+	src/lsp_interface/positions.cpp
 )
 
 make_module(LspInterface USES Base Init Lexer PstParser Clah Version HELIOS QueryFramework

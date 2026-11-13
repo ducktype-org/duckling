@@ -4,7 +4,10 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <frontend/module_tree/source_file.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <lsp_interface/diagnostics.hpp>
+#include <lsp_interface/positions.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -75,20 +78,62 @@ namespace duck_ls {
 		}
 
 		/**
-		 * @brief The term ui convention (as well as for example vs code for display)
-		 * is to calculate the columns and lines from 1. The end_line and end_col
-		 * are inclusive. But the LSP protocol uses 0-based indexing and the end
-		 * position is exclusive.
+		 * @brief The source the compiler parsed for @p file, empty when it parsed none.
+		 *
+		 * A virtual path spelled as text no longer knows its filesystem, so it is looked up as
+		 * the cache overlay twin first and then as the source file behind it.
 		 */
-		SectionLocation extractLocation(const dia::term_ui_view::CodeSection& section) {
+		base::Optional<CRef<tokenizer::TokenSource>> findTokenSource(
+			const std::string& file, const EvaluationContext& evaluation_ctx
+		) {
+			if (file.empty()) return {};
+
+			fs::FilePath              path(file);
+			std::vector<fs::FilePath> candidates{ path };
+			if (path.isVirtual()) {
+				const auto cache_path = evaluation_ctx.files->cachePath(path);
+				candidates = { cache_path, evaluation_ctx.files->sourcePath(cache_path) };
+			}
+
+			for (const auto& candidate: candidates) {
+				auto source_files
+					= compiler::frontend::SourceFile::getSourceFilesFromPath(candidate);
+				if (!source_files.empty()) return source_files.front()->getPST()->getFile();
+			}
+			return {};
+		}
+
+		/**
+		 * @brief The term ui convention (as well as for example vs code for display)
+		 * is to calculate the columns and lines from 1, with columns in code points. The
+		 * end_line and end_col are inclusive. But the LSP protocol uses 0-based indexing,
+		 * columns in UTF-16 code units and the end position is exclusive.
+		 *
+		 * The columns are converted on the source the compiler parsed, so they stay
+		 * consistent with positions updated after a reparse. Without that source they are
+		 * left in code points.
+		 */
+		SectionLocation extractLocation(
+			const dia::term_ui_view::CodeSection& section, const EvaluationContext& evaluation_ctx
+		) {
+			const auto source    = findTokenSource(section.location.file, evaluation_ctx);
+			const auto character = [&](u64 line, u64 code_points) -> Uint {
+				if_opt_some(source, token_source) {
+					return utf16Character(*token_source, line, code_points);
+				}
+				return static_cast<Uint>(code_points);
+			};
+
 			Range range{};
 
 			range.start.line      = static_cast<Uint>(section.location.line - 1);
-			range.start.character = static_cast<Uint>(section.location.column - 1);
+			range.start.character = character(section.location.line, section.location.column - 1);
 
 			if (section.location.end_line.has_value() && section.location.end_column.has_value()) {
 				range.end.line      = static_cast<Uint>(section.location.end_line.value() - 1);
-				range.end.character = static_cast<Uint>(section.location.end_column.value());
+				range.end.character = character(
+					section.location.end_line.value(), section.location.end_column.value()
+				);
 			} else {
 				range.end = range.start;
 			}
@@ -121,11 +166,11 @@ namespace duck_ls {
 					variant_case(dia::term_ui_view::TextSection, text) { content += text + "\n"; }
 					variant_case(dia::term_ui_view::CodeSection, section) {
 						if (not found_code_section) {
-							loc                = extractLocation(section);
+							loc                = extractLocation(section, evaluation_ctx);
 							found_code_section = true;
 						} else {
 							if (content.empty()) continue;
-							SectionLocation section_loc = extractLocation(section);
+							SectionLocation section_loc = extractLocation(section, evaluation_ctx);
 
 							related_information.push_back(DiagnosticRelatedInformation{
 								.location
