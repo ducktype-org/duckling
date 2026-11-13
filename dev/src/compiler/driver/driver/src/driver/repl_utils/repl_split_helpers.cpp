@@ -80,8 +80,9 @@ namespace compiler::repl {
 		}
 
 		if (pst->getLogger()->bad()) {
-			std::cerr << "Parse errors:\n";
-			pst->getLogger()->dumpLog(false, std::cerr);
+			// Diagnostics are rendered once, at log time, by the global immediate-print
+			// mechanism (see dia::configureImmediatePrint), like every other diagnostic in
+			// the compiler. Re-rendering the log here would print each message twice.
 			return std::unexpected(std::string("Parse error"));
 		}
 
