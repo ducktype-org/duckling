@@ -37,10 +37,29 @@ _DEPENDENCIES: list[tuple[str, str]] = [
 
 _MARKER = "DUCK_SYSTEM_DEP"
 
-_INSTALL_HINTS: dict[str, str] = {
-    "Linux": "sudo apt install zlib1g-dev libzstd-dev  (Debian/Ubuntu)",
-    "Darwin": "brew install zstd  (zlib comes with the SDK: xcode-select --install)",
+"""Package that provides each library, per `platform.system()`."""
+_PACKAGES: dict[str, dict[str, str]] = {
+    "Linux": {"zlib": "zlib1g-dev", "zstd": "libzstd-dev"},
+    "Darwin": {"zstd": "zstd"},
 }
+
+
+def _install_hint(missing: list[str]) -> str | None:
+    system = platform.system()
+    packages = _PACKAGES.get(system, {})
+    if system == "Linux":
+        names = [packages[name] for name in missing if name in packages]
+        return f"sudo apt install {' '.join(names)}  (Debian/Ubuntu)" if names else None
+    if system == "Darwin":
+        steps = []
+        names = [packages[name] for name in missing if name in packages]
+        if names:
+            steps.append(f"brew install {' '.join(names)}")
+        if "zlib" in missing:
+            # zlib comes with the macOS SDK.
+            steps.append("xcode-select --install")
+        return " && ".join(steps) if steps else None
+    return None
 
 
 def _probe_script() -> str:
@@ -116,7 +135,7 @@ def check_system_deps_impl() -> bool:
 
     if missing:
         log_warning(f"Missing system libraries: {', '.join(missing)}.")
-        hint = _INSTALL_HINTS.get(platform.system())
+        hint = _install_hint(missing)
         if hint is not None:
             log_warning(f"Install them with: {hint}")
         log_warning("Without them, `setup-build` fails when CMake looks for LLVM.")
