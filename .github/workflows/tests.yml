@@ -19,6 +19,7 @@ env:
   WORKSPACE: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
+  DUCK_DIR: ${{ github.workspace }}/dev/src/duck/
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
   BUILD_SYSTEM: Ninja
@@ -262,7 +263,7 @@ jobs:
       #
       # duckc and VM are built here too, although no test links them: we build them just so their
       # objects land in the ccache entry saved below.
-      - name: Build tests
+      - name: Build duckc, DVM, and tests
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake                                 \
@@ -273,6 +274,11 @@ jobs:
           duckc                                 \
           VM                                    \
           ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
+
+      - name: Build duck
+        working-directory: ${{ env.DUCK_DIR }}
+        timeout-minutes: 5
+        run: cargo --locked build
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
@@ -297,6 +303,9 @@ jobs:
           echo "build/bin:"
           du -hs ${{ env.BUILD_DIR }}/bin
 
+          echo "duck/target:"
+          du -hs ${{ env.DUCK_DIR }}/target/
+
           echo "ccache:"
           du -hs ${{ env.CCACHE_DIR }}
 
@@ -319,6 +328,18 @@ jobs:
           path: |
             ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
+
+      # Backgrounded for the same reason as the build cache above; the coverage and TODO steps
+      # that follow do not touch $SCCACHE_DIR.
+      - name: Save sccache cache
+        id: save-sccache-cache
+        if: ${{ env.PLATFORM != 'macos' }}
+        background: true
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
 
       - name: Test
         working-directory: ${{ env.WORKSPACE }}
@@ -352,21 +373,6 @@ jobs:
           rm -f "$ITEST_LOG"
           echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
           ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" --deterministic-output ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }} ${{ env.PLATFORM == 'macos' && '--timeout-scale 5' || '' }}
-
-      # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
-      # so we have to save sccache after that, otherwise we'd have nothing to save.
-      # Backgrounded for the same reason as the build cache above; the coverage and TODO steps
-      # that follow do not touch $SCCACHE_DIR.
-      - name: Save sccache cache
-        id: save-sccache-cache
-        if: ${{ env.PLATFORM != 'macos' }}
-        background: true
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ${{ env.SCCACHE_DIR }}
-          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
-
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
