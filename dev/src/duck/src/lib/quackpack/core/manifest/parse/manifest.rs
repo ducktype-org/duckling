@@ -293,7 +293,10 @@ fn parse_external_libs(input: Option<&[String]>) -> QuackResult<Vec<StrId>> {
     input
         .unwrap_or_default()
         .iter()
-        .map(|name| validate_external_lib_name(name).map(|()| StrId::from(name)))
+        .map(|name| {
+            validate_external_lib_name(name)?;
+            Ok(name.into())
+        })
         .collect()
 }
 

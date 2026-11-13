@@ -1934,14 +1934,18 @@ metadata:
     );
 }
 
-/// Parse a manifest whose `external-libs` is `[<name>]`, and check that it fails with `note`.
+/// Parse a manifest whose `external-libs` is `['<name>']`, and check that it fails with `note`.
 fn check_invalid_external_lib_name(name: &str, note: &str) {
     let (dir, manifest_path) = prepare_manifest(&format!(
-        "metadata:\n  name: foo\n  version: '1'\n  external-libs: [{name}]\n"
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  external-libs: ['{name}']
+"#
     ));
     let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
-    let unquoted_name = name.trim_matches('\'');
     assert_eq!(
         err.to_string(),
         make_errors_message(
@@ -1949,7 +1953,7 @@ fn check_invalid_external_lib_name(name: &str, note: &str) {
             [
                 "failed to parse the field `metadata`",
                 "failed to parse the field `metadata.external-libs`",
-                &format!("invalid external library name `{unquoted_name}`"),
+                &format!("invalid external library name `{name}`"),
                 note,
                 "use the bare library name (e.g. `sqlite3` for `libsqlite3.a`) and put its directory in `metadata.external-lib-paths`",
             ]
@@ -1964,7 +1968,7 @@ const EXTENSION_NOTE: &str =
 
 #[test]
 fn external_lib_name_empty() {
-    check_invalid_external_lib_name("''", "the name is empty");
+    check_invalid_external_lib_name("", "the name is empty");
 }
 
 #[test]
