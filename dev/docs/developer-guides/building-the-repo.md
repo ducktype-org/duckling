@@ -49,7 +49,7 @@ for the macOS SDK and the system linker (`ld64`).
 xcode-select --install
 
 # GCC (provides g++-15 / gcc-15), the build tools, ICU and libffi.
-brew install gcc@15 cmake ninja graphviz lcov doxygen python pkg-config libffi icu4c
+brew install gcc@15 cmake ninja graphviz lcov doxygen python pkg-config libffi icu4c zstd
 
 # clang-format / clang-tidy 19 are only used for linting (pr-validate / cpp-linter).
 brew install llvm@19
@@ -144,6 +144,8 @@ This:
 - fetches library dependencies
 - setups virtual environment (important for building docs)
 - downloads binaries, etc...
+- checks that the system libraries LLVM links against (zlib and zstd) are installed, and prints
+  how to install the missing ones. It only warns: the build itself fails later, in `setup-build`.
 
 
 ### [Optional, but recommended] Installing custom LLVM library
