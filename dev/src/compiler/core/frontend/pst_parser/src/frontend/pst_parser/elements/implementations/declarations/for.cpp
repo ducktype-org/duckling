@@ -88,16 +88,21 @@ namespace pst {
 
 	void For::dprint(std::ostream& out) const {
 		out << "{";
+		bool has_previous_field = false;
 		if (name.has_value()) {
 			out << R"("name":)";
 			nullAwareDprint(name.value(), out);
-			out << ",";
+			has_previous_field = true;
 		}
 
-		if (is_const.has_value())
-			out << R"(, "is_const": )" << (is_const.value() ? "true" : "false");
+		if (is_const.has_value()) {
+			if (has_previous_field) out << ",";
+			out << R"("is_const": )" << (is_const.value() ? "true" : "false");
+			has_previous_field = true;
+		}
 
-		out << R"(, "iteration": )";
+		if (has_previous_field) out << ",";
+		out << R"("iteration": )";
 		nullAwareDprint(iteration, out);
 		out << R"(, "body": )";
 		nullAwareDprint(body, out);
