@@ -8,8 +8,10 @@
 
 #include <logger/logger.hpp>
 
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
+#include <cstring>
 #include <ostream>
 
 namespace {
@@ -36,26 +38,83 @@ namespace {
 }
 
 vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type):
-	  data(type->getSize()),
+	  value_bytes(makeSharedBox<SafeVMValueBytes>(type->getSize().asInt())),
 	  my_process(&process),
 	  memory(&process.getMemory()),
-	  type(type),
-	  pointer(memory->allocateDummy(type, data.data()), 0) {
-	memory->increaseBlockRefcount(pointer.getBlock());
-}
-
-vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type, Pointer src):
-	  SafeVMValue(process, type) {
-	importData(src);
-}
+	  type(type) {}
 
 vm::SafeVMValue::~SafeVMValue() {
-	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VMValue not freed!\n");
+	if (!isFreed()) CORE_DEV_LOG(DVM, "VMValue not freed!\n");
 }
 
-void vm::SafeVMValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
+void vm::SafeVMValue::checkNotFreed() const {
+	if (isFreed()) throw exceptions::VMUseAfterFreeException();
+}
 
-void vm::SafeVMValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
+vm::Pointer vm::SafeVMValue::ensurePointer() {
+	if (block == nullptr) {
+		// The bytes are already a valid value (zeroed or copied in), so the block adopts them.
+		auto new_block = memory->adoptDummy(type, storage());
+		Memory::increaseBlockRefcount(new_block);
+		block = new_block.get();
+	}
+	return { Ref(block), 0 };
+}
+
+void vm::SafeVMValue::importBytes(const byte* src) {
+	if (block != nullptr) {
+		memory->copyBytesIntoPointedData({ Ref(block), 0 }, src, type);
+		return;
+	}
+	memory->overwriteBytes(bytesView(), src, type);
+}
+
+void vm::SafeVMValue::importFrom(Block* src_block, const byte* src_bytes) {
+	if (src_block != nullptr) {
+		importData({ Ref(src_block), 0 });
+		return;
+	}
+	importBytes(src_bytes);
+}
+
+void vm::SafeVMValue::exportData(Pointer dst) const {
+	checkNotFreed();
+	if (block != nullptr) {
+		memory->copyPointedData(dst, { Ref(block), 0 }, type);
+		return;
+	}
+	memory->copyBytesIntoPointedData(dst, storage(), type);
+}
+
+void vm::SafeVMValue::importData(Pointer src) {
+	checkNotFreed();
+	const usize size     = type->getSize().asInt();
+	const auto  src_view = memory->getPointerData(src, size);
+	if (Memory::hasChildBlocks(src, size)) {
+		memory->copyPointedData(ensurePointer(), src, type);
+		return;
+	}
+	importBytes(src_view.getBegin());
+}
+
+void vm::SafeVMValue::exportToSlot(LocalSlot& slot) const {
+	checkNotFreed();
+	if (slot.block != nullptr) {
+		exportData({ Ref(slot.block), 0 });
+		return;
+	}
+	if (block != nullptr && Memory::hasChildBlocks({ Ref(block), 0 }, type->getSize().asInt())) {
+		// The child blocks need a block to hang from.
+		exportData({ createLocalSlotBlock(slot, *memory), 0 });
+		return;
+	}
+	memory->overwriteBytes({ slot.data, type->getSize().asInt() }, storage(), type);
+}
+
+void vm::SafeVMValue::importFromSlot(const LocalSlot& slot) {
+	checkNotFreed();
+	importFrom(slot.block, slot.data);
+}
 
 void vm::SafeVMValue::importDataFrom(const IVMValue& source) {
 	const auto* safe_source = dynamic_cast<const SafeVMValue*>(&source);
@@ -63,15 +122,27 @@ void vm::SafeVMValue::importDataFrom(const IVMValue& source) {
 	CORE_ASSERT(
 		safe_source->getPID() == getPID(), "Importing data from a value of another VM process!"
 	);
-	importData(safe_source->pointer);
+	checkNotFreed();
+	safe_source->checkNotFreed();
+	if (safe_source == this) return;
+	importFrom(safe_source->block, safe_source->storage());
 }
 
-vm::SafeVMValueRef vm::SafeVMValue::asRef() const { return { *my_process.get(), type, pointer }; }
+vm::SafeVMValueRef vm::SafeVMValue::asRef() const {
+	if (block != nullptr) return { *my_process.get(), type, Pointer(Ref(block), 0) };
+	return { *my_process.get(), type, ValueBytesLocation{ .bytes = value_bytes, .offset = 0 } };
+}
 
 void vm::SafeVMValue::freeData() {
-	memory->freeBlockData(pointer.getBlock());
-	memory->decreaseBlockRefcount(pointer.getBlock());
-	pointer = Pointer::null();
+	checkNotFreed();
+	if (block != nullptr) {
+		memory->freeBlockData(Ref(block));
+		memory->decreaseBlockRefcount(Ref(block));
+		block = nullptr;
+	} else {
+		memory->runDataDestructors(bytesView(), type);
+	}
+	value_bytes->freed = true;
 }
 
 vm::PID vm::SafeVMValue::getPID() const { return my_process->getPID(); }
@@ -88,9 +159,9 @@ vm::code::valid_type::ValidTypeID vm::SafeVMValue::getTypeID() const {
 
 Bytes vm::SafeVMValue::getDataSize() const { return type->getSize(); }
 
-byte* vm::SafeVMValue::getBytes() { return data.data(); }
+byte* vm::SafeVMValue::getBytes() { return storage(); }
 
-const byte* vm::SafeVMValue::getBytes() const { return data.data(); }
+const byte* vm::SafeVMValue::getBytes() const { return storage(); }
 
 void vm::SafeVMValue::dprint(std::ostream& out, const std::string& indent) const {
 	out << indent << "---- VMValue ----\n";
@@ -112,7 +183,7 @@ void vm::SafeVMValue::dprint(std::ostream& out, const std::string& indent) const
 		out << " <Unable to interpret>\n";
 
 	out << "Bytes:\n";
-	hexdump(out, data.data(), data.size(), indent);
+	hexdump(out, storage(), type->getSize().asInt(), indent);
 	out << indent << "-----------------\n";
 }
 
