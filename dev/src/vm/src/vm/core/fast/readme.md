@@ -115,15 +115,15 @@ pointer or frames, so the interpreter and both JIT tiers can call them alike. Th
 mode's non-jittable list: an instruction with a large body is a helper instruction, and only the
 JIT entrypoints themselves are never compiled.
 
-The rules are enforced by `vm ir-stats --check-no-unwind` over every handler and stencil and by
-clang-tidy's `bugprone-exception-escape` on the helpers. Both join `pr-validate` once the existing
-handlers follow this rule.
+The rules are enforced on the release IR by `vm ir-stats --check-no-unwind`, which runs as the
+`vm_fast_no_unwind` CTest: handlers and dispatchers must contain no unwinding code and call only
+`nounwind` functions, and every `invoke` in a helper must land in a catch-all rather than in the
+terminate pad clang emits for `noexcept` functions.
 
 ## Known limitations
 
 - No interrupt checks by default (D-4): `stop()` does not interrupt busy loops.
 - 22 of 387 bytecode instructions are lowered. Any other instruction aborts lowering.
-- `input_p64` and `output_p64` call possibly-throwing IO functions directly, violating D-11.
 
 ## Tooling
 

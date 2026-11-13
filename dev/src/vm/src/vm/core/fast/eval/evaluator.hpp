@@ -18,11 +18,11 @@
 namespace vm::fast {
 	class FastExecutor {
 	public:
-#define HANDLE_INSTR(NAME) static void Instr_##NAME(INSTRFUN_ARGS(NAME));
+#define HANDLE_INSTR(NAME) static void Instr_##NAME(INSTRFUN_ARGS(NAME)) noexcept;
 #include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 #undef HANDLE_INSTR
 
-		constexpr static void eval(INSTRFUN_ARGS_BASE) {
+		constexpr static void eval(INSTRFUN_ARGS_BASE) noexcept {
 #ifdef USE_TAIL_CALLS
 			frame->ip->id(state, local_stack, frame, thread, *frame->ip);
 #else
@@ -41,7 +41,9 @@ namespace vm::fast {
 	#include <vm/core/fast/program/instructions/instruction_definitions.def.hpp>
 	#undef HANDLE_INSTR
 				default:
-					CORE_PANIC("Unknown instruction ID: ", static_cast<u64>(frame->ip->id));
+					CORE_ASSERT_NOEXCEPT(
+						false, "Unknown instruction ID: ", static_cast<u64>(frame->ip->id)
+					);
 				}
 			}
 #endif

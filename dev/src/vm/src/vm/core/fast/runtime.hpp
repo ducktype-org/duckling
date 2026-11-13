@@ -6,10 +6,13 @@
 
 #pragma once
 
+#include "eval/trap.hpp"
+
 #include <base/pointers/box.hpp>
 
 #include <vm/core/fast/program/instructions/executable.hpp>
 
+#include <string>
 #include <vector>
 
 namespace vm::fast {
@@ -59,6 +62,10 @@ namespace vm::fast {
 		// @TODO: #2729 This should be a valid pointer.
 		byte* const global_data_buffer_base = nullptr;
 
+		/// Set by a trapping handler before it jumps to `exec::TRAP_INSTRUCTION`.
+		Trap        trap = Trap::None;
+		std::string trap_message;
+
 		Frame* pushFrame(const exec::ExecFunction* function, byte* local_stack_base) {
 			top_frame++;
 			*top_frame = Frame{ .flag             = false,
@@ -68,7 +75,9 @@ namespace vm::fast {
 		}
 
 		Frame* popFrame() {
-			CORE_ASSERT(top_frame > frame_stack.data(), "Cannot pop frame from an empty stack");
+			CORE_ASSERT_NOEXCEPT(
+				top_frame > frame_stack.data(), "Cannot pop frame from an empty stack"
+			);
 			top_frame--;
 			return top_frame;
 		}

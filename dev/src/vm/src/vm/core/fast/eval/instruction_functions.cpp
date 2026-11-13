@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include "evaluator.hpp"
+#include "helpers.hpp"
 
 #include <vm/api/data/status.hpp>
 #include <vm/core/fast/fast_vmthread.hpp>
@@ -13,11 +14,27 @@
 
 #include <cstring>
 
-#define IMPL(NAME) void vm::fast::FastExecutor::Instr_##NAME(INSTRFUN_ARGS(NAME))
+#define IMPL(NAME) void vm::fast::FastExecutor::Instr_##NAME(INSTRFUN_ARGS(NAME)) noexcept
 
 // Increments instruction pointer.
 // In tailcalls, the dispatcher calls the next instruction
 #define PROGRESS_BY(progress_count) state.incrementInstruction(progress_count)
+
+// Ends execution with `trap`; the dispatch loop stops at `exec::TRAP_INSTRUCTION`.
+#define FAST_TRAP(trap_kind)                  \
+	do {                                      \
+		state.trap = (trap_kind);             \
+		frame->ip  = &exec::TRAP_INSTRUCTION; \
+		return;                               \
+	} while (0)
+
+// Calls a helper and traps when it reports one.
+#define CALL_HELPER(...)                                                                  \
+	do {                                                                                  \
+		if (const Trap helper_trap = FastHelpers::__VA_ARGS__; helper_trap != Trap::None) \
+			[[unlikely]]                                                                  \
+			FAST_TRAP(helper_trap);                                                       \
+	} while (0)
 
 #define getBytePtrToPlace(ARG) decodePlace(ARG, local_stack, state.global_data_buffer_base)
 #define READ_PLACE(type, arg)  safeReadPointerBytes<type>(getBytePtrToPlace(arg))
@@ -87,15 +104,14 @@ IMPL(mod_p64_imm) {
 }
 
 IMPL(output_p64) {
-	thread.getMyProcess().getIO().writeOutput(READ_PLACE(u64, instr.src));
+	CALL_HELPER(outputU64(state, thread, READ_PLACE(u64, instr.src)));
 	PROGRESS_BY(1);
 }
 
 IMPL(input_p64) {
-	thread.reportAsSleeping();
-	i64 io_value = thread.getMyProcess().getIO().getInput<i64>(thread);
+	i64 io_value = 0;
+	CALL_HELPER(inputI64(state, thread, io_value));
 	WRITE_PLACE(instr.dst, io_value);
-	thread.reportAsRunning();
 	PROGRESS_BY(1);
 }
 

@@ -172,3 +172,29 @@ duck_add_test_custom(vm vm_inheritance_hierarchy_correctness_test
 duck_add_test_custom(vm vm_ffi_verification_test loader/ffi/ffi_verification_test.cpp
         USES LibVM_sc Tester VmTester_sc)
 duck_use_ffi_test_lib(vm_ffi_verification_test)
+
+# Exceptions must not leave fast-mode handlers and helpers (D-11 in core/fast/readme.md). The check
+# reads the release LLVM IR, so it needs the clang and LLVM tools of the LLVM the project uses.
+# @note macOS is skipped: the tool does not forward the SDK sysroot to clang.
+set(fast_ir_tools clang++ opt llvm-link llvm-dis llvm-cxxfilt)
+set(fast_ir_tools_missing "")
+foreach(tool IN LISTS fast_ir_tools)
+        if(NOT EXISTS "${LLVM_TOOLS_BINARY_DIR}/${tool}")
+                list(APPEND fast_ir_tools_missing ${tool})
+        endif()
+endforeach()
+
+if(APPLE)
+        message(STATUS "vm_fast_no_unwind is not added on macOS")
+elseif(fast_ir_tools_missing)
+        message(STATUS "vm_fast_no_unwind is not added, missing in ${LLVM_TOOLS_BINARY_DIR}: ${fast_ir_tools_missing}")
+else()
+        add_test(NAME vm_fast_no_unwind
+                COMMAND ${CMAKE_SOURCE_DIR}/toolbox.py vm ir-stats
+                        --build-dir ${CMAKE_BINARY_DIR}
+                        --llvm-bin ${LLVM_TOOLS_BINARY_DIR}
+                        --ir-only
+                        --check-no-unwind
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        set_tests_properties(vm_fast_no_unwind PROPERTIES LABELS vm)
+endif()

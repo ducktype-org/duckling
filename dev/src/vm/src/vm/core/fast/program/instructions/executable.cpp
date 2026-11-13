@@ -39,7 +39,17 @@ namespace vm::fast::exec {
 	#define MAKE_ID_FROM_NAME(NAME) dispatcher_##NAME
 	#define MAKE_MAKERS_JUST_IMPL
 	#include "instr_structures.def.hpp"
+
+	constinit const Instruction TRAP_INSTRUCTION{
+		.instr_exit = instr_structs::exit{},
+		.id         = dispatcher_exit,
+	};
 }
 
+#else
+
+namespace vm::fast::exec {
+	constinit const Instruction TRAP_INSTRUCTION = maker::exit();
+}
 
 #endif

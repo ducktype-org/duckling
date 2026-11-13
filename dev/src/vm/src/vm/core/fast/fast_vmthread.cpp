@@ -47,7 +47,22 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	const exec::ExecFunction& func = functions->at(exec::execFunctionIndex(func_info->id.asInt()));
 
 	exit_value = createStartAndExecuteFunction(func, args);
-	applyEvent(thread_event::Finish{ exit_value });
+
+	switch (runtime_data.trap) {
+	case Trap::None:
+		applyEvent(thread_event::Finish{ exit_value });
+		break;
+	case Trap::Stopped:
+		applyEvent(thread_event::Kill{});
+		break;
+	case Trap::HostError:
+		applyEvent(thread_event::Panic{
+			base::strConcat(trapMessage(runtime_data.trap), ": ", runtime_data.trap_message) });
+		break;
+	default:
+		applyEvent(thread_event::Panic{ trapMessage(runtime_data.trap) });
+		break;
+	}
 }
 
 void vm::fast::FastVMThread::executeOneStep() {
@@ -101,6 +116,8 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 }
 
 i64 vm::fast::FastVMThread::executeFunction(const exec::ExecFunction& start_function, const RunArguments&) {
+	runtime_data.trap = Trap::None;
+	runtime_data.trap_message.clear();
 	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
 	byte*  local_stack = runtime_data.local_stack_base;
 	FastExecutor::eval(runtime_data, local_stack, frame, *this);

@@ -66,6 +66,9 @@ namespace vm::fast::exec {
 
 	using ExecFunctionCollection = std::vector<ExecFunction>;
 
+	/// An `exit` instruction a trapping handler jumps to, ending the dispatch loop.
+	extern const Instruction TRAP_INSTRUCTION;
+
 	/**
 	 * @brief Returns the index in an `ExecFunctionCollection` of the function of the given ID.
 	 */
