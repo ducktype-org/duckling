@@ -29,10 +29,12 @@ UNWIND_MARKERS = ("__cxa_throw", "__cxa_rethrow", "_Unwind_Resume")
 @dataclass
 class FunctionStats:
     name: str
-    ir_instructions: int = 0
-    basic_blocks: int = 0
+    ir_instructions: int | None = 0
+    basic_blocks: int | None = 0
     calls: list[str] = field(default_factory=list)
-    unwind: int = 0
+    # Unwinding instructions plus direct calls to functions that are not `nounwind`.
+    unwind: int | None = 0
+    may_unwind_calls: list[str] = field(default_factory=list)
     x86_instructions: int = 0
     bytes: int = 0
     rthroughput: float | None = None
@@ -52,8 +54,8 @@ def _run(cmd: list[str], input: str | None = None) -> str:
     return result.stdout
 
 
-def _compile_flags(build_dir: pathlib.Path, source: pathlib.Path, variant: str) -> list[str]:
-    """Picks the include paths and definitions of `source` from the build's compile_commands.json."""
+def _compile_command(build_dir: pathlib.Path, source: pathlib.Path, variant: str) -> tuple[list[str], pathlib.Path]:
+    """Returns the compiler invocation of `source` from the build's compile_commands.json and its object file."""
     db_path = build_dir / "compile_commands.json"
     if not db_path.exists():
         exit_with_error(f"`{db_path}` does not exist, configure the build first")
@@ -65,19 +67,25 @@ def _compile_flags(build_dir: pathlib.Path, source: pathlib.Path, variant: str) 
         tokens = shlex.split(entry["command"]) if "command" in entry else entry["arguments"]
         if define not in tokens:
             continue
-
-        flags: list[str] = []
-        it = iter(tokens[1:])
-        for token in it:
-            if token == "-isystem":
-                flags += [token, next(it)]
-            elif token == "-o":
-                next(it)
-            elif token.startswith(("-D", "-I", "-std")) or token == "-fPIC":
-                flags.append(token)
-        return flags
+        output = entry.get("output") or tokens[tokens.index("-o") + 1]
+        return tokens, pathlib.Path(entry["directory"]) / output
 
     exit_with_error(f"No `{variant}` compile command for `{source}` in `{db_path}`")
+
+
+def _compile_flags(build_dir: pathlib.Path, source: pathlib.Path, variant: str) -> list[str]:
+    """Picks the include paths and definitions of `source` from the build's compile_commands.json."""
+    tokens, _ = _compile_command(build_dir, source, variant)
+    flags: list[str] = []
+    it = iter(tokens[1:])
+    for token in it:
+        if token == "-isystem":
+            flags += [token, next(it)]
+        elif token == "-o":
+            next(it)
+        elif token.startswith(("-D", "-I", "-std")) or token == "-fPIC":
+            flags.append(token)
+    return flags
 
 
 def _split_functions(text: str, begin: re.Pattern, end: re.Pattern) -> dict[str, list[str]]:
@@ -100,10 +108,29 @@ def _demangle(llvm_bin: pathlib.Path, names: list[str]) -> dict[str, str]:
 
 
 IR_DEFINE = re.compile(r'^define [^@]*@("?[^"(]+"?)\(')
+IR_FUNCTION = re.compile(r'^(?:define|declare) [^@]*@("?[^"(]+"?)\(')
 IR_CALL = re.compile(r'\b(?:call|invoke)\b[^@]*@("?[\w.$]+"?)\(')
+IR_ATTRIBUTE_GROUP = re.compile(r"^attributes #(\d+) = \{(.*)\}")
 
 
-def _ir_stats(ir: str, mangled: str) -> FunctionStats:
+def _nounwind_functions(ir: str) -> tuple[set[str], set[str]]:
+    """Names of the functions LLVM marked or inferred `nounwind`, and the `nounwind` attribute groups."""
+    nounwind_groups = {
+        m.group(1)
+        for m in map(IR_ATTRIBUTE_GROUP.match, ir.splitlines())
+        if m and re.search(r"\bnounwind\b", m.group(2))
+    }
+    result = set()
+    for line in ir.splitlines():
+        if m := IR_FUNCTION.match(line):
+            attributes = line[m.end() :]
+            if re.search(r"\bnounwind\b", attributes) or nounwind_groups & set(re.findall(r"#(\d+)", attributes)):
+                result.add(m.group(1).strip('"'))
+    return result, nounwind_groups
+
+
+def _ir_stats(ir: str, mangled: str, nounwind: tuple[set[str], set[str]]) -> FunctionStats:
+    nounwind_functions, nounwind_groups = nounwind
     stats = FunctionStats(name=mangled)
     body = _split_functions(ir, IR_DEFINE, re.compile(r"^}"))[mangled]
     stats.basic_blocks = 1
@@ -115,13 +142,19 @@ def _ir_stats(ir: str, mangled: str) -> FunctionStats:
             stats.basic_blocks += 1
             continue
         stats.ir_instructions += 1
-        if m := IR_CALL.search(line):
-            if not m.group(1).startswith("llvm."):
-                stats.calls.append(m.group(1).strip('"'))
         if re.search(r"\b(invoke|landingpad|resume)\b", line) or any(
             marker in line for marker in UNWIND_MARKERS
         ):
             stats.unwind += 1
+        elif (m := IR_CALL.search(line)) and not m.group(1).startswith("llvm."):
+            # Indirect calls (the next-instruction dispatch) are not checked.
+            callee = m.group(1).strip('"')
+            call_site_groups = set(re.findall(r"#(\d+)", line[m.end() :]))
+            if callee not in nounwind_functions and not (call_site_groups & nounwind_groups):
+                stats.unwind += 1
+                stats.may_unwind_calls.append(callee)
+        if (m := IR_CALL.search(line)) and not m.group(1).startswith("llvm."):
+            stats.calls.append(m.group(1).strip('"'))
     return stats
 
 
@@ -190,14 +223,17 @@ def collect(
 
             mangled_names = [m.group(1).strip('"') for m in map(IR_DEFINE.match, ir.splitlines()) if m]
             demangled = _demangle(llvm_bin, mangled_names)
+            nounwind = _nounwind_functions(ir)
             for mangled in mangled_names:
                 m = name_filter.search(demangled[mangled])
                 if not m:
                     continue
                 short = next(g for g in m.groups() if g) if m.groups() else m.group(0)
-                stats = _ir_stats(ir, mangled)
+                stats = _ir_stats(ir, mangled, nounwind)
                 stats.name = short
                 stats.calls = sorted(set(_demangle(llvm_bin, stats.calls).values())) if stats.calls else []
+                if stats.may_unwind_calls:
+                    stats.may_unwind_calls = sorted(set(_demangle(llvm_bin, stats.may_unwind_calls).values()))
                 if mangled in asm:
                     stats.x86_instructions = len(asm[mangled])
                     if mca:
@@ -216,6 +252,75 @@ def collect(
             if name in results:
                 results[name].bytes = size
         return results
+
+
+OBJDUMP_FUNCTION = re.compile(r"^[0-9a-f]+ <([^>]+)>:$")
+OBJDUMP_INSTRUCTION = re.compile(r"^\s*[0-9a-f]+:\s+(\S+)\s*(.*)$")
+OBJDUMP_RELOCATION = re.compile(r"^\s*[0-9a-f]+:\s+R_X86_64_\w+\s+([^\s+-]+)")
+
+
+def collect_from_build(
+    build_dir: pathlib.Path,
+    sources: list[pathlib.Path],
+    variant: str,
+    llvm_bin: pathlib.Path,
+    name_filter: re.Pattern,
+    mca: bool,
+) -> dict[str, FunctionStats]:
+    """Disassembles the object files the build produced, so the counts are the ones of the shipped binary."""
+    results: dict[str, FunctionStats] = {}
+    for source in sources:
+        _, obj = _compile_command(build_dir, source, variant)
+        if not obj.exists():
+            exit_with_error(f"`{obj}` does not exist, build `{build_dir}` first")
+
+        disassembly = _run([_tool(llvm_bin, "llvm-objdump"), "-d", "-r", "--no-show-raw-insn", str(obj)])
+        functions: dict[str, list[tuple[str, str, str | None]]] = {}
+        current: list | None = None
+        for line in disassembly.splitlines():
+            if m := OBJDUMP_FUNCTION.match(line):
+                # GCC moves cold paths to `<name>.cold`; count them with their function, like LLVM does.
+                current = functions.setdefault(m.group(1).removesuffix(".cold"), [])
+            elif current is not None and (m := OBJDUMP_RELOCATION.match(line)):
+                if current:
+                    mnemonic, operands, _ = current[-1]
+                    current[-1] = (mnemonic, operands, m.group(1))
+            elif current is not None and (m := OBJDUMP_INSTRUCTION.match(line)):
+                current.append((m.group(1), m.group(2), None))
+
+        sizes: dict[str, int] = {}
+        for line in _run([_tool(llvm_bin, "llvm-nm"), "-S", "--defined-only", str(obj)]).splitlines():
+            parts = line.split()
+            if len(parts) == 4:
+                name = parts[3].removesuffix(".cold")
+                sizes[name] = sizes.get(name, 0) + int(parts[1], 16)
+
+        demangled = _demangle(llvm_bin, list(functions))
+        for mangled, instructions in functions.items():
+            m = name_filter.search(demangled[mangled])
+            if not m:
+                continue
+            short = next(g for g in m.groups() if g) if m.groups() else m.group(0)
+            callees = {
+                target
+                for mnemonic, _, target in instructions
+                if mnemonic.startswith(("call", "jmp")) and target and not target.startswith(".")
+            }
+            stats = FunctionStats(
+                name=short,
+                ir_instructions=None,
+                basic_blocks=None,
+                unwind=None,
+                calls=sorted(set(_demangle(llvm_bin, sorted(callees)).values())) if callees else [],
+                x86_instructions=len(instructions),
+                bytes=sizes.get(mangled, 0),
+            )
+            if mca:
+                stats.rthroughput = _mca_rthroughput(
+                    llvm_bin, [f"{mn} {re.sub(r'<[^>]*>', '', ops)}" for mn, ops, _ in instructions]
+                )
+            results[short] = stats
+    return results
 
 
 def _fmt_delta(new: float, old: float | None) -> str:
@@ -250,7 +355,8 @@ def print_table(variant: str, stats: dict[str, FunctionStats], baseline: dict | 
         click.echo(click.style(line, fg="red") if s.unwind else line)
         if show_calls:
             for callee in s.calls:
-                click.echo(f"    -> {callee}")
+                suffix = "  (may unwind)" if callee in s.may_unwind_calls else ""
+                click.echo(f"    -> {callee}{suffix}")
 
 
 def ir_stats_impl(
@@ -260,6 +366,7 @@ def ir_stats_impl(
     llvm_bin: str,
     extra_flag: tuple[str, ...],
     no_link: bool,
+    from_build: bool,
     filter: str,
     mca: bool,
     calls: bool,
@@ -267,6 +374,9 @@ def ir_stats_impl(
     compare: str | None,
     check_no_unwind: bool,
 ) -> None:
+    if from_build and (check_no_unwind or extra_flag or no_link):
+        exit_with_error("--from-build reads the built objects; it cannot be combined with -X, --no-link or --check-no-unwind")
+
     sources = [pathlib.Path(s) for s in (source or DEFAULT_SOURCES)]
     name_filter = re.compile(filter)
     baseline = json.loads(pathlib.Path(compare).read_text()) if compare else {}
@@ -274,16 +384,19 @@ def ir_stats_impl(
     report: dict[str, dict[str, dict]] = {}
     unwinding: list[str] = []
     for v in variant or ("tc", "sc"):
-        stats = collect(
-            pathlib.Path(build_dir),
-            sources,
-            v,
-            pathlib.Path(llvm_bin),
-            list(extra_flag),
-            not no_link,
-            name_filter,
-            mca,
-        )
+        if from_build:
+            stats = collect_from_build(pathlib.Path(build_dir), sources, v, pathlib.Path(llvm_bin), name_filter, mca)
+        else:
+            stats = collect(
+                pathlib.Path(build_dir),
+                sources,
+                v,
+                pathlib.Path(llvm_bin),
+                list(extra_flag),
+                not no_link,
+                name_filter,
+                mca,
+            )
         print_table(v, stats, baseline.get(v), calls)
         report[v] = {name: asdict(s) for name, s in stats.items()}
         unwinding += [f"{v}:{name}" for name, s in stats.items() if s.unwind]

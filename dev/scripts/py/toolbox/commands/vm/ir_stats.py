@@ -46,6 +46,13 @@ from click import Choice, Path, command, option
     help="Analyse every translation unit separately instead of linking and optimising them together.",
 )
 @option(
+    "--from-build",
+    is_flag=True,
+    default=False,
+    help="Disassemble the object files of --build-dir instead of compiling with clang, so the counts match "
+    "the built binary. Only x86, bytes, rthr and calls are reported.",
+)
+@option(
     "-f",
     "--filter",
     default=DEFAULT_FILTER,
@@ -60,7 +67,8 @@ from click import Choice, Path, command, option
     "--check-no-unwind",
     is_flag=True,
     default=False,
-    help="Fail if any reported function contains invoke/landingpad/resume or throws.",
+    help="Fail if any reported function can unwind: it contains invoke/landingpad/resume, throws, or "
+    "directly calls a function LLVM does not know to be nounwind.",
 )
 def ir_stats(*args, **kwargs):
     """
@@ -68,7 +76,8 @@ def ir_stats(*args, **kwargs):
 
     Every handler is compiled with the repository's clang at -O3, and for each one the
     command prints the LLVM IR instruction and basic block counts, the x86 instruction
-    count and byte size, the calls that were not inlined, and any exception-unwinding
-    code. Use --json and --compare to track changes between revisions.
+    count and byte size, the calls that were not inlined, and the places an exception
+    can unwind through. With --from-build the object files of the build are disassembled
+    instead. Use --json and --compare to track changes between revisions.
     """
     ir_stats_impl(*args, **kwargs)

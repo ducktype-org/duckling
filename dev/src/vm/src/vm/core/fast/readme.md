@@ -96,18 +96,46 @@ safe mode's trampoline that interprets a copied call instruction. Because no exc
 frames (D-1, D-6), copy-and-patch code needs no unwind information. Debuggers and `perf` still
 cannot unwind through it, which is a tooling limitation only.
 
+**D-11 (2026-11-13) Every instruction is pure, trapping or helper-based.**
+
+| Class | Examples | Handler body | JIT |
+|---|---|---|---|
+| Pure | arithmetic, `mov`, comparisons, jumps | inline code, no calls | fully inlined |
+| Trapping | div/mod, `call` (stack overflow), `virtualCall`, `call_pfun` | inline code and an `[[unlikely]]` check leading to a trap | inlined, status checked after it |
+| Helper | IO, builtins, `alloc`/`free`, threads, mutexes, condition variables, external C, FFI, `strOutput` | one call to a helper and a trap if it returns one | the call is emitted, the helper's body is never inlined |
+
+Helpers are `noexcept` functions returning the trap kind, defined in their own translation unit
+so they are never inlined into handlers. Their whole body sits in a single boundary macro that
+catches every exception and turns it into a trap, so unwinding only ever happens inside the
+helper's own frames, which have unwind tables; handlers and JIT code see only calls to `nounwind`
+functions. The `catch` must never sit in a handler: it would add a landing pad to the handler, and
+in copy-and-patch code the landing pad would live in a stencil without unwind information. External
+C and FFI functions are always called through a helper. Helpers do not touch the instruction
+pointer or frames, so the interpreter and both JIT tiers can call them alike. This replaces safe
+mode's non-jittable list: an instruction with a large body is a helper instruction, and only the
+JIT entrypoints themselves are never compiled.
+
+The rules are enforced by `vm ir-stats --check-no-unwind` over every handler and stencil and by
+clang-tidy's `bugprone-exception-escape` on the helpers. Both join `pr-validate` once the existing
+handlers follow this rule.
+
 ## Known limitations
 
 - No interrupt checks by default (D-4): `stop()` does not interrupt busy loops.
 - 22 of 387 bytecode instructions are lowered. Any other instruction aborts lowering.
+- `input_p64` and `output_p64` call possibly-throwing IO functions directly, violating D-11.
 
 ## Tooling
 
-- `./toolbox.py vm ir-stats [-v tc|sc] [--calls] [--mca] [--json out.json] [--compare base.json]
-  [--check-no-unwind]` compiles the handlers with the repository's clang at `-O3` and reports, per
-  handler and dispatcher, the LLVM IR instruction count, basic blocks, x86 instructions, bytes,
-  calls that were not inlined and unwinding code. By default the translation units are linked and
-  optimised together, which emulates LTO; `--no-link` shows what a build without LTO gets.
+- `./toolbox.py vm ir-stats` compiles the handlers with the repository's clang at `-O3` and reports,
+  per handler and dispatcher, the LLVM IR instruction count, basic blocks, x86 instructions, bytes,
+  calls that were not inlined, and the places an exception can unwind through: `invoke`,
+  `landingpad`, `resume`, throws, and direct calls to functions LLVM does not know to be
+  `nounwind` (listed with `--calls`). By default the translation units are linked and optimised
+  together, which emulates LTO; `--no-link` shows what a build without LTO gets. `--from-build`
+  disassembles the build's own object files instead (GCC for the release builds), reporting x86
+  instructions, bytes and calls of the code that actually ships. `--mca` adds an `llvm-mca`
+  throughput estimate, `--json`/`--compare` track changes, `--check-no-unwind` enforces D-6.
 - `../benchmark` (the `ducktype-org` benchmark repository, a sibling of the `duckling` checkout)
   measures retired user-space instructions with `perf stat`. The `vm_fast_*` configs run fast mode;
   `quick_perf.sh` accepts `MODE=--fast-mode`.
@@ -124,6 +152,13 @@ handler bodies must be visible to the dispatchers.
 **F-2 (2026-11-13) Advancing the instruction pointer reloads the top frame.** `PROGRESS_BY` goes
 through `state.top_frame->ip` instead of the `frame` pointer that is already in a register, which
 adds two dependent loads per instruction.
+
+**F-3 (2026-11-13) GCC hardening defaults bloat the handlers.** Arch's GCC enables
+`-fstack-protector-strong` and `-fcf-protection=full` by default. Handlers copy values through a
+stack temporary (the `memcpy` in `safeReadPointerBytes`), which triggers a stack canary check:
+`Instr_add_p64_p64` is 33 x86 instructions in `build-release` (`vm ir-stats --from-build`) against 17
+from clang. Execution code should be built with `-fno-stack-protector`, and values should be read
+without a stack temporary.
 
 ## Performance log
 
