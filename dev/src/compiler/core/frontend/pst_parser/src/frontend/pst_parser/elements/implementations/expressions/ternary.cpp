@@ -73,7 +73,10 @@ namespace pst::expr {
 		auto out = makeBox<Ternary>(state);
 
 		PARSE().one(Keyword::If);
-		PARSE().autoFallbackLen(then_fwd - 1).with(&out->condition, Lower::parse);
+		out->is_const = PARSE().tryEat(Keyword::Const);
+		PARSE()
+			.autoFallbackLen(then_fwd - (out->is_const ? 2 : 1))
+			.with(&out->condition, Lower::parse);
 
 		PARSE().one(Keyword::Then);
 		PARSE().autoFallbackLen(else_fwd - then_fwd - 1).with(&out->if_true, Lower::parse);
@@ -87,6 +90,7 @@ namespace pst::expr {
 	void Ternary::dprint(std::ostream& out) const {
 		out << "{";
 
+		if (is_const) out << R"("is_const": true, )";
 		out << R"("condition": )";
 		nullAwareDprint(condition, out);
 		out << R"(, "if_true": )";
@@ -98,6 +102,7 @@ namespace pst::expr {
 	}
 
 	HashAlg& Ternary::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, is_const);
 		return partial_hash;
 	}
 

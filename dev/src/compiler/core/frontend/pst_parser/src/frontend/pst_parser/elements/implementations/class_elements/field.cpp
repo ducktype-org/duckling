@@ -14,11 +14,14 @@ namespace pst {
 	MBox<Field> Field::parse(LangParserState& state) {
 		auto out = makeBox<Field>(state);
 
-		if (state[0].is(Keyword::Let)) {
-			out->is_mutable = false;
-			PARSE().one(Keyword::Let);
-		} else
-			PARSE().tryEat(Keyword::Var);
+		// A field takes its mutability from its type, so it has no `let`/`var`. People will still
+		// write them out of habit, so we report the keyword and parse the rest of the field.
+		if (state[0].is(Keyword::Let) || state[0].is(Keyword::Var)) {
+			state.logSafeError(makeBox<FieldBindingKeywordError>(
+				state.getPosition(), lang_def::keywordToStr(state[0].asKeyword()).str()
+			));
+			state.tokens().skip();
+		}
 
 		PARSE().all(&out->name, NamedOperator::Colon);
 		PARSE().one(&out->type);
@@ -31,13 +34,7 @@ namespace pst {
 	void Field::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("is mutable": )";
-		if (is_mutable)
-			out << R"("true")";
-		else
-			out << R"("false")";
-
-		out << R"(,"name": )";
+		out << R"("name": )";
 		nullAwareDprint(name, out);
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
@@ -50,10 +47,7 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, is_mutable);
-		return partial_hash;
-	}
+	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void Field::acceptVisitor(PstVisitor& visitor) const { visitor.visitField(*this); }
 }

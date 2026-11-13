@@ -4,8 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/stable_container.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <tester/tester.hpp>
@@ -21,9 +21,9 @@ class StableListTestSimple: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
-		TESTER_ADD_TEST(stableHashMapTest);
-		TESTER_ADD_TEST(stableHashMapMaybePutAndUpdateTest);
-		TESTER_ADD_TEST(stableHashMapTestStability);
+		TESTER_ADD_TEST(hashMapTest);
+		TESTER_ADD_TEST(hashMapMaybePutAndUpdateTest);
+		TESTER_ADD_TEST(hashMapTestStability);
 	}
 
 private:
@@ -117,8 +117,8 @@ private:
 		assertEqual(10, *new_range.begin(), "Transformed and filtered");
 	}
 
-	void stableHashMapTest() {
-		base::StableHashMap<std::string, std::string> map;
+	void hashMapTest() {
+		base::HashMap<std::string, std::string> map;
 		map.put("lol", "test");
 
 		ASSERT_EQUAL("test", map["lol"]);
@@ -144,8 +144,8 @@ private:
 		ASSERT_EQUAL(map["lol"], "test 1");
 	}
 
-	void stableHashMapMaybePutAndUpdateTest() {
-		base::StableHashMap<std::string, i32> map;
+	void hashMapMaybePutAndUpdateTest() {
+		base::HashMap<std::string, i32> map;
 
 		auto inserted
 			= map.maybePutAndUpdate(std::string("key"), 10, [](Ref<i32> value) { *value += 5; });
@@ -162,13 +162,13 @@ private:
 		ASSERT_EQUAL(17, map["key"]);
 	}
 
-	void stableHashMapTestStability() {
-		base::StableHashMap<usize, i64> map;
-		const i64*                      ptr = nullptr;
+	void hashMapTestStability() {
+		base::HashMap<usize, i64> map;
+		const i64*                ptr = nullptr;
 		for (usize i = 0; i < 10'000; i++) {
 			map.put(i, static_cast<i64>(i));
 			if (i == 0) ptr = &map[0];
-			assertEqual(ptr, &map[0], base::strConcat("A StableHashMap is not stable :O"));
+			assertEqual(ptr, &map[0], base::strConcat("A HashMap is not stable :O"));
 		}
 	}
 };

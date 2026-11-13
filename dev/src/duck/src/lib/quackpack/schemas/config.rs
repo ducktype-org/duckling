@@ -11,8 +11,8 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use serde::{Deserialize, de};
-use url::Url;
 
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackError, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -34,10 +34,12 @@ pub struct SecurityTyposConfig {
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
-/// A struct for the `registry:` config map.
-pub struct RegistryConfig {
+/// A struct for the `network:` config map.
+pub struct NetworkConfig {
+    /// If specified and set to `true`, QuackPack will use git CLI backend instead of libgit2.
+    pub use_git_cli: Option<bool>,
     /// If specified, this overrides the default registry URL.
-    pub url: Option<Url>,
+    pub default_registry_url: Option<InternedUrl>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

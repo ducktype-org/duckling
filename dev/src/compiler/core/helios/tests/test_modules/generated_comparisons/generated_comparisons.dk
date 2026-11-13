@@ -1,0 +1,87 @@
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+class Ratio {
+    num: i64 = 0;
+    den: i64 = 1;
+
+    fun ==(rhs: ref Ratio) -> bool = {
+        return num * rhs.den == rhs.num * den;
+    }
+}
+
+fun tupleLess(a: (i32, i64), b: (i32, i64)) -> bool = {
+    return a < b;
+}
+
+fun classEqual(a: Point, b: Point) -> bool = {
+    return a == b;
+}
+
+fun classGreaterEqual(a: Point, b: Point) -> bool = {
+    return a >= b;
+}
+
+fun customEqual(a: Ratio, b: Ratio) -> bool = {
+    return a == b;
+}
+
+fun customNotEqual(a: Ratio, b: Ratio) -> bool = {
+    return a != b;
+}
+
+fun pointerLess(a: (ptr i32, i32), b: (ptr i32, i32)) -> bool = {
+    return a < b;
+}
+
+fun typesEqual() -> bool = {
+    return (i32, i64) == (i32, i64);
+}
+
+class Segment {
+    a: Point = Point();
+    b: Point = Point();
+}
+
+fun segmentEqual(s: Segment, t: Segment) -> bool = {
+    return s == t;
+}
+
+fun segmentLess(s: Segment, t: Segment) -> bool = {
+    return s < t;
+}
+
+class Boxed {
+    n: i64 = 0;
+    b: box i64 = new 0i64;
+}
+
+fun boxedEqual(x: Boxed, y: Boxed) -> bool = {
+    return x == y;
+}
+
+fun boxedLess(x: Boxed, y: Boxed) -> bool = {
+    return x < y;
+}
+
+fun floatsEqual(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a == b;
+}
+
+fun floatsNotEqual(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a != b;
+}
+
+fun floatsLess(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a < b;
+}
+
+fun floatsGreater(a: (f64, f64), b: (f64, f64)) -> bool = {
+    return a > b;
+}
+
+fun typesNotEqual() -> bool = {
+    return (i32, i64) != (i64, i32);
+}

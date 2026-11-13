@@ -7,6 +7,9 @@
 #include "queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/namespace.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -22,12 +25,14 @@
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -45,6 +50,9 @@ namespace compiler::helios {
 	 * @brief This function collects all used symbols from the hout unit module
 	 * that should be appended to the module, for example some compiler generated symbols
 	 * or template instantiations in the future.
+	 *
+	 * Failed queries are not rethrown, since the callers do not catch query exceptions.
+	 * The failed symbol is skipped and the function returns BAD.
 	 */
 	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
 		// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
@@ -77,10 +85,14 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_fun);
-				if (implementsQueryCodeOfFun(used_fun))
-					out_unit.functions.emplace_back(
-						&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
-					);
+				if (implementsQueryCodeOfFun(used_fun)) {
+					const auto& code = ctx.query<QueryCodeOfFun>(used_fun);
+					if (code->hasFailed()) {
+						result = base::BAD;
+						continue;
+					}
+					out_unit.functions.emplace_back(&code->valueOrPanic());
+				}
 				symbol_stack.push_back(used_fun);
 			}
 			for (auto used_global: used_symbols.used_globals) {
@@ -88,9 +100,12 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_global);
-				out_unit.glob_data.emplace_back(
-					&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
-				);
+				const auto& global_data = ctx.query<QueryHOUTGlobalData>(used_global);
+				if (global_data->hasFailed()) {
+					result = base::BAD;
+					continue;
+				}
+				out_unit.glob_data.emplace_back(&global_data->valueOrPanic());
 				symbol_stack.push_back(used_global);
 			}
 		}
@@ -107,13 +122,9 @@ namespace compiler::helios {
 		};
 
 		static auto getScopes(Context& ctx, frontend::FileID file, Ref<GetScopesOutput> out) {
-			auto root          = getFilePST(ctx, file)->getRootElement();
-			auto root_unlocked = root.unlockOpt(ctx);
-			if (root_unlocked.empty()) {
-				// PST root failed to parse, PST should have already reported the diagnostic.
-				out->failed = true;
-				return;
-			}
+			auto file_pst      = getFilePST(ctx, file);
+			auto root_unlocked = file_pst->getRootElement().unlock(ctx);
+			if (file_pst->hasErrors()) out->failed = true;
 
 			auto grab_scopes_function = [&ctx, &out](pst::Access<pst::LangElement> element) {
 				// handling lambdas, templates, etc. might be much more tricky and
@@ -141,13 +152,58 @@ namespace compiler::helios {
 				return false;
 			};
 
-			auto for_all_ok
-				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
+			auto for_all_ok = pstForAll(ctx, root_unlocked, grab_scopes_function, cutoff_function);
 			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return
 				// the scopes that we managed to obtain.
 				out->failed = true;
 			}
+		}
+
+		/**
+		 * @brief Reports every statement in `statements` that can only run inside a function
+		 * body: expression statements, `return`/`break`/`continue`, `if`, `while` and `for`.
+		 * Nothing would ever execute them at module level, so they are errors there. Namespace
+		 * and specifier block bodies are module level too, so they are checked recursively.
+		 *
+		 * @return `true` if at least one such statement was found.
+		 */
+		static bool reportStatementsOutsideFunctions(Context& ctx, auto&& statements) {
+			bool found = false;
+			for (pst::AccessLocked<pst::Stmt> stmt_locked: statements) {
+				// A null statement is a parse error that the PST has already reported.
+				auto stmt_opt = stmt_locked.unlockOpt(ctx);
+				if (stmt_opt.empty()) continue;
+				auto stmt = stmt_opt.value();
+
+				switch (stmt->getElementKind()) {
+				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::Action:
+				case pst::ElementKind::If:
+				case pst::ElementKind::While:
+				case pst::ElementKind::For:
+					ctx.log<StatementOutsideFunctionError>(stmt->getStablePosition());
+					found = true;
+					break;
+				case pst::ElementKind::Namespace: {
+					auto body
+						= stmt.dynamicCast<pst::Namespace>().value()->getBody().unlockOpt(ctx);
+					if (body.has_value())
+						found |= reportStatementsOutsideFunctions(ctx, *body.value());
+					break;
+				}
+				case pst::ElementKind::SpecifierBlock: {
+					auto specifier_block = stmt.dynamicCast<pst::SpecifierBlock>().value();
+					auto block           = specifier_block->getBlock().unlockOpt(ctx);
+					if (block.has_value())
+						found |= reportStatementsOutsideFunctions(ctx, *block.value());
+					break;
+				}
+				default:
+					break;
+				}
+			}
+			return found;
 		}
 
 		/**
@@ -174,6 +230,13 @@ namespace compiler::helios {
 			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
 
 			getScopes(ctx, main_file, &output);
+
+			// REPL and script modules run their top-level statements, so they are allowed there.
+			if (not ctx.query<frontend::QueryIsReplModule>(key)) {
+				auto root = getFilePST(ctx, main_file)->getRootElement().unlock(ctx);
+				if (reportStatementsOutsideFunctions(ctx, root->getStatements()))
+					output.failed = true;
+			}
 
 			// eliminate duplicates with sort:
 			std::ranges::sort(output.scopes);
@@ -332,14 +395,17 @@ namespace compiler::helios {
 			base::StrID                                      original_name,
 			dia::StablePosition                              stable_pos
 		) {
-			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
-			if (inserted) return false;
+			auto entry = seen_declarations.find(key_name);
+			if (entry == seen_declarations.end()) {
+				seen_declarations.put(key_name, stable_pos);
+				return false;
+			}
 
 			auto error = makeBox<dia::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
 			// Point the user at the previous declaration.
 			error->addAttachedMessage(
-				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->second)
+				makeBox<dia::PlaceholderNote>("Previous declaration here.", entry->value)
 			);
 
 			ctx.log(std::move(error));
@@ -510,7 +576,7 @@ namespace compiler::helios {
 
 			for (auto submodule: *submodules) {
 				auto sub_hout
-					= ctx.query<QueryModuleHOUTRecursively>(submodule.second).valueOrThrow();
+					= ctx.query<QueryModuleHOUTRecursively>(submodule.value).valueOrThrow();
 				total_elements += sub_hout.size();
 
 				sub_results.emplace_back(std::move(sub_hout));

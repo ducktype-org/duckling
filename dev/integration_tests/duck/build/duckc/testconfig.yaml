@@ -16,6 +16,7 @@ SubDirs:
   - external-libs
   - features
   - local-cycle
+  - no-cstd
   - same-dep-names-different-sources
   - shared-artifacts
   - workers-count

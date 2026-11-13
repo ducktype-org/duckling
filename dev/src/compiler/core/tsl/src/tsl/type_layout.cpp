@@ -12,7 +12,7 @@
 
 #include <abi/layout/compute_c_layout.hpp>
 #include <abi/type_system/type.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/errors/extern_c_class_empty.hpp>
 #include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -372,7 +372,7 @@ namespace compiler::tsl {
 			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
 				  ->valueOrThrow()
 				  .getAlignment(),
-			  tsh::SymbolType<>::withDefaults(static_array_type),
+			  tsh::SymbolType<>::withDefaultsMut(static_array_type),
 			  ctx
 		  ),
 		  element_layout(
@@ -427,7 +427,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(
 			  bytes2bits(helper.offsets[1]) + helper.max_component_size,
-			  tsh::SymbolType<>::withDefaults(helper.variant_type),
+			  tsh::SymbolType<>::withDefaultsMut(helper.variant_type),
 			  ctx
 		  ),
 		  tag_offset{ 0 },  // 0 bytes
@@ -575,7 +575,7 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  helper.total_size,
 			  helper.max_alignment,
-			  tsh::SymbolType<>::withDefaults(helper.type),
+			  tsh::SymbolType<>::withDefaultsMut(helper.type),
 			  ctx
 		  ),
 		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
@@ -643,21 +643,21 @@ namespace compiler::tsl {
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::CPointer) {
 		auto& pointee_cabi_type
@@ -670,7 +670,7 @@ namespace compiler::tsl {
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee_type(tsh::SymbolType<>::withDefaults(symbol_type.getType())),
+		  pointee_type(tsh::SymbolType<>::withDefaultsMut(symbol_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
@@ -687,7 +687,7 @@ namespace compiler::tsl {
 	FunctionalTypeLayout::FunctionalTypeLayout(
 		const tsh::FunctionAbstractType function_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(function_type), ctx) {
 		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
 			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(

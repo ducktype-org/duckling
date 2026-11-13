@@ -91,12 +91,12 @@ impl DuckcProcessBuilder {
     /// Set the number of workers to be used by duckc.
     pub fn set_workers_count(&mut self, workers: usize) -> &mut Self {
         if workers == 0 {
-            warn!(target: "duck::duckc", "attempted to set the worker count to 0, ignoring");
+            warn!("attempted to set the worker count to 0, ignoring");
             return self;
         }
 
         if workers == 1 {
-            trace!(target: "duck::duckc", "worker count is 1, not passing `--workers`");
+            trace!("worker count is 1, not passing `--workers`");
             return self;
         }
         self.inner.arg("--workers").arg(workers.to_string());
@@ -121,26 +121,10 @@ impl DuckcProcessBuilder {
         self
     }
 
-    /// Set to use DVM as the backend.
-    pub fn set_dvm_backend(&mut self, value: bool) -> &mut Self {
-        if value {
-            self.inner.arg("--dvm-backend");
-        }
-        self
-    }
-
     /// Set not to use cached compilation artifacts.
     pub fn set_incremental(&mut self, value: bool) -> &mut Self {
         if !value {
             self.inner.arg("--no-incremental");
-        }
-        self
-    }
-
-    /// Set not to link c standard library.
-    pub fn set_c_std(&mut self, value: bool) -> &mut Self {
-        if !value {
-            self.inner.arg("--no-c-standard-library");
         }
         self
     }
@@ -153,7 +137,7 @@ impl DuckcProcessBuilder {
 
     /// Execute the built command.
     pub fn execute(&mut self) -> QuackResult<ExitStatus> {
-        debug!(target: "duck::duckc", "executing `{self}`");
+        debug!("executing `{self}`");
         self.inner
             .status()
             .context("failed to spawn duckc")
@@ -162,7 +146,7 @@ impl DuckcProcessBuilder {
 
     /// Execute the built command by replacing current process.
     pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
-        debug!(target: "duck::duckc", "replacing the current process with `{self}`");
+        debug!("replacing the current process with `{self}`");
         self.inner
             .exec_replace()
             .context("failed to spawn duckc")
@@ -171,7 +155,7 @@ impl DuckcProcessBuilder {
 
     /// Execute the built command and get its output.
     pub fn output(&mut self) -> QuackResult<Output> {
-        debug!(target: "duck::duckc", "executing `{self}`");
+        debug!("executing `{self}`");
         self.inner
             .output()
             .context("failed to spawn duckc")

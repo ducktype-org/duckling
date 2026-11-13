@@ -6,7 +6,7 @@
 
 #include "match.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/match_case.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/patterns/patterns.hpp>
@@ -183,8 +183,7 @@ namespace compiler::helios::desugaring {
 			// alternative. If not, then the cases coerce from ref type (subject is also a
 			// reference) and we check here if adding "deref" will be valid. The "derefs" are
 			// added in MIR.
-			if (not match_subject.moves_ownership)
-				source_type = source_type.withReferenceKind(tsh::ReferenceKind::Ref);
+			if (not match_subject.moves_ownership) source_type = source_type.toRef();
 
 			const auto coercion = coercions::validCoercionOf(
 				ctx,
@@ -404,7 +403,8 @@ namespace compiler::helios::desugaring {
 		}
 
 		// Every case returns void, so the match itself never produces a value either.
-		if (common_type.empty()) common_type = tsh::SymbolType<>::withDefaults(tsh::getVoidType());
+		if (common_type.empty())
+			common_type = tsh::SymbolType<>::withDefaultsMut(tsh::getVoidType());
 
 		// The cases that never produce a value (`void`) are coerced to the type the others
 		// agreed on. Type `void` is uninhabited, so the coercion only reconciles the types:

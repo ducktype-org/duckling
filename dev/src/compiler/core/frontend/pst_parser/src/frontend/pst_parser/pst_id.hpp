@@ -8,8 +8,6 @@
 
 #include <base/extend_cpp/strongly_typed_id.hpp>
 
-#include <functional>
-
 namespace pst {
 	/**
 	 * @brief Unique ID for each PST element.

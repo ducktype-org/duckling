@@ -109,12 +109,19 @@ pub fn get_linker_options(
         )
         .collect::<Vec<_>>();
     debug!(?args, "raw linker args");
-    if args.is_empty() {
+    if args.is_empty() && bcx.profile.c_std {
         return Ok(None);
     }
-    Ok(Some(multipackage_schema::LinkerOptions::RawLinkerArgs(
-        args,
-    )))
+    let linker_options = if bcx.profile.c_std {
+        multipackage_schema::LinkerOptions::RawLinkerArgs(args)
+    } else {
+        multipackage_schema::LinkerOptions::Complex(multipackage_schema::ComplexLinkerOptions {
+            linker: None,
+            additional_linking_options: Some(args),
+            link_cstd: Some(false),
+        })
+    };
+    Ok(Some(linker_options))
 }
 
 /// Collect outputs of dependencies (direct and transitive) of this `unit`.

@@ -1,0 +1,24 @@
+# A comparison operator that takes its right-hand side by value does not replace the generated
+# one. It is still called when the class is compared directly, but fields are compared with the
+# generated operator, which passes both sides by `ref`.
+
+class Fraction {
+    num: i64 = 0;
+    den: i64 = 1;
+
+    fun ==(rhs: Fraction) -> bool = {
+        return num * rhs.den == rhs.num * den;
+    }
+}
+
+fun show(value: bool) = {
+    if (value) builtin_output_i64(1);
+    else builtin_output_i64(0);
+}
+
+fun main() -> i64 = {
+    var half = Fraction(1, 2);
+    show(half == Fraction(2, 4));                  # 1, the user-defined operator
+    show((Fraction(1, 2), 1) == (Fraction(2, 4), 1));  # 0, the generated one compares fields
+    return 0;
+}
