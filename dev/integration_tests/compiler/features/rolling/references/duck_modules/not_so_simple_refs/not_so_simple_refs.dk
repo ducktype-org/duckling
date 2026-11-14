@@ -13,7 +13,7 @@ fun simple_auto_deref() -> () = {
     builtin_output_i64(r); # 20
 }
 
-fun value_swap(a: ref i64, b: ref i64) -> () = {
+fun value_swap(a: ref mut i64, b: ref mut i64) -> () = {
     let tmp: i64 = a;
     a = b;
     b = tmp;

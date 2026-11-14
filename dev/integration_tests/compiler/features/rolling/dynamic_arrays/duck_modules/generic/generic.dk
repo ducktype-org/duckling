@@ -126,7 +126,7 @@ fun listOfRefsTest() -> () = {
     var p1 = Point(1, 2);
     var p2 = Point(3, 4);
 
-    var list_of_refs: List[ref Point];
+    var list_of_refs: List[ref mut Point];
     list_of_refs.push(&p1);
     list_of_refs.push(&p2);
     builtin_output_i64(list_of_refs.length());

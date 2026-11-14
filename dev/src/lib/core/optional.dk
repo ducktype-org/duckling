@@ -77,7 +77,7 @@ namespace optional_primitives {
         Destroys the held value, if any, leaving the optional empty.
     #}
     template(T: type)
-    fun reset(o: ref ?T) -> () = {
+    fun reset(o: ref mut ?T) -> () = {
         o = none;
     }
 }

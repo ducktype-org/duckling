@@ -31,11 +31,11 @@ fun basicFieldAccess() -> () = {
 class Counter {
     value: i64 = 0;
 
-    fun increment() = {
+    mut fun increment() = {
         self.value = self.value + 1;
     }
 
-    fun add(amount: i64) = {
+    mut fun add(amount: i64) = {
         self.value = self.value + amount;
     }
 
@@ -47,7 +47,7 @@ class Counter {
 class CounterManager {
     mainCounter: Counter = Counter(100);
 
-    fun resetMainCounter() = {
+    mut fun resetMainCounter() = {
         self.mainCounter.value = 0;
     }
 
@@ -55,7 +55,7 @@ class CounterManager {
         return self.mainCounter.getValue();
     }
     
-    fun incrementMainCounter() = {
+    mut fun incrementMainCounter() = {
         self.mainCounter.increment();
     }
 }
@@ -82,14 +82,14 @@ class Wallet {
     balance: i64 = 1000;
 }
 
-fun performTransaction(w: ref Wallet, amount: i64) = {
+fun performTransaction(w: ref mut Wallet, amount: i64) = {
     w.balance = w.balance + amount;
 }
 
 class Bank {
     mainWallet: Wallet = Wallet();
     
-    fun deposit(amount: i64) = {
+    mut fun deposit(amount: i64) = {
         self.mainWallet.balance = self.mainWallet.balance + amount;
     }
 }

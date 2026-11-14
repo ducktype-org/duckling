@@ -1,8 +1,8 @@
-class RefPoint { x: ref i32; y: ref i32; }
+class RefPoint { x: ref mut i32; y: ref mut i32; }
 
 fun test_simple_ref() -> i32 = {
     var x: i32 = 10;
-    var r: ref i32 = &x;
+    var r: ref mut i32 = &x;
     r = 42;                     # Deref of lhs.
     var y: i32 = r;             # Deref of rhs.
     var r2: ref i32 = &y;

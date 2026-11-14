@@ -6,11 +6,11 @@ var g_c: i64 = 300;
 var g_f: f64 = 3.14;
 var g_bool: bool = false;
 
-fun modifyGlobal(r: ref i32, newValue: i32) -> () = {
+fun modifyGlobal(r: ref mut i32, newValue: i32) -> () = {
     r = newValue;
 }
 
-fun swap(a: ref i32, b: ref i32) -> () = {
+fun swap(a: ref mut i32, b: ref mut i32) -> () = {
     let tmp: i32 = a;
     a = b;
     b = tmp;
