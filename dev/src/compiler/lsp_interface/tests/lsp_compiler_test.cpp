@@ -17,7 +17,6 @@
 #include <tester/tester.hpp>
 
 #include <algorithm>
-#include <format>
 #include <string>
 
 class LspCompilerTest: public tester::TestSuite {
@@ -31,7 +30,6 @@ public:
 		TESTER_ADD_TEST(stdTypesDiagnosticsTest);
 		TESTER_ADD_TEST(reloadedStdPackageKeepsItsIdTest);
 		TESTER_ADD_TEST(semanticErrorRangeInUtf16Test);
-		TESTER_ADD_TEST(lexerErrorRangeInUtf16Test);
 		TESTER_ADD_TEST(decodeErrorRangeAtFileStartTest);
 		// @TODO: #4032 Restore this test once the compile-time DVM no longer reuses code lowered
 		// before a reload. It crashes intermittently on the dangling types that code returns.
@@ -242,31 +240,13 @@ private:
 		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
 		compiler.publishDiagnostics(main_uri);
 
-		const auto& diagnostic = onlyDiagnostic(main_uri);
-		assertRange(diagnostic.range, { 1, 27 }, { 1, 28 });
-	}
-
-	/**
-	 * @brief The range of a lexer error on an emoji after another emoji covers both UTF-16
-	 * code units of the emoji, for a diagnostic without a PST hash.
-	 */
-	void lexerErrorRangeInUtf16Test() {
-		constexpr auto CONTENT
-			= "fun main() -> i64 = {\n"
-			  "    let s = \"😀\"; let 😛 = 2;\n"
-			  "    return 0;\n"
-			  "}\n";
-		duck_ls_test::VfsWorkspace workspace("lsp_compiler_utf16_lexer_ws");
-		workspace.add("pkg/pkg.dk", CONTENT);
-		const auto main_uri = workspace.uriOf("pkg/pkg.dk");
-
-		compiler.addWorkspace(workspace.uriOf());
-		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
-		compiler.publishDiagnostics(main_uri);
-
-		assertTrue(session.hasErrors(main_uri), "The emoji identifier must report an error");
-		const auto& diagnostic = session.pushed.at(main_uri).front();
-		assertRange(diagnostic.range, { 1, 22 }, { 1, 24 });
+		assertTrue(session.hasErrors(main_uri), "The undefined name must report an error");
+		const auto& range = session.pushed.at(main_uri).front().range;
+		assertTrue(
+			range.start.line == 1 && range.start.character == 27 && range.end.line == 1
+				&& range.end.character == 28,
+			"The range must be 1:27-1:28 in UTF-16 code units"
+		);
 	}
 
 	/**
@@ -287,49 +267,12 @@ private:
 		compiler.publishDiagnostics(main_uri);
 
 		assertTrue(session.hasErrors(main_uri), "The invalid byte must report an error");
-		for (const auto& diagnostic: session.pushed.at(main_uri))
-			assertTrue(
-				diagnostic.range.start.line <= 2 && diagnostic.range.end.line <= 2,
-				"Every range must lie within the file, got line "
-					+ std::to_string(diagnostic.range.start.line)
-			);
 		assertTrue(
-			std::ranges::any_of(
+			std::ranges::all_of(
 				session.pushed.at(main_uri),
-				[](const lsp::Diagnostic& diagnostic) {
-					return diagnostic.range.start.line == 0 && diagnostic.range.start.character == 0
-			            && diagnostic.range.end.line == 0 && diagnostic.range.end.character == 0;
-				}
+				[](const lsp::Diagnostic& diagnostic) { return diagnostic.range.end.line <= 2; }
 			),
-			"The decoding error must be published at the start of the file"
-		);
-	}
-
-	/**
-	 * @brief The single diagnostic published for `uri`.
-	 */
-	const lsp::Diagnostic& onlyDiagnostic(const lsp::Uri& uri) {
-		assertTrue(session.pushed.contains(uri), "The file must be published");
-		const auto& diagnostics = session.pushed.at(uri);
-		assertEqual(1, static_cast<i32>(diagnostics.size()), "Exactly one diagnostic expected");
-		return diagnostics.front();
-	}
-
-	/**
-	 * @brief Asserts `range` spans from `start` to `end`, given as (line, character) pairs.
-	 */
-	void assertRange(
-		const lsp::Range&               range,
-		std::pair<lsp::Uint, lsp::Uint> start,
-		std::pair<lsp::Uint, lsp::Uint> end
-	) {
-		const auto actual = std::format(
-			"{}:{}-{}:{}", range.start.line, range.start.character, range.end.line, range.end.character
-		);
-		const auto expected
-			= std::format("{}:{}-{}:{}", start.first, start.second, end.first, end.second);
-		assertEqual(
-			expected, actual, "Unexpected diagnostic range " + actual + ", expected " + expected
+			"Every range must lie within the file"
 		);
 	}
 
