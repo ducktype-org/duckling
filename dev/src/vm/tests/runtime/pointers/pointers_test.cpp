@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(localSlotAddressingInCalleeTest);
 		TESTER_ADD_TEST(linkedListTest);
 		TESTER_ADD_TEST(linkedListNoStructLoadStoreTest);
+		TESTER_ADD_TEST(pointerComparisonTest);
 	}
 
 private:
@@ -56,6 +57,12 @@ private:
 	void linkedListNoStructLoadStoreTest() {
 		runTestOnVm("linked_list_no_struct_load_store.dbc", "3 11 22 33", "332211");
 	}
+
+	/**
+	 * @brief `cmpEq`/`cmpNeq` on two `pptr` places: equal means same block and same offset, a null
+	 * pointer only equals null, and pointers into different blocks are never equal.
+	 */
+	void pointerComparisonTest() { runTestOnVm("pointer_comparison.dbc", "", "101101010"); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/runtime/pointers/");

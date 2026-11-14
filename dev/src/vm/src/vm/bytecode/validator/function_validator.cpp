@@ -1191,6 +1191,9 @@ class FunctionValidator {
 			instr_case_novalue(Op_fcmpLe_p32_imm) {}
 
 			instr_case_novalue(Op_cmpNull_pptr) {}
+			instr_case_novalue(
+				Op_cmpEq_pptr_pptr, Op_cmpNeq_pptr_pptr, Op_cmpEq_pcptr_pcptr, Op_cmpNeq_pcptr_pcptr
+			) {}
 
 			instr_case_novalue(Op_fadd_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);

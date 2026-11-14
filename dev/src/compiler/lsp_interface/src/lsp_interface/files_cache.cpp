@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <lsp_interface/files_cache.hpp>
+#include <lsp_interface/positions.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -14,44 +15,6 @@
 namespace duck_ls {
 
 	namespace {
-		u32 utf16UnitsAt(std::string_view text, usize offset) {
-			return static_cast<unsigned char>(text[offset]) >= 0xf0 ? 2 : 1;
-		}
-
-		usize codepointBytesAt(std::string_view text, usize offset) {
-			const auto lead = static_cast<unsigned char>(text[offset]);
-			if (lead >= 0xf0) return 4;
-			if (lead >= 0xe0) return 3;
-			if (lead >= 0xc0) return 2;
-			return 1;
-		}
-
-		base::Optional<u32> toByteOffset(std::string_view text, const lsp::Position& position) {
-			usize line_start = 0;
-			for (u32 line = 0; line < position.line; ++line) {
-				const auto newline = text.find('\n', line_start);
-				if (newline == std::string_view::npos) return {};
-				line_start = newline + 1;
-			}
-
-			const auto  newline  = text.find('\n', line_start);
-			const usize line_end = newline == std::string_view::npos ? text.size() : newline;
-
-			usize offset    = line_start;
-			u32   remaining = position.character;
-
-			while (remaining > 0 && offset < line_end) {
-				const auto units = utf16UnitsAt(text, offset);
-				if (units > remaining) break;
-				remaining -= units;
-				offset += codepointBytesAt(text, offset);
-			}
-
-			// "If the character value is greater than the line length it defaults back to the line
-			// length" (LSP specification), so an overlong character clamps to the end of the line
-			// rather than rejecting the whole notification.
-			return static_cast<u32>(offset);
-		}
 
 		bool applyChange(std::string& text, const lsp::TextDocumentContentChangeEvent& change) {
 			if (const auto* whole

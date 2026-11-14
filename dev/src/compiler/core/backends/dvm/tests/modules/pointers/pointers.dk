@@ -5,7 +5,7 @@ fun main() -> i64 = {
     var ref_value = &value;
     var box_value : box i32 = new value;
 
-    var p1 = ref_value as ptr i32;
+    var p1 = ref_value as ptr mut i32;
     var p2 = box_value as ptr i32;
 
     *p1 = 30;
@@ -19,7 +19,7 @@ fun main() -> i64 = {
     table[1] = 22i32;
     table[2] = 33i32;
 
-    var first: ptr i32 = table as ptr i32;
+    var first: ptr mut i32 = table as ptr mut i32;
     builtin_output_i64(*first as i64);      # 11
 
     # Writing through the narrowed pointer is visible through the many-pointer.
@@ -38,7 +38,7 @@ fun main() -> i64 = {
 
     dvm_free_arr[i32](table);
 
-    var mp1 : manyptr i32;
+    var mp1 : manyptr mut i32;
     mp1[0] = 30;
     let tmp2 = mp1[0];
     var ref_mp1 = &mp1[0];

@@ -5,11 +5,11 @@ class ExampleClass {
         return exampleField;
     }
 
-    fun setField(field:i64 = 0) = {
+    mut fun setField(field:i64 = 0) = {
         exampleField = field;
     }
 
-    fun setToZero() = {
+    mut fun setToZero() = {
         setField(0);
     }
 }
@@ -29,7 +29,7 @@ class Wrapper {
         return innerField;
     }
 
-    fun setInner(inner: ref ExampleClass) = {
+    mut fun setInner(inner: ref ExampleClass) = {
         innerField = inner;
     }
 }
@@ -54,11 +54,11 @@ class Point {
         return self.x * y * a;
     }
 
-    fun setX(newX: i64) = {
+    mut fun setX(newX: i64) = {
         x = newX;
     }
 
-    fun setY(newY: i64) = {
+    mut fun setY(newY: i64) = {
         self.y = newY;
     }
 }

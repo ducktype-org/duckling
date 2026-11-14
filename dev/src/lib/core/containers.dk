@@ -16,10 +16,10 @@ namespace allocation {
     const LLVM_OBJECT_SIZE = builtins.size_of(T);
 
     @backend_dependent
-    fundecl alloc() -> ptr T;
+    fundecl alloc() -> ptr mut T;
 
     @dvm_only_impl
-    fun alloc() -> ptr T = {
+    fun alloc() -> ptr mut T = {
         return builtins.dvm_alloc[T]();
     }
 
@@ -28,67 +28,67 @@ namespace allocation {
         anything useful with it, so the program stops right here instead of dereferencing it.
     #}
     @native_only_impl
-    fun alloc() -> ptr T = {
-        let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr T;
+    fun alloc() -> ptr mut T = {
+        let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr mut T;
         if (p as u64 == 0u64) panicking.panic();
         return p;
     }
 
     @backend_dependent
-    fundecl free(p: ptr T) -> ();
+    fundecl free(p: ptr mut T) -> ();
 
     @dvm_only_impl
-    fun free(p: ptr T) -> () = {
+    fun free(p: ptr mut T) -> () = {
         builtins.dvm_free[T](p);
     }
 
     @native_only_impl
-    fun free(p: ptr T) -> () = {
-        clib.free(p as cptr u8);
+    fun free(p: ptr mut T) -> () = {
+        clib.free(p as cptr mut u8);
     }
 
     @backend_dependent
-    fundecl many_alloc(len: i64) -> manyptr T;
+    fundecl many_alloc(len: i64) -> manyptr mut T;
 
     @dvm_only_impl
-    fun many_alloc(len: i64) -> manyptr T = {
+    fun many_alloc(len: i64) -> manyptr mut T = {
         return builtins.dvm_alloc_arr[T](len);
     }
 
     @native_only_impl
-    fun many_alloc(len: i64) -> manyptr T = {
-        return clib.malloc((len * LLVM_OBJECT_SIZE) as u64) as manyptr T;
+    fun many_alloc(len: i64) -> manyptr mut T = {
+        return clib.malloc((len * LLVM_OBJECT_SIZE) as u64) as manyptr mut T;
     }
 
     @backend_dependent
-    fundecl many_free(p: manyptr T) -> ();
+    fundecl many_free(p: manyptr mut T) -> ();
 
     @dvm_only_impl
-    fun many_free(p: manyptr T) -> () = {
+    fun many_free(p: manyptr mut T) -> () = {
         builtins.dvm_free_arr[T](p);
     }
 
     @native_only_impl
-    fun many_free(p: manyptr T) -> () = {
-        clib.free(p as cptr u8);
+    fun many_free(p: manyptr mut T) -> () = {
+        clib.free(p as cptr mut u8);
     }
 
     @backend_dependent
-    fundecl many_realloc(p: manyptr T, new_size: i64) -> manyptr T;
+    fundecl many_realloc(p: manyptr mut T, new_size: i64) -> manyptr mut T;
 
     #{
         `dvm_realloc_arr` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
     #}
     @dvm_only_impl
-    fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
+    fun many_realloc(p: manyptr mut T, new_size: i64) -> manyptr mut T = {
         builtins.dvm_realloc_arr[T](p, new_size);
         return p;
     }
 
     @native_only_impl
-    fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
-        return clib.realloc(p as cptr u8, (new_size * LLVM_OBJECT_SIZE) as u64) as manyptr T;
+    fun many_realloc(p: manyptr mut T, new_size: i64) -> manyptr mut T = {
+        return clib.realloc(p as cptr mut u8, (new_size * LLVM_OBJECT_SIZE) as u64) as manyptr mut T;
     }
 }
 
@@ -96,21 +96,21 @@ namespace allocation {
     The two halves of `box T`'s storage management, as the compiler sees them.
 #}
 template(T: type)
-fun boxAlloc(value: T) -> ptr T = {
+fun boxAlloc(value: T) -> ptr mut T = {
     let storage = allocation[T].alloc();
     builtins.move_in[T](storage, move value);
     return storage;
 }
 
 template(T: type)
-fun boxFree(p: ptr T) -> () = {
+fun boxFree(p: ptr mut T) -> () = {
     # Moving the pointee out and dropping the result on the floor runs `T`'s destructor.
     builtins.move_out[T](p);
     allocation[T].free(p);
 }
 
 class String {
-    pointer: manyptr char;
+    pointer: manyptr mut char;
     len: i64;
     cap: i64;
     offset: i64;
@@ -120,7 +120,7 @@ class String {
         The capacity is doubled instead of trimmed to `required`, which keeps a
         sequence of `append`s amortized O(1).
     #}
-    fun reserve(required: i64) -> () = {
+    mut fun reserve(required: i64) -> () = {
         if (required > cap) {
             var new_cap = cap;
             if (new_cap == 0i64) new_cap = 1i64;
@@ -132,14 +132,14 @@ class String {
         }
     }
 
-    fun append(c: char) -> ref String = {
+    mut fun append(c: char) -> ref mut String = {
         reserve(len + 1i64);
         pointer[len] = c;
         len          = len + 1i64;
         return self;
     }
 
-    fun append(other: ref String) -> ref String = {
+    mut fun append(other: ref String) -> ref mut String = {
         let other_len = other.length();
         reserve(len + other_len);
 
@@ -150,12 +150,12 @@ class String {
         return self;
     }
 
-    fun append(other: String) -> ref String = {
+    mut fun append(other: String) -> ref mut String = {
         append(&other);
         return self;
     }
 
-    fun append(other: str) -> ref String = {
+    mut fun append(other: str) -> ref mut String = {
         let other_len = other.length();
         reserve(len + other_len);
         copyCharsAt(builtins.ptr_from_slice[char](other), pointer, len, other_len);
@@ -163,7 +163,7 @@ class String {
         return self;
     }
 
-    fun prepend(c: char) -> ref String = {
+    mut fun prepend(c: char) -> ref mut String = {
         reserve(len + 1i64);
 
         # Shift right back to front, so moved characters are never clobbered.
@@ -181,7 +181,7 @@ class String {
         Drops the contents but keeps the buffer, so it can be refilled without
         allocating again.
     #}
-    fun clear() -> () = {
+    mut fun clear() -> () = {
         len = 0i64;
     }
 
@@ -192,7 +192,7 @@ class String {
         return builtins.slice_from_ptr_len[char](pointer, len);
     }
 
-    fun at(i: i64) -> ref char = {
+    mut fun at(i: i64) -> ref mut char = {
         if (i < 0i64 or i >= len) panicking.panic();
         return &pointer[i];
     }
@@ -266,7 +266,7 @@ fun stringReserve(cap: i64) -> String = {
     return result;
 }
 
-fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: i64, count: i64) -> () = {
+fun copyCharsAt(source: manyptr char, dest: manyptr mut char, dest_offset: i64, count: i64) -> () = {
     var i = 0i64;
     while (i < count) {
         dest[dest_offset + i] = source[i];
@@ -274,7 +274,7 @@ fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: i64, coun
     }
 }
 
-fun copyChars(source: manyptr char, dest: manyptr char, count: i64) -> () = {
+fun copyChars(source: manyptr char, dest: manyptr mut char, count: i64) -> () = {
     copyCharsAt(source, dest, 0i64, count);
 }
 
@@ -341,7 +341,7 @@ namespace stringification {
         return stringifyStr("false");
     }
 
-    fun appendHexU64(s: ref String, value: u64) -> () = {
+    fun appendHexU64(s: ref mut String, value: u64) -> () = {
         var digits = stringReserve(16);
         var rest   = value;
 
@@ -393,7 +393,7 @@ namespace stringification {
             var address    = stringReserve(buffer_cap);
             let format     = builtins.ptr_from_slice[char]("%p\0") as cptr char;
             let written
-                = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
+                = clib.snprintf(address.pointer as cptr mut char, buffer_cap as u64, format, pointer as cptr u8);
             address.len = runtime.native.writtenLength(written, buffer_cap);
 
             var result = stringifyStr("ptr(");
@@ -425,7 +425,7 @@ namespace stringification {
             var address    = stringReserve(buffer_cap);
             let format     = builtins.ptr_from_slice[char]("%p\0") as cptr char;
             let written
-                = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
+                = clib.snprintf(address.pointer as cptr mut char, buffer_cap as u64, format, pointer as cptr u8);
             address.len = runtime.native.writtenLength(written, buffer_cap);
 
             var result = stringifyStr("cptr(");
@@ -499,7 +499,7 @@ namespace stringification {
         A `,` literal cannot be written inside a call argument list yet, so the separator is built
         from its character code instead.
     #}
-    fun appendSequenceSeparator(s: ref String) -> () = {
+    fun appendSequenceSeparator(s: ref mut String) -> () = {
         s.append(44u64 as char);
     }
 
@@ -545,14 +545,14 @@ namespace stringification {
 #}
 template(T: type)
 class List {
-    pointer: manyptr T;
+    pointer: manyptr mut T;
     len: i64;
     cap: i64;
 
     #{
         Makes sure at least `required` elements fit into the buffer.
     #}
-    fun reserve(required: i64) -> () = {
+    mut fun reserve(required: i64) -> () = {
         if (required > cap) {
             var new_cap = cap;
             if (new_cap == 0i64) new_cap = 1i64;
@@ -564,19 +564,19 @@ class List {
         }
     }
 
-    fun push(value: T) -> () = {
+    mut fun push(value: T) -> () = {
         reserve(len + 1i64);
         builtins.move_in[T](ptrof pointer[len], move value);
         len = len + 1i64;
     }
 
-    fun pop() -> T = {
+    mut fun pop() -> T = {
         if (len == 0i64) panicking.panic();
         len = len - 1i64;
         return builtins.move_out[T](ptrof pointer[len]);
     }
 
-    fun at(i: i64) -> ref T = {
+    mut fun at(i: i64) -> ref mut T = {
         if (i < 0i64 or i >= len) panicking.panic();
         return &pointer[i];
     }
@@ -647,7 +647,7 @@ class List {
         Drops the contents but keeps the buffer, so it can be refilled without
         allocating again.
     #}
-    fun clear() -> () = {
+    mut fun clear() -> () = {
         # Moving an element out and dropping the result on the floor runs `T`'s destructor.
         var i = 0i64;
         while (i < len) {
