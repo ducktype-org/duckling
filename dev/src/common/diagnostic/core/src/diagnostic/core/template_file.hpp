@@ -171,10 +171,10 @@ namespace dia::template_file {
 	};
 
 	struct CodeBlockComponent final: public Component {
-		Box<Component> code_elements;
-		Box<Component> location;
+		Box<Component>        code_elements;
+		base::MBox<Component> location;
 
-		CodeBlockComponent(Box<Component> code_elements, Box<Component> location):
+		CodeBlockComponent(Box<Component> code_elements, base::MBox<Component> location):
 			  code_elements(std::move(code_elements)),
 			  location(std::move(location)) {}
 

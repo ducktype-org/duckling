@@ -54,10 +54,11 @@ namespace duck_ls {
 			  files(files) {}
 
 		/**
-		 * @brief Resolves a path to the URI the client knows it by.
+		 * @brief Resolves a path to the URI the client knows it by, falling back to the default
+		 * location when empty.
 		 */
 		[[nodiscard]] ::lsp::Uri resolve(const fs::FilePath& path) const {
-			return files->uriFor(path);
+			return files->uriFor(path.empty() ? default_error_location : path);
 		}
 
 		/// The default file path to use for diagnostics without location.

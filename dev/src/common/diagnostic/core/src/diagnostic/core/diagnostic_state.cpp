@@ -130,7 +130,9 @@ namespace dia::state {
 		  Component(),
 		  location(std::move(location)) {}
 
-	CodeBlockComponent::CodeBlockComponent(Box<Component> content, CodeLocation location):
+	CodeBlockComponent::CodeBlockComponent(
+		Box<Component> content, base::Optional<CodeLocation> location
+	):
 		  Component(),
 		  content(std::move(content)),
 		  location(std::move(location)) {

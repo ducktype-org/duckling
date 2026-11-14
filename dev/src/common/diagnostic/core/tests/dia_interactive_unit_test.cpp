@@ -621,17 +621,12 @@ params:
     description: "Code to display"
     component_type: "code"
     optional: false
-  location:
-    description: "Location of the code"
-    optional: false
 
 macros: {}
 
 content:
   codeblock:
     - param: "code"
-  location:
-    param: "location"
 )";
 
 			YAML::Node yaml                = YAML::Load(component_template_yaml);
