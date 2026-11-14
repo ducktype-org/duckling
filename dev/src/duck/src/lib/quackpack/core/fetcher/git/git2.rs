@@ -21,6 +21,9 @@ use crate::quackpack::core::GitReference;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
 
+/// For some odd reason [`git2`] doesn't ship this type alias.
+type GitResult<T> = Result<T, git2::Error>;
+
 /// An implementation of [`GitRepository`], which also keeps [`DuckContext`].
 struct Git2Repository<'duck> {
     ctx: &'duck DuckContext,
@@ -75,7 +78,7 @@ impl MaybeFailedCredential {
     ///
     /// For more information about error handling and possible authentication errors, see
     /// [`credentials_callback`].
-    fn maybe_fail<T>(&mut self, result: &Result<T, git2::Error>) {
+    fn maybe_fail<T>(&mut self, result: &GitResult<T>) {
         if let Err(e) = result {
             warn!(%e, "callback failed");
             self.fail(e);
@@ -87,7 +90,7 @@ impl MaybeFailedCredential {
     ///
     /// For more information about error handling and possible authentication errors, see
     /// [`credentials_callback`].
-    fn maybe_fail_callback<T>(&mut self, result: Result<T, git2::Error>) -> Result<T, git2::Error> {
+    fn maybe_fail_callback<T>(&mut self, result: GitResult<T>) -> GitResult<T> {
         self.maybe_fail(&result);
         result
     }
@@ -310,7 +313,7 @@ fn credentials_callback(
     username_from_url: Option<&str>,
     cred_types: CredentialType,
     data: &GitCredentialsCallbackData<'_>,
-) -> Result<git2::Cred, git2::Error> {
+) -> GitResult<git2::Cred> {
     trace!(?cred_types);
     let mut data = data.borrow_mut();
     data.possible_creds = cred_types;
@@ -357,13 +360,13 @@ fn credentials_callback(
 }
 
 /// Callback for ssh authentication.
-fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
+fn ssh_callback(username_from_url: Option<&str>) -> GitResult<Cred> {
     let username = username_from_url.unwrap_or("git");
     Cred::ssh_key_from_agent(username)
 }
 
 /// Callback for simple username + password authentication.
-fn username_and_password_callback(ctx: &DuckContext) -> Result<Cred, git2::Error> {
+fn username_and_password_callback(ctx: &DuckContext) -> GitResult<Cred> {
     let username = ctx
         .prompt_once("username")
         .map_err(|_| git2::Error::from_str("failed to get username"))?;
