@@ -7,12 +7,13 @@
 //! Module responsible for interacting with git repositories via [`git2`].
 
 use std::cell::RefCell;
+use std::fmt;
 use std::path::Path;
 use std::rc::Rc;
 
 use git2::build::RepoBuilder;
 use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, SubmoduleUpdateOptions};
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 use url::Url;
 
 use super::{GitClient, GitRepository, GitSubmoduleOptions, can_shallow_clone};
@@ -76,7 +77,7 @@ impl MaybeFailedCredential {
     /// [`credentials_callback`].
     fn maybe_fail<T>(&mut self, result: &Result<T, git2::Error>) {
         if let Err(e) = result {
-            debug!(%e, "callback failed");
+            warn!(%e, "callback failed");
             self.fail(e);
         }
     }
@@ -139,6 +140,18 @@ struct GitCredentialsCallbackDataInner<'a> {
     possible_creds: CredentialType,
 }
 
+impl fmt::Debug for GitCredentialsCallbackDataInner<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GitCredentialsCallbackData")
+            .field("ssh", &self.ssh)
+            .field("plaintext", &self.plaintext)
+            .field("cred_helper", &self.cred_helper)
+            .field("default", &self.default)
+            .field("possible_creds", &self.possible_creds)
+            .finish()
+    }
+}
+
 type GitCredentialsCallbackData<'a> = Rc<RefCell<GitCredentialsCallbackDataInner<'a>>>;
 
 impl<'a> GitCredentialsCallbackDataInner<'a> {
@@ -172,12 +185,7 @@ impl<'a> GitCredentialsCallbackDataInner<'a> {
     /// Returns `true` if attempted every supported authentication method (by both client (us) and
     /// server).
     fn attempted_every_callback(&self) -> bool {
-        trace!(ssh = ?self.ssh,
-            default = ?self.default,
-            cred_helper = ?self.cred_helper,
-            plaintext = ?self.plaintext,
-            cred_types = ?self.possible_creds
-        );
+        trace!(?self);
         if self.possible_creds.is_ssh_key() && !self.ssh.tried {
             debug!("could try SSH");
             return false;
@@ -385,7 +393,8 @@ impl GitClient for Git2Client<'_> {
         let repository = match builder.clone(url.as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
-                debug!(error = %e, "failed to clone the repository");
+                warn!(error = %e, "failed to clone the repository");
+                trace!(data = ?data.borrow(), "callback data after shallow clone");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
 
                 let can_perform_full_clone = data.borrow().can_proceed_to_full_clone()
@@ -410,6 +419,7 @@ impl GitClient for Git2Client<'_> {
                 fetch_options.depth(0);
                 builder.fetch_options(fetch_options);
                 builder.clone(url.as_str(), destination).map_err(|e| {
+                    trace!(data = ?data.borrow(), "callback data after full clone");
                     let mut e = e.into();
                     data.borrow().add_notes_to_clone_error(&mut e);
                     e
