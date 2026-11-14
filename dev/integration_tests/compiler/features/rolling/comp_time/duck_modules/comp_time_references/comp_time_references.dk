@@ -10,7 +10,7 @@ fun foo(condition: i64) -> i64 = {
     return ref_a;
 }
 
-fun doSomethingWithAType(typ: ref type) -> () = {
+fun doSomethingWithAType(typ: ref mut type) -> () = {
     typ = i64;
 }
 
