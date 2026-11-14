@@ -115,15 +115,18 @@ pointer or frames, so the interpreter and both JIT tiers can call them alike. Th
 mode's non-jittable list: an instruction with a large body is a helper instruction, and only the
 JIT entrypoints themselves are never compiled.
 
-The rules are enforced by `vm ir-stats --check-no-unwind` over every handler and stencil and by
-clang-tidy's `bugprone-exception-escape` on the helpers. Both join `pr-validate` once the existing
-handlers follow this rule.
+The rules are enforced on the release IR by `vm ir-stats --check-no-unwind`, which runs as the
+`vm_fast_no_unwind` CTest on the build's own configuration: handlers and dispatchers must contain
+no unwinding code and call only `nounwind` functions, only the dispatch functions (`eval`,
+`dispatcher_*`) may call indirectly, and every `invoke` in a helper must land in a catch-all rather
+than in the terminate pad clang emits for `noexcept` functions. VM invariants on the execution
+path are checked only in development builds, and a broken one traps with `InternalError` instead
+of throwing.
 
 ## Known limitations
 
 - No interrupt checks by default (D-4): `stop()` does not interrupt busy loops.
 - 22 of 387 bytecode instructions are lowered. Any other instruction aborts lowering.
-- `input_p64` and `output_p64` call possibly-throwing IO functions directly, violating D-11.
 
 ## Tooling
 
@@ -160,6 +163,16 @@ stack temporary (the `memcpy` in `safeReadPointerBytes`), which triggers a stack
 from clang. Execution code should be built with `-fno-stack-protector`, and values should be read
 without a stack temporary.
 
+**F-4 (2026-11-13) A constant `exit` instruction doubles GCC's tail-call dispatchers.** Defining an
+`exec::Instruction` constant whose dispatcher is `dispatcher_exit` in `executable.cpp` makes GCC
+speculate every next-instruction dispatch on `dispatcher_exit`: each dispatcher grows from 16 to 35
+x86 instructions with a stack canary, and fast TC runs ~19% more instructions. Traps therefore
+jump to the running start function's own `exit` (`ThreadRuntimeState::exit_instruction`).
+
+**F-5 (2026-11-13) The switch loop must keep `unreachable` in its `default`.** Trapping on an
+unknown instruction ID in release builds adds the jump table's range check to every dispatched
+instruction (~3% more instructions); it is only done in development builds.
+
 ## Performance log
 
 Retired user-space instructions (`perf stat -e instructions:u`, 3 runs, pinned to one core),
@@ -173,3 +186,5 @@ Retired user-space instructions (`perf stat -e instructions:u`, 3 runs, pinned t
 | 2026-11-13 | safe | TC | 21.75 G | 14.48 G | 3.02 G | 12.69 G |
 | 2026-11-13 | fast | SC | 18.18 G | 17.28 G | 2.52 G | 10.57 G |
 | 2026-11-13 | fast | TC | 19.79 G | 18.63 G | 2.74 G | 11.51 G |
+| 2026-11-13 | fast, `eval` next to the handlers, traps | SC | 17.64 G | 16.83 G | | 10.25 G |
+| 2026-11-13 | fast, traps | TC | 19.79 G | 18.63 G | | 11.51 G |

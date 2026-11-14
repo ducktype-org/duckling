@@ -37,6 +37,7 @@ set_files(
 	safe/vmvalue/safe_vmvalue.cpp
 	safe/vmvalue/safe_vmvalueref.cpp
 	fast/eval/instruction_functions.cpp
+	fast/eval/helpers.cpp
 	fast/program/relocator.cpp
 	fast/fast_vmthread.cpp
 	fast/program/instructions/executable.cpp
