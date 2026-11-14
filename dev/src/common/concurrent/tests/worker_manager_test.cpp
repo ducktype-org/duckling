@@ -144,6 +144,9 @@ private:
 		constexpr u64 TASK_COUNT      = 10'000;
 		constexpr u64 START           = 10'000;
 		constexpr u64 TASK_BATCH_SIZE = 5;
+		// Hang guard, not a speed check: this runs in ~0.3 s normally, but coverage builds
+		// (atomic gcov counters) are ~10x slower and must not trip it on a loaded runner.
+		constexpr usize HANG_TIMEOUT_MS = 30'000;
 		// Creates `task_count` tasks to compute Fibonacci numbers concurrently, ranged
 		// from [start, start + task_count] (modulo MOD).
 		// Complexity is hard to estimate here, but each task should take a few milliseconds.
@@ -207,7 +210,8 @@ private:
 							  << " tasks.\n";
 				}
 				fail("Timeout.");
-			}
+			},
+			HANG_TIMEOUT_MS
 		);
 
 		std::scoped_lock lock(task_mutex);
