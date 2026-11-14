@@ -25,10 +25,12 @@ namespace pst {
 		 * @brief Whether the token `fwd` tokens ahead is a keyword that always starts a statement.
 		 *
 		 * `const` right after `if` belongs to an `if const` statement or ternary, so it does not
-		 * start a new statement.
+		 * start a new statement. `mut` is a prefix operator, but `mut fun` starts a method.
 		 */
 		bool isStmtStartKeyword(const TokenStream& state, i64 fwd) {
 			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
+			// @TODO: #4062 Remove this once we have explicit self.
+			if (state[fwd].is(Keyword::Mut) && state[fwd + 1].is(Keyword::Fun)) return true;
 			return keywordFlags(state[fwd].asKeyword())
 			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}

@@ -75,7 +75,7 @@
 								"sourceEnd": 72
 							},
 							"Class Method": {
-								"mut": true,
+								"is_mut": true,
 								"name": {
 									"position": {
 										"sourceStart": 39,
@@ -225,7 +225,7 @@
 								},
 							],
 							"Class Method": {
-								"mut": true,
+								"is_mut": true,
 								"name": {
 									"position": {
 										"sourceStart": 91,
@@ -390,7 +390,7 @@
 								"sourceEnd": 183
 							},
 							"Class Method": {
-								"mut": true,
+								"is_mut": true,
 								"operator_fixity": "prefix",
 								"name": {
 									"position": {
