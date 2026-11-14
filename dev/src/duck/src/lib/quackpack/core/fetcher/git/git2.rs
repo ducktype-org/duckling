@@ -21,7 +21,7 @@ use crate::quackpack::core::GitReference;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
 
-/// For some odd reason [`git2`] doesn't ship this type alias.
+/// Result type used by [`git2`].
 type GitResult<T> = Result<T, git2::Error>;
 
 /// An implementation of [`GitRepository`], which also keeps [`DuckContext`].
@@ -49,7 +49,12 @@ struct CredentialData {
 }
 
 impl CredentialData {
-    /// Maybe add a note about failed credential to the [`QuackError`].
+    /// Try to add a note about failed credential to the [`QuackError`].
+    ///
+    /// If [`CredentialData::maybe_failed`] is [`MaybeFailedCredential::Failed`], we add a note with
+    /// an error. Otherwise if [`CredentialData::tried`] is `true`, we add a similar note, but
+    /// without an error, and lastly, if we haven't tried the credential or it succeeded, we don't
+    /// do anything.
     fn maybe_add_note(&self, error: &mut QuackError, credential_name: &str) {
         let note = format!("tried {credential_name} authentication but failed");
         if let MaybeFailedCredential::Failed(FailedCredential {
