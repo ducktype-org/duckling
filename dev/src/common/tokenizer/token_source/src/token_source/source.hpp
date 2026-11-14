@@ -89,7 +89,9 @@ namespace tokenizer {
 		/**
 		 * @brief Get line bounds (first, last + 1).
 		 */
-		std::pair<usize, usize> getLine(usize line) { return lines.at(line - 1); }
+		[[nodiscard]] std::pair<usize, usize> getLine(usize line) const {
+			return lines.at(line - 1);
+		}
 
 		/**
 		 * @brief Returns a view containing the source characters in bounds [@p begin_char,@p
@@ -117,6 +119,8 @@ namespace tokenizer {
 		fs::File getFile() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
+
+		[[nodiscard]] const std::vector<std::pair<usize, usize>>& getLines() const { return lines; }
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {

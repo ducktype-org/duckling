@@ -21,11 +21,11 @@
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <lsp_interface/compiler.hpp>
+#include <lsp_interface/diagnostics.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <diagnostic/core/common_classes.hpp>
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
-#include <diagnostic/lsp_ui/lsp_ui.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/stable_position.hpp>
 #include <query_framework/context/context_fd.hpp>
@@ -418,18 +418,13 @@ namespace duck_ls {
 				collected, updatePositionWithHashCodeLocation
 			);
 
-			dia::lsp::EvaluationContext ctx(
-				main_path.string(),
-				queried_file_opt.copyValueOr(main_path).genericString(),
-				[this](const std::string& path) { return files->uriFor(fs::FilePath(path)); }
-			);
+			EvaluationContext ctx(main_path, queried_file_opt.copyValueOr(main_path), files);
 
 			// The queried file always gets an entry, so that fixing its last error clears it.
 			published.emplace(ctx.resolve(ctx.queried_file), std::vector<lsp::Diagnostic>{});
 
 			for (const auto& diagnostic: collected) {
-				dia::lsp::LSPDiagnosticResult result
-					= dia::lsp::evaluateToLanguageServerMessage(diagnostic, ctx);
+				LSPDiagnosticResult result = evaluateToLanguageServerMessage(diagnostic, ctx);
 				published[result.uri].push_back(std::move(result.diagnostic));
 			}
 		}

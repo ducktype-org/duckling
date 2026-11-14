@@ -7,6 +7,7 @@
 #include "line.hpp"
 
 #include <diagnostic/term_ui/code_section.hpp>
+#include <diagnostic/term_ui/display_width.hpp>
 #include <diagnostic/term_ui/styles.hpp>
 
 namespace term_ui {
@@ -15,12 +16,14 @@ namespace term_ui {
 
 	const std::string LinePiece::getText() const { return text; }
 
+	u64 LinePiece::width() const { return displayWidth(text); }
+
 	void LinePiece::print(std::ostream& out) const { getStyleFromType(type).printWith(text, out); }
 
 	bool Line::isEmptyOn(u64 beg, u64 len) const {
 		u64 end = beg + len;
 		for (auto& [col, piece]: pieces) {
-			u64 col_end = col + piece.getText().size();
+			u64 col_end = col + piece.width();
 			if (col < beg && col_end <= beg) continue;
 			if (beg < col && end <= col) {
 				// Pieces are sorted.
@@ -32,7 +35,7 @@ namespace term_ui {
 	}
 
 	bool Line::tryInsert(u64 beg, const LinePiece& piece) {
-		if (!isEmptyOn(beg, piece.getText().size())) return false;
+		if (!isEmptyOn(beg, piece.width())) return false;
 		pieces.put(beg, piece);
 		return true;
 	}
@@ -48,7 +51,7 @@ namespace term_ui {
 			}
 			// Print the piece.
 			piece.print(out);
-			col = beg + piece.getText().size();
+			col = beg + piece.width();
 		}
 		out << '\n';
 	}

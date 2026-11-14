@@ -31,6 +31,11 @@ namespace term_ui {
 		[[nodiscard]] const std::string getText() const;
 
 		/**
+		 * @brief The number of terminal columns the text occupies.
+		 */
+		[[nodiscard]] u64 width() const;
+
+		/**
 		 * @brief Print the line piece to the output stream
 		 * using its style.
 		 *
