@@ -39,7 +39,7 @@ namespace duck_ls {
 	 * Some diagnostics carry no location at all, so evaluation needs both a fallback file and
 	 * the files cache that names a path with the URI to answer the client with.
 	 */
-	class EvaluationContext {
+	class EvaluationContext final {
 	public:
 		/**
 		 * @param default_error_location Path to attach diagnostics that carry no location to.

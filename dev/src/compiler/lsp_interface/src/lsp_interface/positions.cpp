@@ -11,9 +11,11 @@ namespace duck_ls {
 		constexpr UChar32 LAST_SINGLE_UNIT_CODE_POINT = 0xFF'FF;
 	}
 
-	lsp::Uint utf16Character(const tokenizer::TokenSource& source, usize line, usize code_points) {
+	lsp::Uint codePointsToUtf16Units(
+		const tokenizer::TokenSource& source, usize line, usize code_points
+	) {
 		if (line == 0 || line > source.getLines().size())
-			return static_cast<lsp::Uint>(code_points);
+			return base::safeIntConv<lsp::Uint>(code_points);
 
 		const auto& chars = source.getChars();
 		const usize begin = source.getLine(line).first;

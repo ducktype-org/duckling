@@ -92,12 +92,13 @@ namespace duck_ls {
 			const auto source = findTokenSource(location.file);
 
 			Range range{};
-			range.start.line      = static_cast<Uint>(location.line - 1);
-			range.start.character = utf16Character(*source, location.line, location.column - 1);
+			range.start.line = static_cast<Uint>(location.line - 1);
+			range.start.character
+				= codePointsToUtf16Units(*source, location.line, location.column - 1);
 
 			if (location.end_line.has_value() && location.end_column.has_value()) {
 				range.end.line      = static_cast<Uint>(location.end_line.value() - 1);
-				range.end.character = utf16Character(
+				range.end.character = codePointsToUtf16Units(
 					*source, location.end_line.value(), location.end_column.value()
 				);
 			} else {

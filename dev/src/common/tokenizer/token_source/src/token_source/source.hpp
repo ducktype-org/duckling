@@ -89,7 +89,9 @@ namespace tokenizer {
 		/**
 		 * @brief Get line bounds (first, last + 1).
 		 */
-		std::pair<usize, usize> getLine(usize line) const { return lines.at(line - 1); }
+		[[nodiscard]] std::pair<usize, usize> getLine(usize line) const {
+			return lines.at(line - 1);
+		}
 
 		/**
 		 * @brief Returns a view containing the source characters in bounds [@p begin_char,@p

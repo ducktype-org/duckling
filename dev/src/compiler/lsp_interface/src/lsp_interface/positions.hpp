@@ -19,5 +19,7 @@ namespace duck_ls {
 	 * units, where a code point above U+FFFF takes two. A code point past the end of the source
 	 * counts as one unit, and a line @p source does not have leaves @p code_points unchanged.
 	 */
-	lsp::Uint utf16Character(const tokenizer::TokenSource& source, usize line, usize code_points);
+	lsp::Uint codePointsToUtf16Units(
+		const tokenizer::TokenSource& source, usize line, usize code_points
+	);
 }
