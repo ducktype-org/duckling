@@ -577,20 +577,8 @@ namespace vm {
 		// nothing is left deadlocks `vm_sc_threads_test`.
 		for (usize idx = orig_slot_stack_size;
 		     idx < usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
-		     idx++) {
-			if (Block* block = frame->local_slot_stack_base[idx].block) {
-				process_memory.freeBlockData(block);
-				process_memory.decreaseBlockRefcount(block);
-				continue;
-			}
-
-			// A variable that never needed a block still has to release whatever it points at,
-			// which is what `freeBlockData` would have done for it.
-			const LocalSlot& slot = frame->local_slot_stack_base[idx];
-			process_memory.runDataDestructors(
-				{ slot.data, slot.type->getSize().asInt() }, slot.type
-			);
-		}
+		     idx++)
+			releaseLocalSlot(frame->local_slot_stack_base[idx], process_memory);
 
 		return exit_value_storage.value();
 	}
