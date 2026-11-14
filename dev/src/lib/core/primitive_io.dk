@@ -138,7 +138,7 @@ fun readI64() -> i64 = {
 
 	var value = 0i64;
 	while (c >= '0' and c <= '9') {
-		value = value * 10i64 + (c as i64 -'0' as i64);
+		value = value * 10i64 + (c as i64 - '0' as i64);
 		c = readChar();
 	}
 
@@ -150,7 +150,7 @@ fun readU64() -> u64 = {
 	var c = skipBlanks();
 	var value = 0u64;
 	while (c >= '0' and c <= '9') {
-		value = value * 10u64 + (c as i64 -'0' as i64) as u64;
+		value = value * 10u64 + (c as i64 - '0' as i64) as u64;
 		c = readChar();
 	}
 	return value;

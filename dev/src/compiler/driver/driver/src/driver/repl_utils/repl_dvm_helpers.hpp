@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <backends/dvm/repl_lowering.hpp>
+#include <backends/dvm/incremental_dvm_code_builder.hpp>
 #include <helios/hout/hout.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -26,10 +26,10 @@ namespace compiler::repl {
 	 * the code to a running VM process.
 	 */
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
-		query::Context&                 ctx,
-		const helios::HOUTUnit&         hout_unit,
-		std::string_view                module_name,
-		backend_vm::ReplDVMCodeBuilder& lowering_context
+		query::Context&                        ctx,
+		const helios::HOUTUnit&                hout_unit,
+		std::string_view                       module_name,
+		backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	);
 
 	/**
@@ -52,11 +52,11 @@ namespace compiler::repl {
 	 * @return Success or error message on failure.
 	 */
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&                 ctx,
-		const helios::HOUTUnit&         hout_unit,
-		std::string_view                module_name,
-		vm::PID                         pid,
-		backend_vm::ReplDVMCodeBuilder& lowering_context
+		query::Context&                        ctx,
+		const helios::HOUTUnit&                hout_unit,
+		std::string_view                       module_name,
+		vm::PID                                pid,
+		backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	);
 
 	/**
@@ -75,7 +75,7 @@ namespace compiler::repl {
 	 * @return Success or error message on failure.
 	 */
 	std::expected<void, std::string> preloadStandardLibrary(
-		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
+		query::Context& ctx, vm::PID pid, backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	);
 
 	/**

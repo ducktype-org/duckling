@@ -13,9 +13,7 @@ fun printPointList(l: ref List[Point]) -> () = {
 }
 
 fun arrayOfListsTest() -> () = {
-	# @TODO: #3349 Write `List[Point][2]` directly once a bake can be indexed.
-	const PointList = List[Point];
-	var arrayOfLists: PointList[2];
+	var arrayOfLists: List[Point][2];
 
 	arrayOfLists[0].push(Point(1, 2));
 	arrayOfLists[0].push(Point(3, 4));

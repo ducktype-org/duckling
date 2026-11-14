@@ -201,9 +201,10 @@ namespace formatter {
 					if (isSkippable(t)) continue;
 					// `and`/`or` are keywords, yet they join operands like binary operators.
 					const bool logical = isKeyword(t) && (isStr(t, "and") || isStr(t, "or"));
+					// The operator a `fun prefix -*(...)` declares is its name, not a break point.
 					if (prev != nullptr && (isOperator(t) || logical) && !isStr(t, ".")
 					    && isValueCloser(*prev) && needSpace(config, prev, t)
-					    && !isSuffixUse(tokens, i, prev, prev2))
+					    && !isSuffixUse(tokens, i, prev, prev2) && !isFixityMarker(*prev, prev2))
 						points.push_back(i);
 					prev2 = prev;
 					prev  = &t;
@@ -290,6 +291,7 @@ namespace formatter {
 				bool         suppress_space = suppress_leading;
 				bool         unary_glue     = false;
 				const Token* prev2          = nullptr;
+				const Token* prev3          = nullptr;
 				for (usize i = 0; i < tokens.size(); i++) {
 					const Token& t = tokens[i];
 					if (isSkippable(t)) continue;
@@ -300,7 +302,7 @@ namespace formatter {
 					const bool leading = (suppress_space && !must_separate)
 					                       ? false
 					                       : !isSuffixUse(tokens, i, prev, prev2)
-					                             && needSpace(config, prev, t, prev2);
+					                             && needSpace(config, prev, t, prev2, prev3);
 					suppress_space     = false;
 					unary_glue         = false;
 					if (leading) docs.push_back(doc::space());
@@ -310,6 +312,7 @@ namespace formatter {
 						suppress_space = true;
 						unary_glue     = true;
 					}
+					prev3 = prev2;
 					prev2 = prev;
 					prev  = &t;
 				}
@@ -331,9 +334,7 @@ namespace formatter {
 				// A run cut before a block ends in `=`, `->`, `=>` or `:` (`fun f() = {`).
 				if (op.ends_with("=") || op.ends_with(">") || op == ":") return false;
 				// `fun suffix ++(...)` declares the operator, it does not apply it.
-				if (prev2 != nullptr && isKeyword(*prev2)
-				    && (sv(*prev2) == "fun" || sv(*prev2) == "fundecl"))
-					return false;
+				if (prev2 != nullptr && isFunKeyword(*prev2)) return false;
 				usize j = i + 1;
 				while (j < tokens.size() && isSkippable(tokens[j])) j++;
 				// The end of a run or a bracket group is the end of the expression.

@@ -6,6 +6,7 @@
 
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/kind.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <tsl/c_abi_converter.hpp>
@@ -76,34 +77,56 @@ namespace compiler::tsl {
 		}
 
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
-			const helios::SymbolABI abi = class_type.getABI(ctx);
-			variant_match(abi) {
-				variant_case_novalue(helios::DefaultAbi) {
-					return fail("nested non-extern(\"C\") class");
-				}
-				variant_case_novalue(helios::CAbi) {
-					// Convert the fields to their C-ABI types and return them as a
-					// struct, borrowing each field's cached conversion (no clone).
-					std::vector<ats::AbiTypePtr> fields;
-					for (const auto& element: class_type.getInterface(ctx)->getElements()) {
-						if (!element.isField()) continue;
-						const auto& conversion
-							= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
-						if (!conversion.has_value())
-							return fail(base::strConcat(
-								"field `",
-								helios::name(element.getSymbol()),
-								"` rejected: ",
-								conversion.error()
-							));
-						fields.emplace_back(base::CRef<ats::AbiType>(&conversion.value()));
-					}
-					if (fields.empty()) return fail("class with no fields has zero size in C ABI");
+			if (not v_matches(class_type.getABI(ctx), helios::CAbi))
+				return fail("nested non-extern(\"C\") class");
 
-					return ok(ats::structType(std::move(fields)));
-				}
+			// Convert the fields to their C-ABI types and return them as a struct,
+			// borrowing each field's cached conversion (no clone).
+			std::vector<ats::AbiTypePtr> fields;
+			for (const auto& element: class_type.getInterface(ctx)->getElements()) {
+				if (!element.isField()) continue;
+				const auto& conversion
+					= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
+				if (!conversion.has_value())
+					return fail(base::strConcat(
+						"field `",
+						helios::name(element.getSymbol()),
+						"` rejected: ",
+						conversion.error()
+					));
+				fields.emplace_back(base::CRef<ats::AbiType>(&conversion.value()));
 			}
-			CORE_PANIC("unknown symbol ABI kind");
+			if (fields.empty()) return fail("class with no fields has zero size in C ABI");
+
+			return ok(ats::structType(std::move(fields)));
+		}
+
+		/**
+		 * @brief Checks if a `cpr <target>` <target> is a C-friendly type. Avoids query cycle on
+		 * classes. We are not 100% sure we want this behaviour, may change in the future.
+		 */
+		CAbiConversionResult checkPointee(tsh::SymbolType<> pointee, query::Context& ctx) {
+			if (pointee.getRefKind() != tsh::ReferenceKind::Direct)
+				return fail("pointee is a reference");
+
+			const tsh::AbstractType type = pointee.getType();
+			switch (type.getKind()) {
+			case tsh::Kind::Class:
+				if (not v_matches(tsh::ClassAbstractType(type).getABI(ctx), helios::CAbi))
+					return fail("pointee is a non-extern(\"C\") class");
+				return ok(ats::pointerType());
+			case tsh::Kind::StaticArray:
+				return checkPointee(tsh::StaticArrayAbstractType(type).getElementType(), ctx);
+			case tsh::Kind::CPointer:
+				return checkPointee(tsh::CPointerAbstractType(type).getPointee(), ctx);
+			default:
+				break;
+			}
+
+			const auto& conversion = ctx.query<QueryCAbiTypeOf>(pointee)->valueOrThrow();
+			if (not conversion.has_value())
+				return fail(base::strConcat("pointee rejected: ", conversion.error()));
+			return ok(ats::pointerType());
 		}
 	}
 
@@ -130,7 +153,7 @@ namespace compiler::tsl {
 			case Kind::RawPointer:
 				return fail("raw pointer is not C-compatible; use `cptr T`");
 			case Kind::CPointer:
-				return ok(ats::pointerType());
+				return checkPointee(tsh::CPointerAbstractType(abstract).getPointee(), ctx);
 			case Kind::StaticArray:
 				return convertStaticArray(tsh::StaticArrayAbstractType(abstract), ctx);
 			case Kind::Class:

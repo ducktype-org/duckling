@@ -71,6 +71,32 @@ namespace formatter {
 	bool isStatementKeyword(const lexer::Token& t);
 
 	/**
+	 * A keyword that is a value or a type, so it ends an operand: `self`, `true`, `false`, or a
+	 * type keyword such as `i64`. A sign operator after it is binary: `self * 2`.
+	 */
+	[[nodiscard]]
+	bool isValueKeyword(const lexer::Token& t);
+
+	/** `fun` or `fundecl`: the keywords that open a function declaration. */
+	[[nodiscard]]
+	bool isFunKeyword(const lexer::Token& t);
+
+	/**
+	 * Whether @p t is the `prefix`/`suffix` marker of a custom operator declaration, as in
+	 * `fun prefix -*(...)`. @p before is the token before @p t, which must be `fun`/`fundecl`;
+	 * a variable named `prefix` is not a marker.
+	 */
+	[[nodiscard]]
+	bool isFixityMarker(const lexer::Token& t, const lexer::Token* before);
+
+	/**
+	 * A keyword that joins onto the expression or declaration before it, so it never opens
+	 * a new statement: `and`, `or`, `xor`, `in`, `then`, `else`, `catch`, `extends`, ...
+	 */
+	[[nodiscard]]
+	bool isContinuationKeyword(const lexer::Token& t);
+
+	/**
 	 * Whether `prev` leaves us at a position where an expression may start
 	 * (so that a sign operator is unary rather than binary).
 	 */

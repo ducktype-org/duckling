@@ -8,6 +8,7 @@ use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 use tempfile::{TempDir, tempdir};
 use url::Url;
 
+use super::GitClient;
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::git::git2::Git2Client;
 use crate::quackpack::core::{GitReference, PackageLoader};
@@ -65,7 +66,7 @@ fn clone_local_repo() {
 
     let ctx = DuckContext::default();
     let client = Git2Client::new(&ctx);
-    let _ = client.clone(&url, reference, &target).unwrap();
+    let _repository = client.clone(&url, reference, &target).unwrap();
 
     assert!(target.exists());
     assert!(target.is_dir());
@@ -87,7 +88,8 @@ fn clone_local_repo_with_branch() {
 
     let ctx = DuckContext::default();
     let client = Git2Client::new(&ctx);
-    let _ = client.clone(&url, reference, &target).unwrap();
+    // git2 can clone a branch, no need to checkout.
+    let _repository = client.clone(&url, reference, &target).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     assert_eq!(repo.head().unwrap().shorthand().unwrap(), "test-branch");
@@ -103,7 +105,10 @@ fn clone_local_repo_with_tag() {
 
     let ctx = DuckContext::default();
     let client = Git2Client::new(&ctx);
-    let _ = client.clone(&url, reference, &target).unwrap();
+
+    // git2 can't clone a tag, we need to checkout.
+    let repository = client.clone(&url, reference, &target).unwrap();
+    repository.checkout(reference).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let mut opts = DescribeOptions::new();
@@ -128,7 +133,10 @@ fn clone_local_repo_with_rev() {
 
     let ctx = DuckContext::default();
     let client = Git2Client::new(&ctx);
-    let _ = client.clone(&url, reference, &target).unwrap();
+
+    // git2 can't clone a commit, we need to checkout.
+    let repository = client.clone(&url, reference, &target).unwrap();
+    repository.checkout(reference).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let new_commit = repo.head().unwrap().peel_to_commit().unwrap();

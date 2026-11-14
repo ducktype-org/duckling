@@ -9,7 +9,7 @@ class Number {
 	}
 
 	fun double() -> Number = {
-		return self +Number(self.val);
+		return self + Number(self.val);
 	}
 }
 

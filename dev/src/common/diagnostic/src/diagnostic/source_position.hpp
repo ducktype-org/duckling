@@ -16,7 +16,7 @@ int main() {
     dia::SourcePosition multipleCharacters{<source-file>, <line>, <column>, <start-position>,
 <end-position>}; dia::SourcePosition rangeFromSingleCharacter{singleCharacter, <end-position>};
 
-    std::cerr << multipleCharacters.genErrorStr("some message") << "\n";
+    std::cout << multipleCharacters.content() << "\n";
 }
  @endcode
  */
@@ -91,29 +91,6 @@ namespace dia {
 		 * @note Fine for now, In the future might break with macros as they share filepaths.
 		 */
 		std::strong_ordering operator<=>(const SourcePosition& other) const;
-
-		/**
-		 * @brief Get formatted message contents with a given reason.
-		 *
-		 * This is given as message contents (multiple) so that
-		 * it can be conveniently decorated before wrapping in a printer::Message.
-		 * This should be removed on the feature
-		 * @param reason The reason for the message.
-		 * @return Formatted message contents.
-		 */
-		[[nodiscard]]
-		std::vector<printer::PrinterContent> genPrinterContents(
-			[[maybe_unused]] const printer::PrinterContentsSeq& reason
-		) const;
-
-		/**
-		 * @brief Get formatted message string with a given reason.
-		 *
-		 * @param reason The reason for the message.
-		 * @return Formatted message string.
-		 */
-		[[nodiscard]]
-		std::string genStr(std::string_view reason) const;
 
 		/**
 		 * @brief Get the content of the source position as a string.

@@ -36,7 +36,7 @@ fun main() -> i64 = {
 	}
 
 	# Test escape chars in array-like usage
-	var escapes_sum: i64 = newline as i64 +tab as i64 +carriage as i64;
+	var escapes_sum: i64 = newline as i64 + tab as i64 + carriage as i64;
 	builtin_output_i64(escapes_sum); # 32 (10 + 9 + 13)
 
 	# Test escape equality
