@@ -922,7 +922,7 @@ namespace compiler::tsh {
 		ModuleAbstractTypeImpl() = default;
 
 		/**
-		 * @brief Panics: no value has a module type, so nothing ever asks how to destroy one.
+		 * @brief Panics: no one calls it currently.
 		 */
 		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 
