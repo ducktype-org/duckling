@@ -35,6 +35,13 @@
 namespace {
 
 	/**
+	 * Exit codes of `duckfmt`.
+	 */
+	constexpr int EXIT_OK            = 0;  ///< File formatted successfully
+	constexpr int EXIT_NOT_FORMATTED = 1;  ///< The file is not formatted.
+	constexpr int EXIT_ERROR         = 2;  ///< The file can't be formatted.
+
+	/**
 	 * @brief Loads the formatter configuration from @p config_path.
 	 *
 	 * @return The parsed configuration, or an empty optional after printing an error when the
@@ -67,7 +74,7 @@ namespace {
 		const auto config_path = options.getValue<std::string>("config").copyValueOr("");
 		if (not config_path.empty()) {
 			const auto loaded = loadConfig(config_path);
-			if (not loaded.has_value()) return 1;
+			if (not loaded.has_value()) return EXIT_ERROR;
 			format_config = loaded.value();
 		}
 
@@ -78,16 +85,16 @@ namespace {
 		// Comments must stay in the token stream, or formatting would erase them.
 		if (not token_source->tokenize({ .keep_comments = true })) {
 			token_source->getIntLogger()->terminalPrint(std::cerr);
-			return 1;
+			return EXIT_ERROR;
 		}
 
 		const auto formatted = formatter::formatTokens(token_source->getTokenData(), format_config);
 
 		if (options.isFlag("check")) {
-			if (formatted == source_view) return 0;
+			if (formatted == source_view) return EXIT_OK;
 			// On stderr, so `duckfmt -k` stays usable in a pipeline.
 			std::cerr << file_to_format.getFilePath().strView() << ": not formatted\n";
-			return 1;
+			return EXIT_NOT_FORMATTED;
 		}
 
 		if (options.isFlag("in-place"))
@@ -95,7 +102,7 @@ namespace {
 		else
 			std::cout << formatted;
 
-		return 0;
+		return EXIT_OK;
 	}
 
 	clah::Clah getClahForDuckfmt() {
@@ -140,7 +147,7 @@ int main(int argc, const char* argv[]) {
 			{ e.what(), printer::Color::Default },
 			{ "\nAborting\n", printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
@@ -148,7 +155,7 @@ int main(int argc, const char* argv[]) {
 			{ e.what(), printer::Color::Default },
 			{ "\nAborting\n", printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
@@ -156,6 +163,6 @@ int main(int argc, const char* argv[]) {
 		      "caught.\n",
 		      printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	}
 }

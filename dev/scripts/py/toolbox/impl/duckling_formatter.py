@@ -5,9 +5,9 @@
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 import os
+import shlex
 import shutil
 import subprocess
-import sys
 
 from .helpers import (
     get_input,
@@ -20,6 +20,10 @@ from .list_files import list_files_impl
 
 DUCKLING_EXTENSIONS = [".dk"]
 
+# Exit codes of `duckfmt -k`, any other one means duckfmt failed on the file
+_DUCKFMT_OK = 0
+_DUCKFMT_NOT_FORMATTED = 1
+
 
 def _resolve_duckfmt(build_dir: str, duckfmt_path: str | None) -> str | None:
     """
@@ -28,17 +32,25 @@ def _resolve_duckfmt(build_dir: str, duckfmt_path: str | None) -> str | None:
     """
     candidate = duckfmt_path or os.path.join(build_dir, "bin", "duckfmt")
     if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
-        return candidate
+        # Absolute, so the hint that names it works from any directory
+        return os.path.abspath(candidate)
     return shutil.which(candidate)
 
 
-def _is_formatted(duckfmt: str, file: str) -> bool:
-    """`duckfmt -k` exits non-zero and names the file on stderr when it is not formatted."""
-    return subprocess.run([duckfmt, file, "-k"]).returncode == 0
+def _check_file(duckfmt: str, file: str) -> bool | None:
+    """
+    True when the file is formatted, False when it is not, None when duckfmt failed on it.
+    """
+    returncode = subprocess.run([duckfmt, file, "-k"]).returncode
+    if returncode == _DUCKFMT_OK:
+        return True
+    if returncode == _DUCKFMT_NOT_FORMATTED:
+        return False
+    return None
 
 
-def _format_in_place(duckfmt: str, file: str) -> bool:
-    return subprocess.run([duckfmt, file, "-i"]).returncode == 0
+def _format_in_place(duckfmt: str, file: str) -> None:
+    subprocess.run([duckfmt, file, "-i"])
 
 
 def duckling_formatter_impl(
@@ -86,7 +98,10 @@ def duckling_formatter_impl(
         log_info("No Duckling files to check. Nothing to check.")
         return True
 
-    unformatted = [f for f in files if not _is_formatted(duckfmt, f)]
+    results = {f: _check_file(duckfmt, f) for f in files}
+    # duckfmt cannot format these, so they are left out of the fix
+    failed = [f for f, formatted in results.items() if formatted is None]
+    unformatted = [f for f, formatted in results.items() if formatted is False]
 
     if unformatted and not no_fix:
         apply = auto_fix
@@ -99,16 +114,36 @@ def duckling_formatter_impl(
         if apply:
             for f in unformatted:
                 _format_in_place(duckfmt, f)
-            unformatted = [f for f in unformatted if not _is_formatted(duckfmt, f)]
+            rechecked = {f: _check_file(duckfmt, f) for f in unformatted}
+            failed += [f for f, formatted in rechecked.items() if formatted is None]
+            unformatted = [
+                f for f, formatted in rechecked.items() if formatted is False
+            ]
             if not unformatted:
                 log_good("Duckling files formatted!")
 
-    if unformatted:
+    if failed:
         log_warning(
-            f"{len(unformatted)} Duckling file(s) are not formatted. Run "
-            f"`./scripts/formatting/format_repo_duckling.sh{' --all' if all else ''}` "
-            "to format them."
+            f"duckfmt failed on {len(failed)} Duckling file(s), see the errors above: "
+            f"[{', '.join(failed)}]"
         )
+
+    if unformatted:
+        fix_command = (
+            "./scripts/formatting/format_repo_duckling.sh"
+            f"{' --all' if all else ''} {shlex.quote(duckfmt)}"
+        )
+        log_warning(
+            f"{len(unformatted)} Duckling file(s) are not formatted. "
+            f"Run `{fix_command}` to format them."
+        )
+        if not all and (no_merge_base or branch != "origin/main"):
+            log_warning(
+                "The script always diffs against the merge base with origin/main, so it "
+                f"can format a different set of files than the one checked against `{branch}`."
+            )
+
+    if failed or unformatted:
         return False
 
     log_good(f"All {len(files)} checked Duckling file(s) are formatted")
