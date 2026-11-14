@@ -48,6 +48,21 @@ struct CredentialData {
     maybe_failed: MaybeFailedCredential,
 }
 
+impl CredentialData {
+    /// Maybe add a note about failed credential to the [`QuackError`].
+    fn maybe_add_note(&self, error: &mut QuackError, credential_name: &str) {
+        let note = format!("tried {credential_name} authentication but failed");
+        if let MaybeFailedCredential::Failed(FailedCredential {
+            error: ref git_error,
+        }) = self.maybe_failed
+        {
+            error.add_note(format!("{note} because: {git_error}"));
+        } else if self.tried {
+            error.add_note(note);
+        }
+    }
+}
+
 /// Helper indicating whether a credential failed or not.
 #[derive(Default, Debug)]
 enum MaybeFailedCredential {
@@ -59,11 +74,6 @@ enum MaybeFailedCredential {
 }
 
 impl MaybeFailedCredential {
-    /// Has this credential has failed.
-    fn failed(&self) -> bool {
-        matches!(self, Self::Failed(_))
-    }
-
     /// We have failed a credential. Mark it as failed.
     ///
     /// For more information about error handling and possible authentication errors, see
@@ -94,13 +104,6 @@ impl MaybeFailedCredential {
         self.maybe_fail(&result);
         result
     }
-
-    /// Maybe add a note about failed credential to the [`QuackError`].
-    fn maybe_add_note(&self, error: &mut QuackError, credential_name: &str) {
-        if let Self::Failed(failed) = self {
-            failed.add_note(error, credential_name);
-        }
-    }
 }
 
 /// Metadata about failed credential.
@@ -114,14 +117,6 @@ impl FailedCredential {
     fn from_error(error: &git2::Error) -> Self {
         let my_error = git2::Error::new(error.code(), error.class(), error.message());
         Self { error: my_error }
-    }
-
-    /// Add a note about failed credential to the [`QuackError`].
-    fn add_note(&self, error: &mut QuackError, credential_name: &str) {
-        error.add_note(format!(
-            "tried {credential_name} authentication but failed because: {}",
-            self.error
-        ));
     }
 }
 
@@ -222,27 +217,18 @@ impl<'a> GitCredentialsCallbackDataInner<'a> {
     /// For more information about error handling and possible authentication errors, see
     /// [`credentials_callback`].
     fn add_notes_to_clone_error(&self, error: &mut QuackError) {
-        if self.ssh.maybe_failed.failed() {
-            self.ssh.maybe_failed.maybe_add_note(error, "SSH");
+        self.ssh.maybe_add_note(error, "SSH");
+        if self.ssh.tried {
             error.add_note("SSH keys need to be in an SSH agent to work");
             error.add_hint("try adding your SSH keys to the SSH agent");
         }
+        self.plaintext.maybe_add_note(error, "username + password");
         if self.plaintext.tried {
-            if self.plaintext.maybe_failed.failed() {
-                self.plaintext
-                    .maybe_failed
-                    .maybe_add_note(error, "username + password");
-            } else {
-                // We failed, so if we tried this authentication, it must have failed.
-                error.add_note("tried username + password authentication but failed; \
-                    you either entered wrong credentials, or your account does not support username + password authentication");
-            }
+            error.add_note("you either entered wrong credentials, or the repository does not support username + password authentication");
         }
         self.cred_helper
-            .maybe_failed
             .maybe_add_note(error, "git's credential helper (`credential.helper`)");
-
-        self.default.maybe_failed.maybe_add_note(error, "default");
+        self.default.maybe_add_note(error, "default");
     }
 }
 
