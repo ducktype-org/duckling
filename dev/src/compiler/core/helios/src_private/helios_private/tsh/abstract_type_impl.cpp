@@ -472,8 +472,7 @@ namespace compiler::tsh {
 		CORE_PANIC(
 			"Asked whether a module type is trivially destructible which has no sensible value "
 			"yet. If needed, decide what to do about it: a module holds no state, so `true` is the "
-		    "likely "
-			"answer."
+			"likely answer."
 		);
 	}
 
