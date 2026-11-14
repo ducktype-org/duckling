@@ -66,7 +66,7 @@ impl CredentialData {
 /// Helper indicating whether a credential failed or not.
 #[derive(Default, Debug)]
 enum MaybeFailedCredential {
-    /// We did not failed (or haven't tried).
+    /// We did not fail (or haven't tried).
     #[default]
     NotFailed,
     /// We failed this credential.
