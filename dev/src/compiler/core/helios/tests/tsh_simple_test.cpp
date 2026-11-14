@@ -9,11 +9,15 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
+
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <any>
+#include <tuple>
 
 using namespace compiler::tsh;
 
@@ -740,10 +744,12 @@ private:
 				nspace.isTriviallyDestructible(ctx),
 				"NamespaceType should be trivially destructible."
 			);
-			assertFalse(
-				module.isTriviallyDestructible(ctx),
-				"ModuleType should not be trivially destructible."
-			);
+			IF_BUILD_TYPE_DEV(
+				assertThrows<base::Panic>(
+					[&]() { std::ignore = module.isTriviallyDestructible(ctx); },
+					"Asking whether ModuleType is trivially destructible should panic."
+				);
+			)
 
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
 			assertFalse(
