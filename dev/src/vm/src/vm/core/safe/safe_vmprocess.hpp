@@ -261,10 +261,10 @@ namespace vm {
 		Ref<SafeVMValue> createVMValue(TypeCRef type);
 
 		/**
-		 * @brief Creates a process-owned SafeVMValue from safe type metadata, filled with the
-		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 * @brief Creates a process-owned SafeVMValue holding a copy of the local variable in
+		 * `slot`. The variable gets no block for it. Safe-VM-internal only.
 		 */
-		Ref<SafeVMValue> createVMValue(TypeCRef type, Pointer src);
+		Ref<SafeVMValue> createVMValue(const LocalSlot& slot);
 
 		/**
 		 * @brief Creates an empty, caller-owned SafeVMValue from safe type metadata.
@@ -273,10 +273,10 @@ namespace vm {
 		Box<SafeVMValue> createOwnedVMValue(TypeCRef type);
 
 		/**
-		 * @brief Creates a caller-owned SafeVMValue from safe type metadata, filled with the
-		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 * @brief Creates a caller-owned SafeVMValue holding a copy of the local variable in
+		 * `slot`. The variable gets no block for it. Safe-VM-internal only.
 		 */
-		Box<SafeVMValue> createOwnedVMValue(TypeCRef type, Pointer src);
+		Box<SafeVMValue> createOwnedVMValue(const LocalSlot& slot);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 
