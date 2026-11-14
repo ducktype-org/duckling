@@ -9,10 +9,8 @@ if (ENABLE_COVERAGE AND BUILD_TYPE_IS_OPTIMISED)
 endif()
 
 if(ENABLE_COVERAGE)
-	# The compiler, the VM and many tests are multithreaded. The default gcov counters are
-	# incremented non-atomically, so concurrent threads lose updates and gcov later reports
-	# "negative count" for the affected arcs, which fastcov then drops. Atomic updates keep the
-	# counters (and so the coverage percentage) exact.
+	# --coverage -fprofile-update=atomic is needed, 
+	# since the compiler, the VM and many tests are multithreaded.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
 
 	find_program(FASTCOV fastcov REQUIRED)
