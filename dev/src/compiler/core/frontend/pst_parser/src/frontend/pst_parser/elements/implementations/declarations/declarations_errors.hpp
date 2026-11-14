@@ -12,7 +12,7 @@
 
 namespace pst {
 	class MutFunOutsideClassError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -25,7 +25,7 @@ namespace pst {
 	};
 
 	class PatternArgumentCountError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -38,7 +38,7 @@ namespace pst {
 	};
 
 	class PatternBracketError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -50,7 +50,7 @@ namespace pst {
 	};
 
 	class ForBracketError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
