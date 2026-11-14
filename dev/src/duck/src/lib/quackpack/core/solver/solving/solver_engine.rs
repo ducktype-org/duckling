@@ -194,15 +194,30 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
-            self.model
-                .require_dep_realization(edge, None, possible_realizations)?;
+            if possible_realizations.is_empty() {
+                // Splitting no realizations case gives better diagnostics.
+                self.model
+                    .forbid_package_because_no_realization(edge.parent, edge.dep_ename)?;
+            } else {
+                self.model
+                    .require_dep_realization(edge, None, possible_realizations)?;
+            }
         } else {
             for dep_forcing_feature in manifest_dependency.enabling_features() {
-                self.model.require_dep_realization(
-                    edge,
-                    Some(*dep_forcing_feature),
-                    possible_realizations.clone(),
-                )?;
+                if possible_realizations.is_empty() {
+                    // Splitting no realizations case gives better diagnostics.
+                    self.model.forbid_package_feature_because_no_realization(
+                        edge.parent,
+                        *dep_forcing_feature,
+                        edge.dep_ename,
+                    )?;
+                } else {
+                    self.model.require_dep_realization(
+                        edge,
+                        Some(*dep_forcing_feature),
+                        possible_realizations.clone(),
+                    )?;
+                }
             }
         }
         Ok(())

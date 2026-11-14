@@ -13,6 +13,7 @@ SubDirs:
   - errors
   - exposed-freezefile
   - exposed-freezefile-and-deps
+  - iis-explanation
   - legal-packages-names
   - same-dep-names-different-sources
   - warnings
