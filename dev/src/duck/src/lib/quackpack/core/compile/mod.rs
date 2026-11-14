@@ -83,7 +83,7 @@ impl BuildContext<'_, '_> {
 /// Note:
 /// -----
 /// `pkgs` should be all packages present in the freeze, including the root package.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(skip_all)]
 pub fn compile(
     bcx: BuildContext<'_, '_>,
     pkgs: Vec<(PackageId, AnyPackage)>,

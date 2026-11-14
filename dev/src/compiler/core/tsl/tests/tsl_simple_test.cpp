@@ -550,11 +550,11 @@ private:
 
 	void pointerLayoutManglingTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto i64 = SymbolType<>::withDefaults(
+			auto i64 = SymbolType<>::withDefaultsMut(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			auto ref_i64 = i64.withReferenceKind(ReferenceKind::Ref);
-			auto box_i64 = i64.withReferenceKind(ReferenceKind::Box);
+			auto ref_i64 = i64.toRef();
+			auto box_i64 = i64.toBox();
 
 			auto i64_layout     = querySymbolLayout(ctx, i64);
 			auto ref_i64_layout = querySymbolLayout(ctx, ref_i64);

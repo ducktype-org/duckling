@@ -288,11 +288,7 @@ namespace compiler::mir {
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
-				tsh::SymbolType{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				},
+				tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
 			});
 
 			// first step: lowering to pre-mir (cfg+quad)

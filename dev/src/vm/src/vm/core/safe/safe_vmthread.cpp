@@ -15,12 +15,18 @@
 #include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/source_position.hpp>
+#include <filesystem/file_path.hpp>
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
+#include <token_source/source.hpp>
 
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/stack_trace.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
@@ -528,7 +534,16 @@ namespace vm {
 			runtime_data.frame_stack_current = orig_frame_ptr;
 		});
 
-		runInterpreter(instr, local_stack, frame, *this);
+		try {
+			runInterpreter(instr, local_stack, frame, *this);
+		} catch (exceptions::VMRuntimeException& e) {
+			e.setVMStackTrace(getVMStackTrace(orig_frame_ptr));
+			resetFramesAbove(orig_frame_ptr);
+			throw;
+		} catch (...) {
+			resetFramesAbove(orig_frame_ptr);
+			throw;
+		}
 
 		CORE_ASSERT(
 			frame == orig_frame_ptr,
@@ -581,6 +596,84 @@ namespace vm {
 	}
 
 	// executeFunction end
+
+	api::StackTrace SafeVMThread::getVMStackTrace(const Frame* start_frame) const {
+		// Live frames sit right above the start frame, outermost first.
+		std::vector<const Frame*> frames;
+		for (const Frame* frame = start_frame + 1;
+		     frame < runtime_data.frame_stack_end && frame->current_function != nullptr;
+		     frame++)
+			frames.push_back(frame);
+
+		// A stack overflow leaves thousands of frames, so only both ends of the stack are kept.
+		constexpr usize KEPT_FRAMES_PER_END = 16;
+
+		api::StackTrace trace;
+		for (usize depth = 0; depth < frames.size(); depth++) {
+			if (frames.size() > 2 * KEPT_FRAMES_PER_END && depth == KEPT_FRAMES_PER_END)
+				depth = frames.size() - KEPT_FRAMES_PER_END;
+			trace.frames.push_back(getStackFrame(*frames[frames.size() - 1 - depth], depth));
+		}
+		return trace;
+	}
+
+	api::StackFrame SafeVMThread::getStackFrame(const Frame& frame, u64 depth) const {
+		const auto& func = *frame.current_function;
+
+		const auto to_location = [](const api::SourceLine& line) {
+			return api::SourceLocation{ .file = line.file.str(), .line = line.line, .column = {} };
+		};
+
+		api::StackFrame result{
+			.depth         = depth,
+			.function_name = func.name,
+			.source_name   = safe_process.getFunctionSourceName(func.name),
+			.call_site     = {},
+			.definition    = {},
+		};
+		if_opt_some(safe_process.getFunctionDefinitionLine(func.name), line) {
+			result.definition = to_location(line);
+		}
+
+		// The innermost frame has no saved position.
+		if (depth == 0) return result;
+
+		// `instr` rests on the return address, one past the call.
+		const auto* begin = func.bc.data();
+		if (frame.instr <= begin || frame.instr > begin + func.bc.size()) return result;
+		const low::LowCodePosition low_position{
+			.function          = &func,
+			.instruction_index = static_cast<u64>(frame.instr - begin - 1),
+		};
+
+		// The Duckling source line of the call, when the process has debug info for the function.
+		if_opt_some(safe_process.mapToCodeCollectionIndex(low_position), instruction_index) {
+			if_opt_some(safe_process.getInstructionSourceLine(func.name, instruction_index), line) {
+				result.call_site = to_location(line);
+				return result;
+			}
+		}
+
+		// Else the position of the call in the bytecode file, when the code was loaded from one.
+		const auto code_position = safe_process.mapToCodePosition(low_position);
+		if_opt_some(code_position.source_position, position) {
+			const auto [line, column] = position.getStartLineColumn();
+			const auto file           = position.getSource()->getFile().getFilePath();
+			result.call_site          = api::SourceLocation{
+						 .file   = std::string(file.strView()),
+						 .line   = static_cast<u64>(line),
+						 .column = static_cast<u64>(column),
+			};
+		}
+		return result;
+	}
+
+	void SafeVMThread::resetFramesAbove(Frame* start_frame) {
+		for (Frame* frame = start_frame + 1;
+		     frame < runtime_data.frame_stack_end && frame->current_function != nullptr;
+		     frame++)
+			frame->resetFrameData();
+	}
 
 	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
