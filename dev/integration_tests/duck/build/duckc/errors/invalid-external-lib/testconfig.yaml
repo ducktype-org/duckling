@@ -1,0 +1,27 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "  external-libs: [libs/libsqlite.a]" >> foo/quackconfig.yaml
+Tests:
+  invalid-external-lib:
+    Description: errors on an external library given as a path instead of a name
+    Cases:
+      invalid-external-lib:
+        test-cmd: duck -C foo build
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+
+              Caused by:
+                failed to parse the field \`metadata\`
+
+              Caused by:
+                failed to parse the field \`metadata.external-libs\`
+
+              Caused by:
+                invalid external library name \`libs/libsqlite.a\`
+
+            note: the name looks like a path
+
+            hint: use the bare library name (e.g. \`sqlite3\` for \`libsqlite3.a\`) and put its directory in \`metadata.external-lib-paths\`"

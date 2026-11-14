@@ -37,6 +37,8 @@ assert bar_deps.exists()
 
 text = bar_deps.read_text()
 
+# `found` is in foo's `external-lib-paths`, so it is passed by its path. bar's two libraries are
+# not in any search directory, so they fall back to `-l<name>` and the linker looks for them.
 expected = f"""{{
   "packages": [
     {{
@@ -97,8 +99,9 @@ expected = f"""{{
       "output_file": "{str(layout / "foo")}",
       "linking_options": [
         "{str(bar_artifacts / f"{bar_name}.a")}",
-        "lib1",
-        "lib2"
+        "{str(foo_path / "libs" / "libfound.a")}",
+        "-lduck-not-installed-1",
+        "-lduck-not-installed-2"
       ]
     }}
   ]

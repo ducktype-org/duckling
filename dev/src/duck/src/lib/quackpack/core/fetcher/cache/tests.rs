@@ -22,7 +22,7 @@ fn create_sample_metadata() -> registry::Manifest {
         "name": "quackpack",
         "license": "GPS",
         "description": "",
-        "links": null
+        "external-libs": []
     },
     "dependencies": [
         {

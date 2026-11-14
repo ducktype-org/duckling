@@ -1865,6 +1865,148 @@ lints:
 }
 
 #[test]
+fn external_libs_and_paths() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  external-libs: [sqlite3, python3.12, sqlite3]
+  external-lib-paths: [libs, /opt/foo/lib]
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert_eq!(
+        build_options.external_libs,
+        [
+            StrId::from("sqlite3"),
+            StrId::from("python3.12"),
+            StrId::from("sqlite3")
+        ]
+    );
+    assert_eq!(
+        build_options.external_lib_paths,
+        [PathBuf::from("libs"), PathBuf::from("/opt/foo/lib")]
+    );
+}
+
+#[test]
+fn external_libs_default_to_empty() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert!(build_options.external_libs.is_empty());
+    assert!(build_options.external_lib_paths.is_empty());
+}
+
+#[test]
+fn old_links_field_is_an_error() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  links: sqlite3
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `metadata`",
+                "failed to parse the field `metadata.links`",
+                "`metadata.links` is no longer supported",
+                "list the library names in `metadata.external-libs` instead",
+            ]
+        )
+    );
+}
+
+/// Parse a manifest whose `external-libs` is `['<name>']`, and check that it fails with `note`.
+fn check_invalid_external_lib_name(name: &str, note: &str) {
+    let (dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  external-libs: ['{name}']
+"#
+    ));
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `metadata`",
+                "failed to parse the field `metadata.external-libs`",
+                &format!("invalid external library name `{name}`"),
+                note,
+                "use the bare library name (e.g. `sqlite3` for `libsqlite3.a`) and put its directory in `metadata.external-lib-paths`",
+            ]
+        )
+    );
+}
+
+const LIB_PREFIX_NOTE: &str =
+    "the `lib` prefix is added when the library is searched for, so it must not be in the name";
+const EXTENSION_NOTE: &str =
+    "the file extension is added when the library is searched for, so it must not be in the name";
+
+#[test]
+fn external_lib_name_empty() {
+    check_invalid_external_lib_name("", "the name is empty");
+}
+
+#[test]
+fn external_lib_name_is_a_path() {
+    check_invalid_external_lib_name("libs/foo", "the name looks like a path");
+}
+
+#[test]
+fn external_lib_name_with_lib_prefix() {
+    check_invalid_external_lib_name("libsqlite3", LIB_PREFIX_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_static_extension() {
+    check_invalid_external_lib_name("sqlite3.a", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_shared_extension() {
+    check_invalid_external_lib_name("sqlite3.so", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_versioned_shared_extension() {
+    check_invalid_external_lib_name("sqlite3.so.0", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_dylib_extension() {
+    check_invalid_external_lib_name("sqlite3.dylib", EXTENSION_NOTE);
+}
+
+#[test]
+fn external_lib_name_with_dll_extension() {
+    check_invalid_external_lib_name("sqlite3.dll", EXTENSION_NOTE);
+}
+
+#[test]
 fn invalid_explicit_url() {
     let (dir, manifest_path) = prepare_manifest(
         r#"

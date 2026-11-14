@@ -33,11 +33,11 @@ impl UnitTaskGenerator for DvmTaskGenerator {
             "dvm executor should only compile binary packages; got {:?}",
             root.unit_type()
         );
-        if let Some(ExternalLibrariesFound { unit, links }) =
+        if let Some(ExternalLibrariesFound { unit, lib }) =
             has_external_libraries(graph.root_id(), graph)
         {
             qp_bail!(
-                "package {} links against `{links}`, which is not supported on the DVM",
+                "package {} links against `{lib}`, which is not supported on the DVM",
                 unit.pkg_descriptive_name()
             )
         }
