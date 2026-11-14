@@ -28,24 +28,109 @@ struct Git2Repository<'duck> {
 
 #[derive(Debug)]
 /// Client implementing interaction with Git repositories.
-/// Currently it provides only static methods.
 pub struct Git2Client<'duck> {
     ctx: &'duck DuckContext,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default, Debug)]
+/// Metadata about a given credential callback.
+///
+/// For more information about error handling and possible authentication errors, see
+/// [`credentials_callback`].
+struct CredentialData {
+    /// Whether we tried this credential.
+    tried: bool,
+    /// Whether we failed this credential.
+    maybe_failed: MaybeFailedCredential,
+}
+
+/// Helper indicating whether a credential failed or not.
+#[derive(Default, Debug)]
+enum MaybeFailedCredential {
+    /// We did not failed (or haven't tried).
+    #[default]
+    NotFailed,
+    /// We failed this credential.
+    Failed(FailedCredential),
+}
+
+impl MaybeFailedCredential {
+    /// Has this credential has failed.
+    fn failed(&self) -> bool {
+        matches!(self, Self::Failed(_))
+    }
+
+    /// We have failed a credential. Mark it as failed.
+    ///
+    /// For more information about error handling and possible authentication errors, see
+    /// [`credentials_callback`].
+    fn fail(&mut self, error: &git2::Error) {
+        if matches!(self, Self::NotFailed) {
+            *self = Self::Failed(FailedCredential::from_error(error));
+        }
+    }
+
+    /// Check if we failed a credential, and update metadata.
+    ///
+    /// For more information about error handling and possible authentication errors, see
+    /// [`credentials_callback`].
+    fn maybe_fail<T>(&mut self, result: &Result<T, git2::Error>) {
+        if let Err(e) = result {
+            debug!(%e, "callback failed");
+            self.fail(e);
+        }
+    }
+
+    /// An alternative to [`maybe_fail]`, which reduces code in
+    /// [`credentials_callback`].
+    ///
+    /// For more information about error handling and possible authentication errors, see
+    /// [`credentials_callback`].
+    fn maybe_fail_callback<T>(&mut self, result: Result<T, git2::Error>) -> Result<T, git2::Error> {
+        self.maybe_fail(&result);
+        result
+    }
+
+    /// Maybe add a note about failed credential to the [`QuackError`].
+    fn maybe_add_note(&self, error: &mut QuackError, credential_name: &str) {
+        if let Self::Failed(failed) = self {
+            failed.add_note(error, credential_name);
+        }
+    }
+}
+
+/// Metadata about failed credential.
+#[derive(Debug)]
+struct FailedCredential {
+    error: git2::Error,
+}
+
+impl FailedCredential {
+    /// Create a new [`FailedCredential`] from the given error.
+    fn from_error(error: &git2::Error) -> Self {
+        let my_error = git2::Error::new(error.code(), error.class(), error.message());
+        Self { error: my_error }
+    }
+
+    /// Add a note about failed credential to the [`QuackError`].
+    fn add_note(&self, error: &mut QuackError, credential_name: &str) {
+        error.add_note(format!(
+            "tried {credential_name} authentication but failed because: {}",
+            self.error
+        ));
+    }
+}
+
 /// Summary and data of called functions in [`RemoteCallbacks::credentials`].
 struct GitCredentialsCallbackDataInner<'a> {
-    /// Number of actually executed callbacks.
-    attempted_auth_callbacks: u32,
-    /// `true` if have tried SSH.
-    tried_ssh: bool,
-    /// `true` if have tried plaintext password.
-    tried_plaintext: bool,
-    /// `true` if have tried plaintext password via credentials helper.
-    tried_cred_helper: bool,
-    /// `true` if have tried default credentials helper.
-    tried_default: bool,
+    /// Data about ssh authentication.
+    ssh: CredentialData,
+    /// Data about plaintext authentication.
+    plaintext: CredentialData,
+    /// Data about plaintext via credential helper authentication.
+    cred_helper: CredentialData,
+    /// Data about “default” authentication.
+    default: CredentialData,
 
     /// Config for used in credentials.
     config: &'a git2::Config,
@@ -57,18 +142,24 @@ struct GitCredentialsCallbackDataInner<'a> {
 type GitCredentialsCallbackData<'a> = Rc<RefCell<GitCredentialsCallbackDataInner<'a>>>;
 
 impl<'a> GitCredentialsCallbackDataInner<'a> {
-    /// Create a new [`GitCredentialsCallbackData`], with maximal authentication number,
-    /// [`git2::Config`], and defaults.
+    /// Create a new [`GitCredentialsCallbackDataInner`], with [`git2::Config`] and defaults.
     fn new(config: &'a git2::Config) -> Self {
         Self {
-            attempted_auth_callbacks: 0,
-            tried_ssh: false,
-            tried_plaintext: false,
-            tried_default: false,
-            tried_cred_helper: false,
+            ssh: Default::default(),
+            plaintext: Default::default(),
+            cred_helper: Default::default(),
+            default: Default::default(),
             possible_creds: CredentialType::empty(),
             config,
         }
+    }
+
+    /// Returns `true` if it's likely that a user has configured `credential.helper` and using it
+    /// won't fail (or is less likely to fail).
+    fn has_credential_helper(&self) -> bool {
+        let result = self.config.get_str("credential.helper").is_ok();
+        debug!(has_credential_helper = ?result);
+        result
     }
 
     /// Returns `true` if we can proceed to full clone.
@@ -81,55 +172,66 @@ impl<'a> GitCredentialsCallbackDataInner<'a> {
     /// Returns `true` if attempted every supported authentication method (by both client (us) and
     /// server).
     fn attempted_every_callback(&self) -> bool {
-        trace!(ssh = ?self.tried_ssh,
-            default = ?self.tried_default,
-            cred_helper = ?self.tried_cred_helper,
-            plaintext = ?self.tried_plaintext,
+        trace!(ssh = ?self.ssh,
+            default = ?self.default,
+            cred_helper = ?self.cred_helper,
+            plaintext = ?self.plaintext,
             cred_types = ?self.possible_creds
         );
-        if self.possible_creds.is_ssh_key() && !self.tried_ssh {
-            trace!("didn't try SSH but could");
+        if self.possible_creds.is_ssh_key() && !self.ssh.tried {
+            debug!("could try SSH");
             return false;
         }
 
         if self.possible_creds.is_user_pass_plaintext() {
-            if !self.tried_cred_helper {
-                trace!("didn't try cred helper but could");
+            if !self.plaintext.tried {
+                debug!("could try username + password");
                 return false;
             }
-            if !self.tried_plaintext {
-                trace!("didn't try plaitnext but could");
+            if !self.cred_helper.tried && self.has_credential_helper() {
+                debug!("could try credential helper");
                 return false;
             }
         }
 
-        if self.possible_creds.is_default() && !self.tried_default {
-            trace!("didn't try default but could");
+        if self.possible_creds.is_default() && !self.default.tried {
+            debug!("could try default helper");
             return false;
         }
         true
     }
 
     /// Add notes about appropriate failures to the [`QuackError`].
+    /// SSH and plaintext are treated in a special way:
+    /// 1. for SSH, we want to add extra notes and hints if we fail,
+    /// 2. for password it's more subtle: [`MaybeFailedCredential::maybe_fail`] gets result from
+    ///    *creating* the [`git2::Cred`] object. We can create it successfully, but credentials may
+    ///    just be wrong. Unfortunately, [`git2`] doesn't tell us about that.
+    ///
+    /// For more information about error handling and possible authentication errors, see
+    /// [`credentials_callback`].
     fn add_notes_to_clone_error(&self, error: &mut QuackError) {
-        if self.tried_ssh {
-            error.add_note("tried SSH authentication, but failed");
+        if self.ssh.maybe_failed.failed() {
+            self.ssh.maybe_failed.maybe_add_note(error, "SSH");
             error.add_note("SSH keys need to be in an SSH agent to work");
             error.add_hint("try adding your SSH keys to the SSH agent");
         }
-        if self.tried_plaintext {
-            error.add_note("tried username + password authentication, but failed");
+        if self.plaintext.tried {
+            if self.plaintext.maybe_failed.failed() {
+                self.plaintext
+                    .maybe_failed
+                    .maybe_add_note(error, "username + password");
+            } else {
+                // We failed, so if we tried this authentication, it must have failed.
+                error.add_note("tried username + password authentication but failed; \
+                    you either entered wrong credentials, or your account does not support username + password authentication");
+            }
         }
+        self.cred_helper
+            .maybe_failed
+            .maybe_add_note(error, "git's credential helper (`credential.helper`)");
 
-        if self.tried_cred_helper {
-            error.add_note(
-                "tried git's credential helper (`credential.helper`) authentication, but failed",
-            );
-        }
-
-        if self.tried_default {
-            error.add_note("tried default authentication, but failed");
-        }
+        self.default.maybe_failed.maybe_add_note(error, "default");
     }
 }
 
@@ -177,45 +279,73 @@ fn callbacks<'a>(
     });
     let data_copy = Rc::clone(&data);
     callbacks.credentials(move |url, username_from_url, cred_types| {
-        trace!(?cred_types);
-        let mut data = data_copy.borrow_mut();
-        data.possible_creds = cred_types;
-        data.attempted_auth_callbacks += 1;
-        if !data.tried_ssh && cred_types.is_ssh_key() {
-            trace!("trying SSH");
-            data.tried_ssh = true;
-            return ssh_callback(username_from_url);
-        }
-
-        if cred_types.is_user_pass_plaintext() {
-            if !data.tried_cred_helper {
-                trace!("trying cred helper");
-                data.tried_cred_helper = true;
-                return git2::Cred::credential_helper(data.config, url, username_from_url);
-            }
-            if !data.tried_plaintext {
-                trace!("trying plaintext");
-                data.tried_plaintext = true;
-                return username_and_password_callback(ctx);
-            }
-        }
-
-        if !data.tried_default && cred_types.is_default() {
-            trace!("trying default");
-            data.tried_default = true;
-            return Cred::default();
-        }
-
-        let mut err = git2::Error::from_str("unsupported authentication method");
-        err.set_code(git2::ErrorCode::Auth);
-        err.set_class(git2::ErrorClass::Callback);
-        Err(err)
+        credentials_callback(ctx, url, username_from_url, cred_types, &data_copy)
     });
     let port = url.port();
     callbacks.certificate_check(move |cert, host| {
         super::known_hosts::check_certificate(ctx, cert, host, port)
     });
     (callbacks, data)
+}
+
+/// Callback for [`RemoteCallbacks::credentials`].
+///
+/// General note on error handling: we communicate to [`git2`] custom errors/errors that occurred
+/// while creating an object (e.g. [`git2::Cred::credential_helper`] reads git config, but may fail
+/// to find a field). Unfortunately, some errors (e.g. wrong username + password) are detected later
+/// by [`git2`], but it doesn't have an API to tell us about them, so we lack diagnostic. (from my
+/// understanding, [`git2`] sees that an authentication failed, so it tries another one, until we
+/// return "unsupported authentication method" with the right code and class).
+fn credentials_callback(
+    ctx: &DuckContext,
+    url: &str,
+    username_from_url: Option<&str>,
+    cred_types: CredentialType,
+    data: &GitCredentialsCallbackData<'_>,
+) -> Result<git2::Cred, git2::Error> {
+    trace!(?cred_types);
+    let mut data = data.borrow_mut();
+    data.possible_creds = cred_types;
+    if !data.ssh.tried && cred_types.is_ssh_key() {
+        debug!("trying SSH authentication");
+        data.ssh.tried = true;
+        return data
+            .ssh
+            .maybe_failed
+            .maybe_fail_callback(ssh_callback(username_from_url));
+    }
+
+    if cred_types.is_user_pass_plaintext() {
+        if !data.plaintext.tried {
+            debug!("trying username + password authentication");
+            data.plaintext.tried = true;
+            return data
+                .plaintext
+                .maybe_failed
+                .maybe_fail_callback(username_and_password_callback(ctx));
+        }
+        if !data.cred_helper.tried && data.has_credential_helper() {
+            debug!("trying credential helper authentication");
+            data.cred_helper.tried = true;
+            let result = git2::Cred::credential_helper(data.config, url, username_from_url);
+            return data.cred_helper.maybe_failed.maybe_fail_callback(result);
+        }
+    }
+
+    if !data.default.tried && cred_types.is_default() {
+        debug!("trying default authentication");
+        data.default.tried = true;
+        return data
+            .default
+            .maybe_failed
+            .maybe_fail_callback(Cred::default());
+    }
+
+    Err(git2::Error::new(
+        git2::ErrorCode::Auth,
+        git2::ErrorClass::Callback,
+        "unsupported authentication method",
+    ))
 }
 
 /// Callback for ssh authentication.

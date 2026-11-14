@@ -68,12 +68,8 @@ fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal)
 
 /// Print [`QuackError`] as a message.
 fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
-    let mut should_follow_with_newline = true;
     // NOTE: We intentionally ignore any printing errors here.
-    for (i, error) in msgs.sources().enumerate() {
-        if i > 0 && should_follow_with_newline {
-            let _ = term.print("");
-        }
+    for error in msgs.sources() {
         let msg = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
             // Clap internally adds a trailing newline, remove it.
             clap_error
@@ -87,15 +83,12 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
         };
         match error.error_type() {
             ErrorType::Hint => {
-                should_follow_with_newline = false;
                 let _ = term.hint(msg);
             }
             ErrorType::Note => {
-                should_follow_with_newline = false;
                 let _ = term.note(msg);
             }
             ErrorType::BareMessage => {
-                should_follow_with_newline = false;
                 let _ = term.print(msg);
             }
             error_type => qp_bail_internal!(
