@@ -292,7 +292,7 @@ fn callbacks<'a>(
 /// to find a field). Unfortunately, some errors (e.g. wrong username + password) are detected later
 /// by [`git2`], but it doesn't have an API to tell us about them, so we lack diagnostic. (from my
 /// understanding, [`git2`] sees that an authentication failed, so it tries another one, until we
-/// return "unsupported authentication method" with the right code and class).
+/// return "all supported authentication methods have failed" with the right code and class).
 fn credentials_callback(
     ctx: &DuckContext,
     url: &str,
@@ -341,7 +341,7 @@ fn credentials_callback(
     Err(git2::Error::new(
         git2::ErrorCode::Auth,
         git2::ErrorClass::Callback,
-        "unsupported authentication method",
+        "all supported authentication methods have failed",
     ))
 }
 
