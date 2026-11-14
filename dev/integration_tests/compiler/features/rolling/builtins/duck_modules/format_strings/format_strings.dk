@@ -6,7 +6,7 @@ fun main() -> i64 = {
 	print("And another?\n");
 	var number2 = builtin_input_i64();
 
-    print(f"Hello {name}, did you know that {number1} + {number2} = {number1 + number2}?\n");
+	print(f"Hello {name}, did you know that {number1} + {number2} = {number1 + number2}?\n");
 
-    return 0;
+	return 0;
 }

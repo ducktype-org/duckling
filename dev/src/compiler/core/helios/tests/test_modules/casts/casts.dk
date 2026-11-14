@@ -17,5 +17,5 @@ fun test_casts() -> i64 = {
 
 
 fun get_i32() -> i32 = {
-    return 42 as i32;
+	return 42 as i32;
 }

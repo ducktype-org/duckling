@@ -1,14 +1,14 @@
 fun readPastEnd(index: i64) -> i64 = {
-    var arr: i64[3];
-    return arr[index];
+	var arr: i64[3];
+	return arr[index];
 }
 
 fun forward(index: i64) -> i64 = {
-    return readPastEnd(index);
+	return readPastEnd(index);
 }
 
 fun main() -> i64 = {
-    builtin_output_i64(forward(4));
+	builtin_output_i64(forward(4));
 
-    return 0;
+	return 0;
 }

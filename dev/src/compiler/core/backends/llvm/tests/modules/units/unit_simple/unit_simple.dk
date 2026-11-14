@@ -5,11 +5,11 @@ let b: unitType = ();
 const unitType: type = ();
 
 fun foo(u: ()) -> () = {
-    return u;
+	return u;
 }
 
 fun main() -> i64 = {
-    foo(a);
-    foo(b);
-    return 0i64;
+	foo(a);
+	foo(b);
+	return 0i64;
 }

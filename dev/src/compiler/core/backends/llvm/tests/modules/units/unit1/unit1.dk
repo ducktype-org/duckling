@@ -1,10 +1,10 @@
 # Call a function which explicitly returns unit.
 
 fun goo() -> () = {
-    return;
+	return;
 }
 
 fun foo() -> () = {
-    goo();
-    return;
+	goo();
+	return;
 }

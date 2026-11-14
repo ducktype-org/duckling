@@ -31,7 +31,7 @@ fun foo() -> i32 = {
 const abc: i64 = 123;
 
 namespace N {
-    # @TODO: #1412 fix dealias
+	# @TODO: #1412 fix dealias
 	# class Q {}
 	const in_n: i64 = 0;
 }

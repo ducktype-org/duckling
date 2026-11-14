@@ -1,9 +1,9 @@
 fun main() -> i64 = {
-    var a: i64 = 1;
+	var a: i64 = 1;
 
-    expand "builtin_output_i64(a);";
-    expand "a = a + 1;";
-    expand "builtin_output_i64(a);";
+	expand "builtin_output_i64(a);";
+	expand "a = a + 1;";
+	expand "builtin_output_i64(a);";
 
-    return 0;
+	return 0;
 }

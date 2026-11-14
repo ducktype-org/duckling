@@ -205,7 +205,8 @@ no-op) and round-trip safety (the significant token stream is unchanged).
 
 ## Keeping the repository formatted
 
-These helpers format `.dk` files with `duckfmt` or check them. Both find the binary in `build/bin/duckfmt` by default, so build it first.
+Every `.dk` file in the repository is kept formatted with `duckfmt`. Both helpers
+below find the binary in `build/bin/duckfmt` by default, so build it first.
 
 ```sh
 # format the .dk files this branch changed (plus untracked ones); --all for every file
@@ -214,6 +215,8 @@ These helpers format `.dk` files with `duckfmt` or check them. Both find the bin
 # check only; --auto-fix formats the offending files, --no-fix just reports them
 python3 toolbox.py duckling-formatter -b build [--all] [--no-fix | --auto-fix]
 ```
+
+`pr-validate` runs the same check right after its build step.
 
 ## Limitations
 

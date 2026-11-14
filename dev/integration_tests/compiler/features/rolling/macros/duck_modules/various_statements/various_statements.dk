@@ -9,15 +9,15 @@ expand " class T { x: i64 = 0; y: i64 = 0; } ";
 expand " const c = 100; ";
 
 fun main() -> i64 = {
-    var t = T();
-    t.x = 10;
-    t.y = 20;
+	var t = T();
+	t.x = 10;
+	t.y = 20;
 
-    a = 4;
+	a = 4;
 
-    var sum = t.x + t.y + N.foo() + a + c + s.sub();
+	var sum = t.x + t.y + N.foo() + a + c + s.sub();
 
-    builtin_output_i64(sum);
+	builtin_output_i64(sum);
 
-    return 0;
+	return 0;
 }

@@ -11,6 +11,6 @@ fun *(c: char, n: i64) -> String = {
 }
 
 fun main() -> i64 = {
-    print('a' * 5);
-    return 0;
+	print('a' * 5);
+	return 0;
 }
