@@ -921,10 +921,10 @@ namespace compiler::tsh {
 
 		ModuleAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override {
-			// @TODO: #1275 this is a placeholder, implement proper logic
-			return false;
-		}
+		/**
+		 * @brief Panics: no one calls it currently.
+		 */
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
