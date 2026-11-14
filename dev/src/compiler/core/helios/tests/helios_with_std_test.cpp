@@ -552,6 +552,7 @@ private:
 		ASSERT_EQUAL(',', getConstValueAs<char>("CHAR_FROM_U8", root_scope));
 		ASSERT_EQUAL('A', getConstValueAs<char>("CHAR_FROM_F64", root_scope));
 		ASSERT_EQUAL(',', getConstValueAs<char>("CHAR_WRAPPED", root_scope));
+		ASSERT_EQUAL('\xFF', getConstValueAs<char>("CHAR_NEGATIVE", root_scope));
 		ASSERT_EQUAL(200, getConstValueAs<i64>("CHAR_TO_I64", root_scope));
 		ASSERT_EQUAL(65.0f, getConstValueAs<f32>("CHAR_TO_F32", root_scope));
 	}

@@ -778,30 +778,30 @@ namespace compiler::helios {
 					return;
 				}
 
-				const auto target_kind = cast.target_type.getType().getKind();
-				if (target_kind == tsh::Kind::Char) {
-					// Only exact casts are folded here. A value outside the `u8` range wraps at
-					// runtime, and the VM evaluation reproduces that.
-					auto maybe_u8 = numeric->coerceTo<std::uint8_t>();
-					if (!maybe_u8.has_value()) {
+				switch (cast.target_type.getType().getKind()) {
+				case tsh::Kind::Integral:
+				case tsh::Kind::Float: {
+					auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
+					if (maybe_new_numeric.has_value())
+						result = CompileTimeValue{ maybe_new_numeric.value() };
+					else
 						result = CouldNotShortPath{};
-						return;
-					}
-					result = CompileTimeValue{ static_cast<char>(maybe_u8.value()) };
-					return;
+					break;
 				}
-				if (target_kind != tsh::Kind::Integral && target_kind != tsh::Kind::Float) {
+				case tsh::Kind::Char: {
+					// `char` is not a `NumericValue`, so `castTo` cannot produce it. Only exact
+					// casts are folded here. A value outside the `u8` range wraps at runtime, and
+					// the VM evaluation reproduces that.
+					auto maybe_u8 = numeric->coerceTo<std::uint8_t>();
+					if (maybe_u8.has_value())
+						result = CompileTimeValue{ static_cast<char>(maybe_u8.value()) };
+					else
+						result = CouldNotShortPath{};
+					break;
+				}
+				default:
 					result = CouldNotShortPath{};
-					return;
 				}
-
-				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
-				if (!maybe_new_numeric.has_value()) {
-					result = CouldNotShortPath{};
-					return;
-				}
-
-				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
 			void visitMoveExpr(const code::MoveExpr& expr) final {

@@ -157,5 +157,6 @@ const ARRAY_ELEM_OF_CALL = makeArray()[2]; # 30
 const CHAR_FROM_U8: char = 44u8 as char; # ','
 const CHAR_FROM_F64: char = 65.9 as char; # 'A'
 const CHAR_WRAPPED: char = 300 as char; # 44, out of range: evaluated by the VM
+const CHAR_NEGATIVE: char = -1 as char; # 255, out of range: evaluated by the VM
 const CHAR_TO_I64: i64 = (200u8 as char) as i64; # 200, zero-extended
 const CHAR_TO_F32: f32 = 'A' as f32; # 65.0
