@@ -125,6 +125,46 @@ def _split_nul_listing(listing: str) -> list[str]:
     return [f for f in listing.split("\0") if f]
 
 
+# The C-style escapes git uses in a quoted path, besides the octal `\NNN` bytes
+_GIT_PATH_ESCAPES = {
+    "a": 0x07,
+    "b": 0x08,
+    "t": 0x09,
+    "n": 0x0A,
+    "v": 0x0B,
+    "f": 0x0C,
+    "r": 0x0D,
+    '"': 0x22,
+    "\\": 0x5C,
+}
+
+
+def _unquote_git_path(path: str) -> str:
+    """
+    Undo the quoting git applies to a path holding a control character, e.g. in the
+    `+++ "b/mod_\\177_.dk"` header of a diff, which has no `-z` form.
+
+    A path without the surrounding quotes is returned unchanged.
+    """
+    if len(path) < 2 or path[0] != '"' or path[-1] != '"':
+        return path
+
+    raw = bytearray()
+    i, end = 1, len(path) - 1
+    while i < end:
+        if path[i] != "\\":
+            raw += path[i].encode("UTF-8")
+            i += 1
+        elif path[i + 1] in "01234567":
+            # An octal escape is one byte of the UTF-8 encoded path
+            raw.append(int(path[i + 1 : i + 4], 8))
+            i += 4
+        else:
+            raw.append(_GIT_PATH_ESCAPES[path[i + 1]])
+            i += 2
+    return raw.decode("UTF-8")
+
+
 def _get_untracked_files_to_list(
     extensions: list[str] | None, include_untracked: bool
 ) -> list[str]:
@@ -195,9 +235,11 @@ def _get_modified_files_and_lines(
 
         if line.startswith("@@") and not file_deleted:
             # Check if this diff is for a new file...
-            if prev_line and prev_line.startswith("+++ b/"):
-                # File has changed
-                filename = prev_line[len("+++ b/") :].rstrip()
+            if prev_line and prev_line.startswith("+++ "):
+                # File has changed. Every `+++` header names the new file, so a quoted one
+                # must not be skipped, or its hunks would be credited to the previous file.
+                path = _unquote_git_path(prev_line[len("+++ ") :].rstrip())
+                filename = path[len("b/") :] if path.startswith("b/") else None
 
             if filename is None:
                 continue
