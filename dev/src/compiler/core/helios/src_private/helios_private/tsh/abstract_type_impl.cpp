@@ -470,8 +470,8 @@ namespace compiler::tsh {
 
 	bool ModuleAbstractTypeImpl::isTriviallyDestructible(query::Context&) const {
 		CORE_PANIC(
-			"Asked whether a module type is trivially destructible, but no value has a module type "
-			"yet. Decide what to do about it: a module holds no state, so `true` is the likely "
+			"Asked whether a module type is trivially destructible which has no sensible value "
+			"yet. If needed, decide what to do about it: a module holds no state, so `true` is the likely "
 			"answer."
 		);
 	}
