@@ -65,7 +65,7 @@ class SomeClass {
     field_a: i32;
     field_b: str;
 
-    fun count(tmp: i32) = {
+    mut fun count(tmp: i32) = {
         field_a = field_a+tmp;
         return field_a;
     }

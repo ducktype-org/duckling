@@ -3,13 +3,13 @@ fun main() -> i64 = {
     var ref_value = &value;
     var box_value : box i32 = new value;
 
-    var p1 = ref_value as ptr i32;
+    var p1 = ref_value as ptr mut i32;
     var p2 = box_value as ptr i32;
     
     *p1 = 30;
     var tmp1 = *p2;
 
-    var mp1 : manyptr i32;
+    var mp1 : manyptr mut i32;
     mp1[0] = 30;
     let tmp2 = mp1[0];
     var ref_mp1 = &mp1[0];

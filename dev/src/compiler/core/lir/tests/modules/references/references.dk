@@ -1,6 +1,6 @@
 class Point { x: i32; y: i32; }
-class RefPoint { x: ref i32; y: ref i32; }
-class RefWrapper { p: ref RefPoint; }
+class RefPoint { x: ref mut i32; y: ref mut i32; }
+class RefWrapper { p: ref mut RefPoint; }
 
 fun references(p: ref Point) -> () = {
     var x: i32 = 123;

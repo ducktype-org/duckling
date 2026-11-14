@@ -12,8 +12,8 @@ fun records1() -> () = {
     builtin_output_i64(w.p.y); # 42
 }
 
-class RefPoint { x: ref i64; y: ref i64; }
-class RefWrapper { p: ref RefPoint; }
+class RefPoint { x: ref mut i64; y: ref mut i64; }
+class RefWrapper { p: ref mut RefPoint; }
 
 fun records2() -> () = {
     var x: i64 = 123;
@@ -34,7 +34,7 @@ fun records2() -> () = {
     builtin_output_i64(ref_wrapper.p.y);
 }
 
-fun point_by_ref(p: ref Point) -> () = {
+fun point_by_ref(p: ref mut Point) -> () = {
     p.x = 777;
     p.y = 888;
 }

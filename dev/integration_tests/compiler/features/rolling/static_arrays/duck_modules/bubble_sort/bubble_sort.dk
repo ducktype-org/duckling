@@ -1,10 +1,10 @@
-fun swap(a: ref i64, b: ref i64) -> () = {
+fun swap(a: ref mut i64, b: ref mut i64) -> () = {
     let tmp: i64 = a;
     a = b;
     b = tmp;
 }
 
-fun bubble_sort(size: i64, arr: ref i64[10]) -> () = {
+fun bubble_sort(size: i64, arr: ref mut i64[10]) -> () = {
     var i = 0;
     while (i < size) {
         var j = 0;
