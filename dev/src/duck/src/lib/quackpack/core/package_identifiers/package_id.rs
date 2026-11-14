@@ -6,12 +6,12 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::StrId;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::short_name_for_host;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::with_version::WithVersion;
+use crate::{DuckContext, QuackResult, StrId};
 
 /// Unique identifier of a package, used throughout the whole project.
 pub type PackageId = WithVersion<FullIdentity>;
@@ -40,6 +40,10 @@ impl PackageId {
     /// Get the package's kind.
     pub fn kind(self) -> FullKind {
         self.origin().kind()
+    }
+
+    pub fn is_default_registry(self, ctx: &DuckContext) -> QuackResult<bool> {
+        Ok(self.url() == ctx.duck_cfg().registry_url()?)
     }
 
     #[track_caller]

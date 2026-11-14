@@ -171,7 +171,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         self.root_pcx
             .ctx()
             .info_verbose("starting the solver engine")?;
-        let (solution, manifests) = SolverEngine::run_engine(input, root)?;
+        let (solution, manifests) = SolverEngine::run_engine(input, root, self.root_pcx.ctx())?;
         debug!(?solution);
         let new_freeze = solution.trim(&manifests, root.features.clone())?;
         Ok(SolverAnswer {
