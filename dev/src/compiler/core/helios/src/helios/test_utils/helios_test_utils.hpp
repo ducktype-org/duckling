@@ -73,7 +73,8 @@ namespace compiler::helios::test_utils {
 		auto ctv_result = getConstValue(chain, scope);
 
 		base::Optional<T> maybe_value{};
-		if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>) {
+		if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, bool>
+		              && !std::is_same_v<T, char>) {
 			auto maybe_numeric_value = ctv_result.get<numeric_value::NumericValue>();
 			maybe_value              = maybe_numeric_value->get<T>();
 		} else {

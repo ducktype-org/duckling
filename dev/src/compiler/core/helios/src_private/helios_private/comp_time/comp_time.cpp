@@ -768,8 +768,29 @@ namespace compiler::helios {
 					result = ctv;
 					return;
 				}
-				const auto& numeric = ctv.get<NumericValue>();
+				// A `char` is an unsigned 8-bit integer to the backends: it zero-extends when cast
+				// to a wider type, so it is folded as a `u8`.
+				base::Optional<NumericValue> numeric = ctv.get<NumericValue>();
+				if (const auto maybe_char = ctv.get<char>())
+					numeric = NumericValue{ static_cast<std::uint8_t>(maybe_char.value()) };
 				if (!numeric) {
+					result = CouldNotShortPath{};
+					return;
+				}
+
+				const auto target_kind = cast.target_type.getType().getKind();
+				if (target_kind == tsh::Kind::Char) {
+					// Only exact casts are folded here. A value outside the `u8` range wraps at
+					// runtime, and the VM evaluation reproduces that.
+					auto maybe_u8 = numeric->coerceTo<std::uint8_t>();
+					if (!maybe_u8.has_value()) {
+						result = CouldNotShortPath{};
+						return;
+					}
+					result = CompileTimeValue{ static_cast<char>(maybe_u8.value()) };
+					return;
+				}
+				if (target_kind != tsh::Kind::Integral && target_kind != tsh::Kind::Float) {
 					result = CouldNotShortPath{};
 					return;
 				}

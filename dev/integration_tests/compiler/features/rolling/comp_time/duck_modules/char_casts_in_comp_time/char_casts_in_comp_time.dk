@@ -1,0 +1,20 @@
+# Casts to and from `char` in constant initializers. A `char` is an unsigned 8-bit integer, so
+# an out-of-range value wraps and a `char` zero-extends when cast to a wider type.
+const COMMA: char = 44u8 as char;
+const FROM_FLOAT: char = 65.9 as char;
+const WRAPPED: char = 300 as char;
+const NEGATIVE: char = -1 as char;
+const LETTER_CODE: i64 = 'A' as i64;
+const HIGH_CODE: i64 = (200u8 as char) as i64;
+const HIGH_AS_FLOAT: f64 = (200u8 as char) as f64;
+
+fun main() -> i64 = {
+    builtin_output_i64(COMMA as i64);
+    builtin_output_i64(FROM_FLOAT as i64);
+    builtin_output_i64(WRAPPED as i64);
+    builtin_output_i64(NEGATIVE as i64);
+    builtin_output_i64(LETTER_CODE);
+    builtin_output_i64(HIGH_CODE);
+    builtin_output_i64(HIGH_AS_FLOAT as i64);
+    return 0;
+}

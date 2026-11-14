@@ -6,6 +6,13 @@ Tests:
           String: ""
         ExitCode: 0
 
+  char_casts_in_comp_time:
+    Cases:
+      all:
+        Output:
+          String: "44\n65\n44\n255\n65\n200\n200\n"
+        ExitCode: 0
+
   comp_time_references:
     Cases:
       all:
