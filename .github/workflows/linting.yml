@@ -126,6 +126,13 @@ jobs:
           # Set it to true to post a new comment (and delete the old comment).
           step-summary: true
 
+      # Every .dk file is kept formatted with duckfmt. Reuses the build configured above. 
+      - name: Check Duckling formatting
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} --target duckfmt -j "$(nproc)"
+          python3 toolbox.py duckling-formatter --all --no-fix --duckfmt ${{ env.BUILD_DIR }}/bin/duckfmt
+
       - name: Fail fast?!
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
