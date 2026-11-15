@@ -114,5 +114,4 @@ namespace duck_ls {
 			units += i < chars.size() && chars[i].value > LAST_SINGLE_UNIT_CODE_POINT ? 2 : 1;
 		return units;
 	}
-
 }
