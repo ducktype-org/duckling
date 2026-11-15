@@ -1,0 +1,42 @@
+function checkNonZero { i64 }-> { i64 } {
+	init_pany_type          check_ret0, i64;
+	init_pany_type          check_arg0, i64;
+	mov_p64_p64             check_arg0, arg0;
+	call_cfunc              panicAtZero;
+
+	mov_p64_p64             ret0, check_ret0;
+	deinit; # check_ret0
+	ret;
+}
+
+function main { i64, ptr_argv }-> { i64 } {
+    # Read counter from STDIN
+    init_pany_type counter, i64;
+    input_p64 counter;
+
+    # Counts down to 0 inclusive; the last call panics.
+label loop_start;
+
+    cmpEq_p64_imm counter, -1;
+    jmpIf_label loop_end;
+
+	init_pany_type          checkNonZero_ret0, i64;
+	init_pany_type          checkNonZero_arg0, i64;
+	mov_p64_p64             checkNonZero_arg0, counter;
+	call_func               checkNonZero;
+
+    output_p64              checkNonZero_ret0;
+    deinit; # checkNonZero_ret0
+
+    add_p64_imm counter, -1;
+    jmp_label loop_start;
+
+label loop_end;
+
+    mov_p64_imm ret0, 0;
+
+    deinit; # counter
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

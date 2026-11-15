@@ -918,6 +918,11 @@ private:
 			}
 
 			bool erase(const Key& key) override { return map.erase(key) > 0; }
+
+			// Lets the linearizer merge equal search states.
+			bool operator==(const SequentialHashMapWrapper& other) const {
+				return map == other.map;
+			}
 		};
 
 		// Run the race test multiple times for confidence

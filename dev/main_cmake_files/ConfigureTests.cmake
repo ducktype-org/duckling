@@ -9,7 +9,9 @@ if (ENABLE_COVERAGE AND BUILD_TYPE_IS_OPTIMISED)
 endif()
 
 if(ENABLE_COVERAGE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
+	# --coverage -fprofile-update=atomic is needed, 
+	# since the compiler, the VM and many tests are multithreaded.
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
 
 	find_program(FASTCOV fastcov REQUIRED)
 

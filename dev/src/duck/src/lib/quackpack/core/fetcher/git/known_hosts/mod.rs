@@ -213,6 +213,7 @@ fn get_known_hosts_files(ctx: &DuckContext) -> Vec<PathBuf> {
 }
 
 /// Parse a single known_hosts file, and append its results to `buffer`.
+#[tracing::instrument(skip(buffer))]
 fn parse_single_known_hosts_file<'a>(path: &'a Path, buffer: &mut Vec<TrackedKnownHostEntry<'a>>) {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
