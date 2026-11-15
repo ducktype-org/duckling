@@ -189,6 +189,12 @@ private:
 			usize counter{};
 
 			usize increment(u32) override { return counter++; }
+
+		public:
+			// Lets the linearizer merge equal search states.
+			bool operator==(const SequentialCounter& other) const {
+				return counter == other.counter;
+			}
 		};
 
 		// Run for the good counter.
