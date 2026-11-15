@@ -768,19 +768,40 @@ namespace compiler::helios {
 					result = ctv;
 					return;
 				}
-				const auto& numeric = ctv.get<NumericValue>();
+				// A `char` is an unsigned 8-bit integer to the backends: it zero-extends when cast
+				// to a wider type, so it is folded as a `u8`.
+				base::Optional<NumericValue> numeric = ctv.get<NumericValue>();
+				if (const auto maybe_char = ctv.get<char>())
+					numeric = NumericValue{ static_cast<std::uint8_t>(maybe_char.value()) };
 				if (!numeric) {
 					result = CouldNotShortPath{};
 					return;
 				}
 
-				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
-				if (!maybe_new_numeric.has_value()) {
-					result = CouldNotShortPath{};
-					return;
+				switch (cast.target_type.getType().getKind()) {
+				case tsh::Kind::Integral:
+				case tsh::Kind::Float: {
+					auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
+					if (maybe_new_numeric.has_value())
+						result = CompileTimeValue{ maybe_new_numeric.value() };
+					else
+						result = CouldNotShortPath{};
+					break;
 				}
-
-				result = CompileTimeValue{ maybe_new_numeric.value() };
+				case tsh::Kind::Char: {
+					// `char` is not a `NumericValue`, so `castTo` cannot produce it. Only exact
+					// casts are folded here. A value outside the `u8` range wraps at runtime, and
+					// the VM evaluation reproduces that.
+					auto maybe_u8 = numeric->coerceTo<std::uint8_t>();
+					if (maybe_u8.has_value())
+						result = CompileTimeValue{ static_cast<char>(maybe_u8.value()) };
+					else
+						result = CouldNotShortPath{};
+					break;
+				}
+				default:
+					result = CouldNotShortPath{};
+				}
 			}
 
 			void visitMoveExpr(const code::MoveExpr& expr) final {
