@@ -5,6 +5,8 @@ add_library(TerminalUI
     src/diagnostic/term_ui/code_line.cpp
     src/diagnostic/term_ui/code_section.hpp
     src/diagnostic/term_ui/code_section.cpp
+    src/diagnostic/term_ui/display_width.hpp
+    src/diagnostic/term_ui/display_width.cpp
     src/diagnostic/term_ui/highlight.hpp
     src/diagnostic/term_ui/highlight.cpp
     src/diagnostic/term_ui/line.hpp
