@@ -226,10 +226,10 @@ impl AnyPackage {
     }
 
     /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
-    pub fn iss_expl_path(&self) -> PathBuf {
+    pub fn iis_expl_path(&self) -> PathBuf {
         match self {
-            Self::Package(package) => package.iss_expl_path(),
-            Self::Script(script) => script.iss_expl_path(),
+            Self::Package(package) => package.iis_expl_path(),
+            Self::Script(script) => script.iis_expl_path(),
         }
     }
 
@@ -372,7 +372,7 @@ impl Package {
     }
 
     /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
-    pub fn iss_expl_path(&self) -> PathBuf {
+    pub fn iis_expl_path(&self) -> PathBuf {
         self.root_directory()
             .join(".duck_sync")
             .join("iis_expl.txt")

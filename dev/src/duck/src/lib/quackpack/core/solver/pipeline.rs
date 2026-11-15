@@ -69,7 +69,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         let ctx = self.root_pcx.ctx();
         ctx.info_verbose("starting solving the dependency graph")?;
         let root = SolverRoot::new(self.root_pcx)?;
-        let iis_path = self.root_pcx.package().iss_expl_path();
+        let iis_path = self.root_pcx.package().iis_expl_path();
 
         let Some(previous_freeze) = self.previous_solver_freeze(&root)? else {
             return self

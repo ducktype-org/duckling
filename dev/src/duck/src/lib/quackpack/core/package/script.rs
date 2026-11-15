@@ -220,7 +220,7 @@ impl Script {
         }
     }
     /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
-    pub fn iss_expl_path(&self) -> PathBuf {
+    pub fn iis_expl_path(&self) -> PathBuf {
         match self {
             Self::Associated(associated) => associated.iis_expl_path(),
             Self::Standalone(standalone) => standalone.iis_expl_path(),
@@ -439,7 +439,7 @@ impl StandaloneScript {
 
     /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
     pub fn iis_expl_path(&self) -> PathBuf {
-        self.frontmatter.iss_expl_path()
+        self.frontmatter.iis_expl_path()
     }
 
     /// Get a [`Display`](fmt::Display) impl.
@@ -560,7 +560,7 @@ impl FrontMatter {
     }
 
     /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
-    pub fn iss_expl_path(&self) -> PathBuf {
+    pub fn iis_expl_path(&self) -> PathBuf {
         self.script_folder().join(".duck_sync").join("iis_expl.txt")
     }
 }
