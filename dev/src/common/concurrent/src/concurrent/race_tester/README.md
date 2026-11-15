@@ -78,6 +78,8 @@ It uses the operation function objects recorded in the History to replay those o
 
 By trying all possible orderings of concurrent operations, the BFS explores the entire space of valid sequential executions. If any ordering produces results matching the recorded history, the concurrent execution is linearizable (correct). Note that the search space might grow exponentially with the number of concurrent operations, so the tests should be kept reasonably small, and designed to aid the framework in rejecting search paths early. See [Usage](#usage).
 
+If the sequential implementation has an `operator==`, the search drops a state that it has already reached by another ordering (same next operation for every thread, equal sequential state). The answer stays the same, but the number of states stays small even when many orderings give matching results. Give your sequential implementation an `operator==` whenever you can.
+
 The BFS approach finds the shortest counterexample if the implementation is incorrect, which aids debugging.
 
 Note that the BFSLinearizer requires the sequential implementation to be copy-constructible, as it needs to maintain multiple independent copies of the state during exploration.
