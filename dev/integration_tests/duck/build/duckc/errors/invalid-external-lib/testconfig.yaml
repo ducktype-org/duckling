@@ -23,5 +23,4 @@ Tests:
                 invalid external library name \`libs/libsqlite.a\`
 
             note: the name looks like a path
-
             hint: use the bare library name (e.g. \`sqlite3\` for \`libsqlite3.a\`) and put its directory in \`metadata.external-lib-paths\`"
