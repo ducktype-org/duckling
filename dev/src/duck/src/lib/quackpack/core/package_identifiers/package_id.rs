@@ -42,8 +42,9 @@ impl PackageId {
         self.origin().kind()
     }
 
+    /// Checks if the package comes from the default registry.
     pub fn is_default_registry(self, ctx: &DuckContext) -> QuackResult<bool> {
-        Ok(self.url() == ctx.duck_cfg().registry_url()?)
+        Ok(self.identity().is_registry() && self.url() == ctx.duck_cfg().registry_url()?)
     }
 
     #[track_caller]

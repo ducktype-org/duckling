@@ -4,7 +4,7 @@
 # Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-PostCase: python3 check.py && @{cleanup_tmp_env} && rm /tmp/qp_iis_expl.txt
+PostCase: python3 check.py && @{cleanup_tmp_env}
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
@@ -22,8 +22,10 @@ Tests:
       sync:
         test-cmd: duck -C foo sync --external-errors
         ExitCode: 1
+        Output:
+          String: ""
         Err:
           Run: |+
             echo "error: no solution to the dependency problem found; SCIP run's status is Infeasible
 
-            note: the explaination why there is no solution was written to \`/tmp/qp_iis_expl.txt\`"
+            note: the explanation why there is no solution was written to \`$DIT_TMP_DIR/foo/.duck_sync/iis_expl.txt\`"

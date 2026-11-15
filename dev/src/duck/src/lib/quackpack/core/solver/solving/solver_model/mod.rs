@@ -9,6 +9,7 @@
 //! -----
 //! By `child` in the context of a given dependency relation we mean the package realising that dependency.
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use russcip::prelude::var;
@@ -29,7 +30,7 @@ mod solution;
 pub use constraints::Constraint;
 
 /// Error signifying that no solution was found by SCIP.
-/// Constains the resulting [`Status`].
+/// Contains the resulting [`Status`].
 /// Introduced so that callers can check if error was caused by no solution or anything else.
 #[derive(Debug)]
 pub struct NoSolutionError(pub(crate) Status);
@@ -160,17 +161,23 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
+    ///
+    /// `generate_iis` specifies if and where to write explanation in case no solution was found.
     #[tracing::instrument(skip_all)]
-    pub fn solve(self, main_pkg: PackageId, ctx: &DuckContext) -> QuackResult<SolverFreeze> {
-        let model = self.model.minimize().solve();
-        let solution = get_solution(&model, self.root, self.constraints, ctx)?;
+    pub fn solve(
+        self,
+        ctx: &DuckContext,
+        generate_iis: Option<PathBuf>,
+    ) -> QuackResult<SolverFreeze> {
+        let model = self.model.minimize().set_param("iis/silent", true).solve();
+        let solution = get_solution(&model, self.root, self.constraints, generate_iis, ctx)?;
         debug!(?solution);
         freeze_from_solution(
             self.package_vars,
             self.package_to_feature_vars,
             self.input,
             &solution,
-            main_pkg,
+            self.root,
         )
     }
 }
@@ -181,6 +188,7 @@ fn get_solution<'a>(
     model: &'a Model<Solved>,
     root: PackageId,
     constraints: Vec<Constraint>,
+    generate_iis: Option<PathBuf>,
     ctx: &DuckContext,
 ) -> QuackResult<Solution<'a>> {
     if let Some(solution) = model.best_sol() {
@@ -190,14 +198,25 @@ fn get_solution<'a>(
         // No solution found.
         let status = model.status();
         let mut err = Into::<QuackError>::into(NoSolutionError(status));
-        if matches!(status, Status::Infeasible) {
+        if matches!(status, Status::Infeasible)
+            && let Some(location) = generate_iis
+        {
             // If the problem is infeasible, explain the IIS to the user.
-            let explaination_path = generate_iis_explanation(model, root, constraints, ctx)
-                .context("failed to obtain IIS and explain it")?;
-            err.add_note(format!(
-                "the explaination why there is no solution was written to `{}`",
-                explaination_path.display()
-            ));
+            let iis_succ = generate_iis_explanation(model, root, constraints, ctx, &location)
+                .context("failed to obtain IIS and explain it");
+            match iis_succ {
+                Ok(()) => {
+                    err.add_note(format!(
+                        "the explanation why there is no solution was written to `{}`",
+                        location.display()
+                    ));
+                }
+                Err(e) => {
+                    err.add_note(format!(
+                        "failed to generate explanation for why there is no solution: {e}",
+                    ));
+                }
+            }
         }
         Err(err)
     }

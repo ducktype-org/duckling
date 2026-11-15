@@ -12,10 +12,12 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from utilities import *
 
-explanation = Path("/tmp/qp_iis_expl.txt")
-assert explanation.exists()
+foo_path = project_root("foo")
 
-text = explanation.read_text()
+iis_path = iis_path_for_root(foo_path)
+assert iis_path.exists()
+
+text = iis_path.read_text()
 
 expected = """The following constraints are mutually infeasible:
 

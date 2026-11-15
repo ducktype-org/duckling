@@ -219,6 +219,13 @@ impl Script {
             Self::Associated(package_script) => package_script.into_manifest(),
         }
     }
+    /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
+    pub fn iss_expl_path(&self) -> PathBuf {
+        match self {
+            Self::Associated(associated) => associated.iis_expl_path(),
+            Self::Standalone(standalone) => standalone.iis_expl_path(),
+        }
+    }
 
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
@@ -332,6 +339,14 @@ impl PackageScript {
         self.package.version()
     }
 
+    /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
+    pub fn iis_expl_path(&self) -> PathBuf {
+        self.package
+            .root_directory()
+            .join(".duck_sync")
+            .join("iis_expl.txt")
+    }
+
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
         // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
@@ -420,6 +435,11 @@ impl StandaloneScript {
     /// Transform into the underlying frontmatter.
     pub fn into_frontmatter(self) -> FrontMatter {
         self.frontmatter
+    }
+
+    /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
+    pub fn iis_expl_path(&self) -> PathBuf {
+        self.frontmatter.iss_expl_path()
     }
 
     /// Get a [`Display`](fmt::Display) impl.
@@ -537,6 +557,11 @@ impl FrontMatter {
     /// Transform into the underlying manifest.
     pub fn into_manifest(self) -> Box<Manifest> {
         self.manifest
+    }
+
+    /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
+    pub fn iss_expl_path(&self) -> PathBuf {
+        self.script_folder().join(".duck_sync").join("iis_expl.txt")
     }
 }
 

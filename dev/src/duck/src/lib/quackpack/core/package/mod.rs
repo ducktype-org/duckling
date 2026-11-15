@@ -225,6 +225,14 @@ impl AnyPackage {
         self.manifest().venv()
     }
 
+    /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
+    pub fn iss_expl_path(&self) -> PathBuf {
+        match self {
+            Self::Package(package) => package.iss_expl_path(),
+            Self::Script(script) => script.iss_expl_path(),
+        }
+    }
+
     /// Get a [`Display`](fmt::Display) impl.
     pub fn display(&self) -> impl fmt::Display + '_ {
         // @TODO: #3318 Use `fmt::from_fn` from Rust 1.93.
@@ -361,6 +369,13 @@ impl Package {
     /// Is this the global package.
     pub fn is_global(&self) -> bool {
         self.manifest().is_global()
+    }
+
+    /// Get the location to write the explanation of the IIS on failure to solve the dependency problem.
+    pub fn iss_expl_path(&self) -> PathBuf {
+        self.root_directory()
+            .join(".duck_sync")
+            .join("iis_expl.txt")
     }
 
     /// Get a [`Display`](fmt::Display) impl.

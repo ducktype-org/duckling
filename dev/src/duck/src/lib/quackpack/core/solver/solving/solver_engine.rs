@@ -9,6 +9,7 @@
 //! the constraints of [`SolverModel`].
 use std::collections::HashMap;
 use std::iter::once;
+use std::path::PathBuf;
 
 use itertools::iproduct;
 use russcip::ProblemCreated;
@@ -33,14 +34,17 @@ pub struct SolverEngine<'a> {
 impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
+    ///
+    /// `generate_iis` specifies if and where to write explanation if no solution was found.
     #[tracing::instrument(skip_all)]
     pub(in crate::quackpack::core::solver) fn run_engine(
         input: SolverInput,
         root: &SolverRoot,
+        generate_iis: Option<PathBuf>,
         ctx: &DuckContext,
     ) -> QuackResult<(SolverFreeze, HashMap<PackageId, Box<Manifest>>)> {
         let engine = SolverEngine::new(&input, root.id);
-        let solution = engine.run(root, ctx)?;
+        let solution = engine.run(root, generate_iis, ctx)?;
         let manifests = input.into_manifests();
         Ok((solution, manifests))
     }
@@ -54,7 +58,12 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
-    fn run(mut self, root: &SolverRoot, ctx: &DuckContext) -> QuackResult<SolverFreeze> {
+    fn run(
+        mut self,
+        root: &SolverRoot,
+        generate_iis: Option<PathBuf>,
+        ctx: &DuckContext,
+    ) -> QuackResult<SolverFreeze> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
             for dependency in data
@@ -73,7 +82,7 @@ impl<'a> SolverEngine<'a> {
         }
         self.force_features_expansion()?;
         self.force_singular_versions()?;
-        self.model.solve(root.id, ctx)
+        self.model.solve(ctx, generate_iis)
     }
 
     /// Creates necessary variables for all the packages.
@@ -509,7 +518,7 @@ metadata:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root, &ctx).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -586,7 +595,7 @@ dependencies:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root, &ctx).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -665,7 +674,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root, &ctx).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -744,7 +753,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root, &ctx).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -857,7 +866,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root, &ctx).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -939,7 +948,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root, &ctx).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -1044,10 +1053,10 @@ metadata:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let err = SolverEngine::run_engine(input, &root, &ctx).unwrap_err();
+        let err = SolverEngine::run_engine(input, &root, None, &ctx).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "no solution to the dependency problem found; SCIP run's status is Infeasible\nthe explaination why there is no solution was written to `/tmp/qp_iis_expl.txt`"
+            "no solution to the dependency problem found; SCIP run's status is Infeasible"
         );
     }
 
@@ -1110,10 +1119,10 @@ metadata:
         };
 
         let root = solver_root(&input, pkg_a, ["new".into()].into());
-        let err = SolverEngine::run_engine(input, &root, &ctx).unwrap_err();
+        let err = SolverEngine::run_engine(input, &root, None, &ctx).unwrap_err();
         assert_eq!(
             err.to_string(),
-            "no solution to the dependency problem found; SCIP run's status is Infeasible\nthe explaination why there is no solution was written to `/tmp/qp_iis_expl.txt`"
+            "no solution to the dependency problem found; SCIP run's status is Infeasible"
         );
     }
 }
