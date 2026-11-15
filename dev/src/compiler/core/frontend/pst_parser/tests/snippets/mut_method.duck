@@ -1,0 +1,15 @@
+class Counter {
+	count: i64;
+
+	mut fun bump() = {
+		count = count + 1;
+	}
+
+	public mut fun reset() -> i64 = 0;
+
+	fun get() -> i64 = count;
+
+	mut fun prefix -() = {
+		count = -count;
+	}
+}

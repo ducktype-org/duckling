@@ -192,9 +192,9 @@ jobs:
           # Most recent entry is used when multiple match to the same key.
           # See readme for details.
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main-
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-
 
       # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
       - name: Restore sccache cache

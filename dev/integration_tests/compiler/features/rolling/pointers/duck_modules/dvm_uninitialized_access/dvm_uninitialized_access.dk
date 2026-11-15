@@ -1,4 +1,4 @@
-var x : manyptr i32;
+var x : manyptr mut i32;
 
 fun main() -> i64 = {
     x[2] = x[0];

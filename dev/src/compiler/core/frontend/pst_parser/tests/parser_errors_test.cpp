@@ -395,6 +395,17 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Method, true> simple_method{
 		"fun foo(x: i32, y: i32) -> (i32, i32) = {}"
 	};
+	ClassStmtExample<pst::Method, true>  mut_method{ "mut fun push(x: i32) = {}" };
+	ClassStmtExample<pst::Method, false> mut_after_fun{ "fun mut push(x: i32) = {}" };
+	ClassStmtExample<pst::Stmt, true>    public_mut_method{ "public mut fun push(x: i32) = {}" };
+	ClassStmtExample<pst::Stmt, false>   mut_field{ "mut x: i32;" };
+	Example<pst::Class, true>            mut_methods_in_class{
+        "class Foo { mut fun a() -> i64 = 1; mut fun b() = {} fun c() = {} }"
+	};
+	Example<pst::Class, true>      mut_operator_method{ "class Foo { mut fun prefix -() = {} }" };
+	Example<pst::Stmt, false>      mut_fun_outside_class{ "mut fun foo() = {}" };
+	Example<pst::CodeBlock, false> mut_fun_in_block{ "{ mut fun foo() = {} }" };
+	ClassStmtExample<pst::Stmt, true> template_mut_method{ "template(T: type) mut fun foo() = {}" };
 
 	ClassStmtExample<pst::Constructor, true> default_constructor{ "name(x: i32) = {}", "name" };
 	ClassStmtExample<pst::Constructor, true> named_constructor{
