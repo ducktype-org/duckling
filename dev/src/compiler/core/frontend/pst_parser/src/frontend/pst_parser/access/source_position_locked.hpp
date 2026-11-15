@@ -36,8 +36,6 @@ namespace pst {
 	 * @brief This function ideally shouldn't be needed. It's for the cases when we are using a
 	 * SourcePosition, but we obtained it in a way we don't have a query dependency on it, so we
 	 * need to manually mark the dependency.
-	 *
-	 * @TODO: #2521 For example the tpc::Identifier has a SourcePosition, fix this
 	 */
 	void markDependencyOnSourcePosition(query::Context& ctx, dia::SourcePosition);
 

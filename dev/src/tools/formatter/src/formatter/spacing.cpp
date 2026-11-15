@@ -15,10 +15,17 @@ namespace formatter {
 		using Bracket = Token::BracketType;
 
 		bool isStr(const Token& t, std::string_view s) { return sv(t) == s; }
+
+		/** The `::` operator binds both of its sides: `variadic::sum(...)`. */
+		bool isScopeOperator(const Token& t) { return isOperator(t) && isStr(t, "::"); }
 	}
 
 	bool needSpace(
-		const FormatConfig& config, const Token* prev, const Token& cur, const Token* prev2
+		const FormatConfig& config,
+		const Token*        prev,
+		const Token&        cur,
+		const Token*        prev2,
+		const Token*        prev3
 	) {
 		if (prev == nullptr) return false;
 
@@ -35,11 +42,15 @@ namespace formatter {
 		if (isMemberAccessOperator(cur)) return false;
 		if (isOperator(*prev) && (isStr(*prev, ".") || isStr(*prev, ".?"))) return false;
 
+		if (isScopeOperator(cur) || isScopeOperator(*prev)) return false;
+
 		// Attribute sigil binds to its name: `@Attr`.
 		if (isSpecial(*prev) && isStr(*prev, "@")) return false;
 
-		// Suffix increment/decrement binds to the preceding value: `t++`.
-		if (isSuffixOperator(cur) && isValueCloser(*prev)) return false;
+		// Suffix increment/decrement binds to the preceding value: `t++`. Not when the value
+		// is the `suffix` marker of an operator declaration: `fun suffix ++(...)`.
+		if (isSuffixOperator(cur) && isValueCloser(*prev) && !isFixityMarker(*prev, prev2))
+			return false;
 
 		// Type/label colon: no space before, space after (handled by default).
 		if (isOperator(cur) && isStr(cur, ":")) return false;
@@ -53,9 +64,14 @@ namespace formatter {
 				if (isTypeKeyword(*prev)) return false;  // `i32[5]`, `Array[i32]`
 				// The template header binds to its parameter list: `template(T: type)`.
 				if (isKeyword(*prev) && isStr(*prev, "template")) return false;
-				// A custom operator used as the declared name: `fun +*(a, b)`.
-				if (isOperator(*prev) && prev2 != nullptr && isKeyword(*prev2)
-				    && isStr(*prev2, "fun"))
+				// A custom operator used as the declared name: `fun +*(a, b)`,
+				// `fun prefix -*(a)`, `fundecl suffix **(a)`.
+				// A variable named `prefix` is no marker: `prefix - (a + b)` keeps its space.
+				if (isOperator(*prev) && prev2 != nullptr
+				    && (isFunKeyword(*prev2) || isFixityMarker(*prev2, prev3)))
+					return false;
+				// A keyword used as a member name is a method call: `Counter.destroy()`.
+				if (isKeyword(*prev) && prev2 != nullptr && isMemberAccessOperator(*prev2))
 					return false;
 				if (isKeyword(*prev)) return true;       // `if (...)`, `return [...]`
 				if (isValueCloser(*prev)) return false;  // `foo(...)`, `a[...]`

@@ -50,11 +50,7 @@ macro_rules! forward_printing_helpers {
 impl DuckContext {
     /// Create a new [`DuckContext`].
     pub fn new() -> QuackResult<Self> {
-        trace!(
-            target: "duck::curl",
-            "linked against `{:#?}`",
-            curl::Version::get()
-        );
+        trace!("linked against `{:#?}`", curl::Version::get());
         let env = Env::default();
         let stdout = Terminal::stdout();
         let stderr = Terminal::stderr();
@@ -225,11 +221,7 @@ impl Default for DuckContext {
     fn default() -> Self {
         use crate::duck::util::terminal::Verbosity;
 
-        trace!(
-            target: "duck::curl",
-            "linked against `{:#?}`",
-            curl::Version::get()
-        );
+        trace!("linked against `{:#?}`", curl::Version::get());
         let env = Default::default();
         let user_home = home_dir().unwrap();
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home));

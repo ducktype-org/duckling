@@ -56,11 +56,9 @@ namespace compiler::helios::comptime_ops {
 			std::vector<tsh::SymbolType<>> subtypes;
 
 			tsh::SymbolType<> finalize(query::Context& ctx) {
-				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryVariantType>({ subtypes }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::SymbolType<>::withDefaultsMut(
+					ctx.query<tsh::QueryVariantType>({ subtypes })
+				);
 			}
 		};
 
@@ -68,11 +66,9 @@ namespace compiler::helios::comptime_ops {
 			std::vector<tsh::SymbolType<>> subtypes;
 
 			tsh::SymbolType<> finalize(query::Context& ctx) {
-				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryTupleType>({ subtypes }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::SymbolType<>::withDefaultsMut(
+					ctx.query<tsh::QueryTupleType>({ subtypes })
+				);
 			}
 		};
 	}
@@ -83,7 +79,7 @@ namespace compiler::helios::comptime_ops {
 		comptime_create_box,
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Box);
+		auto new_type = type_ptr->toBox();
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -93,7 +89,7 @@ namespace compiler::helios::comptime_ops {
 		comptime_create_ref,
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = type_ptr->withReferenceKind(tsh::ReferenceKind::Ref);
+		auto new_type = type_ptr->toRef();
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -125,7 +121,8 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type
-			= tsh::SymbolType<>::withDefaults(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr }));
+			= tsh::SymbolType<>::withDefaultsMut(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr }
+		    ));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -136,7 +133,7 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = tsh::SymbolType<>::withDefaults(getOptionalType(*ctx_ptr, *type_ptr));
+		auto new_type = tsh::SymbolType<>::withDefaultsMut(getOptionalType(*ctx_ptr, *type_ptr));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -147,7 +144,7 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = tsh::SymbolType<>::withDefaults(
+		auto new_type = tsh::SymbolType<>::withDefaultsMut(
 			ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr })
 		);
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
@@ -160,8 +157,9 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type
-			= tsh::SymbolType<>::withDefaults(ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr }));
+		auto new_type = tsh::SymbolType<>::withDefaultsMut(
+			ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr })
+		);
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -173,7 +171,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type
-			= tsh::SymbolType<>::withDefaults(ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr }));
+			= tsh::SymbolType<>::withDefaultsMut(ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr }));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 

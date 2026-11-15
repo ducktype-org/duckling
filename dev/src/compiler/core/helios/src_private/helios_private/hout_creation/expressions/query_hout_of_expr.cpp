@@ -474,11 +474,8 @@ namespace compiler::helios::code {
 
 				// Box creation
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
-					const auto origin = inner->origin.generatedFrom();
-					const auto direct_type
-						= inner->expression_type.getSymbolType().withReferenceKind(
-							tsh::ReferenceKind::Direct
-						);
+					const auto origin      = inner->origin.generatedFrom();
+					const auto direct_type = inner->expression_type.getSymbolType().toDirect();
 
 					auto value = coercions::coerceFromBox(
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
@@ -609,11 +606,7 @@ namespace compiler::helios::code {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					const auto meta_type = tsh::SymbolType<>{
-						tsh::getMetaType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto meta_type = tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType());
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
@@ -663,12 +656,8 @@ namespace compiler::helios::code {
 					kind            = tsh::FunctionKind::Raw;
 				}
 
-				const ElementOrigin origin    = pstOrigin(arrow);
-				const auto          meta_type = tsh::SymbolType<>{
-                    tsh::getMetaType(),
-                    tsh::ReferenceKind::Direct,
-                    tsh::Mutability::Mutable,
-				};
+				const ElementOrigin origin = pstOrigin(arrow);
+				const auto meta_type       = tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType());
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
@@ -861,7 +850,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				const auto bool_type     = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
                 );
@@ -875,8 +864,37 @@ namespace compiler::helios::code {
 				auto if_true   = std::move(if_true_res).valueOrThrow();
 				auto if_false  = std::move(if_false_res).valueOrThrow();
 
+				// Both if-else-then branches must produce the same type (note that backend may
+				// assume this). For now we just enforce it here by an error.
+				// @TODO: #4029 In the future we might want to introduce some kind of common-type
+				// and coerce all branches to common type.
+				const auto true_type  = if_true->expression_type.getSymbolType();
+				const auto false_type = if_false->expression_type.getSymbolType();
+				const bool true_void  = true_type.getType().getKind() == tsh::Kind::Void;
+				const bool false_void = false_type.getType().getKind() == tsh::Kind::Void;
+				if (!true_void and !false_void
+				    and true_type.withMutability(tsh::Mutability::Mutable)
+				            != false_type.withMutability(tsh::Mutability::Mutable)) {
+					ctx.log<dia::PlaceholderError>(
+						base::strConcat(
+							"Both branches of an `if ... then ... else ...` expression have to be "
+							"of the same type, but the `then` branch is `",
+							true_type.withMutability(tsh::Mutability::Mutable).toString(),
+							"` and the `else` branch is `",
+							false_type.withMutability(tsh::Mutability::Mutable).toString(),
+							"`."
+						),
+						stmt->getStablePosition(),
+						"Make both branches the same type, for example with an `as` cast or a "
+						"typed literal like `1i64`."
+					);
+					return;
+				}
+
+				const auto result_type
+					= true_void ? if_false->expression_type : if_true->expression_type;
 				node = makeBox<TernaryOperatorExpr>(
-					ctx,
+					result_type,
 					pstOrigin(stmt),
 					std::move(condition),
 					std::move(if_true),
@@ -995,11 +1013,8 @@ namespace compiler::helios::code {
 				// Some type had to be chosen. `void` would perhaps make more sense,
 				// but it seemed to break some assumptions of the compiler and cause panics.
 				// @TODO: #3707 When fixed, think about making this `void`.
-				auto elem_type_of_empty_array = tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto elem_type_of_empty_array
+					= tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 
 				auto type = ctx.query<tsh::QueryStaticArrayType>(
 					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }

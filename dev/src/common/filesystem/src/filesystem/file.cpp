@@ -226,6 +226,10 @@ namespace fs {
 	// --- File methods (non-static, formerly FilePath) ---
 
 	base::SharedView File::getContent() const {
+		// A directory opens fine as a stream, but has no content to read.
+		if (isDirectory())
+			CORE_PANIC(base::strConcat("Cannot read `", path.string(), "`: it is a directory"));
+
 		if (type == FileType::Virtual) {
 			auto content = vfsOf(path)->readFile(path);
 
@@ -235,7 +239,7 @@ namespace fs {
 			return { r_array, content.size() };
 		} else {
 			std::ifstream file(path.getPath(), std::ios::in | std::ios::binary);
-			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string() + ", error: ");
+			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string());
 
 			file.unsetf(std::ios::skipws);
 
@@ -258,6 +262,11 @@ namespace fs {
 		if (!exists()) {
 			return std::unexpected(base::strConcat(
 				"Error: cannot get content of file `", path.native(), "` - file does not exist"
+			));
+		}
+		if (isDirectory()) {
+			return std::unexpected(base::strConcat(
+				"Error: cannot get content of file `", path.native(), "` - it is a directory"
 			));
 		}
 		return getContent();

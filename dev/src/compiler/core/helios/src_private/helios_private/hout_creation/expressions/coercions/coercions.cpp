@@ -281,15 +281,7 @@ namespace compiler::helios::coercions {
 	}
 
 	Coercion coercionToMeta(query::Context& ctx, const CRef<Expr> from) {
-		return coercionOf(
-			ctx,
-			from,
-			tsh::SymbolType<>{
-				tsh::getMetaType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			}
-		);
+		return coercionOf(ctx, from, tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType()));
 	}
 
 	query::QResult<Coercion> validCoercionOf(
@@ -376,7 +368,7 @@ namespace compiler::helios::coercions {
 		case tsh::Kind::Char: {
 			// There is no literal of either to compare against, so they are compared as the
 			// unsigned integer of the same width. Both are 8 bits wide.
-			const auto as_integer = tsh::SymbolType<>::withDefaults(
+			const auto as_integer = tsh::SymbolType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
 			);
 			return buildZeroCheck(ctx, makeBox<CastExpr>(ctx, origin, std::move(value), as_integer));

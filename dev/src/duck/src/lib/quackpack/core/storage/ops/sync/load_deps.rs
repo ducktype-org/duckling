@@ -61,7 +61,7 @@ pub struct LoadedFreezePackages {
 /// Note
 /// ----
 /// We use [`ErrorsLogger`] to delay bailing, downloading as many dependencies as possible.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(skip_all)]
 pub fn load_packages_in_freeze(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
@@ -124,7 +124,7 @@ fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResu
 
 /// Helper for [`load_packages_in_freeze`].
 /// Loads a package, downloading it if not present and loading it from storage (except for local packages).
-#[tracing::instrument(level = "debug", skip_all, fields(name = %pkg_id.name(), version = %pkg_id.version()))]
+#[tracing::instrument(skip_all, fields(name = %pkg_id.name(), version = %pkg_id.version()))]
 async fn load_package(
     storage: &Storage,
     fetcher: &Fetcher<'_>,

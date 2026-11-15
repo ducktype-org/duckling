@@ -15,7 +15,7 @@ namespace compiler::tsh {
 	SymbolType<ABSTRACT_TYPE> SymbolType<ABSTRACT_TYPE>::getPointeeSymbolType() const {
 		// If this is Ref or Box we want to get the underlying direct type.
 		if (reference_kind == ReferenceKind::Ref || reference_kind == ReferenceKind::Box)
-			return withReferenceKind(ReferenceKind::Direct);
+			return toDirect();
 		// Now this has to be a pointer
 		switch (abstract_type.getKind()) {
 		case tsh::Kind::Pointer:

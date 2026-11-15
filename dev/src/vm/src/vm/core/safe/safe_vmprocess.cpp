@@ -479,8 +479,20 @@ namespace vm {
 		// Try to obtain low position
 		auto maybe_lp = thread->getCurrentPosition(frame_idx);
 		if (!maybe_lp) return std::unexpected(maybe_lp.error());
-		auto low_position = maybe_lp.value();
+		return mapToCodePosition(maybe_lp.value());
+	}
 
+	base::Optional<u64> SafeVMProcess::mapToCodeCollectionIndex(
+		const low::LowCodePosition& low_position
+	) const {
+		auto high_position = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if (!high_position) return {};
+		return high_position->instruction_index;
+	}
+
+	api::response::CodePosition SafeVMProcess::mapToCodePosition(
+		const low::LowCodePosition& low_position
+	) const {
 		api::response::CodePosition code_position = {
 			.function_name   = low_position.function->name,
 			.instr_number    = 0,

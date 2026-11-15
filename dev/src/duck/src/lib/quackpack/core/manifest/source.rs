@@ -162,6 +162,17 @@ impl GitReference {
     }
 }
 
+impl fmt::Display for GitReference {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Default => f.write_str("default branch"),
+            Self::Tag(tag) => write!(f, "tag `{tag}`"),
+            Self::Branch(branch) => write!(f, "branch `{branch}`"),
+            Self::Rev(rev) => write!(f, "revision `{rev}`"),
+        }
+    }
+}
+
 impl TryFrom<registry::DependencySource> for Source {
     type Error = QuackError;
 

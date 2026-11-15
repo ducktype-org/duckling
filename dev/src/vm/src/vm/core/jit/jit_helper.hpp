@@ -13,7 +13,20 @@
 #include <string_view>
 
 namespace vm::jit::helpers {
+	/**
+	 * @brief Runs one call instruction of JIT-compiled code in the interpreter.
+	 * @details `instr` must point at the call in the function's pristine bytecode
+	 * (`LowFuncData::orig_bc`). When a runtime error escapes the call, the caller frame gets its
+	 * return address back (see `restoreReturnAddress`), so a stack trace shows its call site.
+	 */
 	void trampoline(OPFUN_REF_ARGS);
+
+	/**
+	 * @brief Points the return address of `caller` at `resume`, an instruction of its function's
+	 * pristine bytecode, translated to the bytecode the interpreter runs.
+	 * @details Leaves the frame as it is when `resume` is not in that pristine bytecode.
+	 */
+	void restoreReturnAddress(Frame& caller, const vm::MicroInstruction* resume);
 
 	/**
 	 * @brief Prod-side handling of a failed JIT compilation.

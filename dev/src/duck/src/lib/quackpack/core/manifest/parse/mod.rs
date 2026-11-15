@@ -36,7 +36,7 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-#[tracing::instrument(level = "debug", skip(ctx))]
+#[tracing::instrument(skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings, Errors)> {
     parse_inner(path, ctx)
         .with_context(|| format!("failed to parse the user manifest at `{}`", path.display()))

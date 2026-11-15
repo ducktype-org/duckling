@@ -15,7 +15,6 @@
 #include <../src_private/helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
@@ -113,12 +112,9 @@ private:
 		CORE_ASSERT(!body_stmts.empty(), "Function body must have at least one statement");
 
 		// Compile the first body statement in isolation
-		auto return_type = custom_return_type.has_value() ? custom_return_type.value()
-		                                                  : tsh::SymbolType<>{
-																tsh::getUnitType(),
-																tsh::ReferenceKind::Direct,
-																tsh::Mutability::Mutable,
-															};
+		auto return_type = custom_return_type.has_value()
+		                     ? custom_return_type.value()
+		                     : tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 		body_stmts.at(stmt_index)->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
@@ -329,11 +325,9 @@ private:
 				"test_pkg"
 			);
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto int_type = tsh::SymbolType<>{
-					tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto int_type = tsh::SymbolType<>::withDefaultsMut(
+					tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed)
+				);
 				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 0, int_type);
 				ASSERT_EQUAL(block.statements.size(), 1u);
 				StmtKindCounter c;

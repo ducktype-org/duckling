@@ -7,16 +7,20 @@
 //! CLI based git client.
 
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use tracing::{debug, trace, warn};
 use url::Url;
 
-use super::{ClonedRepositoryData, GitClient, can_shallow_clone};
+use super::{GitClient, GitRepository, GitSubmoduleOptions, can_shallow_clone};
 use crate::quackpack::core::GitReference;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
+
+#[derive(Debug)]
+/// A git repository rooted at the given path.
+struct GitCliRepository(PathBuf);
 
 /// git environmental variables to unset.
 /// They can affect git execution.
@@ -40,20 +44,6 @@ impl GitCliClient {
         check_git_binary_exists()?;
         Ok(Self(()))
     }
-
-    /// Clone a repository pointed by `url` into `destination`.
-    #[tracing::instrument(target = "duck::git", level = "debug", skip(self, url), fields(%url, ?reference, ?destination))]
-    pub fn clone(
-        &self,
-        url: &Url,
-        reference: GitReference,
-        destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData> {
-        clone_git_repository(url, reference, destination)?;
-        maybe_checkout_to_commit(reference, destination)?;
-        let commit = get_current_commit(destination)?;
-        Ok(ClonedRepositoryData { commit })
-    }
 }
 
 impl GitClient for GitCliClient {
@@ -62,12 +52,28 @@ impl GitClient for GitCliClient {
         url: &Url,
         reference: GitReference,
         destination: &Path,
-    ) -> QuackResult<ClonedRepositoryData> {
-        self.clone(url, reference, destination)
+    ) -> QuackResult<Box<dyn GitRepository>> {
+        clone_git_repository(url, reference, destination)?;
+        let repository = GitCliRepository(destination.to_path_buf());
+        Ok(Box::new(repository))
     }
 
     fn uses_cli(&self) -> bool {
         true
+    }
+}
+
+impl GitRepository for GitCliRepository {
+    fn checkout(&self, reference: GitReference) -> QuackResult<()> {
+        checkout(reference, &self.0)
+    }
+
+    fn head_commit(&self) -> QuackResult<StrId> {
+        get_current_commit(&self.0)
+    }
+
+    fn init_submodules(&self, options: GitSubmoduleOptions) -> QuackResult<()> {
+        initialize_submodules(options, &self.0)
     }
 }
 
@@ -76,7 +82,7 @@ fn check_git_binary_exists() -> QuackResult<()> {
     let mut command = git_cmd();
     command.arg("--version");
     let output = get_git_output(&mut command).map_err(add_path_hint_to_missing_git)?;
-    debug!(target: "duck::git", version = %String::from_utf8_lossy(&output.stdout), "git binary version");
+    debug!(version = %String::from_utf8_lossy(&output.stdout), "git binary version");
     Ok(())
 }
 
@@ -94,21 +100,71 @@ fn clone_git_repository(url: &Url, reference: GitReference, destination: &Path) 
     execute_git(&mut command)
 }
 
-/// Checkout repo to the given commit, if we requested that.
-fn maybe_checkout_to_commit(reference: GitReference, path: &Path) -> QuackResult<()> {
-    let GitReference::Rev(commit) = reference else {
-        return Ok(());
-    };
+/// Checkout repo to the given reference.
+fn checkout(reference: GitReference, path: &Path) -> QuackResult<()> {
+    if let GitReference::Rev(commit) = reference {
+        validate_commit(commit, path)?;
+    }
+    if let GitReference::Tag(tag) = reference {
+        validate_tag(tag, path)?;
+    }
+    match reference {
+        // We only checkout to tag or commit, since we can clone to branch.
+        GitReference::Tag(tag_or_commit) | GitReference::Rev(tag_or_commit) => {
+            let mut command = git_cmd();
+            set_cwd_on_git_cmd(&mut command, path)
+                .arg("checkout")
+                .arg(tag_or_commit);
+            execute_git(&mut command)
+        }
+        GitReference::Branch(_) | GitReference::Default => Ok(()),
+    }
+}
+
+/// Initialize git submodules, following `options`.
+fn initialize_submodules(options: GitSubmoduleOptions, path: &Path) -> QuackResult<()> {
+    let mut command = git_cmd();
+    set_cwd_on_git_cmd(&mut command, path);
+    command.arg("submodule");
+    match options {
+        GitSubmoduleOptions::Init => {
+            command.arg("init");
+        }
+        GitSubmoduleOptions::Update { init, recursive } => {
+            command.arg("update");
+            if init {
+                command.arg("--init");
+            }
+            if recursive {
+                command.arg("--recursive");
+            }
+        }
+    }
+    execute_git(&mut command)
+}
+
+fn validate_commit(commit: StrId, path: &Path) -> QuackResult<()> {
     let mut command = git_cmd();
     set_cwd_on_git_cmd(&mut command, path)
-        .arg("checkout")
-        .arg(commit);
-    execute_git(&mut command)
+        .args(["rev-parse", "--verify", "--quiet", "--end-of-options"])
+        .arg(format!("{}^{{commit}}", commit));
+    let _ = get_git_output(&mut command)
+        .with_context(|| format!("`{commit}` is not a valid commit"))?;
+    Ok(())
+}
+
+fn validate_tag(tag: StrId, path: &Path) -> QuackResult<()> {
+    let mut command = git_cmd();
+    set_cwd_on_git_cmd(&mut command, path)
+        .arg("check-ref-format")
+        .arg(format!("refs/tags/{tag}"));
+    let _ = get_git_output(&mut command).with_context(|| format!("`{tag}` is not a valid tag"))?;
+    Ok(())
 }
 
 /// Get current HEAD commit.
 fn get_current_commit(path: &Path) -> QuackResult<StrId> {
-    let mut command = Command::new("git");
+    let mut command = git_cmd();
     set_cwd_on_git_cmd(&mut command, path).args(["rev-parse", "HEAD"]);
     let output = get_git_output(&mut command)?;
     let commit = String::from_utf8(output.stdout)
@@ -138,7 +194,7 @@ fn git_cmd() -> Command {
 
 /// Execute a prepared git command, inheriting stdout, stderr, and stdin.
 fn execute_git(command: &mut Command) -> QuackResult<()> {
-    trace!(target: "duck::git", ?command, "executing git command");
+    trace!(?command, "executing git command");
     let status = command
         .status()
         .with_context(|| format!("failed to execute `{}`", command.display()))?;
@@ -150,7 +206,7 @@ fn execute_git(command: &mut Command) -> QuackResult<()> {
 
 /// Execute a prepared git command, and return the output.
 fn get_git_output(command: &mut Command) -> QuackResult<Output> {
-    trace!(target: "duck::git", ?command, "executing git command");
+    trace!(?command, "executing git command");
     let output = command
         .output()
         .with_context(|| format!("failed to execute `{}`", command.display()))?;

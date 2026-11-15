@@ -53,8 +53,8 @@ namespace {
 		// Numeric operators only work on direct values. When provided with references or box types
 		// we have to force a coercion to a direct type which will insert a DerefExpr. This is
 		// needed to handle cases like: var x = referenceA + referenceB.
-		auto lhs_direct = lhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
-		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
+		auto lhs_direct = lhs_type.toDirect();
+		auto rhs_direct = rhs_type.toDirect();
 
 		// Try to coerce both values to the rhs direct type.
 		Coercion lhs_to_rhs = coercions::coercionOf(ctx, lhs, rhs_direct);
@@ -188,10 +188,9 @@ namespace compiler::helios::code {
 	base::Optional<std::tuple<BuiltinUnary, tsh::coercions::Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
-		auto operation_kind = expr->expression_type.getType().getKind();
-		auto direct_type
-			= expr->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Direct);
-		tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, expr, direct_type);
+		auto                     operation_kind = expr->expression_type.getType().getKind();
+		auto                     direct_type    = expr->expression_type.getSymbolType().toDirect();
+		tsh::coercions::Coercion coercion       = coercions::coercionOf(ctx, expr, direct_type);
 		if (not coercion.isValid()) return {};
 
 		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators
@@ -333,9 +332,10 @@ namespace compiler::helios::code {
 		);
 
 		// Step 2b. — Look for operator methods declared on the left-hand side's type
-		// (classes only)
+		// (classes and tuples only)
 		const auto lhs_abstract_type = lhs_type.getType();
-		if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
+		if (lhs_abstract_type.getKind() == tsh::Kind::Class
+		    || lhs_abstract_type.getKind() == tsh::Kind::Tuple) {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
@@ -474,11 +474,7 @@ namespace compiler::helios::code {
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {
 		static auto provide(Context& ctx, QKey) -> PResult {
 			// Preamble
-			const auto bool_t = tsh::SymbolType<>{
-				tsh::getBoolType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto bool_t = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 			using enum HOUTFunctionDeclaration::Operatoriness;
 			using enum BuiltinUnary;
 			using enum BuiltinBinary;
@@ -519,11 +515,7 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
 
 			/// Meta constructions ///
-			const auto meta_t = tsh::SymbolType<>{
-				tsh::getMetaType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto meta_t = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
 
 			builtin_op(keywordToStr(Keyword::Ref), { meta_t }, meta_t, Ref, Prefix);
 			builtin_op(keywordToStr(Keyword::Box), { meta_t }, meta_t, Box, Prefix);
@@ -547,16 +539,10 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("!="), { bool_t, bool_t }, bool_t, IntegerNeq, Infix);
 
 			/// Character arithmetic ///
-			const auto u8_t = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			const auto char_t = tsh::SymbolType<>{
-				tsh::getCharType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto u8_t = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
+			);
+			const auto char_t = tsh::SymbolType<>::withDefaults(tsh::getCharType());
 			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt, Infix);
 			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq, Infix);
 			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt, Infix);

@@ -71,6 +71,13 @@ namespace compiler::lir {
 	};
 
 	namespace {
+		/**
+		 * @brief Computes the LIR ABI of the function @p sym with the layout @p function_layout.
+		 *
+		 * Panics when a parameter or the return type has no C-ABI type. This assumes that the
+		 * LIR queries will return a `QResult`, so that the C-ABI validation done in TSL is
+		 * reported as a query failure instead.
+		 */
 		LIRAbi getLIRAbi(
 			query::Context& ctx, helios::SymID sym, const tsl::FunctionalTypeLayout& function_layout
 		) {
@@ -1289,12 +1296,8 @@ namespace compiler::lir {
 		const base::StrID&                 mangled_name
 	) {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
-			.parameter_types={},
-			.result_type=tsh::SymbolType{
-				tsh::getUnitType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			},
+			.parameter_types = {},
+			.result_type     = tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
 		});
 
 		auto layouts = getFunctionLayouts(ctx, function_type);

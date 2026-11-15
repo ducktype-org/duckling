@@ -18,7 +18,7 @@
 //!    (though we allow for the dependencies of the root package to not be satisfied).
 //! 4. Running the gathering process ([`Gatherer`](gathering::gatherer::Gatherer)) on the unsatisfied dependencies of the root package.
 //! 5. Running the solver engine, which translates the problem into an instance of Integer Linear Programming and solves it with a 3-rd party solver.
-//! 6. Creating the new freeze, based on the reused part of the previous freeze and the solver-engine output.
+//! 6. Creating the new freeze, based on the reused part of the previous freeze and the solution to the ILP.
 //! 7. Trimming the new freeze, to remove dependencies of the root package which were present previously
 //!    but have been since removed from its manifest.
 //!
@@ -33,9 +33,9 @@
 //! ------------
 //! - [`pipeline`] — the [`Solver`] itself: runs the steps above in order and handles the retry,
 //! - [`root`] — [`SolverRoot`](root::SolverRoot), what the solver needs to know about the root package,
-//! - [`solver_freeze`] — steps 2, 3, 6 and 7 (freeze diagnosis, new freeze generation and trimming),
+//! - [`solver_freeze`] — steps 2, 3, 7 (freeze diagnosis, trimming),
 //! - [`gathering`] — step 4,
-//! - [`solving`] — step 5.
+//! - [`solving`] — step 5, 6.
 //!
 //! Helpers shared by the steps:
 //! - [`dependency_edge`] — [`DependencyEdge`](dependency_edge::DependencyEdge), one dependency of a package on a package identity,

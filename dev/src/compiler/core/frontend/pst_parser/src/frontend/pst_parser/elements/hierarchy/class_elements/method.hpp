@@ -8,6 +8,7 @@
 
 #include "../lists/parameter_list.hpp"
 #include "../meta.hpp"
+#include "../not_statements/code_block_or_expr.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -15,7 +16,7 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public Stmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt, operator_fixity);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt, operator_fixity, is_mut);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -24,6 +25,7 @@ namespace pst {
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrExpr);
 		OperatorFixity operator_fixity = OperatorFixity::None;
+		bool           is_mut          = false;
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
@@ -52,6 +54,14 @@ namespace pst {
 		[[nodiscard]]
 		OperatorFixity getOperatorFixity() const {
 			return operator_fixity;
+		}
+
+		/**
+		 * @brief Whether the method is declared with `mut fun`, so `self` is mutable.
+		 */
+		[[nodiscard]]
+		bool isMut() const {
+			return is_mut;
 		}
 
 		[[nodiscard]]

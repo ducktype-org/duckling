@@ -50,6 +50,9 @@ namespace compiler::helios {
 	 * @brief This function collects all used symbols from the hout unit module
 	 * that should be appended to the module, for example some compiler generated symbols
 	 * or template instantiations in the future.
+	 *
+	 * Failed queries are not rethrown, since the callers do not catch query exceptions.
+	 * The failed symbol is skipped and the function returns BAD.
 	 */
 	base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
 		// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
@@ -82,10 +85,14 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_fun);
-				if (implementsQueryCodeOfFun(used_fun))
-					out_unit.functions.emplace_back(
-						&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
-					);
+				if (implementsQueryCodeOfFun(used_fun)) {
+					const auto& code = ctx.query<QueryCodeOfFun>(used_fun);
+					if (code->hasFailed()) {
+						result = base::BAD;
+						continue;
+					}
+					out_unit.functions.emplace_back(&code->valueOrPanic());
+				}
 				symbol_stack.push_back(used_fun);
 			}
 			for (auto used_global: used_symbols.used_globals) {
@@ -93,9 +100,12 @@ namespace compiler::helios {
 				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_global);
-				out_unit.glob_data.emplace_back(
-					&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
-				);
+				const auto& global_data = ctx.query<QueryHOUTGlobalData>(used_global);
+				if (global_data->hasFailed()) {
+					result = base::BAD;
+					continue;
+				}
+				out_unit.glob_data.emplace_back(&global_data->valueOrPanic());
 				symbol_stack.push_back(used_global);
 			}
 		}

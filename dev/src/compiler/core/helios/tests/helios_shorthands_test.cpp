@@ -259,7 +259,7 @@ public:
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::SymbolType<>::withDefaults(
+			const auto i64_sym_type = tsh::SymbolType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 
@@ -369,7 +369,7 @@ public:
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::SymbolType<>::withDefaults(i64_type);
+			const auto i64_sym_type = tsh::SymbolType<>::withDefaultsMut(i64_type);
 
 			// Simple statements wrap their expression operand.
 			const auto decl = s.var(dummy_symbol, i64_sym_type, s.litNum(0, i64_type));
@@ -444,7 +444,7 @@ public:
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::SymbolType<>::withDefaults(
+			const auto i64_sym_type = tsh::SymbolType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 

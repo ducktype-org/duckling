@@ -9,12 +9,12 @@ class Point {
         return x*x + y*y + z*z;
     }
 
-    fun step_forward() = {
+    mut fun step_forward() = {
         x = x+1;
         builtin_output_i64(x);
     }
 
-    fun lunge_backwards(how_much: i64) = {
+    mut fun lunge_backwards(how_much: i64) = {
         x = x-how_much;
         step_forward();
     }
@@ -25,7 +25,7 @@ class Backpack {
     point1: Point;
     point2: Point = Point(100, 200, 300);
 
-    fun do_something(what: i64) -> Point = {
+    mut fun do_something(what: i64) -> Point = {
         point1.lunge_backwards(what);
         point2.step_forward();
         return Point(point2.x-point1.x, point2.y-point1.y, point2.z-point1.z);

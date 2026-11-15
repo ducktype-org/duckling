@@ -93,7 +93,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         match SolverFreeze::try_from_venv_freeze(root.id, freeze) {
             Ok(freeze) => Ok(Some(freeze)),
             Err(malformed) => {
-                debug!(target: "duck::solver", error = ?malformed, "previous storage freeze is malformed");
+                debug!(error = ?malformed, "previous storage freeze is malformed");
                 self.root_pcx
                     .ctx()
                     .warning("previous freezefile was malformed, ignoring it")?;
@@ -105,7 +105,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
     /// Steps 2-7, starting from `initial_freeze` as the a priori knowledge.
     ///
     /// The fetcher lock is held only while manifests are fetched (steps 2-4).
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
+    #[tracing::instrument(skip_all)]
     async fn solve_from(
         &self,
         root: &SolverRoot,
@@ -119,12 +119,11 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         let mut manifests = initial_freeze.get_prev_freeze_manifests(&gatherer).await?;
         manifests.insert(root.id, root.manifest.clone());
         let (valid_freeze, is_root_satisfied) = initial_freeze
-            .find_maximal_correct_dep_solution(root.features.clone(), &manifests, self.fetcher)
+            .retain_valid_fragment(root.features.clone(), &manifests, self.fetcher)
             .await?;
         if is_root_satisfied {
-            debug!(target: "duck::solver", "the previous freeze still satisfies the root, trimming it");
-            let new_freeze =
-                valid_freeze.find_minimal_dep_solution(&manifests, root.features.clone())?;
+            debug!("the previous freeze still satisfies the root, trimming it");
+            let new_freeze = valid_freeze.trim(&manifests, root.features.clone())?;
             ctx.info_verbose("no need to run the gathering or the solver engine")?;
             return Ok(SolverAnswer {
                 new_freeze,
@@ -141,7 +140,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
             .gather(root, &gatherer, &valid_freeze, manifests)
             .await?;
         drop(fetcher_lock);
-        self.run_engine(root, valid_freeze, input)
+        self.run_engine(root, input)
     }
 
     /// Step 4: runs the [`Gatherer`] on the root dependencies not realized in `valid_freeze`,
@@ -162,25 +161,19 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
                 self.mode,
             )
             .await?;
-        trace!(target: "duck::solver", ?gathered_info, "finished gathering");
+        trace!(?gathered_info, "finished gathering");
         SolverInput::from_freeze_and_gathered_info(valid_freeze, freeze_manifests, gathered_info)
     }
 
     /// Steps 5-7: runs the [`SolverEngine`] and builds the new, trimmed freeze from its output.
-    #[tracing::instrument(target = "duck::solver", level = "debug", skip_all)]
-    fn run_engine(
-        &self,
-        root: &SolverRoot,
-        valid_freeze: SolverFreeze,
-        input: SolverInput,
-    ) -> QuackResult<SolverAnswer> {
+    #[tracing::instrument(skip_all)]
+    fn run_engine(&self, root: &SolverRoot, input: SolverInput) -> QuackResult<SolverAnswer> {
         self.root_pcx
             .ctx()
             .info_verbose("starting the solver engine")?;
-        let (solution, manifests) =
-            SolverEngine::run_engine(input, &(root.id, root.features.clone()))?;
-        debug!(target: "duck::solver", ?solution);
-        let new_freeze = valid_freeze.new_freeze(&manifests, solution)?;
+        let (solution, manifests) = SolverEngine::run_engine(input, root)?;
+        debug!(?solution);
+        let new_freeze = solution.trim(&manifests, root.features.clone())?;
         Ok(SolverAnswer {
             new_freeze,
             pkgs_manifests: manifests,

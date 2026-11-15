@@ -32,7 +32,7 @@ pub struct CleanOutput {
 }
 
 /// Delete a virtual environment from storage.
-#[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display(), id = %venv.to_venv_id()))]
+#[tracing::instrument(skip_all, fields(root = %storage_root.display(), id = %venv.to_venv_id()))]
 pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
@@ -59,7 +59,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
 }
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
-#[tracing::instrument(level = "debug", skip_all, fields(root = %storage_root.display()))]
+#[tracing::instrument(skip_all, fields(root = %storage_root.display()))]
 pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
     let storage = paths::Storage::new(storage_root);
@@ -97,7 +97,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
 
 /// Remove a single venv from a storage.
 /// A helper for [`clean_storage`].
-#[tracing::instrument(level = "debug", skip_all, fields(id = %dir.file_name().to_venv_id()))]
+#[tracing::instrument(skip_all, fields(id = %dir.file_name().to_venv_id()))]
 fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,

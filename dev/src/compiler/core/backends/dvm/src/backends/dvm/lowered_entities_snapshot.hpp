@@ -14,11 +14,11 @@ namespace compiler::backend_vm {
 	}
 
 	/**
-	 * @brief Opaque snapshot/cursor for incremental REPL lowering.
+	 * @brief Opaque snapshot/cursor for incremental lowering (REPL, compile-time evaluation).
 	 *
 	 * Purpose: This struct acts as a private, immutable stamp of the lowering context's state,
-	 * allowing the REPL to track which types, globals, and functions have been newly lowered
-	 * since a given point. Only the lowering context can construct or mutate it.
+	 * allowing IncrementalDVMCodeBuilder to track which types, globals, and functions have been
+	 * newly lowered since a given point. Only the lowering context can construct or mutate it.
 	 */
 	struct LoweredEntitiesSnapshot final {
 	public:
@@ -37,7 +37,7 @@ namespace compiler::backend_vm {
 
 	private:
 		friend class internal::ProgramLoweringContext;
-		friend class ReplDVMCodeBuilder;
+		friend class IncrementalDVMCodeBuilder;
 
 		LoweredEntitiesSnapshot(
 			usize type_count,
