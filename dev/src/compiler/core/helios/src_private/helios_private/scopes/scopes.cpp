@@ -38,7 +38,6 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <hashing/hash.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
@@ -47,6 +46,7 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <variant>
 
 namespace compiler::helios {
 
@@ -878,23 +878,24 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	base::Bit256 KeyOf_LookupFromScope::queryUnstablePerfectHash() const {
-		return hashing::justHash<hashing::SHA256>(
-			scope.queryUnstablePerfectHash(),
-			std::hash<base::StrID>()(name),
-			static_cast<u64>(with_wildcards),
-			static_cast<u64>(with_parents)
-		);
+		return { scope.queryUnstablePerfectHash(),
+			     std::hash<base::StrID>()(name),
+			     static_cast<u64>(with_wildcards),
+			     static_cast<u64>(with_parents) };
 	}
 
 	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupResult>) {
 		/**
 		 * @brief Searches @p start and all the scopes its `using`/`import` symbols lead to,
-		 * skipping the ones in @p visited. Returns the symbols found there.
+		 * skipping the ones in @p visited. Adds the symbols found there to @p result.
 		 */
-		static query::QResult<std::vector<SymID>> searchScopeWithUsings(
-			Context& ctx, const QKey& key, ScopeID start, std::unordered_set<ScopeID>& visited
+		static query::QResult<std::monostate> searchScopeWithUsings(
+			Context&                     ctx,
+			const QKey&                  key,
+			ScopeID                      start,
+			std::unordered_set<ScopeID>& visited,
+			LookupResult&                result
 		) {
-			std::vector<SymID>   found;
 			std::vector<ScopeID> pending{ start };
 
 			while (not pending.empty()) {
@@ -909,7 +910,7 @@ namespace compiler::helios {
 
 				for (const SymID sym: *symbols) {
 					if (kind(sym) != SymbolKind::Using and kind(sym) != SymbolKind::Import) {
-						found.push_back(sym);
+						result.leaves.push_back(sym);
 						continue;
 					}
 
@@ -918,27 +919,35 @@ namespace compiler::helios {
 					);
 					variant_match(target) {
 						variant_case(std::vector<SymID>, pointed) {
-							found.insert(found.end(), pointed.begin(), pointed.end());
+							result.leaves.insert(
+								result.leaves.end(), pointed.begin(), pointed.end()
+							);
 						}
 						variant_case(ScopeID, pointed_scope) { pending.push_back(pointed_scope); }
+						variant_case(SymID, pointed_symbol) {
+							auto interface = HInterface::ofSymbol(ctx, pointed_symbol);
+							UNPACK_QRESULT_CREF(
+								CRef<LookupResult> pointed_result = &,
+								interface.lookup(ctx, key.name)
+							);
+							result.merge(*pointed_result);
+						}
 					}
 				}
 			}
 
-			return found;
+			return std::monostate{};
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			std::unordered_set<ScopeID> visited;
-			std::vector<SymID>          result;
+			LookupResult                result;
 
 			base::Optional<ScopeID> current = key.scope;
 
 			while (current.has_value()) {
-				UNPACK_QRESULT_MOVE(
-					auto found =, searchScopeWithUsings(ctx, key, current.value(), visited)
-				);
-				result.insert(result.end(), found.begin(), found.end());
+				if (searchScopeWithUsings(ctx, key, current.value(), visited, result).hasFailed())
+					return query::Failed();
 
 				if (not key.with_parents) break;
 
@@ -948,17 +957,14 @@ namespace compiler::helios {
 			// Bring the default prelude modules into scope, as if every module wrote
 			// `import <module>.*;`. A no-op under --no-std.
 			if (key.with_parents) {
-				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({})) {
-					UNPACK_QRESULT_MOVE(
-						auto found =, searchScopeWithUsings(ctx, key, prelude_scope, visited)
-					);
-					result.insert(result.end(), found.begin(), found.end());
-				}
+				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({}))
+					if (searchScopeWithUsings(ctx, key, prelude_scope, visited, result).hasFailed())
+						return query::Failed();
 			}
 
 			std::unordered_set<SymID> seen;
-			std::erase_if(result, [&](SymID sym) { return not seen.insert(sym).second; });
-			return LookupResult{ .leaves = std::move(result), .inaccessible = {}, .children = {} };
+			std::erase_if(result.leaves, [&](SymID sym) { return not seen.insert(sym).second; });
+			return result;
 		}
 
 		QUERY_AUTO_CACHE_CREF

@@ -3474,6 +3474,7 @@ private:
 		ASSERT_EQUAL(20, getConstValueAs<i32>("rb_through_ra", root_scope));
 		ASSERT_EQUAL(21, getConstValueAs<i32>("ra_from_rb_v", root_scope));
 		ASSERT_EQUAL(12, getConstValueAs<i32>("rb_from_ra_v", root_scope));
+		ASSERT_EQUAL(31, getConstValueAs<i32>("self_using_v", root_scope));
 	}
 
 	void testBackendDependentCompTime() {

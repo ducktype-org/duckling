@@ -8,8 +8,6 @@
 
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/selector.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
-#include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -31,18 +29,8 @@ namespace compiler::helios {
 	}
 
 	namespace {
-		/**
-		 * @brief The selector of the `using`/`import` statement the symbol was made from.
-		 * Only the first selector is used, the others are reported as not supported when the
-		 * symbol is created.
-		 */
 		pst::Access<pst::Selector> selectorOf(query::Context& ctx, SymID symbol) {
-			auto element = getSymRef(symbol)->maybePstElement().value().unlock(ctx);
-			auto selectors
-				= element.dynamicCast<pst::Using>().has_value()
-			        ? element.dynamicCast<pst::Using>().value()->getSelectors().unlock(ctx)
-			        : element.dynamicCast<pst::Import>().value()->getSelectors().unlock(ctx);
-			return (*selectors->begin()).unlock(ctx);
+			return usingImportSelector(ctx, getSymRef(symbol)->stmtCast(ctx).value());
 		}
 
 		/**
@@ -178,13 +166,8 @@ namespace compiler::helios {
 			if (selector->getTailKind() != pst::SelectorTail::Star)
 				return UsingImportTarget{ std::vector{ pointed } };
 
-			if (kind(pointed) != SymbolKind::Module and kind(pointed) != SymbolKind::Namespace) {
-				ctx.log<dia::NotYetImplementedCodeError>(
-					"Wildcard of a symbol that is not a module or a namespace.",
-					selector->getStablePosition()
-				);
-				return query::Failed();
-			}
+			if (kind(pointed) != SymbolKind::Module and kind(pointed) != SymbolKind::Namespace)
+				return UsingImportTarget{ pointed };
 
 			return UsingImportTarget{ scopeOfNamespaceLike(ctx, pointed) };
 		}

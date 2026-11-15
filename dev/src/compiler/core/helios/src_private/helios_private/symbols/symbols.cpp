@@ -413,22 +413,31 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The first selector of a `using`/`import`, which is the one the symbol is made of.
-		 *
-		 * @TODO: #2791 One statement should give one symbol per selector. Until then a list of
-		 * several selectors is reported as not supported and only the first one is used.
+		 * @brief The selector list of a `using`/`import` statement.
+		 */
+		pst::AccessLocked<pst::SelectorList> selectorsOf(pst::Access<pst::Stmt> stmt) {
+			if (auto using_stmt = stmt.dynamicCast<pst::Using>())
+				return using_stmt.value()->getSelectors();
+			return stmt.dynamicCast<pst::Import>().value()->getSelectors();
+		}
+
+		/**
+		 * @brief The selector of a `using`/`import`, logs when the statement has more of them.
 		 */
 		pst::Access<pst::Selector> firstSelector(
-			query::Context& ctx, pst::AccessLocked<pst::SelectorList> list, std::string_view keyword
+			query::Context& ctx, pst::Access<pst::Stmt> stmt, std::string_view keyword
 		) {
-			auto selectors = list.unlock(ctx);
-			auto first     = (*selectors->begin()).unlock(ctx);
-			if (selectors->size() > 1)
+			auto first = usingImportSelector(ctx, stmt);
+			if (selectorsOf(stmt).unlock(ctx)->size() > 1)
 				logSelectorNotSupported(
 					ctx, first, base::strConcat("More than one selector in `", keyword, "`")
 				);
 			return first;
 		}
+	}
+
+	pst::Access<pst::Selector> usingImportSelector(query::Context& ctx, pst::Access<pst::Stmt> stmt) {
+		return (*selectorsOf(stmt).unlock(ctx)->begin()).unlock(ctx);
 	}
 
 	/**
@@ -476,8 +485,7 @@ namespace compiler::helios {
 			};
 		}
 		case pst::StmtKind::Using: {
-			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
-			auto selector   = firstSelector(ctx, using_stmt->getSelectors(), "using");
+			auto selector   = firstSelector(ctx, stmt, "using");
 			auto first_name = selector->getNameByIndex(0).unlock(ctx)->unwrap();
 			auto last_name
 				= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
@@ -519,8 +527,7 @@ namespace compiler::helios {
 			// logic with other similar constructs (e.g. usings), and because imports may introduce
 			// multiple names now. We could extend wildcard machinery to keep the general assumption
 			// of one-stmt=one-symbol while handling the above.
-			auto import   = stmt.dynamicCast<pst::Import>().value();
-			auto selector = firstSelector(ctx, import->getSelectors(), "import");
+			auto selector = firstSelector(ctx, stmt, "import");
 			auto last_name
 				= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
 

@@ -24,8 +24,13 @@ namespace compiler::helios {
 	 * @brief What a `using`/`import` points at:
 	 * * `ScopeID` -- the scope of the module or namespace named by a wildcard selector.
 	 * * `std::vector<SymID>` -- the symbols named by a non-wildcard selector.
+	 * * `SymID` -- any other symbol named by a wildcard selector (`using a.*;` of a variable),
+	 *   names are looked up in its interface.
+	 *
+	 * @TODO: #2791 Turn into a struct once nested selectors in usings and imports
+	 * (`using a.{b.*, c as d}`, `import a.{b.{* hides x}, c as d}`) are supported.
 	 */
-	using UsingImportTarget = std::variant<ScopeID, std::vector<SymID>>;
+	using UsingImportTarget = std::variant<ScopeID, std::vector<SymID>, SymID>;
 
 	/**
 	 * @brief Resolves what the selector of a `using`/`import` symbol points at.
