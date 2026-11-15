@@ -26,7 +26,7 @@ namespace term_ui {
 	 * point, including the replacement of invalid UTF-8, takes 1. Widths are summed per code
 	 * point, so multi code point emoji sequences are wider than most terminals draw them.
 	 */
-	u64 displayWidth(std::string_view text);
+	u64 displayWidth(std::string_view line);
 
 	/**
 	 * @brief Replaces every tab in @p text with @ref TAB_WIDTH spaces, so the printed width
