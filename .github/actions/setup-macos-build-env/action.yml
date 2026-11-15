@@ -1,7 +1,8 @@
 name: Setup macOS build environment
 description: >
-  Points the build at what the mac mini already has.
-  Nothing to install.
+  Points the build at the toolchain of the mac mini. On a self-hosted runner nothing is installed:
+  the machine is expected to have it already. On a GitHub-hosted runner the same toolchain is
+  installed first, so workflows can use this action on both.
 
 inputs:
   dev-dir:
@@ -9,17 +10,48 @@ inputs:
     required: true
   ccache-dir:
     description: >
-      Where the workflow expects the ccache directory. Replaced with a symlink to the machine's
-      shared cache, because ConfigureCCache.cmake hardcodes this path into the compiler launcher.
-    required: true
+      Self-hosted runners only: where the workflow expects the ccache directory. Replaced with a
+      symlink to the machine's shared cache, because ConfigureCCache.cmake hardcodes this path into
+      the compiler launcher. Not needed on GitHub-hosted runners, which keep no cache.
+    required: false
+    default: ""
   shared-dir:
     description: Directory on the machine holding the caches that outlive a job.
     required: false
     default: /Users/Shared/duckling-ci
+  brew-formulae:
+    description: >
+      The Homebrew formulae the build needs, i.e. what the mac mini has. Installed on GitHub-hosted
+      runners and checked on every runner. Not meant to be overridden.
+    required: false
+    default: llvm@19 llvm@23 lld@19 icu4c ccache ninja
 
 runs:
   using: composite
   steps:
+    # A GitHub-hosted image has Homebrew, cmake and rustup, but not the rest of the mac mini's
+    # toolchain. A self-hosted mac already has it, so nothing is installed there.
+    - name: Setup Python (GitHub-hosted only)
+      if: runner.environment == 'github-hosted'
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.14"
+
+    - name: Install toolchain (GitHub-hosted only)
+      if: runner.environment == 'github-hosted'
+      shell: bash
+      env:
+        # A fresh runner: no need to clean up old versions or to check what else depends on them.
+        HOMEBREW_NO_INSTALL_CLEANUP: 1
+        HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+      run: |
+        set -euo pipefail
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        brew install ${{ inputs.brew-formulae }}
+        # lld@19 is keg-only. The mac mini links it into $HOMEBREW_PREFIX/bin, where the toolbox
+        # finds lld, so do the same here.
+        brew link --force --overwrite lld@19
+
     # Everything below points at things the mac is expected to already have. Checked here.
     - name: Check the machine's toolchain
       shell: bash
@@ -37,14 +69,17 @@ runs:
         eval "$("$brew" shellenv)"
         # llvm@23 is checked even though nothing here points at it: setup-build-matrix.py
         # hardcodes its compiler paths straight into the matrix.
-        for p in "$HOMEBREW_PREFIX/opt/llvm@19" "$HOMEBREW_PREFIX/opt/llvm@23" \
-                 "$HOMEBREW_PREFIX/opt/icu4c" "$HOMEBREW_PREFIX/bin/ccache" \
-                 "$HOMEBREW_PREFIX/bin/ld64.lld"; do
-          if [ ! -e "$p" ]; then
-            echo "::error::missing $p - install it on the runner with brew"
+        for f in ${{ inputs.brew-formulae }}; do
+          if [ ! -e "$HOMEBREW_PREFIX/opt/$f" ]; then
+            echo "::error::missing $HOMEBREW_PREFIX/opt/$f - install it on the runner with brew install $f"
             exit 1
           fi
         done
+        # lld@19 is keg-only, but the build looks for the linker on PATH.
+        if [ ! -e "$HOMEBREW_PREFIX/bin/ld64.lld" ]; then
+          echo "::error::missing $HOMEBREW_PREFIX/bin/ld64.lld - link it with brew link --force lld@19"
+          exit 1
+        fi
 
     # The choices follow dev/docs/developer-guides/building-the-repo.md, "MacOS (clang)"
     # Homebrew goes on the FRONT of PATH deliberately this ensures that python resolves
@@ -62,9 +97,15 @@ runs:
 
     # On mac the caches are kept on the machine, not in the workspace. This is a symlink to the machine's
     # shared cache, because ConfigureCCache.cmake hardcodes the path into the compiler launcher.
+    # GitHub-hosted runners keep nothing between jobs, so there is no shared cache to point at.
     - name: Point caches at local storage
+      if: runner.environment == 'self-hosted'
       shell: bash
       run: |
+        if [ -z '${{ inputs.ccache-dir }}' ]; then
+          echo "::error::the ccache-dir input is required on a self-hosted runner"
+          exit 1
+        fi
         shared='${{ inputs.shared-dir }}'
         mkdir -p "$shared/ccache"
         # replace the workspace's ccache dir with a link to the shared one

@@ -1,7 +1,8 @@
 name: Setup Rust (macOS)
 description: >
   Points the Rust build at what the mac already has, and gives sccache somewhere to write.
-  Nothing is installed here.
+  On a self-hosted runner nothing is installed. On a GitHub-hosted runner rustup and sccache are
+  installed first, laid out as on the mac mini.
 
 inputs:
   shared-dir:
@@ -18,6 +19,24 @@ inputs:
 runs:
   using: composite
   steps:
+    # The image's rustup comes from Homebrew, without ~/.cargo/bin and ~/.cargo/env. The mac mini
+    # has a per-account rustup instead, with sccache in ~/.cargo/bin, which the steps below expect.
+    - name: Install rustup and sccache (GitHub-hosted only)
+      if: runner.environment == 'github-hosted'
+      shell: bash
+      env:
+        HOMEBREW_NO_INSTALL_CLEANUP: 1
+        HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+      run: |
+        set -euo pipefail
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+        brew install sccache
+        # The standard installer adds ~/.cargo/bin and ~/.cargo/env, and reuses the toolchains
+        # already in ~/.rustup.
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+          | RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y --no-modify-path --profile minimal
+        ln -sfn "$HOMEBREW_PREFIX/bin/sccache" "$HOME/.cargo/bin/sccache"
+
     # Check if the machine has a per-account rustup. 
     # If not, the mac is misconfigured and the job will fail.
     - name: Check the per-account rustup
