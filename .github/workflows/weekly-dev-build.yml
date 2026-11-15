@@ -124,44 +124,14 @@ jobs:
           echo "deb https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-19 main" \
             | sudo tee /etc/apt/sources.list.d/llvm-19.list
 
-      # setup-macos-build-env and setup-macos-rust expect what
-      # the macOS runner of the test CI has installed (and check it).
-      # We need to install the required tools on the GitHub-hosted runner first (the two following steps).
-      # Its image already has Homebrew, cmake and rustup.
-
-      - name: Setup Python (macOS)
+      # Read by default by CMake, clang, rustc and the cc crate,
+      # so it configures the whole build for this deployment target.
+      - name: Set macOS deployment target
         if: matrix.platform == 'macos'
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.14"
+        run: echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.deployment-target }}" >> "$GITHUB_ENV"
 
-      - name: Install macOS toolchain
-        if: matrix.platform == 'macos'
-        env:
-          # A fresh runner: no need to clean up old versions or to check what else depends on them.
-          HOMEBREW_NO_INSTALL_CLEANUP: 1
-          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
-        run: |
-          set -euo pipefail
-
-          # This variable is read by default by CMake, clang, rustc and the cc crate,
-          # so it automatically configures the whole build for this deployment target.
-          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.deployment-target }}" >> "$GITHUB_ENV"
-
-          brew install llvm@19 llvm@23 lld icu4c ccache ninja sccache
-
-          # The image's rustup comes from Homebrew, without ~/.cargo/bin and ~/.cargo/env, which
-          # setup-macos-rust expects (a per-account rustup, as in the test CI environment).
-          # The standard installer adds them and reuses the toolchains already in ~/.rustup.
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-            | RUSTUP_INIT_SKIP_PATH_CHECK=yes sh -s -- -y --no-modify-path --profile minimal
-
-          # We link sccache to cargo location to match the expected locations
-          # of the test CI environment and reuse setup workflows.
-          ln -sfn "$(brew --prefix)/bin/sccache" "$HOME/.cargo/bin/sccache"
- 
-          df -h "$GITHUB_WORKSPACE"
-
+      # On the GitHub-hosted macOS runner, setup-build-env and setup-rust first install the
+      # toolchain that the test CI mac has.
       - name: Setup build environment
         uses: ./.github/actions/setup-build-env/
         with:
@@ -171,9 +141,6 @@ jobs:
           compiler-name: ${{ matrix.compiler-name }}
           linker: ${{ matrix.linker }}
           dev-dir: ${{ github.workspace }}/dev
-          # ccache is not used here, but without this argument
-          # the setup-build-env action fails on macOS.
-          ccache-dir: ${{ github.workspace }}/dev/.ccache
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust/
