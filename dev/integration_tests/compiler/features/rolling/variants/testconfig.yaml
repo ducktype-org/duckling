@@ -20,3 +20,9 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  variant_fields:
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0

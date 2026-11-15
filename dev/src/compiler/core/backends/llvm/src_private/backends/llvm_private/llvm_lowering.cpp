@@ -310,6 +310,100 @@ namespace compiler::backend_llvm {
 				context, base::safeIntConv<unsigned>(layout.getTagSize().asInt())
 			);
 		}
+
+		/**
+		 * @brief The shape of the LLVM struct of a class: its members and where each field lands.
+		 */
+		struct ClassStructPlan {
+			/// The field types, with explicit `[N x i8]` padding members between them if needed.
+			std::vector<llvm::Type*> member_types;
+			/// The LLVM element index of each field, indexed by its TSL layout index.
+			std::vector<unsigned> field_element_indices;
+			/// Whether the struct must be packed to put every field at its TSL offset.
+			bool is_packed = false;
+		};
+
+		/**
+		 * @brief Plans the LLVM struct of a class so that every field lands at its TSL offset and
+		 * the struct takes exactly the TSL size.
+		 *
+		 * LLVM places a struct member at the next multiple of the member's ABI alignment, which
+		 * can be smaller than the TSL alignment (variants lower to packed structs, whose alignment
+		 * is 1). Explicit `[N x i8]` padding then moves the field to its TSL offset. The struct is
+		 * packed only when padding is not enough, i.e. when LLVM would place a member after its
+		 * TSL offset.
+		 */
+		auto planClassStruct(const Ref<llvm::Module> module, const tsl::ClassTypeLayout& layout)
+			-> ClassStructPlan {
+			const llvm::DataLayout& data_layout     = module->getDataLayout();
+			const usize             num_sub_layouts = layout.getNumSubLayouts();
+			const u64               class_size = base::bits2bytesRoundUp(layout.getSize()).asInt();
+
+			std::vector<llvm::Type*> field_types;
+			std::vector<u64>         field_offsets;
+			field_types.reserve(num_sub_layouts);
+			field_offsets.reserve(num_sub_layouts);
+			for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+				field_types.push_back(
+					typeFromLayout(module, layout.getFieldLayoutOfLayoutIndex(layout_idx))
+				);
+				field_offsets.push_back(
+					layout.getOffsetOfFieldSymbol(layout.getFieldSymbolOfLayoutIndex(layout_idx))
+						.value()
+						.asInt()
+				);
+			}
+
+			llvm::Type* i8_type  = llvm::Type::getInt8Ty(module->getContext());
+			auto        try_plan = [&](const bool is_packed) -> base::Optional<ClassStructPlan> {
+                ClassStructPlan plan{ .member_types          = {},
+					                         .field_element_indices = {},
+					                         .is_packed             = is_packed };
+                u64             current_offset = 0;
+                llvm::Align     struct_alignment(1);
+
+                auto pad_to = [&](const u64 offset) {
+                    plan.member_types.push_back(
+                        llvm::ArrayType::get(i8_type, offset - current_offset)
+                    );
+                    current_offset = offset;
+                };
+
+                for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+                    llvm::Type*       field_type = field_types[layout_idx];
+                    const u64         offset     = field_offsets[layout_idx];
+                    const llvm::Align alignment
+                        = is_packed ? llvm::Align(1) : data_layout.getABITypeAlign(field_type);
+
+                    const u64 natural_offset = llvm::alignTo(current_offset, alignment);
+                    if (natural_offset > offset or not llvm::isAligned(alignment, offset))
+                        return {};
+                    if (natural_offset < offset) pad_to(offset);
+
+                    plan.field_element_indices.push_back(
+                        base::safeIntConv<unsigned>(plan.member_types.size())
+                    );
+                    plan.member_types.push_back(field_type);
+                    current_offset   = offset + data_layout.getTypeAllocSize(field_type);
+                    struct_alignment = std::max(struct_alignment, alignment);
+                }
+
+                if (current_offset > class_size) return {};
+                if (llvm::alignTo(current_offset, struct_alignment) != class_size) {
+                    pad_to(class_size);
+                    if (not llvm::isAligned(struct_alignment, class_size)) return {};
+                }
+                return plan;
+			};
+
+			if (auto plan = try_plan(/*is_packed=*/false); plan.has_value()) return *plan;
+			if (auto plan = try_plan(/*is_packed=*/true); plan.has_value()) return *plan;
+			CORE_PANIC(base::strConcat(
+				"Cannot lay out class '",
+				layout.getMangledName().strView(),
+				"' as an LLVM struct matching its TSL layout"
+			));
+		}
 	}
 
 	/**
@@ -361,25 +455,20 @@ namespace compiler::backend_llvm {
 				// Otherwise, define the struct in LLVM.
 				// - First, create an opaque type.
 				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
-				// - Then, collect the member types.
-				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
-				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_sub_layouts);
-				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
-					const CRef<tsl::TypeLayout> field_layout
-						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
-					member_types.push_back(typeFromLayout(module, field_layout));
-				}
-				// - Finally, set the body of the struct and return it.
-				struct_type->setBody(member_types, /*is_packed=*/false);
+				// - Then, lay out the members so that each field lands at its TSL offset.
+				const ClassStructPlan plan = planClassStruct(module, class_layout);
+				struct_type->setBody(plan.member_types, plan.is_packed);
 
 				// Now, confirm that the LLVM struct layout matches the TSL type layout.
-				// - First, get the LLVM struct layout.
 				const llvm::DataLayout&   data_layout   = module->getDataLayout();
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
-
-				// - Then, check each field's offset.
-				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+				CORE_ASSERT(
+					Bytes(struct_layout.getSizeInBytes())
+						== base::bits2bytesRoundUp(class_layout.getSize()),
+					base::strConcat("LLVM struct size mismatch for class '", class_name, "'")
+				);
+				for (usize layout_idx = 0; layout_idx < plan.field_element_indices.size();
+				     layout_idx++) {
 					[[maybe_unused]] const Bytes expected_offset
 						= class_layout
 					          .getOffsetOfFieldSymbol(
@@ -387,7 +476,7 @@ namespace compiler::backend_llvm {
 							  )
 					          .value();
 					[[maybe_unused]] const auto actual_offset = Bytes(
-						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
+						struct_layout.getElementOffset(plan.field_element_indices[layout_idx])
 					);
 					CORE_ASSERT(
 						expected_offset == actual_offset,
@@ -767,9 +856,10 @@ namespace compiler::backend_llvm {
 							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id)
 						          .value();
 
-						gep_indices.push_back(
-							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
-						);
+						// Padding members can shift the field's LLVM element index.
+						const unsigned element_idx = planClassStruct(module, current_class_layout)
+						                                 .field_element_indices.at(layout_idx);
+						gep_indices.push_back(llvm_i32(element_idx));
 						current_layout
 							= current_class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					}
