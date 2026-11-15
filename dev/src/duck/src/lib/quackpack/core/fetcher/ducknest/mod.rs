@@ -7,7 +7,7 @@
 //! Ducknest registry communication.
 use std::io::Write;
 use std::path::Path;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use endpoints::UrlExt;
 use tracing::{debug, trace};
@@ -29,32 +29,32 @@ mod tests;
 #[derive(Debug)]
 /// General client communicating with a registry instance over HTTP.
 pub struct DucknestClient<'duck> {
-    client: Arc<AsyncHttpClient<'duck>>,
+    client: Rc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> DucknestClient<'duck> {
     /// Construct a new [`DucknestClient`].
-    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+    pub fn new(client: Rc<AsyncHttpClient<'duck>>) -> Self {
         Self { client }
     }
 
     /// Retrieve metadata for a specific package from a Ducknest instance.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn get_exact_metadata(
         &self,
         package: types::PackageWithUrl,
     ) -> QuackResult<registry::Manifest> {
-        let url = package.url.for_exact_metadata(package.into())?;
+        let url = package.url.for_exact_metadata(package.as_package())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;
         let data = response.deserialize_json()?;
-        trace!(target: "duck::ducknest", "fetched");
+        trace!("fetched");
         Ok(data)
     }
 
     /// Retrieve all metadata for a specific package from a Ducknest instance.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self, url), fields(%url))]
+    #[tracing::instrument(skip(self, url), fields(%url))]
     pub async fn get_multi_metadata(
         &self,
         url: &Url,
@@ -66,12 +66,12 @@ impl<'duck> DucknestClient<'duck> {
 
         let response = self.client.request(request).await?;
         let data = response.deserialize_json()?;
-        trace!(target: "duck::ducknest", "fetched");
+        trace!("fetched");
         Ok(data)
     }
 
     /// Publish a package to a Ducknest instance.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self, url), fields(%url))]
+    #[tracing::instrument(skip(self, url), fields(%url))]
     pub fn publish_package(
         &self,
         url: &Url,
@@ -82,19 +82,18 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Download a package blob from a Ducknest instance and save it to a file.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn fetch_blob(
         &self,
         package: types::PackageWithUrl,
         mut target: &LockedFile,
     ) -> QuackResult<()> {
-        let url = package.url.for_blob(package.into())?;
+        let url = package.url.for_blob(package.as_package())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;
 
         debug!(
-            target: "duck::ducknest",
             "fetched {} bytes, saving them to `{}`",
             response.body().len(),
             target.path().display()
@@ -109,14 +108,14 @@ impl<'duck> DucknestClient<'duck> {
     }
 
     /// Search the Ducknest instance for all packages that match the provided query.
-    #[tracing::instrument(target = "duck::ducknest", level = "debug", skip(self))]
+    #[tracing::instrument(skip(self))]
     pub async fn search(&self, url: &Url, query: &str) -> QuackResult<types::SearchResult> {
         let url = url.for_search(query)?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request).await?;
         let data = response.deserialize_json()?;
-        trace!(target: "duck::ducknest", "got search response");
+        trace!("got search response");
         Ok(data)
     }
 }
@@ -126,8 +125,8 @@ fn create_get_request(url: &Url) -> QuackResult<Request> {
 }
 
 fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-    debug!(target: "duck::ducknest", "building a `{method}` request to `{url}`");
-    trace!(target: "duck::ducknest", ?body);
+    debug!("building a `{method}` request to `{url}`");
+    trace!(?body);
     http::Request::builder()
         .uri(url.as_str())
         .method(&method)

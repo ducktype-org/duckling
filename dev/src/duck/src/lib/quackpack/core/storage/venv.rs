@@ -166,11 +166,12 @@ impl VenvData {
             .into());
         }
         serde_json::from_str(data).map_err(|e| {
-            let err = QuackError::from(e);
+            let mut err = QuackError::from(e);
             err.context(CorruptedVenvError {
                 reason: CorruptedVenvReason::Other,
                 path: path.to_path_buf(),
-            })
+            });
+            err
         })
     }
 
@@ -321,7 +322,7 @@ impl Venv {
     /// Convert the state of a virtual environment into canonical form and return its state.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
-    #[tracing::instrument(level = "debug", skip_all, fields(%id))]
+    #[tracing::instrument(skip_all, fields(%id))]
     pub fn fix_and_load(
         storage: &Storage,
         id: VenvId,
@@ -341,7 +342,7 @@ impl Venv {
     /// this function returns the previous last_access value as well as the loaded venv.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
-    #[tracing::instrument(level = "debug", skip_all, fields(%id))]
+    #[tracing::instrument(skip_all, fields(%id))]
     pub fn fix_and_load_with_last_access(
         storage: &Storage,
         id: VenvId,
@@ -438,7 +439,7 @@ impl Venv {
     ///
     /// Assumes that the current `metadata` file is valid. This is typically ensured
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
-    #[tracing::instrument(level = "debug", skip_all, fields(id = %self.id))]
+    #[tracing::instrument(skip_all, fields(id = %self.id))]
     pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
         let _lock = storage
             .data_locks()

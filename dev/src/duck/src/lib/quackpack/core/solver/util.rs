@@ -105,12 +105,12 @@ impl PackageId {
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
-            trace!(target: "duck::solver", "does not satisfy the versions");
+            trace!("does not satisfy the versions");
             return Ok(false);
         }
         let source = dependency.source();
         if self.url() != source.url() || self.name() != dependency.name() {
-            trace!(target: "duck::solver", other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
+            trace!(other_source = ?source, source.url = %self.url(), source.name = ?self.name(), "sources are different");
             return Ok(false);
         }
         self.origin()

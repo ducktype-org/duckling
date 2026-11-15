@@ -16,19 +16,21 @@
 
 namespace compiler::helios::code {
 
-	/**
-	 * @brief Checks whether the type is a primitive scalar which may take part in an
-	 * explicit `as` conversion (integers, floats, `char` and `byte`).
-	 */
-	static bool isScalarCastableType(const tsh::AbstractType type) {
-		switch (type.getKind()) {
-		case tsh::Kind::Integral:
-		case tsh::Kind::Float:
-		case tsh::Kind::Byte:
-		case tsh::Kind::Char:
-			return true;
-		default:
-			return false;
+	namespace {
+		/**
+		 * @brief Checks whether the type is a primitive scalar which may take part in an
+		 * explicit `as` conversion (integers, floats, `char` and `byte`).
+		 */
+		bool isScalarCastableType(const tsh::AbstractType type) {
+			switch (type.getKind()) {
+			case tsh::Kind::Integral:
+			case tsh::Kind::Float:
+			case tsh::Kind::Byte:
+			case tsh::Kind::Char:
+				return true;
+			default:
+				return false;
+			}
 		}
 	}
 
@@ -70,9 +72,8 @@ namespace compiler::helios::code {
 		if (auto value_type = value->expression_type.getType();
 		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
 		    && to.getType().getKind() == Kind::Bool) {
-			const tsh::coercions::Coercion to_direct = coercions::coercionOf(
-				ctx, value.ref(), from.withReferenceKind(ReferenceKind::Direct)
-			);
+			const tsh::coercions::Coercion to_direct
+				= coercions::coercionOf(ctx, value.ref(), from.toDirect());
 			CORE_ASSERT(to_direct.isValid(), "Should always be valid");
 			return coercions::buildZeroCheck(
 				ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
@@ -223,10 +224,10 @@ namespace compiler::helios::code {
 		}
 		if (found_match) return cast_expr(std::move(value));
 
-		ctx.logInt(makeBox<dia::PlaceholderError>(
+		ctx.log<dia::PlaceholderError>(
 			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
 			stmt->getStablePosition()
-		));
+		);
 		query::throwFailed();
 		CORE_UNREACHABLE();
 	}

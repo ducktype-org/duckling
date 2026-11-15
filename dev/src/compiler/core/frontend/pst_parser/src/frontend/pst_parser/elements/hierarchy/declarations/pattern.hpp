@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "../not_statements/code_block_or_expr.hpp"
 #include "../not_statements/param.hpp"
 #include "preamble.hpp"
 
@@ -21,7 +22,7 @@ namespace pst {
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(param, Param);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;

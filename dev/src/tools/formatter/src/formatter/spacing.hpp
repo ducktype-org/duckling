@@ -23,12 +23,15 @@ namespace formatter {
 	 *             a bracket group, or an exploded group element.
 	 * @param prev2 The token before @p prev, where known. Only a few rules need it, such as
 	 *              telling the custom-operator name in `fun +*(a, b)` from a binary operator.
+	 * @param prev3 The token before @p prev2, where known. It tells the `prefix` marker in
+	 *              `fun prefix -*(a)` from a variable named `prefix` in `prefix - (a + b)`.
 	 */
 	[[nodiscard]]
 	bool needSpace(
 		const FormatConfig& config,
 		const lexer::Token* prev,
 		const lexer::Token& cur,
-		const lexer::Token* prev2 = nullptr
+		const lexer::Token* prev2 = nullptr,
+		const lexer::Token* prev3 = nullptr
 	);
 }

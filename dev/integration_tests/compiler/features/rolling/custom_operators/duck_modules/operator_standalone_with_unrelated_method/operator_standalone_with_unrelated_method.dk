@@ -3,7 +3,7 @@
 class L {
     v: i64 = 0;
 
-    L.copy(other: const ref L) = {
+    L.copy(other: ref L) = {
         return L(other.v);
     }
 

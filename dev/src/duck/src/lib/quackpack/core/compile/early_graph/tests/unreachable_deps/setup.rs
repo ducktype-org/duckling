@@ -46,25 +46,26 @@ pub fn setup_mock_packages(root: &Path) {
             ),
             Version::new(1, 0, 0),
         );
+        let base = root.join("pkg");
         touch(
-            root.join("pkg")
-                .join(mock_registry_pkg.storage_name())
+            mock_registry_pkg
+                .push_storage_path(&base)
                 .join("src")
                 .join("main.duck"),
         )
         .unwrap();
 
         write_file(
-            root.join("pkg")
-                .join(mock_registry_pkg.storage_name())
+            mock_registry_pkg
+                .push_storage_path(&base)
                 .join(PackageLoader::MANIFEST_NAME),
             manifest,
         )
         .unwrap();
 
         touch(
-            root.join("pkg")
-                .join(mock_registry_pkg.storage_name())
+            mock_registry_pkg
+                .push_storage_path(&base)
                 .join(paths::OK_FILENAME),
         )
         .unwrap();

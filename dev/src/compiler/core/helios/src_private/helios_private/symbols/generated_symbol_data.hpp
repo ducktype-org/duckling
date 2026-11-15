@@ -41,9 +41,10 @@ namespace compiler::helios::defgen {
 	 * fields with a default value (which may mean a call to another constructor); returns the
 	 * initialized static array value.
 	 *
-	 * - `Copy`: the compiler-generated default copy constructor. It takes a single `const ref T`
-	 *   source and returns a new `T` that copies each member (trivially-copyable members are
-	 *   byte-copied, non-trivially-copyable members are copied via their own copy constructor).
+	 * - `Copy`: the compiler-generated default copy constructor. It takes a single read-only
+	 *   `ref T` source and returns a new `T` that copies each member (trivially-copyable members
+	 *   are byte-copied, non-trivially-copyable members are copied via their own copy
+	 *   constructor).
 	 */
 	struct Constructor final {
 		enum class Kind {
@@ -60,14 +61,20 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
-	 * `toString`). The concrete method is distinguished by `kind`.
+	 * Represents a compiler-generated method shared by all types (the destructor, `length`, and
+	 * `toString`, or comparison operator). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
 		enum class Kind {
 			DefaultDestructor,
 			LengthMethod,
 			ToString,
+			Equal,
+			NotEqual,
+			Lesser,
+			LesserEqual,
+			Greater,
+			GreaterEqual,
 		};
 
 		tsh::AbstractType owner_type;
@@ -77,11 +84,17 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief Whether @p kind is one of the generated comparison operators (`==`, `!=`, `<`, `<=`,
+	 * `>`, `>=`).
+	 */
+	[[nodiscard]] bool isComparisonMethodKind(Method::Kind kind);
+
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
 
-		HOUTFunctionDeclaration::Operatoriness operatoriness;
+		HOUTFunctionDeclaration::Operatoriness operatoriness{};
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

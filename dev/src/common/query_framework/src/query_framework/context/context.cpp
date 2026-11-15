@@ -28,7 +28,7 @@ namespace query {
 
 	void Context::setAreWeInsideQuery(bool value) { current_thread_inside_query = value; }
 
-	void Context::logInt(Box<dia::MessageBase> diagnostic) {
+	void Context::log(Box<dia::MessageBase> diagnostic) {
 		assertActive();
 		main_query_state.logDiagnosticForNode(my_node, std::move(diagnostic));
 	}

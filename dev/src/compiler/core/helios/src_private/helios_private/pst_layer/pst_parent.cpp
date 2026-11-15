@@ -8,6 +8,8 @@
 
 #include <helios_private/templates/templates.hpp>
 
+#include <base/misc/anycast.hpp>
+
 namespace compiler::helios {
 
 	PSTParentResult getPSTElementParent(

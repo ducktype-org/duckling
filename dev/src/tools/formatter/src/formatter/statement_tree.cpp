@@ -37,6 +37,77 @@ namespace formatter {
 			return i + 1;
 		}
 
+		/** Index of the first significant token at or after @p i, or `tokens.size()`. */
+		usize nextSignificant(std::span<const Token> tokens, usize i) {
+			while (i < tokens.size() && isSkippable(tokens[i])) i++;
+			return i;
+		}
+
+		/**
+		 * At the start of a statement, finds where a leading item that goes on lines of its
+		 * own ends: an attribute (`@name` or `@name(...)` before a `fun`), always, or a block
+		 * comment (`#{ ... #}` above a declaration) that the author put on lines of its own.
+		 * Such an item becomes a statement of its own, so it gets its own line.
+		 *
+		 * @return The index just past the item, or 0 when @p i opens no such item or a block
+		 *         comment shares its line with the next token.
+		 */
+		usize ownLineItemEnd(std::span<const Token> tokens, usize i) {
+			const usize n    = tokens.size();
+			usize       last = i;
+			if (isSpecial(tokens[i]) && isStr(tokens[i], "@")) {
+				last = nextSignificant(tokens, i + 1);
+				if (last == n) return 0;
+				const usize args = nextSignificant(tokens, last + 1);
+				if (args < n && isBracketGroup(tokens[args])
+				    && tokens[args].getBracketType() == Bracket::Round
+				    && onSameSourceLine(tokens[last], tokens[args]))
+					last = args;
+			} else if (!isComment(tokens[i]) || isLineComment(tokens[i])) {
+				return 0;
+			}
+			const usize next = nextSignificant(tokens, last + 1);
+			if (next == n) return 0;
+			// An attribute always gets a line of its own above what it applies to.
+			if (isSpecial(tokens[i])) return last + 1;
+			if (onSameSourceLine(tokens[last], tokens[next])) return 0;
+			return last + 1;
+		}
+
+		/**
+		 * Whether the curly group at @p i is a body that closes its line, as in `fun f() = {}`
+		 * or `class C { x: String }` followed by the next declaration. Such a group ends the
+		 * statement like a code block. With no `;` inside it cannot be told apart from a
+		 * literal, so the line break and the token after it decide.
+		 */
+		bool isBodyEndingLine(std::span<const Token> tokens, usize i) {
+			const Token& t = tokens[i];
+			if (!isBracketGroup(t) || t.getBracketType() != Bracket::Curly) return false;
+			const usize next = nextSignificant(tokens, i + 1);
+			if (next == tokens.size()) return false;
+			const Token& after = tokens[next];
+			if (onSameSourceLine(t, after)) return false;
+			// A new declaration or statement, an attribute or a comment starts the next line.
+			// Not a keyword that joins onto the expression before it, though: `== {1, 2}\n and b`.
+			return (isKeyword(after) && !isContinuationKeyword(after))
+			    || after.getType() == Token::Type::Identifier || isComment(after)
+			    || (isSpecial(after) && isStr(after, "@"));
+		}
+
+		/**
+		 * Whether a `fundecl` statement, which has no body, ends before @p i: the token
+		 * opens a new line with a keyword or an attribute, as in a `fundecl` with no `;`
+		 * followed by a `class`.
+		 */
+		bool endsBodylessDecl(std::span<const Token> tokens, usize start, usize i) {
+			if (!isKeyword(tokens[start]) || !isStr(tokens[start], "fundecl")) return false;
+			usize prev = i;
+			while (prev > start && isSkippable(tokens[prev - 1])) prev--;
+			if (prev == start || onSameSourceLine(tokens[prev - 1], tokens[i])) return false;
+			const Token& t = tokens[i];
+			return isStatementKeyword(t) || (isSpecial(t) && isStr(t, "@"));
+		}
+
 		/**
 		 * Parses one statement starting at @p i into @p stmt.
 		 *
@@ -80,6 +151,16 @@ namespace formatter {
 						return j + 1;
 					}
 				}
+				if (at_start) {
+					if (const usize end = ownLineItemEnd(tokens, i); end != 0) {
+						flush_run(end);
+						return end;
+					}
+				}
+				if (!at_start && endsBodylessDecl(tokens, run_start, i)) {
+					flush_run(i);
+					return i;
+				}
 				at_start = false;
 
 				// Statement terminator.
@@ -97,17 +178,20 @@ namespace formatter {
 				}
 
 				// A code block ends the statement (unless an `else` clause or `;` follows).
-				if (isBlockCurly(t)) {
+				if (isBlockCurly(t) || isBodyEndingLine(tokens, i)) {
 					flush_run(i);
-					stmt.items.emplace_back(BlockItem{
-						.curly = &t,
-						.body  = parseStatementList(t.getRecursive()),
-					});
+					stmt.items.emplace_back(parseBlock(t));
 
 					usize j = i + 1;
 					while (j < n && isSkippable(tokens[j])) j++;
 
-					if (j < n && isKeyword(tokens[j]) && isStr(tokens[j], "else")) {
+					// So does an operator right after the brace, on the same line: the block
+					// is an operand (`acc + match (v) {...} * 2;`), not a statement of its own.
+					const bool continues
+						= j < n
+					   && ((isKeyword(tokens[j]) && isStr(tokens[j], "else"))
+					       || (isOperator(tokens[j]) && onSameSourceLine(t, tokens[j])));
+					if (continues) {
 						run_start = j;
 						i         = j;
 						continue;
@@ -124,6 +208,21 @@ namespace formatter {
 			flush_run(n);
 			return n;
 		}
+	}
+
+	BlockItem parseBlock(const Token& curly) {
+		const std::span<const Token> children = curly.getRecursive();
+		usize                        first    = 0;
+		while (first < children.size() && isSkippable(children[first])) first++;
+		// A line comment right after `{`, on the same line, stays there: `for (...) { # note`.
+		if (first < children.size() && isLineComment(children[first])
+		    && startLine(curly) == startLine(children[first]))
+			return BlockItem{
+				.curly        = &curly,
+				.body         = parseStatementList(children.subspan(first + 1)),
+				.open_comment = &children[first],
+			};
+		return BlockItem{ .curly = &curly, .body = parseStatementList(children) };
 	}
 
 	std::vector<Statement> parseStatementList(std::span<const Token> tokens) {

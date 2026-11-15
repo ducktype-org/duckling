@@ -108,7 +108,7 @@ impl YamlConfig {
                     return Ok(Self::default());
                 } else {
                     return Err(e).context(format!(
-                        "when trying to read a user config at `{}`",
+                        "failed to read the user config at `{}`",
                         path.display()
                     ));
                 }
@@ -116,7 +116,7 @@ impl YamlConfig {
         };
         let content: Value = from_str(&content).with_context(|| {
             format!(
-                "when trying to parse a user config at `{}` into the YAML value",
+                "failed to parse the user config at `{}` into a YAML value",
                 path.display()
             )
         })?;
@@ -135,9 +135,9 @@ impl YamlConfig {
     /// Create an error message.
     pub fn make_location_error(&self) -> String {
         match self.source {
-            Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
+            Some(ref path) => format!("failed to parse the configuration at `{}`", path.display()),
             None => {
-                "You've encountered an internal error: when parsing the default user configuration"
+                "You've encountered an internal error: failed to parse the default user configuration"
                     .into()
             }
         }
@@ -438,42 +438,42 @@ foo:
         assert_eq!(
             config.get_i64("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_table("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_array("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_bool("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_f64("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_str("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
@@ -517,7 +517,7 @@ foo:
         assert_eq!(
             err.to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo` expected a table, not an array",
+                "failed to parse the configuration at `{}`\nin the chain `foo` expected a table, not an array",
                 file.path().display()
             )
         );
@@ -553,7 +553,7 @@ b: 1
         assert_eq!(
             err.to_string(),
             format!(
-                "when trying to parse a user config at `{}` into the YAML value
+                "failed to parse the user config at `{}` into a YAML value
 deserializing from YAML containing more than one document is not supported",
                 file.path().display()
             )
@@ -638,7 +638,7 @@ foo:
             missing.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 missing key `nonexistentkey`",
                 file.path().display()
             )
@@ -652,7 +652,7 @@ missing key `nonexistentkey`",
             err.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 invalid type: integer `1`, expected struct FooWithA",
                 file.path().display()
             )
@@ -686,7 +686,7 @@ invalid type: integer `1`, expected struct FooWithA",
             err.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 invalid type: map, expected an int or a string",
                 file.path().display()
             )
@@ -699,7 +699,7 @@ invalid type: map, expected an int or a string",
             err.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 missing key `nonexistentkey`",
                 file.path().display()
             )

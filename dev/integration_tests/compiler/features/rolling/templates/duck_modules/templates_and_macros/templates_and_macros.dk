@@ -1,6 +1,6 @@
 import core.builtins.*;
 
-expand "template(T: type) class X { var t: T; }";
+expand "template(T: type) class X { t: T; }";
 
 template(s: str)
 namespace Expand {

@@ -19,7 +19,7 @@ class Base {
         return pub_field;
     }
 
-    public fun setPub(new_value: i64) = {
+    public mut fun setPub(new_value: i64) = {
         pub_field = new_value;
     }
 
@@ -29,7 +29,7 @@ class Base {
     }
 
     private {
-        Base.copy(other: const ref Base) = {
+        Base.copy(other: ref Base) = {
             return Base(other.pub_field, other.prot_field, other.priv_field, other.unspecified);
         }
     }

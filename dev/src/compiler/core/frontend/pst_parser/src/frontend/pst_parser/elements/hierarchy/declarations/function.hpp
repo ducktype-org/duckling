@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../lists/parameter_list.hpp"
+#include "../not_statements/code_block_or_expr.hpp"
 #include "preamble.hpp"
 
 #include <token_parser_core/common_elements.hpp>
@@ -23,7 +24,7 @@ namespace pst {
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
 		OperatorFixity operator_fixity = OperatorFixity::None;
 
 	protected:

@@ -10,6 +10,7 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 

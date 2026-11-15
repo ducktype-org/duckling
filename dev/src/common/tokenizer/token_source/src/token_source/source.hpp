@@ -128,6 +128,12 @@ namespace tokenizer {
 		void runLexer(const lexer::LexOptions& options = {});
 
 		/**
+		 * @brief Sets token data without tokens, only with the sentinels at the start of the
+		 * source. Used when the source cannot be decoded, so the token data is always available.
+		 */
+		void emplaceEmptyTokenData();
+
+		/**
 		 * @brief Run the whole lexer and change the keyword mode
 		 * to the given one. The keyword mode is set until any subsequent
 		 * call to this function, because we need the same keyword mode
@@ -142,7 +148,10 @@ namespace tokenizer {
 		bool tokenize(const lexer::LexOptions& options = {}) {
 			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
-			if (int_log.hasErrors()) return false;
+			if (int_log.hasErrors()) {
+				emplaceEmptyTokenData();
+				return false;
+			}
 			countLines();
 			runLexer(options);
 			return not int_log.hasErrors();

@@ -6,6 +6,8 @@
 
 #include "code_line.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 namespace term_ui {
 
 	u64 minTabSpace(const dia::term_ui_view::CodeLine& line) {

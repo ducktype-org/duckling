@@ -1,0 +1,3 @@
+const CT1: i32 = if const 1 == 1 then 1 else this_does_not_exist;
+const CT2: i32 = if const 1 == 2 then this_does_not_exist else 2;
+const CT3: i32 = if const (1 == 2) then this_does_not_exist else 3;

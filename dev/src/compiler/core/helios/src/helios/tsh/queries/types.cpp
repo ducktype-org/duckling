@@ -54,10 +54,10 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains({ size, signedness })) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Invalid size of integral type: ", size, "."),
 				"The only allowed sizes are 8, 16, 32, 64 and 128."
-			));
+			);
 			// We might want to change this to query failed, instead of a "best guess".
 			return IntegralAbstractType{ &cache.at({ 128, signedness }) };
 		}
@@ -77,10 +77,10 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains(size)) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Invalid size of float type: ", size, "."),
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
-			));
+			);
 			// We might want to change this to query failed, instead of a "best guess".
 			return FloatAbstractType{ &cache.at(128) };
 		}
@@ -110,7 +110,7 @@ namespace compiler::tsh {
 	}
 
 	SliceAbstractType getCharSliceType(query::Context& ctx) {
-		return ctx.query<QuerySliceType>(tsh::SymbolType<>::withDefaults(tsh::getCharType()));
+		return ctx.query<QuerySliceType>(tsh::SymbolType<>::withDefaultsMut(tsh::getCharType()));
 	}
 
 	NamespaceAbstractType getNamespaceType() {

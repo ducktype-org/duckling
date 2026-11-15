@@ -201,9 +201,9 @@ namespace compiler::helios {
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
 					// @TODO: #2754 With flexible literals it should work
 					if (!maybe_u64_size.has_value()) {
-						ctx.logInt(makeBox<dia::PlaceholderError>(
+						ctx.log<dia::PlaceholderError>(
 							"Static array size must be a non-negative integral value.", ""
-						));
+						);
 						return query::Failed();
 					}
 					auto size = static_cast<usize>(maybe_u64_size.value());
@@ -242,7 +242,7 @@ namespace compiler::helios {
 					result                = const_val_result.valueOrThrow();
 				} else if (kind(expr.symbol) == SymbolKind::Class) {
 					// Special case for type definitions.
-					result = tsh::SymbolType<>::withDefaults(
+					result = tsh::SymbolType<>::withDefaultsMut(
 						ctx.query<tsh::QueryClassType>({ expr.symbol })
 					);
 				} else {
@@ -360,11 +360,11 @@ namespace compiler::helios {
 											if (rhs_val < 0
 									            || static_cast<u64>(rhs_val)
 									                   >= sizeof(ResultT) * 8) {
-												ctx.logInt(makeBox<dia::PlaceholderError>(
+												ctx.log<dia::PlaceholderError>(
 													"Invalid shift amount in compile-time "
 													"expression evaluation.",
 													expr.origin.getStablePosition().value()
-												));
+												);
 												return query::Failed();
 											}
 											set_num_result(static_cast<ResultT>(lhs_val << rhs_val));
@@ -375,11 +375,11 @@ namespace compiler::helios {
 											if (rhs_val < 0
 									            || static_cast<u64>(rhs_val)
 									                   >= sizeof(ResultT) * 8) {
-												ctx.logInt(makeBox<dia::PlaceholderError>(
+												ctx.log<dia::PlaceholderError>(
 													"Invalid shift amount in compile-time "
 													"expression evaluation.",
 													expr.origin.getStablePosition().value()
-												));
+												);
 												return query::Failed();
 											}
 											set_num_result(static_cast<ResultT>(lhs_val >> rhs_val));
@@ -388,11 +388,11 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia::PlaceholderError>(
+											ctx.log<dia::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
-											));
+											);
 											return query::Failed();
 										}
 										set_num_result(lhs_val / rhs_val);
@@ -400,11 +400,11 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia::PlaceholderError>(
+											ctx.log<dia::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
 												expr.origin.getStablePosition().value()
-											));
+											);
 											return query::Failed();
 										}
 										if constexpr (std::is_integral_v<ResultT>)
@@ -516,31 +516,31 @@ namespace compiler::helios {
 						} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
 							switch (expr.operation) {
 							case Ref:
-								return ctv::CompileTimeValue{
-									val.withReferenceKind(tsh::ReferenceKind::Ref)
-								};
+								return ctv::CompileTimeValue{ val.toRef() };
 							case Box:
+								return ctv::CompileTimeValue{ val.toBox() };
+							case Mut:
 								return ctv::CompileTimeValue{
-									val.withReferenceKind(tsh::ReferenceKind::Box)
+									val.withMutability(tsh::Mutability::Mutable)
 								};
-							case Const:
+							case Imm:
 								return ctv::CompileTimeValue{
 									val.withMutability(tsh::Mutability::Immutable)
 								};
 							case Ptr:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
 									ctx.query<tsh::QueryPointerType>({ val })
 								) };
 							case ManyPtr:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
 									ctx.query<tsh::QueryManyPointerType>({ val })
 								) };
 							case CPtr:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
 									ctx.query<tsh::QueryCPointerType>({ val })
 								) };
 							case Slice:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
 									ctx.query<tsh::QuerySliceType>({ val })
 								) };
 							default:
@@ -668,23 +668,21 @@ namespace compiler::helios {
 							// The duplicate is of the underlying type, so that is what gets named:
 							// in `i32 | ref i32` neither alternative is written twice, but they
 							// still describe the same one.
-							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+							ctx.log<DuplicateVariantAlternativeError>(
 								position.value(),
 								makeBox<InteractiveType>(
-									ctx, tsh::SymbolType<>::withDefaults(subtypes[i].getType())
+									ctx, tsh::SymbolType<>::withDefaultsMut(subtypes[i].getType())
 								)
-							));
+							);
 							result = query::Failed();
 							return;
 						}
 					}
 				}
 
-				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryVariantType>({ subtypes }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				} };
+				result = CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+					ctx.query<tsh::QueryVariantType>({ subtypes })
+				) };
 			}
 
 			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) final {
@@ -707,7 +705,7 @@ namespace compiler::helios {
 				}
 
 				result = CompileTimeValue{
-					tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryFunctionType>({
+					tsh::SymbolType<>::withDefaultsMut(ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = std::move(parameter_types),
 						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
 						.kind        = expr.kind,
@@ -735,21 +733,19 @@ namespace compiler::helios {
 					CORE_ASSERT(
 						position.has_value(), "Optional type constructor without a source position"
 					);
-					ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+					ctx.log<DuplicateVariantAlternativeError>(
 						position.value(),
 						makeBox<InteractiveType>(
-							ctx, tsh::SymbolType<>::withDefaults(value_type.getType())
+							ctx, tsh::SymbolType<>::withDefaultsMut(value_type.getType())
 						)
-					));
+					);
 					result = query::Failed();
 					return;
 				}
 
-				result = CompileTimeValue{ tsh::SymbolType<>{
-					ctx.query<tsh::QueryOptionalType>({ value_type }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				} };
+				result = CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+					ctx.query<tsh::QueryOptionalType>({ value_type })
+				) };
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
@@ -834,11 +830,7 @@ namespace compiler::helios {
 				variant_match(ctv.getStorage()) {
 					variant_case(tsh::SymbolType<>, symbol_type) { return symbol_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
-						return tsh::SymbolType<>{
-							tsh::getUnitType(),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable,
-						};
+						return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 					}
 					variant_case(CompileTimeValue::TypeTuple, tuple) {
 						std::vector<tsh::SymbolType<>> element_types;
@@ -847,11 +839,9 @@ namespace compiler::helios {
 							element_types.emplace_back(liftCTVToTypeRecursively(
 								ctx, CompileTimeValue::TypeTuple::elementToCtv(element)
 							));
-						return tsh::SymbolType<>{
-							ctx.query<tsh::QueryTupleType>({ std::move(element_types) }),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable,
-						};
+						return tsh::SymbolType<>::withDefaultsMut(
+							ctx.query<tsh::QueryTupleType>({ std::move(element_types) })
+						);
 					}
 				}
 				CORE_UNREACHABLE();
@@ -1043,12 +1033,12 @@ namespace compiler::helios {
 			);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Compile time evaluation of this function call failed or "
 					"returned unsupported result.",
 					call_expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
-				));
+				);
 				return query::Failed();
 			}
 			return vm_eval_result.value();
@@ -1074,7 +1064,7 @@ namespace compiler::helios {
 					if (symbol_kind != SymbolKind::Variable and symbol_kind != SymbolKind::Parameter)
 						return;
 					if (declared_inside.contains(node.symbol)) return;
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"Expression cannot be evaluated at compile-time.",
 						node.origin.getStablePosition(),
 						base::strConcat(
@@ -1082,7 +1072,7 @@ namespace compiler::helios {
 							name(node.symbol),
 							"` in a constant expression is invalid."
 						)
-					));
+					);
 					result = base::BAD;
 				}
 			});
@@ -1106,11 +1096,11 @@ namespace compiler::helios {
 			auto vm_eval_result = executeInVm(ctx, func_to_call_name, lir_unit, {}, return_type);
 
 			if (!vm_eval_result) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					"Compile time evaluation of this expression failed.",
 					expr->origin.getStablePosition(),
 					base::strConcat("Detailed reason: ", vm_eval_result.error().message)
-				));
+				);
 				return query::Failed();
 			}
 			return vm_eval_result.value();
@@ -1162,13 +1152,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx,
-			pst_expr,
-			tsh::SymbolType<>{
-				tsh::getMetaType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			}
+			ctx, pst_expr, tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType())
 		);
 
 		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
@@ -1180,7 +1164,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx, pst_expr, tsh::SymbolType<>::withDefaults(tsh::getBoolType())
+			ctx, pst_expr, tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType())
 		);
 		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
 		UNPACK_QRESULT(auto ctv =, ctx.query<QueryEvaluateHOUTExpression>({ hout.ref() }));

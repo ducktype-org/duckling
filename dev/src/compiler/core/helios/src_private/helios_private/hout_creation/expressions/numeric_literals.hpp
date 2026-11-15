@@ -24,9 +24,7 @@ namespace compiler::helios::code {
 	 * @brief Whether the literal may be parsed as a negative number.
 	 * @return false for unsigned types.
 	 */
-	bool canBeNegative(
-		query::Context& ctx, pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr
-	);
+	bool canBeNegative(pst::Access<pst::expr::ExprNumericValue> literal_expr);
 
 	/**
 	 * @brief Parses a PST numeric literal expression into a compile-time numeric value.
@@ -48,9 +46,9 @@ namespace compiler::helios::code {
 	 * failed. Errors are logged to the context.
 	 */
 	base::Optional<numeric_value::NumericValue> fromExprNumericValue(
-		query::Context&                                ctx,
-		pst::AccessLocked<pst::expr::ExprNumericValue> literal_expr,
-		const dia::StablePosition&                     position,
-		LiteralSign                                    sign = LiteralSign::Positive
+		query::Context&                          ctx,
+		pst::Access<pst::expr::ExprNumericValue> literal_expr,
+		const dia::StablePosition&               position,
+		LiteralSign                              sign = LiteralSign::Positive
 	);
 }

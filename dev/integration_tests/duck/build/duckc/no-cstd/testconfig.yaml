@@ -1,0 +1,14 @@
+PostCase: python3 check.py @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "profiles:
+    dev:
+      c-std: false" >> foo/quackconfig.yaml
+Tests:
+  basic:
+    Description: if no std, then complex linker options
+    Cases:
+      dev:
+        test-cmd: duck -C foo build

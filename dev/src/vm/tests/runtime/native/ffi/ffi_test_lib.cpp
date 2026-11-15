@@ -15,8 +15,10 @@
 extern "C" {
 	int64_t ffi_add(int64_t a, int64_t b) { return a + b; }
 
-	// Exercises the void, argument-taking path plus a state read-back.
-	static int64_t g_stored = 0;
+	namespace {
+		// Exercises the void, argument-taking path plus a state read-back.
+		int64_t g_stored = 0;
+	}
 
 	void ffi_set(int64_t v) { g_stored = v; }
 

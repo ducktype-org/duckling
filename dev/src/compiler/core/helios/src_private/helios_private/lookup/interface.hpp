@@ -9,7 +9,7 @@
 #include "lookup_result.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
-#include <frontend/pst_parser/source_position_locked.hpp>
+#include <frontend/pst_parser/access/source_position_locked.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>

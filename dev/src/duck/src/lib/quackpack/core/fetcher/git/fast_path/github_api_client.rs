@@ -18,8 +18,9 @@
 //!
 //! We perform 2 types of queries.
 //! 1. Get the commit hash for the default branch (`base_api_url/commits`) or for the commit specified by git referense (`base_api_url/commits?sha=<reference>`).
-//! 2. Download the manifest (for a given commit): `base_api_url/contents/<manifest_path>?ref=<commit_hash>`.use http::{HeaderName, HeaderValue, header};
-use std::sync::Arc;
+//! 2. Download the manifest (for a given commit): `base_api_url/contents/<manifest_path>?ref=<commit_hash>`.
+
+use std::rc::Rc;
 
 use http::{HeaderName, HeaderValue, header};
 use serde::Deserialize;
@@ -35,12 +36,12 @@ use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 #[derive(Debug)]
 /// Client for performing requests to Github repositories.
 pub struct GithubApiClient<'duck> {
-    client: Arc<AsyncHttpClient<'duck>>,
+    client: Rc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> GithubApiClient<'duck> {
     /// Create a new [`GithubClient`] instance.
-    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+    pub fn new(client: Rc<AsyncHttpClient<'duck>>) -> Self {
         Self { client }
     }
 
@@ -126,8 +127,8 @@ impl<'duck> GithubApiClient<'duck> {
 
     /// Helper for [`Self::request`].
     fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-        debug!(target: "duck::git", "building a `{method}` request to `{url}`");
-        trace!(target: "duck::git", ?body);
+        debug!("building a `{method}` request to `{url}`");
+        trace!(?body);
         http::Request::builder()
             .uri(url.as_str())
             .method(&method)

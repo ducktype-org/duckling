@@ -1,0 +1,7 @@
+# GitHub has no Duckling grammar yet, so Duckling sources are highlighted with the closest
+# language it knows. Nim fits best.
+# @TODO: #4017 Unmock this.
+#
+# `linguist-detectable=false` keeps these files out of the language statistics.
+*.dk   linguist-language=Nim linguist-detectable=false
+*.dks  linguist-language=Nim linguist-detectable=false

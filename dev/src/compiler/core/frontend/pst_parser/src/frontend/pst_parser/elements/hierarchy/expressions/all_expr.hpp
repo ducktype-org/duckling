@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "access.hpp"               // IWYU pragma: export
+#include "access_expr.hpp"          // IWYU pragma: export
 #include "array_literal.hpp"        // IWYU pragma: export
 #include "assignment.hpp"           // IWYU pragma: export
 #include "atom.hpp"                 // IWYU pragma: export

@@ -7,7 +7,7 @@
 #pragma once
 
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst/pst.hpp>
 #include <helios_private/pst_layer/macros.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>

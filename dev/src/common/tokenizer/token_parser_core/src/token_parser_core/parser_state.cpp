@@ -7,7 +7,6 @@
 #include "parser_state.hpp"
 
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 namespace tpc {
 
@@ -43,11 +42,8 @@ namespace tpc {
 			.saved_context = std::move(current_context),
 			.post_jump     = 1,
 		});
-		current_stream = makeBox<TokenStream>(std::move(new_stream));
-		variant_match(std::get<Fallback>(fallback_stack.back()).saved_context) {
-			variant_case(CRef<ParserContext>, ctx_ref) { current_context = ctx_ref; }
-			variant_case(Box<ParserContext>, ctx_ref) { current_context = ctx_ref.ref(); }
-		}
+		current_stream  = makeBox<TokenStream>(std::move(new_stream));
+		current_context = std::get<Fallback>(fallback_stack.back()).saved_context.ref();
 	}
 
 	void ParserState::goUp() {

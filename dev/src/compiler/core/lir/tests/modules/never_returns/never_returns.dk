@@ -1,0 +1,15 @@
+# A function returning `void` never returns. A function returning `()` does return.
+
+fun fails() -> void = {
+    return fails();
+}
+
+fun returnsUnit() -> () = {
+    return ();
+}
+
+fun caller(b: bool) -> i64 = {
+    returnsUnit();
+    if (b) return fails();
+    return 0i64;
+}

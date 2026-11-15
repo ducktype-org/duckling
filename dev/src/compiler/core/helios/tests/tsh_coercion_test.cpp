@@ -155,7 +155,7 @@ private:
 
 		plan("i32", "i32").succeeds().ranks(Identity);
 		plan("box i32", "box i32").succeeds().ranks(Identity);
-		plan("(const i32, i32)", "(i32, i32)").succeeds().ranks(MutabilityChange);
+		plan("(imm i32, i32)", "(i32, i32)").succeeds().ranks(MutabilityChange);
 		plan(mutable_pointer, immutable_pointer).succeeds().ranks(MutabilityChange);
 		plan("i32", "ref i32", CoercionMode::ImplicitRefOf).succeeds().ranks(RefOf);
 		plan("box i32", "i32").succeeds().ranks(Deref);
@@ -331,7 +331,7 @@ private:
 			.succeeds()
 			.doesNothing()
 			.steps({ MUTABILITY_CHANGE });
-		plan("(const box i32, i32)", "(box i32, i32)")
+		plan("(imm box i32, i32)", "(box i32, i32)")
 			.succeeds()
 			.steps({ HAND_OVER, MUTABILITY_CHANGE });
 		plan("box i32", "box i32").succeeds().steps({ HAND_OVER });
@@ -359,8 +359,8 @@ private:
 			.steps({ HAND_OVER });
 
 		// A tuple none of whose parts does anything is not taken apart.
-		plan("(const i32, i32)", "(i32, i32)").succeeds().doesNothing().steps({ MUTABILITY_CHANGE });
-		plan("(box i32, const i32)", "(box i32, i32)")
+		plan("(imm i32, i32)", "(i32, i32)").succeeds().doesNothing().steps({ MUTABILITY_CHANGE });
+		plan("(box i32, imm i32)", "(box i32, i32)")
 			.succeeds()
 			.steps({ HAND_OVER, MUTABILITY_CHANGE });
 	}
@@ -404,7 +404,7 @@ private:
 		plan("ref i32", "box i32").refuses().because<IncompatibleTypes>();
 		plan("box i32", "ref i32").refuses().because<IncompatibleTypes>();
 		plan("ref i32", "ref i64").refuses().because<IncompatibleTypes>();
-		plan("ref (i32, i32)", "ref (const i32, i32)").refuses().because<IncompatibleTypes>();
+		plan("ref (i32, i32)", "ref (imm i32, i32)").refuses().because<IncompatibleTypes>();
 
 		// Every component that refuses is a cause, as deep as the types go.
 		plan("(i32, i32)", "(i64, f64)")
@@ -554,7 +554,7 @@ private:
 			= coerce("(makeBox(), 1i64)", "(box i32, i64)").succeeds().steps({ ELEMENTWISE });
 		built.part(0).steps({ IMPLICIT_MOVE });
 		built.part(1).steps({});
-		coerce("(makeBox(), 1i64)", "(box i32, const i64)")
+		coerce("(makeBox(), 1i64)", "(box i32, imm i64)")
 			.succeeds()
 			.steps({ ELEMENTWISE, MUTABILITY_CHANGE })
 			.part(0)

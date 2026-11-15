@@ -108,20 +108,14 @@ private:
 		// Navigate to its PST body
 		auto fun_pst = getSymRef(fun_sym)->stmtCast(ctx).value().dynamicCast<pst::Fun>().value();
 
-		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody());
+		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody().unlock(ctx));
 		CORE_ASSERT(!body_stmts.empty(), "Function body must have at least one statement");
 
 		// Compile the first body statement in isolation
-		auto return_type = custom_return_type.has_value() ? custom_return_type.value()
-		                                                  : tsh::SymbolType<>{
-																tsh::getUnitType(),
-																tsh::ReferenceKind::Direct,
-																tsh::Mutability::Mutable,
-															};
-		body_stmts.at(stmt_index)
-			.illegalAccess()
-			.value()
-			->debugPrint(std::cerr);  // value().elementType()();
+		auto return_type = custom_return_type.has_value()
+		                     ? custom_return_type.value()
+		                     : tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+		body_stmts.at(stmt_index)->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 
@@ -331,11 +325,9 @@ private:
 				"test_pkg"
 			);
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto int_type = tsh::SymbolType<>{
-					tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto int_type = tsh::SymbolType<>::withDefaultsMut(
+					tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed)
+				);
 				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 0, int_type);
 				ASSERT_EQUAL(block.statements.size(), 1u);
 				StmtKindCounter c;

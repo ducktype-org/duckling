@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use std::backtrace::Backtrace;
+use std::error::Error;
 
 use chrono::Local;
 use tracing::info;
@@ -68,11 +69,8 @@ fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal)
 /// Print [`QuackError`] as a message.
 fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
     // NOTE: We intentionally ignore any printing errors here.
-    for (i, error) in msgs.sources().enumerate() {
-        if i > 0 {
-            let _ = term.print("");
-        }
-        let msg = if let Some(clap_error) = error.context_aware_downcast_ref::<clap::Error>() {
+    for error in msgs.sources() {
+        let msg = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
             // Clap internally adds a trailing newline, remove it.
             clap_error
                 .render()
@@ -109,22 +107,22 @@ fn print_error(error: &QuackError, term: &Terminal) {
 
 /// Print stack of [`QuackError`]s.
 fn print_errors_stack(error: &QuackError, term: &Terminal) {
+    let mut should_follow_with_newline = true;
     for (i, error) in error.sources().enumerate() {
-        let (msg, is_clap) =
-            if let Some(clap_error) = error.context_aware_downcast_ref::<clap::Error>() {
-                (
-                    // Clap internally adds a trailing newline, remove it.
-                    clap_error
-                        .render()
-                        .ansi()
-                        .to_string()
-                        .trim_end()
-                        .to_string(),
-                    true,
-                )
-            } else {
-                (error.to_string(), false)
-            };
+        let (msg, is_clap) = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
+            (
+                // Clap internally adds a trailing newline, remove it.
+                clap_error
+                    .render()
+                    .ansi()
+                    .to_string()
+                    .trim_end()
+                    .to_string(),
+                true,
+            )
+        } else {
+            (error.to_string(), false)
+        };
         if i == 0 {
             // Clap errors already start with `error: ` prefix, ignore it.
             if is_clap {
@@ -133,22 +131,29 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
                 let _ = term.error(msg);
             }
         } else {
-            let _ = term.print("");
+            if should_follow_with_newline {
+                let _ = term.print("");
+            }
             match error.error_type() {
                 ErrorType::Hint => {
+                    should_follow_with_newline = false;
                     let _ = term.hint(msg);
                 }
                 ErrorType::Note => {
+                    should_follow_with_newline = false;
                     let _ = term.note(msg);
                 }
                 ErrorType::BareMessage => {
+                    should_follow_with_newline = false;
                     let _ = term.print(msg);
                 }
                 ErrorType::Error => {
+                    should_follow_with_newline = true;
                     let _ = term.print(indent("Caused by:", 2));
                     let _ = term.print(indent(msg.as_str(), 4));
                 }
                 ErrorType::Internal => {
+                    should_follow_with_newline = true;
                     let _ = term.print(indent("Caused by:", 2));
                     let _ = term.print(indent(msg.as_str(), 4));
                 }
@@ -163,7 +168,7 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
 fn print_internals(error: &QuackError, term: &Terminal) {
     let errors = error
         .sources()
-        .filter_map(ErrorExt::context_aware_downcast_ref::<InternalError>)
+        .filter_map(<dyn Error>::downcast_ref::<InternalError>)
         .collect::<Vec<_>>();
     if errors.is_empty() {
         return;

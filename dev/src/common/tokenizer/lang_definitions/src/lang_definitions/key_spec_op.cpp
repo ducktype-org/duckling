@@ -25,15 +25,15 @@ namespace lang_def {
 		 * @TODO: #2943 remove this global state
 		 */
 		thread_local KeywordMode keyword_mode = DEFAULT_MODE;
+
+		base::StrID makeStrID(std::string_view view) {
+			return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
+		}
 	}
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
 	KeywordMode getKeywordMode() { return keyword_mode; }
-
-	base::StrID makeStrID(std::string_view view) {
-		return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
-	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	constexpr auto LANG_KEYWORDS_ARRAY
@@ -49,6 +49,7 @@ namespace lang_def {
 			{ Keyword::Using, "using", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Var, "var", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Let, "let", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Const, "const", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::While, "while", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::For, "for", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Loop, "loop", KeywordFlagsOptions::IsStmtStart },
@@ -97,7 +98,8 @@ namespace lang_def {
 			{ Keyword::Else, "else", KeywordFlags() },
 
 			// This is the list of keywords that are general prefix operators
-			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Mut, "mut", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Imm, "imm", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
@@ -299,23 +301,26 @@ namespace lang_def {
 
 		});
 
-	// Distinct for all keyword modes:
-	base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;
-	base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
+	namespace {
+		// Distinct for all keyword modes:
+		base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;
+		base::VectorMap<base::StrID, Keyword, false, true> bc_keyword_map;
 
-	// Single for all
-	base::VectorMap<Keyword, base::StrID, false, true> rev_keyword_map;
+		// Single for all
+		base::VectorMap<Keyword, base::StrID, false, true> rev_keyword_map;
 
-	// Single for all:
-	base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
+		// Single for all:
+		base::VectorMap<Keyword, KeywordFlags, false, true> keyword_flags;
 
-	base::VectorMap<base::StrID, Special, false, true>                     special_map;
-	base::VectorMap<base::StrID, NamedOperator, false, true>               operator_map;
-	base::VectorMap<base::StrID, NumericLiteralTypeSpecifier, false, true> numeric_specifier_map;
+		base::VectorMap<base::StrID, Special, false, true>       special_map;
+		base::VectorMap<base::StrID, NamedOperator, false, true> operator_map;
+		base::VectorMap<base::StrID, NumericLiteralTypeSpecifier, false, true> numeric_specifier_map;
 
-	base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
-	base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
-	base::VectorMap<NumericLiteralTypeSpecifier, base::StrID, false, true> rev_numeric_specifier_map;
+		base::VectorMap<Special, base::StrID, false, true>       rev_special_map;
+		base::VectorMap<NamedOperator, base::StrID, false, true> rev_operator_map;
+		base::VectorMap<NumericLiteralTypeSpecifier, base::StrID, false, true>
+			rev_numeric_specifier_map;
+	}
 
 	void key_spec_op::init() {
 		SIMPLE_INIT_GUARD_BEGIN;

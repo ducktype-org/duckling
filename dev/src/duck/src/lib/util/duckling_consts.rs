@@ -13,7 +13,7 @@ pub const DUCKLING_MODULE_EXT: &str = "dk";
 pub const DUCKLING_SCRIPT_EXT: &str = "dks";
 
 /// __Sorted__ list of std Duckling packages.
-pub const DUCKLING_STD_PACKAGES: &[&str] = &["core", "std"];
+pub const DUCKLING_STD_PACKAGES: &[&str] = &["core", "exp", "std"];
 
 /// __Sorted__ list of builtin Duckling keywords.
 pub const DUCKLING_KEYWORDS: &[&str] = &[
@@ -59,6 +59,7 @@ pub const DUCKLING_KEYWORDS: &[&str] = &[
     "i64",
     "i8",
     "if",
+    "imm",
     "implements",
     "import",
     "in",
@@ -69,6 +70,7 @@ pub const DUCKLING_KEYWORDS: &[&str] = &[
     "manyptr",
     "match",
     "move",
+    "mut",
     "namespace",
     "not",
     "or",

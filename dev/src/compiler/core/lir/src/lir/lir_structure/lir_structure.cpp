@@ -6,7 +6,7 @@
 
 #include "lir_structure.hpp"
 
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -53,7 +53,7 @@ namespace compiler::lir {
 	}
 
 	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::SymbolType<> pointee_type) {
-		const auto ref_type   = pointee_type.withReferenceKind(tsh::ReferenceKind::Ref);
+		const auto ref_type   = pointee_type.toRef();
 		auto&      ref_layout = ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
             "layout query failed at LIR stage"
         );
@@ -406,6 +406,7 @@ namespace compiler::lir {
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout,
+			.never_returns      = function.never_returns,
 			.builtin_kind_opt   = {},
 		};
 	}

@@ -28,20 +28,15 @@ use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
+    fn git_path(&self, _package: PackageId) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
+    fn is_stored(&self, _package: PackageId) -> bool {
         unimplemented!()
     }
 
-    fn store(
-        &self,
-        _url: InternedUrl,
-        _commit: &str,
-        _source_path: &std::path::Path,
-    ) -> crate::QuackResult<()> {
+    fn store(&self, _package: PackageId, _source_path: &std::path::Path) -> crate::QuackResult<()> {
         unimplemented!()
     }
 }

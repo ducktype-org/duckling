@@ -15,44 +15,48 @@ I assumed this also contains `Prev`, because to verify that `Prev` is dependency
 Linear program
 --------------
 
+### Introduction
+
+We translate the dependency solving problem into boolean conditions (conjuction implies conjunction, conjunction implies disjunction etc.) of variables, symbolizing presence of package/feature.
+Then we rewrite them as an Integer Linear Program with boolean variables.
+
 ### General case
 Assume that we have a package `P`, identified by its identity `I(P)` and version `V(P)`.
-Assume that it has a dependency on a package `Q` and the dependency is described by an identity `I(Q)` and a list of possible versions `V(Q)_1, ..., V(Q)_n` (those are all the versions compatible with the ones described in the manifest of `P`).
+Assume that it has a dependency on a package `Q` and the dependency is described by an identity `I(Q)` and a list of possible versions `v_1, ..., v_n` (those are all the versions compatible with the ones described in the manifest of `P`).
 
 Then we would have the following inequalities:
 
-1. Forcing the presence of `Q` in one of the good versions (`var(P)` implies any of `var(P->Q_1_)`, ..., `var(P->Q_n_x)`), where `var(P->Q_i_x)` is a variable signifying that `Q` in version `V(Q)_i` was chosen to satisfy the dependency.
+1. Forcing the presence of `Q` in one of the good versions (`var(P)` implies any of `var(Q_1)`, ..., `var(Q_n)`), where `Q_i` is `Q` in version `v_i`.
 
 Note: if the dependency is only forced by some features of `P`, instead of `var(P)` we use `var(P, F)`, for any such feature `F`.
 
 ```
-var(P) - var(P->Q_V1_x) - ... - var(P->Q_Vn_x) <= 0
+var(P) - var(Q_1) - ... - var(Q_n) <= 0
 ```
 
-2. Forcing the presence of `Q` with the appropriate features.
-`P` forces `Q` to be present with some features by default, moreover features of `P` can force additional features of `Q`.
+2. Forcing the realization to have required features.
+We look at the pairs `F_1, F_2`, where `F_1, F_2` are features of `P`/empty.
+If `F_1` enables the dependency, we look at the features `G_1, ..., G_n` forced by `F_2` on `Q`.
 
-Assume that a feature `F_P` of `P` forces features `G_1, ..., G_n` of `Q`.
-Then we get the following inequality:
-
-```
-n * var(P, F_P) - var(P->Q_x_G1) - ... - var(P->Q_x_Gn) <= 0
-```
-
-3. Forcing that if we choose a version realisation (pt 1), then the package is present.
-
-Well, if we choose to realise the dependency by `V(Q)_i`, then `Q` in version `V(Q)_i` has to be present, so we get the following inequality (for all `i`):
+Then we add a condition that if `(P, F_1)`, `(P, F_2)` and `Q_i` are present, then `(Q_i, G_1), ..., (Q_i, G_n)`
+are present as well.
 
 ```
-var(P->Q_i_x) - var(Qi) <= 0
+n * (var(P, F_1) + var(P, F_2) + var(Q_i)) - var(Q_1, G_1) - ... - var(Q_i, G_n) <= 2 * n
 ```
 
-4. Forcing that if we choose a feature realisation (pt 2), then the chosen version realisation has that feature,
-so for example, for all the versions `V_i` and all the features `G_j` we get the inequality:
+Note: if `Q_i` does not support one of `G_1, ..., G_n`, then we forbid a triple `(P, F_1)`, `(P, F_2)`, `Q_i`
+from occuring.
 
 ```
-var(P->Q_i_x) + var(P->Q_x_Gj) - var(QiGj) <= 1
+var(P, F_1) + var(P, F_2) + var(Q_1) <= 2
 ```
+
+Important: We only need two types of conditions and no intermediate variables,
+because of the assumption that each package can occur in just one version.
+If this condition is lifted, then the program above becomes overly restrictive,
+as for example both `Q_i`, `Q_j` could be present with only `Q_i` might realize the dependency,
+but we will force the same features on `Q_j`.
 
 ### Preexisting parent and child
 If the dependency was resolved in the previous freeze, we try to utilise this fact (if not, there would be no gain from making solver incremental).
@@ -83,9 +87,7 @@ Otherwise we add a constraint that at most one version is present.
 
 Outcome
 -------
-The [``solver engine``](solver_engine.rs) yields which new packages (outside of `Prev`) have to be added, with what features (and what features to add to `Prev`) and what new dependencies have been realised and how.
-It is the case that `Prev` union'd with this output is a correct resolution, but it may be possible to trim it, since we have accounted for the added/changed dependencies, but haven't removed dependencies removed from the manifest since the last compilation.
+The new freeze, which consists of previous-freeze packages and features, as well as the packages and features chosen by the solution to the ILP.
 
-So for example, if our project depended on `a` and `b`, and then we have removed the dependency on `b` and added the dependency on `c`, `a` and `b` belong to `Prev` and [``solver engine``](solver_engine.rs) finds a solution to the dependency on `c`, reusing as many packages added for `a` and `b` as needed. But now, the packages used only to satisfy the dependencies of `b` can be simply removed, and this is done in the `new_freeze_generation` module.
-
-Note that we create variables for preexisting packages (just in case) but do not care whether they are set to `1` or `0`.
+Note that we create variables for preexisting packages (just in case) but do not care whether they are set to `1` or `0`,
+we always put them into the new freeze.

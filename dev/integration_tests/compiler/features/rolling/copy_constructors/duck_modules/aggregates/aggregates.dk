@@ -2,7 +2,7 @@ var copies: i64 = 0;
 
 class Counter {
     id: i32 = 0;
-    Counter.copy(other: const ref Counter) = {
+    Counter.copy(other: ref Counter) = {
         copies = copies + 1;
         return Counter(other.id);
     }

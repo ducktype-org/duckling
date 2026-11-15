@@ -17,10 +17,10 @@
 #include "frontend.hpp"
 #include "helpers.hpp"
 
-#include <backends/dvm/repl_lowering.hpp>
+#include <backends/dvm/incremental_dvm_code_builder.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <base/collections/optional.hpp>
@@ -315,7 +315,7 @@ namespace compiler::repl {
 		 * globals, and types from previous statements to be referenced in new statements.
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
-		base::Optional<backend_vm::ReplDVMCodeBuilder> m_lowering_context;
+		base::Optional<backend_vm::IncrementalDVMCodeBuilder> m_lowering_context;
 		/**
 		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
 		 * or when resetting state of the REPL.

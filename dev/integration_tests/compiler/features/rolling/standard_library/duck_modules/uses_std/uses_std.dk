@@ -1,7 +1,9 @@
 import core.*; # for a();
+import exp;
 
 fun main() -> i64 = {
     builtin_output_i64(10);
     a(); # outputs 42
+    exp.c(); # outputs 42, 42
     return 0;
 }

@@ -19,6 +19,7 @@ mod migrations;
 
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::sqlite::run_migrations;
+use crate::util::path_ops::{MkdirOptions, mkdir};
 use crate::{QuackResult, QuackResultContext};
 
 const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
@@ -117,16 +118,19 @@ impl ManifestCache {
     /// Create a new [ManifestCache] at location pointed by [CacheLocation].
     /// Note that this is a blocking operation.
     pub fn new(location: CacheLocation<'_>) -> QuackResult<Self> {
-        debug!(target: "duck::sqlite", ?location, "initializing fetcher cache");
+        debug!(?location, "initializing fetcher cache");
         let mut connection = match location {
-            CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
-            CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
-        };
+            CacheLocation::Memory => rusqlite::Connection::open_in_memory(),
+            CacheLocation::Path(path) => {
+                if let Some(parent) = path.parent() {
+                    mkdir(parent, MkdirOptions::WithParents)?;
+                }
+                rusqlite::Connection::open(path)
+            }
+        }
+        .with_context(|| format!("failed to open an SQLite3 connection in {location}"))?;
         run_migrations(&mut connection, migrations::MIGRATIONS).with_context(|| {
-            format!(
-                "failed to run migrations for a manifest cache in {}",
-                location
-            )
+            format!("failed to run migrations for a manifest cache in {location}")
         })?;
         Ok(Self { connection })
     }

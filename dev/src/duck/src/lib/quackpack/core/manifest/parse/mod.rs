@@ -36,14 +36,10 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-#[tracing::instrument(level = "debug", skip(ctx))]
+#[tracing::instrument(skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings, Errors)> {
-    parse_inner(path, ctx).with_context(|| {
-        format!(
-            "when trying to parse the user manifest at `{}`",
-            path.display()
-        )
-    })
+    parse_inner(path, ctx)
+        .with_context(|| format!("failed to parse the user manifest at `{}`", path.display()))
 }
 
 /// Different utilities in which manifests occur.
@@ -110,7 +106,7 @@ impl Scope {
 
     /// A helper for creating common context messages.
     pub fn make_context_string(&self) -> String {
-        format!("when parsing the field `{}`", self.format())
+        format!("failed to parse the field `{}`", self.format())
     }
 }
 

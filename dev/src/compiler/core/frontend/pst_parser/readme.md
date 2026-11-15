@@ -10,8 +10,8 @@ Building parse/semantic trees (PST) from files and macro expansion.
 
 REPL and script execution use single-statement extraction helpers from:
 
-* [utility.hpp](./src/frontend/pst_parser/utility.hpp)
-* [utility.cpp](./src/frontend/pst_parser/utility.cpp)
+* [repl_utils/extractors.hpp](./src/frontend/pst_parser/repl_utils/extractors.hpp)
+* [repl_utils/extractors.cpp](./src/frontend/pst_parser/repl_utils/extractors.cpp)
 
 These helpers provide a strict "exactly one top-level statement" API:
 

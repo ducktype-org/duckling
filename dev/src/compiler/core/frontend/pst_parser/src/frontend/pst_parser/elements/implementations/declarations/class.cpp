@@ -28,6 +28,9 @@ namespace pst {
 		if (PARSE().tryEat(Keyword::Extends)) PARSE().one(&out->base);
 		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
 
+		// Fail fast-path to prevent panic in line below.
+		if (not out->name.internal()) return nullptr;
+
 		PST_NEW_CONTEXT({
 			state.setContextClassName(out->name.internal()->unwrap());
 			state.setContextBlockOrdering(BlockOrderType::Unordered);

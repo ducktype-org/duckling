@@ -14,6 +14,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
@@ -29,80 +30,199 @@
 #include <utility>
 
 namespace compiler::tsh {
-	/**
-	 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
-	 * every type, such as `toString`.
-	 * @param ctx Query context for generating symbols.
-	 * @param type The type for which to get the default interface, needed e.g. for method types.
-	 * @return The default interface for the given type.
-	 */
-	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
-		using helios::defgen::generatedCopyConstructorSymForType;
-		using helios::defgen::generatedDestructSymForType;
-		using helios::defgen::generatedToStringSymForType;
+	namespace {
+		bool supportsComparison(
+			query::Context&                             ctx,
+			AbstractType                                type,
+			CRef<TypeInterface>                         declared,
+			const helios::defgen::ComparisonMethodInfo& comparison
+		);
 
-		// The generated `toString` returns a `String`, which lives in `core.containers`. It only
-		// exists when a standard library is available, so skip it otherwise (e.g. no-std builds) —
-		// resolving its type would fail to find the `String` language primitive.
-		const bool string_type_present = isStringTypePresent(ctx);
+		/**
+		 * @brief Whether a field of type @p field_type can be compared with @p comparison by a
+		 * generated comparison. A tuple or a class field can, when its interface has the operator,
+		 * which may be user-defined.
+		 */
+		bool fieldSupportsComparison(
+			query::Context&                             ctx,
+			const AbstractType                          field_type,
+			const helios::defgen::ComparisonMethodInfo& comparison
+		) {
+			if (not field_type.carriesInformation(ctx)) return true;
+			if (field_type.getKind() == Kind::Tuple || field_type.getKind() == Kind::Class)
+				return field_type.getInterface(ctx)
+				    ->getSpecialElement(comparison.special_kind)
+				    .has_value();
+			// Only tuples and classes need their declared interface.
+			static const TypeInterface no_fields{};
+			return supportsComparison(ctx, field_type, &no_fields, comparison);
+		}
 
-		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
-		if (not type.carriesInformation(ctx)) {
-			if (type.getKind() == Kind::Unit && string_type_present) {
-				// The unit type has a `toString` method, even though it doesn't carry information,
-				// because it is a simple type and it's passed by value.
-				return TypeInterface{ std::vector{ InterfaceElement{
+		/**
+		 * @brief Whether the compiler can generate the comparison operator @p comparison for
+		 * @p type. A tuple or a class supports it when all of its fields which carry information
+		 * do.
+		 * @param declared The declared interface of @p type, which holds the fields of a tuple or
+		 * a class. Its full interface is the one being built when this is called.
+		 * @TODO: #4033 Remove or simplify once we generate comparisons for (almost) all types.
+		 */
+		bool supportsComparison(
+			query::Context&                             ctx,
+			const AbstractType                          type,
+			const CRef<TypeInterface>                   declared,
+			const helios::defgen::ComparisonMethodInfo& comparison
+		) {
+			using enum Kind;
+			switch (type.getKind()) {
+			case Unit:
+			case Void:
+			case Byte:
+			case Bool:
+			case Char:
+			case Integral:
+			case Float:
+			case RawPointer:
+			case Pointer:
+			case ManyPointer:
+			case CPointer:
+				return true;
+			case Meta:
+				return comparison.kind == helios::defgen::ComparisonKind::Equal
+				    || comparison.kind == helios::defgen::ComparisonKind::NotEqual;
+			case Tuple:
+			case Class:
+				return std::ranges::all_of(
+					declared->getFieldsView(),
+					[&](const InterfaceElement& field) {
+						return fieldSupportsComparison(
+							ctx, field.getType(ctx).getType(), comparison
+						);
+					}
+				);
+			// @TODO: #4033 Generate the comparison operators for the remaining kinds of types.
+			case Slice:
+			case Function:
+			case StaticArray:
+			case Variant:
+			case TypeTemplate:
+			case Namespace:
+			case Module:
+			case Import:
+				return false;
+			case COUNT:
+				CORE_UNREACHABLE();
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
+		 * every type, such as `toString`.
+		 * @param ctx Query context for generating symbols.
+		 * @param type The type for which to get the default interface, needed e.g. for method types.
+		 * @param declared The interface declared by the type itself, e.g. its fields.
+		 * @return The default interface for the given type.
+		 */
+		TypeInterface getDefaultTypeInterfaceForType(
+			query::Context& ctx, const AbstractType type, const CRef<TypeInterface> declared
+		) {
+			using helios::defgen::COMPARISON_METHODS;
+			using helios::defgen::generatedComparisonSymForType;
+			using helios::defgen::generatedCopyConstructorSymForType;
+			using helios::defgen::generatedDestructSymForType;
+			using helios::defgen::generatedToStringSymForType;
+
+			// The generated `toString` returns a `String`, which lives in `core.containers`. It
+			// only exists when a standard library is available, so skip it otherwise (e.g. no-std
+			// builds) — resolving its type would fail to find the `String` language primitive.
+			const bool string_type_present = isStringTypePresent(ctx);
+
+			// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
+			if (not type.carriesInformation(ctx)) {
+				if (type.getKind() == Kind::Unit && string_type_present) {
+					// The unit type has a `toString` method, even though it doesn't carry
+					// information, because it is a simple type and it's passed by value.
+					return TypeInterface{ std::vector{ InterfaceElement{
+						generatedToStringSymForType(ctx, type),
+						type,
+						0,
+						InterfaceElement::InterfaceElementKind::Method,
+						MemberVisibility::Public,
+						MemberSpecialKind::ToString,
+					} } };
+				}
+				return {};
+			}
+
+			std::vector<InterfaceElement> elements;
+
+			// Every type has a `toString` method (when a standard library provides `String`).
+			if (string_type_present) {
+				elements.emplace_back(
 					generatedToStringSymForType(ctx, type),
 					type,
 					0,
 					InterfaceElement::InterfaceElementKind::Method,
 					MemberVisibility::Public,
-					MemberSpecialKind::ToString,
-				} } };
+					MemberSpecialKind::ToString
+				);
 			}
-			return {};
+
+			// The comparison operators the compiler can generate for this type.
+			for (const auto& comparison: COMPARISON_METHODS) {
+				if (not supportsComparison(ctx, type, declared, comparison)) continue;
+				elements.emplace_back(
+					generatedComparisonSymForType(ctx, type, comparison.kind),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					MemberVisibility::Public,
+					comparison.special_kind
+				);
+			}
+
+			if (not type.isTriviallyDestructible(ctx)) {
+				elements.emplace_back(
+					generatedDestructSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					MemberVisibility::Public,
+					MemberSpecialKind::Destructor
+				);
+			}
+
+			// A trivially copyable type is copied by copying its bytes, so it needs no copy
+			// constructor. A type that declares its own one keeps it, because the declared
+			// interface wins over the default one for every special kind.
+			if (not type.isTriviallyCopyable(ctx)) {
+				elements.emplace_back(
+					generatedCopyConstructorSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::StaticMethod,
+					MemberVisibility::Public,
+					MemberSpecialKind::CopyConstructor
+				);
+			}
+
+			return TypeInterface(elements);
 		}
 
-		std::vector<InterfaceElement> elements;
+		/**
+		 * @brief Creates a human-readable string representation of a vector of symbol types.
+		 * @param types Vector of symbol types to stringify.
+		 * @return A human-readable string representing a sequence of symbol types.
+		 */
+		std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
+			std::stringstream res;
+			res << "(";
+			if (!types.empty()) res << types[0].toString();
+			for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
+			res << ")";
 
-		// Every type has a `toString` method (when a standard library provides `String`).
-		if (string_type_present) {
-			elements.emplace_back(
-				generatedToStringSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::Method,
-				MemberVisibility::Public,
-				MemberSpecialKind::ToString
-			);
+			return res.str();
 		}
-
-		if (not type.isTriviallyDestructible(ctx)) {
-			elements.emplace_back(
-				generatedDestructSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::Method,
-				MemberVisibility::Public,
-				MemberSpecialKind::Destructor
-			);
-		}
-
-		// A trivially copyable type is copied by copying its bytes, so it needs no copy
-		// constructor. A type that declares its own one keeps it, because the declared interface
-		// wins over the default one for every special kind.
-		if (not type.isTriviallyCopyable(ctx)) {
-			elements.emplace_back(
-				generatedCopyConstructorSymForType(ctx, type),
-				type,
-				0,
-				InterfaceElement::InterfaceElementKind::StaticMethod,
-				MemberVisibility::Public,
-				MemberSpecialKind::CopyConstructor
-			);
-		}
-
-		return TypeInterface(elements);
 	}
 
 	/**
@@ -134,6 +254,7 @@ namespace compiler::tsh {
 		case CPointer:
 		case RawPointer:
 		case Slice:
+		case Meta:
 			return true;
 		default:
 			return false;
@@ -156,7 +277,8 @@ namespace compiler::tsh {
 					declared_specials.insert(elem.specialKind());
 			}
 
-			const TypeInterface default_interface = getDefaultTypeInterfaceForType(ctx, key);
+			const TypeInterface default_interface
+				= getDefaultTypeInterfaceForType(ctx, key, declared);
 			for (auto& elem: default_interface.getElements()) {
 				if (elem.specialKind() != MemberSpecialKind::None
 				    && declared_specials.contains(elem.specialKind()))
@@ -174,21 +296,6 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeInterface)
-
-	/**
-	 * @brief Creates a human-readable string representation of a vector of symbol types.
-	 * @param types Vector of symbol types to stringify.
-	 * @return A human-readable string representing a sequence of symbol types.
-	 */
-	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
-		std::stringstream res;
-		res << "(";
-		if (!types.empty()) res << types[0].toString();
-		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
-		res << ")";
-
-		return res.str();
-	}
 
 	CRef<TypeInterface> UnitAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
@@ -361,8 +468,18 @@ namespace compiler::tsh {
 		CORE_PANIC("Module type interface does not exist (we can add it if we find a use case).");
 	}
 
+	bool ModuleAbstractTypeImpl::isTriviallyDestructible(query::Context&) const {
+		CORE_PANIC(
+			"Asked whether a module type is trivially destructible which has no sensible value "
+			"yet. If needed, decide what to do about it: a module holds no state, so `true` is the "
+			"likely answer."
+		);
+	}
+
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		CORE_PANIC("Meta type interface does not exist yet.");
+		// A type has only the default interface, so for example it can be compared as a field.
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {

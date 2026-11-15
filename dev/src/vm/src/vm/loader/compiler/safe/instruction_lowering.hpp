@@ -8,6 +8,7 @@
 
 #include "safe_compiler.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
 
@@ -399,6 +400,9 @@ namespace vm::loader::compiler::safe::detail {
 				// A null cpointer is the native address 0.
 				addLow<Op_cmpEq_p64_imm>(i.ptr, vm::opargs::Immediate{ 0 });
 			}
+			// A cpointer is a native address, so equality is 64-bit integer equality.
+			instr_case(high::Op_cmpEq_pcptr_pcptr, i) { addLow<Op_cmpEq_p64_p64>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpNeq_pcptr_pcptr, i) { addLow<Op_cmpNeq_p64_p64>(i.lhs, i.rhs); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_mov_pvnt_pvnt, i) { addLow<Op_mov_bvnt_bvnt>(i.dst, i.src); }
@@ -644,6 +648,8 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fcmpLe_p32_p32, i) { addLow<Op_fcmpLe_p32_p32>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpLe_p32_imm, i) { addLow<Op_fcmpLe_p32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNull_pptr, i) { addLow<Op_cmpNull_pptr>(i.ptr); }
+			instr_case(high::Op_cmpEq_pptr_pptr, i) { addLow<Op_cmpEq_pptr_pptr>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpNeq_pptr_pptr, i) { addLow<Op_cmpNeq_pptr_pptr>(i.lhs, i.rhs); }
 			instr_case(high::Op_variantSetInner_pvnt_type, i) {
 				addLow<Op_variantSetInner_bvnt_type>(i.variant, i.inner_type);
 				opargs::Type variant_type = getPlaceType(i.variant)->getName();

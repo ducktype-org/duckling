@@ -16,14 +16,14 @@ pub trait ToUrl {
 
 impl ToUrl for str {
     fn to_url(&self) -> QuackResult<Url> {
-        Url::parse(self).with_context(|| format!("`{self}` is not a valid url"))
+        Url::parse(self).with_context(|| format!("`{self}` is not a valid URL"))
     }
 }
 
 impl ToUrl for Path {
     fn to_url(&self) -> QuackResult<Url> {
         Url::from_file_path(self)
-            .map_err(|_| qp_err!("failed to turn `{}` into a url", self.display()))
+            .map_err(|_| qp_err!("failed to turn `{}` into a URL", self.display()))
     }
 }
 

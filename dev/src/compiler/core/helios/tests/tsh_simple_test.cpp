@@ -9,11 +9,15 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
+
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <any>
+#include <tuple>
 
 using namespace compiler::tsh;
 
@@ -275,7 +279,7 @@ private:
 			assertTrue(int_st.isCopyable(ctx), "Int should be copyable.");
 			assertTrue(int_st.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
 
-			const auto int_ref_st = int_st.withReferenceKind(ReferenceKind::Ref);
+			const auto int_ref_st = int_st.toRef();
 			assertFalse(
 				int_ref_st.isDefaultConstructible(ctx),
 				"Reference to Int should NOT be default constructible."
@@ -289,7 +293,7 @@ private:
 				int_ref_st.isTriviallyCopyable(ctx), "Reference to Int should be trivially copyable."
 			);
 
-			const auto int_box_st = int_st.withReferenceKind(ReferenceKind::Box);
+			const auto int_box_st = int_st.toBox();
 			assertFalse(
 				int_box_st.isDefaultConstructible(ctx),
 				"Box of Int should NOT be default constructible."
@@ -600,7 +604,7 @@ private:
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
 		const auto var_boxed = query::entryPoint<QueryVariantType>({
-			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+			{ st(int_16), st(int_32).toBox() },
 		});
 
 
@@ -740,10 +744,12 @@ private:
 				nspace.isTriviallyDestructible(ctx),
 				"NamespaceType should be trivially destructible."
 			);
-			assertFalse(
-				module.isTriviallyDestructible(ctx),
-				"ModuleType should not be trivially destructible."
-			);
+			IF_BUILD_TYPE_DEV(
+				assertThrows<base::Panic>(
+					[&]() { std::ignore = module.isTriviallyDestructible(ctx); },
+					"Asking whether ModuleType is trivially destructible should panic."
+				);
+			)
 
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
 			assertFalse(

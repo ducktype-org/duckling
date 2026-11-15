@@ -229,15 +229,15 @@ namespace compiler::helios {
 		query::QResult<SymID> lookupPrimitiveThrow(query::Context& ctx, LanguagePrimitive primitive) {
 			const auto leaves = lookupPrimitiveSymbols(ctx, primitive);
 			if (leaves.empty()) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat("Can't find symbol for language primitive '", primitive, "'")
-				));
+				);
 				return query::Failed();
 			}
 			if (leaves.size() > 1) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Found multiple primitives with the symbol name '", primitive, "'"
-				)));
+				));
 				return query::Failed();
 			}
 			return leaves.back();
@@ -289,7 +289,7 @@ namespace compiler::helios {
 		const SymID none_sym
 			= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::OptionalNone })
 		          ->valueOrThrow();
-		return tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryClassType>(none_sym));
+		return tsh::SymbolType<>::withDefaultsMut(ctx.query<tsh::QueryClassType>(none_sym));
 	}
 
 	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {

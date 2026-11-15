@@ -7,9 +7,9 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/parsed_pst.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 
 #include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
@@ -83,6 +83,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
 		TESTER_ADD_TEST(testOperatorFun);
+		TESTER_ADD_TEST(testMutMethod);
 		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
@@ -213,6 +214,8 @@ private:
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testOperatorFun() { testJsonRelativePath("operator_fun.duck", "operator_fun.json"); }
+
+	void testMutMethod() { testJsonRelativePath("mut_method.duck", "mut_method.json"); }
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");

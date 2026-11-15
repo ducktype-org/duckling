@@ -60,9 +60,11 @@ impl DependencyKind {
 
 impl fmt::Display for DependencyKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Trailing space is important, as it's used as `"{kind}dependency"`, which makes normal
+        // deps format like `"dependency"`, but dev ones still are `"dev dependency"`.
         match self {
-            Self::Normal => write!(f, "normal"),
-            Self::Dev => write!(f, "dev"),
+            Self::Normal => write!(f, ""),
+            Self::Dev => write!(f, "dev "),
         }
     }
 }
@@ -210,6 +212,14 @@ impl Dependency {
     /// Helper for `self.alias().unwrap_or(self.name())`.
     pub fn effective_name(&self) -> StrId {
         self.alias.unwrap_or(self.name)
+    }
+
+    /// Get the name used to refer to this dependency in user-facing messages.
+    ///
+    /// It is equal to [`Self::effective_name`], because it is unique among the dependencies
+    /// of a package.
+    pub fn diagnostic_name(&self) -> StrId {
+        self.effective_name()
     }
 
     /// Get [`DependencyKind`] of this dependency.

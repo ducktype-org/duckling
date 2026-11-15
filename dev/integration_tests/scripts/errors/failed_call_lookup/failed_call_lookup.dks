@@ -1,0 +1,7 @@
+print("Hello");
+
+# `abort` does not exist, so the call lookup fails. duckc must report it as a diagnostic
+# and exit with code 1, not crash with an unhandled query failure.
+fun lol() = {
+    abort();
+}

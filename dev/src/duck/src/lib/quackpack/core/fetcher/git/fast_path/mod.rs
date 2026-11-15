@@ -8,7 +8,7 @@
 //! This means using outside knowledge about some git servers to perform necessary operation
 //! without performing costly repository clones.
 use std::pin::Pin;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::quackpack::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
 use crate::quackpack::core::fetcher::git::fast_path::github_client::GithubClient;
@@ -50,7 +50,7 @@ pub struct GitFastPathClient<'duck> {
 
 impl<'duck> GitFastPathClient<'duck> {
     /// Create new [`GitFastPathClient`].
-    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+    pub fn new(client: Rc<AsyncHttpClient<'duck>>) -> Self {
         Self {
             github: GithubApiClient::new(client.clone()),
             gitlab: GitlabApiClient::new(client),

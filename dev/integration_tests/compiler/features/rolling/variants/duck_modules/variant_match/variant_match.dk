@@ -7,7 +7,7 @@ fun check(actual: i64, expected: i64, id: i64) -> () = {
 	if (actual != expected) builtin_output_i64(id);
 }
 
-fun store(out: ref i64, value: i64) -> i64 = {
+fun store(out: ref mut i64, value: i64) -> i64 = {
 	out = value;
 	return 0i64;
 }
@@ -49,7 +49,7 @@ fun positions(v: i32 | f32) -> i64 = {
 }
 
 # Nothing follows the match, so its continuation is the end of the function.
-fun statementPosition(v: i32 | f32, out: ref i64) -> () = {
+fun statementPosition(v: i32 | f32, out: ref mut i64) -> () = {
 	match (v) {
 		case x : i32 = store(out, x as i64);
 		case _ = store(out, -1i64);
@@ -58,14 +58,14 @@ fun statementPosition(v: i32 | f32, out: ref i64) -> () = {
 
 # ===== A `ref` binding on a direct alternative aliases the payload =====
 
-fun addOne(out: ref i32) -> i64 = {
+fun addOne(out: ref mut i32) -> i64 = {
 	out = out + 1i32;
 	return out as i64;
 }
 
-fun bumpInPlace(v: ref (i32 | f32)) -> i64 = {
+fun bumpInPlace(v: ref mut (i32 | f32)) -> i64 = {
 	return match (v) {
-		case x : ref i32 = addOne(x);
+		case x : ref mut i32 = addOne(x);
 		case _ = -1i64;
 	};
 }
@@ -90,14 +90,14 @@ fun refAltDirect(v: ref (ref i32 | f32)) -> i64 = {
 	};
 }
 
-fun refAltWrite(v: ref (ref i32 | f32), value: i32) -> i64 = {
+fun refAltWrite(v: ref mut (ref mut i32 | f32), value: i32) -> i64 = {
 	return match (v) {
-		case x : ref i32 = assignI32(x, value);
+		case x : ref mut i32 = assignI32(x, value);
 		case _ = -1i64;
 	};
 }
 
-fun assignI32(out: ref i32, value: i32) -> i64 = {
+fun assignI32(out: ref mut i32, value: i32) -> i64 = {
 	out = value;
 	return 0i64;
 }
@@ -111,9 +111,9 @@ fun boxAltRead(v: ref (box i32 | f32)) -> i64 = {
 	};
 }
 
-fun boxAltWrite(v: ref (box i32 | f32), value: i32) -> i64 = {
+fun boxAltWrite(v: ref mut (box i32 | f32), value: i32) -> i64 = {
 	return match (v) {
-		case x : ref i32 = assignI32(x, value);
+		case x : ref mut i32 = assignI32(x, value);
 		case _ = -1i64;
 	};
 }
@@ -131,14 +131,14 @@ fun stringAltLength(v: ref (String | i32)) -> i64 = {
 	};
 }
 
-fun stringAltAppend(v: ref (String | i32), c: char) -> i64 = {
+fun stringAltAppend(v: ref mut (String | i32), c: char) -> i64 = {
 	return match (v) {
-		case s : ref String = appendChar(s, c);
+		case s : ref mut String = appendChar(s, c);
 		case n : i32 = -1i64;
 	};
 }
 
-fun appendChar(s: ref String, c: char) -> i64 = {
+fun appendChar(s: ref mut String, c: char) -> i64 = {
 	s.append(c);
 	return s.length();
 }
@@ -180,7 +180,7 @@ fun matchPositions() -> () = {
 
 fun refAlternative() -> () = {
 	var a: i32 = 7i32;
-	var v: ref i32 | f32 = &a;
+	var v: ref mut i32 | f32 = &a;
 
 	check(refAltByRef(&v), 7i64, 20i64);
 	check(refAltDirect(&v), 7i64, 21i64);

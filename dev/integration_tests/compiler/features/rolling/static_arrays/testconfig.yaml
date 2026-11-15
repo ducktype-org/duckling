@@ -81,6 +81,16 @@ Tests:
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
+  # A DVM panic prints the call stack of the panicking thread, innermost call first. The
+  # callers carry the Duckling file and line of their call; `(?s)` lets `.` cross the line breaks.
+  # Functions are named as in the Duckling source (`readPastEnd`, not its mangled name): `VM run`
+  # reads the names and lines from the debug info next to the bytecode.
+  array_out_of_bounds_stack_trace:
+    Cases:
+      dvm:
+        stderr_regex: "(?s)VMThread has panicked: Program panicked.*DVM stack trace [(]most recent call first[)]:.*#0 doPanic.*#1 panic at .*#2 readPastEnd at [^ ]*array_out_of_bounds_stack_trace[.]dk:3[^0-9].*#3 forward at [^ ]*array_out_of_bounds_stack_trace[.]dk:7[^0-9].*#4 main at [^ ]*array_out_of_bounds_stack_trace[.]dk:11[^0-9]"
+        Output:
+          String: "Program panicked!\n"
   array_negative_index:
     Cases:
       llvm:

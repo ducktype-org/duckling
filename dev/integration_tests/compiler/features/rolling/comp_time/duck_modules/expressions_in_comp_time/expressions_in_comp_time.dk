@@ -57,6 +57,7 @@ const MATCHED_CALL: i64 = pickBigger(mkVariant());
 const CHAR_CODE: i64 = code('a');
 const TERNARY: i64 = if two() > 1 then 100 else 200;
 const TERNARY_OF_CLASSES: i64 = (if two() < 1 then mkPoint(1, 1) else mkPoint(9, 9)).y;
+const CONST_TERNARY: i64 = if const two() > 1 then 13 else this_does_not_exist;
 const CHAIN: bool = 1 < two() < 3;
 const CHAIN_FALSE: bool = 1 < two() < 2;
 
@@ -84,6 +85,7 @@ fun main() -> i64 = {
     builtin_output_i64(CHAR_CODE);
     builtin_output_i64(TERNARY);
     builtin_output_i64(TERNARY_OF_CLASSES);
+    builtin_output_i64(CONST_TERNARY);
     builtin_output_i64(if CHAIN then 1 else 0);
     builtin_output_i64(if CHAIN_FALSE then 1 else 0);
     builtin_output_i64(RES_FIELD);

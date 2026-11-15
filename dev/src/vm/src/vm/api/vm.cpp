@@ -17,18 +17,20 @@
 #define REQUEST(VALUE) Supervisor::get().doRequest(pid, api::request::VALUE)
 
 namespace vm::api {
-	void ignoreResponse([[maybe_unused]] const Response& response) {}
+	namespace {
+		void ignoreResponse([[maybe_unused]] const Response& response) {}
 
-	template<class T>
-	std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
-		if (std::holds_alternative<T>(response)) return std::get<T>(response);
-		return std::unexpected(WrongResponse{});
-	}
+		template<class T>
+		std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
+			if (std::holds_alternative<T>(response)) return std::get<T>(response);
+			return std::unexpected(WrongResponse{});
+		}
 
-	template<class T>
-	std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
-		if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
-		return std::unexpected(WrongResponse{});
+		template<class T>
+		std::expected<T, ApiError> mapOrWrongResponseMove(Response&& response) {
+			if (std::holds_alternative<T>(response)) return std::get<T>(std::move(response));
+			return std::unexpected(WrongResponse{});
+		}
 	}
 
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid) {
@@ -98,6 +100,10 @@ namespace vm::api {
 
 	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config) {
 		return REQUEST(SetExecutionConfig{ config }).transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> setFunctionSourceInfo(PID pid, FunctionSourceInfos infos) {
+		return REQUEST(SetFunctionSourceInfo{ std::move(infos) }).transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> stop(PID pid) {

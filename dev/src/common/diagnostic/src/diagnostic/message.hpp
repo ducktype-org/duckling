@@ -8,6 +8,8 @@
 
 #include "stable_position.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic/location.hpp>
 #include <diagnostic/source_position.hpp>

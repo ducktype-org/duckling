@@ -21,9 +21,7 @@ use crate::quackpack::core::storage::freeze::{
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::{
-    PackageContext, PackageLoader, Version, fetcher, storage_name_for_registry,
-};
+use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version, fetcher};
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
 use crate::util::path_ops::touch;
@@ -31,11 +29,6 @@ use crate::util::test_utils::setup_test;
 
 mod basic;
 mod concurrent;
-
-fn registry_url_hash() -> String {
-    let url = &*fetcher::DEFAULT_REGISTRY_URL;
-    crate::util::hash::sha256_string(url.host_str().unwrap())
-}
 
 /// This function creates mock storage with following contents:
 /// 1. We have three packages: foo, bar, and baz.
@@ -75,17 +68,11 @@ fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
 fn setup_mock_packages(root: &Path) {
     let names = ["foo", "bar", "baz"];
     for name in names {
-        touch(
-            root.join("pkg")
-                .join(storage_name_for_registry(
-                    name,
-                    Version::new(1, 0, 0),
-                    fetcher::DEFAULT_REGISTRY_URL.clone().into(),
-                ))
-                .join("src")
-                .join("main.duck"),
-        )
-        .unwrap();
+        let origin = FullOrigin::for_registry(*fetcher::DEFAULT_REGISTRY_URL);
+        let identity = FullIdentity::new(name.into(), origin);
+        let id = PackageId::new(identity, Version::new(1, 0, 0));
+        let base = root.join("pkg");
+        touch(id.push_storage_path(&base).join("src").join("main.duck")).unwrap();
     }
 }
 
@@ -126,8 +113,8 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ctx,
     );
 
-    let origin = FullOrigin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone());
-    let simple_origin = Origin::for_registry(fetcher::DEFAULT_REGISTRY_URL.clone());
+    let origin = FullOrigin::for_registry(*fetcher::DEFAULT_REGISTRY_URL);
+    let simple_origin = Origin::for_registry(*fetcher::DEFAULT_REGISTRY_URL);
     let mock_simple_dep_identity =
         |name: &str| DepIdWithAlias::new(name.into(), Identity::new(name.into(), simple_origin));
     let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
@@ -183,13 +170,13 @@ fn setup_mock_locks(root: &Path) {
 
     let setup_sync_locks = |names: &[&str]| {
         for name in names {
-            touch(root.join("locks").join("venv_sync").join(name)).unwrap();
+            touch(root.join("locks").join("sync").join(name)).unwrap();
         }
     };
 
     let setup_data_locks = |names: &[&str]| {
         for name in names {
-            touch(root.join("locks").join("venv_data").join(name)).unwrap();
+            touch(root.join("locks").join("data").join(name)).unwrap();
         }
     };
     touch(root.join("locks").join("clean.lock")).unwrap();

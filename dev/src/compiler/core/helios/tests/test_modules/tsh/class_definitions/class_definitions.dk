@@ -27,7 +27,7 @@ class TrivialClass {
 class DeepCopied {
     v: i32;
 
-    DeepCopied.copy(other: const ref DeepCopied) = {
+    DeepCopied.copy(other: ref DeepCopied) = {
         return DeepCopied(other.v);
     }
 }

@@ -8,6 +8,9 @@
 
 use sha2::{Digest, Sha256};
 
+/// Default length for a short hash.
+pub const DEFAULT_SHORT_HASH_BYTE_LENGTH: usize = 8;
+
 /// Calculate SHA-256 hash and return it as an array of bytes.
 pub fn sha256_bytes<H: AsRef<[u8]>>(data: H) -> [u8; 32] {
     let mut hasher = Sha256Hasher::new(None);
@@ -20,6 +23,21 @@ pub fn sha256_string<H: AsRef<[u8]>>(data: H) -> String {
     let mut hasher = Sha256Hasher::new(None);
     hasher.update(data);
     hasher.into_string()
+}
+
+/// Create a short hash of data.
+pub fn short_hash<H: AsRef<[u8]>>(data: H) -> [u8; DEFAULT_SHORT_HASH_BYTE_LENGTH] {
+    const {
+        assert!(DEFAULT_SHORT_HASH_BYTE_LENGTH <= 32);
+    }
+    let hash = sha256_bytes(data);
+    hash[..DEFAULT_SHORT_HASH_BYTE_LENGTH].try_into().unwrap()
+}
+
+/// Create a short hash of data, encoded as a hex string.
+pub fn short_hash_string<H: AsRef<[u8]>>(data: H) -> String {
+    let hash = short_hash(data);
+    super::hex::encode(hash)
 }
 
 /// Struct for hashing long series of words.

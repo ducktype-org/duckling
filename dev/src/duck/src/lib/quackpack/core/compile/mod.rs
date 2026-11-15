@@ -34,9 +34,13 @@ pub mod unit_runner;
 pub mod unit_task_generator;
 
 /// A common message for panicking when a manifest is missing a dependency.
-pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
+pub fn missing_depenendcy_in_manifest(
+    root_name: &str,
+    dep_ename: &str,
+    context: &dyn fmt::Debug,
+) -> ! {
     panic!(
-        "malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest {context:#?}"
+        "malformed manifest of `{root_name}`: missing dependency `{dep_ename}` in the manifest {context:#?}"
     )
 }
 
@@ -79,7 +83,7 @@ impl BuildContext<'_, '_> {
 /// Note:
 /// -----
 /// `pkgs` should be all packages present in the freeze, including the root package.
-#[tracing::instrument(level = "debug", skip_all)]
+#[tracing::instrument(skip_all)]
 pub fn compile(
     bcx: BuildContext<'_, '_>,
     pkgs: Vec<(PackageId, AnyPackage)>,

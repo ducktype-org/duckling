@@ -125,7 +125,7 @@ class Point {
     y: i64 = 0;
 }
 
-fun sumPoint(p: const ref Point) -> i64 = p.x + p.y;
+fun sumPoint(p: ref Point) -> i64 = p.x + p.y;
 
 fun sumPointByValue(p: Point) -> i64 = p.x + p.y;
 
@@ -146,7 +146,7 @@ fun makeArray() -> i64[3] = {
     return arr;
 }
 
-fun sumArray(a: const ref i64[3]) -> i64 = a[0] + a[1] + a[2];
+fun sumArray(a: ref i64[3]) -> i64 = a[0] + a[1] + a[2];
 
 const ARRAY = makeArray();
 
