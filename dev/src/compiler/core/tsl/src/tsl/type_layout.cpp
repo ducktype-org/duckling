@@ -426,7 +426,7 @@ namespace compiler::tsl {
 		const VariantTypeLayoutConstructionHelper& helper, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  bytes2bits(helper.offsets[1]) + helper.max_component_size,
+			  roundUpToDefaultAlignment(bytes2bits(helper.offsets[1]) + helper.max_component_size),
 			  tsh::SymbolType<>::withDefaultsMut(helper.variant_type),
 			  ctx
 		  ),

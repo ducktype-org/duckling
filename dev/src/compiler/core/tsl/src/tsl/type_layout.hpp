@@ -152,7 +152,16 @@ namespace compiler::tsl {
 			return std::string(indent, '\t');
 		}
 
-	private:
+		/**
+		 * @brief Rounds a size up to a multiple of the default alignment of that size, so that
+		 * consecutive values of the type (e.g. array elements) all stay aligned.
+		 */
+		static Bits roundUpToDefaultAlignment(const Bits size_in_bits) {
+			return base::bytes2bits(base::bytesRoundTo(
+				base::bits2bytesRoundUp(size_in_bits), computeDefaultAlignment(size_in_bits)
+			));
+		}
+
 		/**
 		 * @brief Compute the default alignment for a type from its size in bits.
 		 *
@@ -295,7 +304,9 @@ namespace compiler::tsl {
 	/**
 	 * @brief Layout of a variant type.
 	 * @note Alternative indices are zero-based. At runtime, tag 0 denotes no active alternative,
-	 * and an alternative with index `i` is encoded as tag `i + 1`.
+	 * and an alternative with index `i` is encoded as tag `i + 1`. Its alignment comes from its
+	 * size, and its size is rounded up to a multiple of that alignment (like a class, whose size
+	 * is a multiple of its alignment), so the bytes after the payload are tail padding.
 	 */
 	class VariantTypeLayout final: public TypeLayoutABC {
 		Bytes tag_offset;

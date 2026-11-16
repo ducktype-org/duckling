@@ -31,6 +31,19 @@ class AfterI32 {
 	c: i8;
 }
 
+fun asSum(v: i8 | (i8, i8, i8, i8, i8)) -> i64 = {
+	return match (v) {
+		case x : i8 = x as i64;
+		case t : (i8, i8, i8, i8, i8) = (t._1 + t._2 + t._3 + t._4 + t._5) as i64;
+	};
+}
+
+# The payload ends at byte 13, but the variant is 8-aligned, so it takes 16 bytes.
+class BeforeI8 {
+	v: i8 | (i8, i8, i8, i8, i8);
+	c: i8;
+}
+
 # A class holding a variant, after a small field of the outer class.
 class Nested {
 	flag: bool;
@@ -65,6 +78,13 @@ fun main() -> i64 = {
 	var t: (bool, i64 | f64, i8) = (true, 4 as i64, 9i8);
 	check(asI64(t._2), 4i64, 40i64);
 	check(t._3 as i64, 9i64, 41i64);
+
+	var o = BeforeI8((1i8, 2i8, 3i8, 4i8, 5i8), 6i8);
+	check(asSum(o.v), 15i64, 50i64);
+	check(o.c as i64, 6i64, 51i64);
+	var odd: BeforeI8[2] = [BeforeI8(3i8, 7i8), BeforeI8((1i8, 1i8, 1i8, 1i8, 1i8), 8i8)];
+	check(asSum(odd[0].v) * 10i64 + asSum(odd[1].v), 35i64, 52i64);
+	check(odd[0].c as i64 * 10i64 + odd[1].c as i64, 78i64, 53i64);
 
 	return 0i64;
 }
