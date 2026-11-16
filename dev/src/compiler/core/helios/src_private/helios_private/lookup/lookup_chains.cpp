@@ -8,7 +8,6 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios/tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
@@ -28,19 +27,6 @@ namespace compiler::helios {
 		auto accessedSymbols(const LookupPath& path) {
 			return path.symbols
 			     | std::views::filter([](SymID symbol) { return not isUsingOrImport(symbol); });
-		}
-
-		bool isInstanceMember(query::Context& ctx, SymID symbol) {
-			switch (kind(symbol)) {
-			case SymbolKind::Field:
-				return not isStaticField(ctx, symbol);
-			case SymbolKind::Method: {
-				auto element = typeMemberOwner(symbol).getInterface(ctx)->getElementBySym(symbol);
-				return not(element.has_value() and element.value()->isStaticMethod());
-			}
-			default:
-				return false;
-			}
 		}
 
 		query::QResult<Box<code::Expr>> pathAsExpression(
@@ -79,6 +65,10 @@ namespace compiler::helios {
 		return symbols.back();
 	}
 
+	bool LookupPath::constructsAccessExpr() const {
+		return std::ranges::distance(accessedSymbols(*this)) > 1;
+	}
+
 	bool LookupChains::isEmpty() const { return paths.empty(); }
 
 	bool LookupChains::isSingle() const { return paths.size() == 1; }
@@ -94,10 +84,8 @@ namespace compiler::helios {
 		return paths.front().leaf();
 	}
 
-	bool LookupChains::isAccessedThroughValue() const {
-		return std::ranges::any_of(paths, [](const LookupPath& path) {
-			return std::ranges::distance(accessedSymbols(path)) > 1;
-		});
+	bool LookupChains::constructsAccessExpr() const {
+		return std::ranges::any_of(paths, &LookupPath::constructsAccessExpr);
 	}
 
 	query::QResult<std::vector<Box<code::Expr>>> LookupChains::asExpressions(
@@ -123,8 +111,11 @@ namespace compiler::helios {
 		LookupPath result;
 		for (usize i = 0; i < path.symbols.size(); i++) {
 			const SymID symbol = path.symbols.at(i);
-			if (isUsingOrImport(symbol) ? keep_using_imports : i >= first_kept)
+			if (isUsingOrImport(symbol)) {
+				if (keep_using_imports) result.symbols.push_back(symbol);
+			} else if (i >= first_kept) {
 				result.symbols.push_back(symbol);
+			}
 		}
 		return result;
 	}

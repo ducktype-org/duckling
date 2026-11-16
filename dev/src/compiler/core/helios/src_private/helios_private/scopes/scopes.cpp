@@ -786,6 +786,9 @@ namespace compiler::helios {
 		 * @brief Hash of a path, skipping the symbols above its leaf that do not change what the
 		 * path gives access to: the `using`/`import` symbols and the modules, namespaces and
 		 * classes qualifying it.
+		 *
+		 * We want to not insert any duplicates, ignoring the usings and namespaces, but keeping
+		 * the values that would construct the access, and their order.
 		 */
 		struct SeenPathsHash final {
 			std::size_t operator()(const LookupPath& path) const {

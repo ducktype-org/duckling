@@ -624,7 +624,7 @@ namespace compiler::helios::code {
 				logNotSingleLookup(query_ctx, ident->getStablePosition(), name, *found);
 				return query::Failed();
 			}
-			if (found->isAccessedThroughValue()) {
+			if (found->constructsAccessExpr()) {
 				UNPACK_QRESULT_MOVE(auto exprs =, found->asExpressions(query_ctx, pstOrigin(ident)));
 				return ChainState::ofExpr(std::move(exprs.front()));
 			}

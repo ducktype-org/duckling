@@ -40,6 +40,13 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]]
 		SymID leaf() const;
+
+		/**
+		 * @brief Whether the path stands for an access expression on a value, i.e. there are other
+		 * symbols than `using`/`import` above the leaf, like the `v` of `v.x`.
+		 */
+		[[nodiscard]]
+		bool constructsAccessExpr() const;
 	};
 
 	/**
@@ -77,11 +84,11 @@ namespace compiler::helios {
 		SymID uniqueLeaf() const;
 
 		/**
-		 * @brief Whether some found symbol is accessed on a value, i.e. some path has other
-		 * symbols than `using`/`import` above its leaf.
+		 * @brief Whether some path stands for an access expression (@see
+		 * LookupPath::constructsAccessExpr).
 		 */
 		[[nodiscard]]
-		bool isAccessedThroughValue() const;
+		bool constructsAccessExpr() const;
 
 		/**
 		 * @brief Turns every path into an expression evaluating to the found symbol.

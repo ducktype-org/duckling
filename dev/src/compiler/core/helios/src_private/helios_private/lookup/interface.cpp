@@ -93,7 +93,7 @@ namespace compiler::helios {
 	}
 
 	query::QResult<CRef<LookupPath>> HInterface::lookupExpectSingle(
-		const dia::StablePosition  error_position,
+		const LookupErrorArgs&     error_args,
 		query::Context&            ctx,
 		base::StrID                name,
 		AdditionalLookupParameters params
@@ -101,32 +101,50 @@ namespace compiler::helios {
 		UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup(ctx, name, params));
 		if (lookup_result->isSingle()) return &lookup_result->paths.front();
 
-		logNotSingleLookup(ctx, error_position, name, *lookup_result);
+		logNotSingleLookup(ctx, error_args, name, *lookup_result);
 		return query::Failed();
 	}
 
 	query::QResult<SymID> HInterface::lookupExpectSingleSym(
-		const dia::StablePosition  error_position,
+		const LookupErrorArgs&     error_args,
 		query::Context&            ctx,
 		base::StrID                name,
 		AdditionalLookupParameters params
 	) const {
 		UNPACK_QRESULT_MOVE(
-			CRef<LookupPath> path =, lookupExpectSingle(error_position, ctx, name, params)
+			CRef<LookupPath> path =, lookupExpectSingle(error_args, ctx, name, params)
 		);
+		if (path->constructsAccessExpr()) {
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat("Symbol '", name, "' accessed through a value used as a symbol"),
+				error_args.error_position
+			);
+			return query::Failed();
+		}
 		return path->leaf();
 	}
 
+	void logSymbolNotFound(
+		query::Context& ctx, const dia::StablePosition error_position, base::StrID name
+	) {
+		ctx.log<dia::PlaceholderError>(
+			base::strConcat("Symbol '", name, "' not found in lookup"),
+			error_position,
+			"",
+			"symbol lookup here"
+		);
+	}
+
 	void logNotSingleLookup(
-		query::Context&           ctx,
-		const dia::StablePosition error_position,
-		base::StrID               name,
-		const LookupChains&       result
+		query::Context&        ctx,
+		const LookupErrorArgs& error_args,
+		base::StrID            name,
+		const LookupChains&    result
 	) {
 		CORE_ASSERT(not result.isSingle(), "The lookup found a single symbol");
 
 		if (result.isEmpty() and result.hasInaccessible()) {
-			auto msg = makeBox<InaccessibleSymbolLookupError>(error_position);
+			auto msg = makeBox<InaccessibleSymbolLookupError>(error_args.error_position);
 			for (auto& hidden: result.inaccessible) {
 				if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
 					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
@@ -138,16 +156,11 @@ namespace compiler::helios {
 		}
 
 		if (result.isEmpty()) {
-			ctx.log<dia::PlaceholderError>(
-				base::strConcat("Symbol '", name, "' not found in lookup"),
-				error_position,
-				"",
-				"symbol lookup here"
-			);
+			error_args.log_not_found(ctx, error_args.error_position, name);
 			return;
 		}
 
-		auto msg = makeBox<ShadowedVariableLookupError>(error_position);
+		auto msg = makeBox<ShadowedVariableLookupError>(error_args.error_position);
 		for (auto& leaf: result.leaves()) {
 			if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
 				auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
