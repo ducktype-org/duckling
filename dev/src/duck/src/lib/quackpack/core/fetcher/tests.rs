@@ -100,7 +100,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![pkg1]),
         features: HashMap::new(),
@@ -114,7 +115,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![pkg2, pkg3]),
         features: HashMap::new(),
@@ -128,7 +130,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -246,7 +249,7 @@ fn create_sample_metadata() -> registry::Manifest {
         "name": "quackpack",
         "license": "GPS",
         "description": "",
-        "links": null
+        "external-libs": []
     },
     "dependencies": [
         {
