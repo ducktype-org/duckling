@@ -96,12 +96,12 @@ jobs:
     steps:
       # Duckling goes to the workspace root, as in test CI.
       - name: Checkout Duckling
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Checkout packaging
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ducktype-org/packaging
           # Note: `inputs` is empty for scheduled runs.
@@ -166,7 +166,7 @@ jobs:
       # Best effort, often misses: GitHub evicts entries not accessed for 7 days, and this one is
       # only read once a week. A miss only costs re-downloading the license texts.
       - name: Restore third-party license cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: _packaging/cache/tpa
           key: tpa-${{ matrix.platform }}-${{ hashFiles('_packaging/data/tpa/components.toml', 'dev/src/duck/Cargo.lock') }}
@@ -217,7 +217,7 @@ jobs:
       # Also what the publish job releases. Kept with the run, so a failed publish still leaves the
       # packages available.
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.PACKAGE_NAME }}
           path: |
@@ -236,7 +236,7 @@ jobs:
     
     steps:
       - name: Download packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: duckling-dev-*
           path: packages
