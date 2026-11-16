@@ -230,16 +230,4 @@ namespace compiler::helios {
 		}
 	};
 
-	/**
-	 * @brief Logs, as @p error_args say, why the lookup of @p name, which gave @p result, did not
-	 * find exactly one symbol: the symbols of that name are inaccessible, there are none, or there
-	 * are several.
-	 * @warning Panics if @p result is single.
-	 */
-	void logNotSingleLookup(
-		query::Context&        ctx,
-		const LookupErrorArgs& error_args,
-		base::StrID            name,
-		const LookupResult&    result
-	);
 }

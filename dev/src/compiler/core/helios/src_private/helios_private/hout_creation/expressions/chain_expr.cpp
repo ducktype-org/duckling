@@ -517,7 +517,6 @@ namespace compiler::helios::code {
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
@@ -615,20 +614,17 @@ namespace compiler::helios::code {
 			// identifier it will return ChainContext with namespace or expr.
 			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			auto name  = ident->getName().unlock(query_ctx)->unwrap();
-			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_CREF(
-				CRef<LookupResult> found = &,
-				HInterface::ofScopeWithParents(scope).lookup(query_ctx, name)
+			UNPACK_QRESULT_MOVE(
+				CRef<LookupPath> found =,
+				HInterface::ofScopeWithParents(scope).lookupExpectSingle(
+					ident->getStablePosition(), query_ctx, name
+				)
 			);
-			if (not found->isSingle()) {
-				logNotSingleLookup(query_ctx, ident->getStablePosition(), name, *found);
-				return query::Failed();
-			}
 			if (found->constructsAccessExpr()) {
-				UNPACK_QRESULT_MOVE(auto exprs =, found->asExpressions(query_ctx, pstOrigin(ident)));
-				return ChainState::ofExpr(std::move(exprs.front()));
+				UNPACK_QRESULT_MOVE(auto expr =, found->asExpression(query_ctx, pstOrigin(ident)));
+				return ChainState::ofExpr(std::move(expr));
 			}
-			return processNamespaceOrValue(found->uniqueLeaf(), pstOrigin(ident), ident);
+			return processNamespaceOrValue(found->leaf(), pstOrigin(ident), ident);
 		}
 
 		/**
@@ -707,45 +703,26 @@ namespace compiler::helios::code {
 			base::Box<Expr> current_expr, pst::Access<pst::expr::AccessExpr> expr_access
 		) -> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
-			auto lookup_qresult
-				= HInterface::ofTypeInstance(current_expr_type)
-			          .lookup(
-						  query_ctx,
-						  expr_access->getName().unlock(query_ctx)->unwrap(),
-						  { .accessing_scope
-			                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
-					  );
-			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
-			if (lookup_result->isEmpty() and lookup_result->hasInaccessible()) {
-				query_ctx.log<dia::PlaceholderError>(
-					"Accessed value is not visible from here.",
-					expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
-				);
-				return query::Failed();
-			}
-			if (lookup_result->isEmpty()) {
-				// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator
-				// overloads. Ex.: obj.a fails to look up 'a', but it can still call
-				// obj.selectDynamic("a"). See Scala's Dynamic:
-				// https://www.scala-lang.org/api/current/scala/Dynamic.html
-				query_ctx.log<dia::PlaceholderError>(
-					"Accessed value not found.",
-					expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
-				);
-				return query::Failed();
-			}
-			// Note that if multiple symbols were found, it results in an error. This is temporary,
-			// as symbol ambiguity should be handled differently than through dynamic field access.
-			if (not lookup_result->isSingle()) {
-				query_ctx.log<dia::PlaceholderError>(
-					"Accessed value is ambiguous.",
-					expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
-				);
-				return query::Failed();
-			}
-
-			// @TODO: #1412 handle dealias expressions:
-			auto sym = lookup_result->uniqueLeaf();
+			auto log_not_found
+				= [](query::Context& ctx, dia::StablePosition position, base::StrID) {
+					  // @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator
+				      // overloads. Ex.: obj.a fails to look up 'a', but it can still call
+				      // obj.selectDynamic("a"). See Scala's Dynamic:
+				      // https://www.scala-lang.org/api/current/scala/Dynamic.html
+					  ctx.log<dia::PlaceholderError>("Accessed value not found.", position);
+				  };
+			UNPACK_QRESULT_MOVE(
+				const SymID sym =,
+				HInterface::ofTypeInstance(current_expr_type)
+					.lookupExpectSingleSym(
+						{ expr_access->getName().unlock(query_ctx)->getStablePosition(),
+			              log_not_found },
+						query_ctx,
+						expr_access->getName().unlock(query_ctx)->unwrap(),
+						{ .accessing_scope
+			              = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+					)
+			);
 
 			if (isStaticField(query_ctx, sym)) {
 				auto node = makeBox<IdentifierExpr>(
@@ -785,7 +762,6 @@ namespace compiler::helios::code {
 				),
 				expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
 			);
-			// @TODO: #1412 Support lookup of other kinds of symbols in classes.
 			return query::Failed();
 		}
 
@@ -802,7 +778,6 @@ namespace compiler::helios::code {
 												query_ctx,
 												expr_access->getName().unlock(query_ctx)->unwrap()
 											);
-			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const SymID found =, lookup_result);
 			auto whole_expr_origin
 				= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
@@ -838,7 +813,6 @@ namespace compiler::helios::code {
 						  );
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
@@ -905,7 +879,6 @@ namespace compiler::helios::code {
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
@@ -938,7 +911,6 @@ namespace compiler::helios::code {
 				expr_access->getName().unlock(query_ctx)->unwrap(),
 				{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 			);
-			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const SymID found =, lookup_result);
 
 			auto whole_expr_origin = pstOriginOrdered(type.origin, expr_access);
@@ -969,7 +941,6 @@ namespace compiler::helios::code {
 				);
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
@@ -1239,7 +1210,6 @@ namespace compiler::helios::code {
 			// The element naming the template is the callee, as in a call without a bake.
 			auto callee = chain_elements.at(this->index - 1).unlock(query_ctx);
 
-			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(std::vector{ baked });
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 

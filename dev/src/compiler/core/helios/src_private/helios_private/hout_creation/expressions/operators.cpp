@@ -318,9 +318,8 @@ namespace compiler::helios::code {
 		}
 
 		// Step 2. — Regular lookup and overload resolution
-		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
-		// @TODO: #1412 fix dealias
-		auto               all_candidates = lookup_result->valueOrThrow().leaves();
+		const auto lookup_result  = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+		auto       all_candidates = lookup_result->valueOrThrow().leaves();
 		std::vector<SymID> method_candidates;
 		for (const auto [builtin_operator_sym, _]:
 		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
@@ -391,9 +390,8 @@ namespace compiler::helios::code {
 		}
 
 		// Step 2. — Regular lookup and overload resolution
-		const auto lookup_result = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
-		// @TODO: #1412 fix dealias
-		auto               all_candidates = lookup_result->valueOrThrow().leaves();
+		const auto lookup_result  = HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+		auto       all_candidates = lookup_result->valueOrThrow().leaves();
 		std::vector<SymID> method_candidates;
 		for (const auto [builtin_operator_sym, _]:
 		     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {

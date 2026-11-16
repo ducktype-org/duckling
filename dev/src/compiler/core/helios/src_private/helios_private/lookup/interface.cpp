@@ -92,6 +92,47 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
+	namespace {
+		/**
+		 * @brief Logs, as @p error_args say, why the lookup of @p name, which gave @p result, did
+		 * not find exactly one symbol.
+		 */
+		void logNotSingleLookup(
+			query::Context&        ctx,
+			const LookupErrorArgs& error_args,
+			base::StrID            name,
+			const LookupResult&    result
+		) {
+			CORE_ASSERT(not result.isSingle(), "The lookup found a single symbol");
+
+			if (result.isEmpty() and result.hasInaccessible()) {
+				auto msg = makeBox<InaccessibleSymbolLookupError>(error_args.error_position);
+				for (auto& hidden: result.inaccessible) {
+					if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
+						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
+						msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
+					}
+				}
+				ctx.log(std::move(msg));
+				return;
+			}
+
+			if (result.isEmpty()) {
+				error_args.log_not_found(ctx, error_args.error_position, name);
+				return;
+			}
+
+			auto msg = makeBox<ShadowedVariableLookupError>(error_args.error_position);
+			for (auto& leaf: result.leaves()) {
+				if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
+					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
+					msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
+				}
+			}
+			ctx.log(std::move(msg));
+		}
+	}
+
 	query::QResult<CRef<LookupPath>> HInterface::lookupExpectSingle(
 		const LookupErrorArgs&     error_args,
 		query::Context&            ctx,
@@ -135,38 +176,4 @@ namespace compiler::helios {
 		);
 	}
 
-	void logNotSingleLookup(
-		query::Context&        ctx,
-		const LookupErrorArgs& error_args,
-		base::StrID            name,
-		const LookupResult&    result
-	) {
-		CORE_ASSERT(not result.isSingle(), "The lookup found a single symbol");
-
-		if (result.isEmpty() and result.hasInaccessible()) {
-			auto msg = makeBox<InaccessibleSymbolLookupError>(error_args.error_position);
-			for (auto& hidden: result.inaccessible) {
-				if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
-					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
-					msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
-				}
-			}
-			ctx.log(std::move(msg));
-			return;
-		}
-
-		if (result.isEmpty()) {
-			error_args.log_not_found(ctx, error_args.error_position, name);
-			return;
-		}
-
-		auto msg = makeBox<ShadowedVariableLookupError>(error_args.error_position);
-		for (auto& leaf: result.leaves()) {
-			if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
-				auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
-				msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
-			}
-		}
-		ctx.log(std::move(msg));
-	}
 }

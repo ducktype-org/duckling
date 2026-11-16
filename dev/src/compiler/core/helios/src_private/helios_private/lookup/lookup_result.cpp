@@ -29,35 +29,6 @@ namespace compiler::helios {
 			     | std::views::filter([](SymID symbol) { return not isUsingOrImport(symbol); });
 		}
 
-		query::QResult<Box<code::Expr>> pathAsExpression(
-			query::Context& ctx, const LookupPath& path, code::ElementOrigin origin
-		) {
-			auto symbols = stripQualifiers(ctx, path, false).symbols;
-			if (isInstanceMember(ctx, symbols.front())) {
-				ctx.log<dia::NotYetImplementedCodeError>(
-					base::strConcat("Expression of the looked-up symbol '", name(path.leaf()), "'"),
-					origin.getStablePosition()
-				);
-				return query::Failed();
-			}
-
-			Box<code::Expr> expr = makeBox<code::IdentifierExpr>(ctx, origin, symbols.front());
-
-			for (const SymID field: symbols | std::views::drop(1)) {
-				if (kind(field) != SymbolKind::Field) {
-					ctx.log<dia::NotYetImplementedCodeError>(
-						base::strConcat("Expression of the looked-up symbol '", name(field), "'"),
-						origin.getStablePosition()
-					);
-					return query::Failed();
-				}
-
-				if (expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct)
-					expr = makeBox<code::DerefExpr>(ctx, origin.generatedFrom(), std::move(expr));
-				expr = makeBox<code::AccessExpr>(ctx, origin, std::move(expr), field);
-			}
-			return expr;
-		}
 	}
 
 	SymID LookupPath::leaf() const {
@@ -67,6 +38,36 @@ namespace compiler::helios {
 
 	bool LookupPath::constructsAccessExpr() const {
 		return std::ranges::distance(accessedSymbols(*this)) > 1;
+	}
+
+	query::QResult<Box<code::Expr>> LookupPath::asExpression(
+		query::Context& ctx, code::ElementOrigin origin
+	) const {
+		auto symbols = stripQualifiers(ctx, *this, false).symbols;
+		if (isInstanceMember(ctx, symbols.front())) {
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat("Expression of the looked-up symbol '", name(leaf()), "'"),
+				origin.getStablePosition()
+			);
+			return query::Failed();
+		}
+
+		Box<code::Expr> expr = makeBox<code::IdentifierExpr>(ctx, origin, symbols.front());
+
+		for (const SymID field: symbols | std::views::drop(1)) {
+			if (kind(field) != SymbolKind::Field) {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					base::strConcat("Expression of the looked-up symbol '", name(field), "'"),
+					origin.getStablePosition()
+				);
+				return query::Failed();
+			}
+
+			if (expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct)
+				expr = makeBox<code::DerefExpr>(ctx, origin.generatedFrom(), std::move(expr));
+			expr = makeBox<code::AccessExpr>(ctx, origin, std::move(expr), field);
+		}
+		return expr;
 	}
 
 	bool LookupResult::isEmpty() const { return paths.empty(); }
@@ -93,7 +94,7 @@ namespace compiler::helios {
 	) const {
 		std::vector<Box<code::Expr>> expressions;
 		for (const LookupPath& path: paths) {
-			UNPACK_QRESULT_MOVE(auto expr =, pathAsExpression(ctx, path, origin));
+			UNPACK_QRESULT_MOVE(auto expr =, path.asExpression(ctx, origin));
 			expressions.push_back(std::move(expr));
 		}
 		return expressions;

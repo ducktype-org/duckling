@@ -28,9 +28,12 @@ namespace compiler::helios {
 	/**
 	 * @brief One symbol found by a lookup, together with the symbols it is accessed through.
 	 *
-	 * The leaf is the found symbol. The symbols above it are the value and the fields it is
-	 * accessed on (`v` of `v.x`), and the `using`/`import` symbols the lookup went through to
-	 * reach it.
+	 * The leaf is the found symbol, but sometimes it requires the preceding symbols to construct
+	 * proper "access" expression. The path consists of two independent type of informations:
+	 * 1. The usings/imports we went through to find the symbol, which is used in error handling.
+	 * 2. The values we need to construct the proper expression. For example `using a.x` where `a`
+	 * is a value of some class, and `x` is a field will construct a path like `[a, x]`. There
+	 * should be no modules or namespaces in the path, as they are not needed.
 	 */
 	struct LookupPath final {
 		std::vector<SymID> symbols;
@@ -47,6 +50,19 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]]
 		bool constructsAccessExpr() const;
+
+		/**
+		 * @brief The expression evaluating to the found symbol.
+		 *
+		 * The expression starts at the last symbol of the path that is not a non-static field or
+		 * method, and the fields below it are accessed on it.
+		 *
+		 * @note Fails, with a logged error, for a path that does not contain such a symbol or has
+		 * something else than fields below it.
+		 */
+		query::QResult<Box<code::Expr>> asExpression(
+			query::Context& ctx, code::ElementOrigin origin
+		) const;
 	};
 
 	/**
@@ -91,13 +107,7 @@ namespace compiler::helios {
 		bool constructsAccessExpr() const;
 
 		/**
-		 * @brief Turns every path into an expression evaluating to the found symbol.
-		 *
-		 * The expression starts at the last symbol of the path that is not a non-static field or
-		 * method, and the fields below it are accessed on it.
-		 *
-		 * @note Fails, with a logged error, for paths that do not contain such a symbol or have
-		 * something else than fields below it.
+		 * @brief The expressions of all the paths (@see LookupPath::asExpression).
 		 */
 		query::QResult<std::vector<Box<code::Expr>>> asExpressions(
 			query::Context& ctx, code::ElementOrigin origin
