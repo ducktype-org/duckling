@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install click and PyYAML
         run: sudo pip install click pyyaml --break-system-packages --no-input
@@ -60,7 +60,7 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Update apt
         run: sudo apt update
@@ -148,7 +148,7 @@ jobs:
           mkdir -p -- "$GITHUB_WORKSPACE"
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # we use SHA because branch names can be parsed incorrectly
       - name: Fetch PR target branch

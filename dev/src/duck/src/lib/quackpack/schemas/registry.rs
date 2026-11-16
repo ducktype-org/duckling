@@ -6,6 +6,7 @@
 
 //! Schemas used when communicating with a registry.
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -48,8 +49,12 @@ pub struct Metadata {
     pub name: String,
     /// Package's description.
     pub description: String,
-    /// This package links against the specified library.
-    pub links: Option<String>,
+    /// Names of the external libraries this package links against.
+    #[serde(default)]
+    pub external_libs: Vec<String>,
+    /// Directories searched for [`Metadata::external_libs`], relative to the package's root.
+    #[serde(default)]
+    pub external_lib_paths: Vec<PathBuf>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
