@@ -1,0 +1,102 @@
+name: Determine Runners
+
+# This workflow determines the availability of self-hosted runners based on a single provided label.
+# Inputs:
+# - self-hosted-labels: A JSON-encoded string representing an array of labels to check for self-hosted runners.
+#   Example: '["build", "test"]'
+# - github-labels: A JSON-encoded string representing an array of labels to use for GitHub-hosted runners if self-hosted runners are unavailable.
+#   Example: '["ubuntu-latest", "windows-latest"]'
+# Outputs:
+# - runners: JSON array containing the group and label for each runner.
+#   Example: [{"group":"SelfHostedRunners","label":"build"}, {"label":"ubuntu-latest"}]
+
+on:
+  workflow_call:
+    inputs:
+      self-hosted-labels:
+        description: 'A JSON-encoded string representing an array of labels to check for self-hosted runners'
+        required: true
+        type: string
+      github-labels:
+        description: 'A JSON-encoded string representing an array of labels to use for GitHub-hosted runners'
+        required: true
+        type: string
+    outputs:
+      runners:
+        value: ${{ jobs.determine.outputs.runners }}
+
+jobs:
+  determine:
+    runs-on: ubuntu-latest
+    outputs:
+      runners: ${{ steps.set-runners.outputs.runners }}
+    steps:
+      - name: Check runner availability
+        id: set-runners
+        env:
+          GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+        run: |
+          echo "Checking for runners with labels: ${{ inputs.self-hosted-labels }}"
+          echo "Fallback GitHub labels: ${{ inputs.github-labels }}"
+
+          self_hosted_labels='${{ inputs.self-hosted-labels }}'
+          github_labels='${{ inputs.github-labels }}'
+
+          runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
+
+          available_runners_json="["
+          first=true
+          used_runner_ids=()
+
+          for i in $(seq 0 $(($(echo "$self_hosted_labels" | jq length) - 1))); do
+            label=$(echo "$self_hosted_labels" | jq -r ".[$i]")
+            github_label=$(echo "$github_labels" | jq -r ".[$i]")
+
+            # Find the first available runner with the label that hasn't been used yet
+            runner_info=$(echo "$runners" | jq -c --arg lbl "$label" '
+              .runners[]? |
+              select(
+                .status == "online" and
+                .busy == false and
+                (.labels[]?.name == $lbl)
+              )')
+
+            selected_runner_id=""
+            selected_runner_name=""
+            if [ -n "$runner_info" ]; then
+              while read -r runner; do
+                runner_id=$(echo "$runner" | jq -r '.id')
+                runner_name=$(echo "$runner" | jq -r '.name')
+                # Check if this runner_id is already used
+                skip=false
+                for used_id in "${used_runner_ids[@]}"; do
+                  if [ "$runner_id" = "$used_id" ]; then
+                    skip=true
+                    break
+                  fi
+                done
+                if [ "$skip" = false ]; then
+                  selected_runner_id="$runner_id"
+                  selected_runner_name="$runner_name"
+                  break
+                fi
+              done < <(echo "$runner_info")
+            fi
+
+            if [ -n "$selected_runner_id" ]; then
+              used_runner_ids+=("$selected_runner_id")
+              echo "Using self-hosted runner: $selected_runner_name with ID: $selected_runner_id for label: $label"
+              available_runners_json+="{\"group\":\"SelfHostedRunners\",\"labels\":\"$label\"}"
+            else
+              echo "No available self-hosted runner found for label: $label, using GitHub label: $github_label"
+              available_runners_json+="{\"labels\":\"$github_label\"}"
+            fi
+
+            if [ $i -lt $(($(echo "$self_hosted_labels" | jq length) - 1)) ]; then
+              available_runners_json+=",";
+            fi
+          done
+
+          available_runners_json+="]"
+          echo "Available runners: ${available_runners_json}"
+          echo "runners=$available_runners_json" >> $GITHUB_OUTPUT
