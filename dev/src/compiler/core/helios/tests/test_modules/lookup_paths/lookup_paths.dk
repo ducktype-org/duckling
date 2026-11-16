@@ -1,0 +1,49 @@
+namespace N {
+	const c: i64 = 1;
+	const only_wild: i64 = 2;
+}
+
+class S {
+	x: i64;
+	global sf: i64 = 3;
+	global fun sm() -> i64 = 4;
+}
+
+var v: S;
+var v1: S;
+var v2: S;
+
+namespace Holder {
+	var hv: S;
+}
+
+using N.*;
+using N.c;
+
+namespace Values {
+	using v.*;
+	using v.x;
+	using S.*;
+
+	namespace Inner {
+		using v.*;
+	}
+}
+
+namespace Aliased {
+	using v as w;
+	using v.*;
+	using w.*;
+}
+
+namespace TwoValues {
+	using v1.*;
+
+	namespace Other {
+		using v2.*;
+	}
+}
+
+namespace Qualified {
+	using Holder.hv.*;
+}
