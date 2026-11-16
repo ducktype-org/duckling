@@ -35,7 +35,7 @@ namespace dia {
 		auto [line, column]         = pos.getStartLineColumn();
 		auto [end_line, end_column] = pos.getEndLineColumn();
 		return {
-			.file       = pos.getSource()->getFile().getFilePath().string(),
+			.file       = pos.getSource()->getFile().getFilePath(),
 			.line       = (u64) line,
 			.column     = (u64) column,
 			.end_line   = end_line,
@@ -89,9 +89,8 @@ namespace dia {
 	}
 
 	CodeLocationArgument::CodeLocationArgument(std::string name, dia::SourcePosition position):
-		  Argument(std::move(name)) {
-		location = FileLocation::fromSourcePosition(position);
-
+		  Argument(std::move(name)),
+		  location(FileLocation::fromSourcePosition(position)) {
 		base::Optional<StablePosition> expand_pos = getMacroLocationSource(position);
 
 		// Macro handling
@@ -104,9 +103,8 @@ namespace dia {
 	}
 
 	CodeLocationArgument::CodeLocationArgument(std::string name, dia::StablePosition position):
-		  Argument(std::move(name)) {
-		location = FileLocation::fromStablePosition(position);
-
+		  Argument(std::move(name)),
+		  location(FileLocation::fromStablePosition(position)) {
 		// Macro handling
 		base::Optional<StablePosition> expand_pos = getMacroLocationSource(position);
 		if (expand_pos) {
