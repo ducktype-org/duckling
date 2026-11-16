@@ -11,6 +11,8 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/types/bit256.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -25,8 +27,8 @@ namespace compiler::helios {
 	 * names, like the `a.N` of `using a.N.*;`, and @p scope holds the contents of its leaf.
 	 */
 	struct TargetScope final {
-		ScopeID      scope;
-		LookupChains chain;
+		ScopeID    scope;
+		LookupPath chain;
 	};
 
 	/**
@@ -34,7 +36,7 @@ namespace compiler::helios {
 	 * `a.b` of `using a.b;`, and its leaf is the provided symbol.
 	 */
 	struct TargetExpr final {
-		LookupChains chain;
+		LookupPath chain;
 	};
 
 	/**
@@ -42,7 +44,7 @@ namespace compiler::helios {
 	 * its selector names, like the `v` of `using v.*;`, and the wildcard looks into its leaf.
 	 */
 	struct WildcardExpr final {
-		LookupChains chain;
+		LookupPath chain;
 	};
 
 	/**
@@ -54,6 +56,22 @@ namespace compiler::helios {
 	 */
 	using UsingImportTarget = std::variant<TargetScope, TargetExpr, WildcardExpr>;
 
+	struct KeyOf_ResolveUsingImport final {
+		SymID symbol;
+
+		/**
+		 * @brief Keep the whole chains named by the selector. When false, the chains keep only
+		 * the symbols taking part in the access to their leaf. For example the chain of
+		 * a `TargetScope` is empty. True useful for Language Server.
+		 */
+		bool keep_whole_chains{};
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return { symbol.queryUnstablePerfectHash(), static_cast<u64>(keep_whole_chains), 0, 0 };
+		}
+	};
+
 	/**
 	 * @brief Resolves what the selector of a `using`/`import` symbol points at.
 	 * It is independent of the looked-up name, nothing is looked up inside the target. Every name
@@ -61,7 +79,12 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryResolveUsingImport, SymID, CRef<query::QResult<UsingImportTarget>>, ({}));
+	DECLARE_QUERY(
+		QueryResolveUsingImport,
+		KeyOf_ResolveUsingImport,
+		CRef<query::QResult<UsingImportTarget>>,
+		({})
+	);
 
 	/**
 	 * @brief Can the `using`/`import` @p symbol provide @p name, judging by its selector alone.

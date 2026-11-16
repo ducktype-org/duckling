@@ -8,6 +8,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <helios/tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
@@ -16,41 +17,27 @@
 #include <query_framework/context/context.hpp>
 
 #include <algorithm>
-#include <iterator>
 #include <ranges>
 
 namespace compiler::helios {
 	namespace {
-		using LookupPath = std::vector<SymID>;
-
-		void collectPaths(
-			const LookupChains& result, LookupPath& prefix, std::vector<LookupPath>& paths
-		) {
-			for (const Node& node: result.nodes) {
-				prefix.push_back(node.id);
-				if (node.inner.has_value())
-					collectPaths(*node.inner.value(), prefix, paths);
-				else
-					paths.push_back(prefix);
-				prefix.pop_back();
-			}
+		bool isUsingOrImport(SymID symbol) {
+			return kind(symbol) == SymbolKind::Using or kind(symbol) == SymbolKind::Import;
 		}
 
-		std::vector<LookupPath> allPaths(const LookupChains& result) {
-			LookupPath              prefix;
-			std::vector<LookupPath> paths;
-			collectPaths(result, prefix, paths);
-			return paths;
+		auto accessedSymbols(const LookupPath& path) {
+			return path.symbols
+			     | std::views::filter([](SymID symbol) { return not isUsingOrImport(symbol); });
 		}
 
-		bool standsAlone(query::Context& ctx, SymID symbol) {
+		bool isInstanceMember(query::Context& ctx, SymID symbol) {
 			switch (kind(symbol)) {
-			case SymbolKind::Variable:
-			case SymbolKind::Parameter:
-			case SymbolKind::Const:
-				return true;
 			case SymbolKind::Field:
-				return isStaticField(ctx, symbol);
+				return not isStaticField(ctx, symbol);
+			case SymbolKind::Method: {
+				auto element = typeMemberOwner(symbol).getInterface(ctx)->getElementBySym(symbol);
+				return not(element.has_value() and element.value()->isStaticMethod());
+			}
 			default:
 				return false;
 			}
@@ -59,21 +46,18 @@ namespace compiler::helios {
 		query::QResult<Box<code::Expr>> pathAsExpression(
 			query::Context& ctx, const LookupPath& path, code::ElementOrigin origin
 		) {
-			usize start_index = path.size();
-			while (start_index > 0 and not standsAlone(ctx, path.at(start_index - 1)))
-				start_index--;
-			if (start_index == 0) {
+			auto symbols = stripQualifiers(ctx, path, false).symbols;
+			if (isInstanceMember(ctx, symbols.front())) {
 				ctx.log<dia::NotYetImplementedCodeError>(
-					base::strConcat("Expression of the looked-up symbol '", name(path.back()), "'"),
+					base::strConcat("Expression of the looked-up symbol '", name(path.leaf()), "'"),
 					origin.getStablePosition()
 				);
 				return query::Failed();
 			}
-			start_index--;
 
-			Box<code::Expr> expr = makeBox<code::IdentifierExpr>(ctx, origin, path.at(start_index));
+			Box<code::Expr> expr = makeBox<code::IdentifierExpr>(ctx, origin, symbols.front());
 
-			for (const SymID field: path | std::views::drop(start_index + 1)) {
+			for (const SymID field: symbols | std::views::drop(1)) {
 				if (kind(field) != SymbolKind::Field) {
 					ctx.log<dia::NotYetImplementedCodeError>(
 						base::strConcat("Expression of the looked-up symbol '", name(field), "'"),
@@ -90,89 +74,58 @@ namespace compiler::helios {
 		}
 	}
 
-	bool LookupChains::isEmpty() const { return nodes.empty(); }
+	SymID LookupPath::leaf() const {
+		CORE_ASSERT(not symbols.empty(), "Lookup path has no symbols");
+		return symbols.back();
+	}
 
-	bool LookupChains::isSingle() const { return leaves().size() == 1; }
+	bool LookupChains::isEmpty() const { return paths.empty(); }
+
+	bool LookupChains::isSingle() const { return paths.size() == 1; }
 
 	bool LookupChains::hasInaccessible() const { return not inaccessible.empty(); }
 
 	std::vector<SymID> LookupChains::leaves() const {
-		return allPaths(*this)
-		     | std::views::transform([](const LookupPath& path) { return path.back(); })
-		     | std::ranges::to<std::vector>();
+		return paths | std::views::transform(&LookupPath::leaf) | std::ranges::to<std::vector>();
 	}
 
 	SymID LookupChains::uniqueLeaf() const {
-		auto found = leaves();
-		CORE_ASSERT(found.size() == 1, "Expected a single symbol in the lookup result");
-		return found.front();
+		CORE_ASSERT(isSingle(), "Expected a single symbol in the lookup result");
+		return paths.front().leaf();
 	}
 
 	bool LookupChains::isAccessedThroughValue() const {
-		return std::ranges::any_of(nodes, &Node::passesThroughValue);
+		return std::ranges::any_of(paths, [](const LookupPath& path) {
+			return std::ranges::distance(accessedSymbols(path)) > 1;
+		});
 	}
 
 	query::QResult<std::vector<Box<code::Expr>>> LookupChains::asExpressions(
 		query::Context& ctx, code::ElementOrigin origin
 	) const {
 		std::vector<Box<code::Expr>> expressions;
-		for (const LookupPath& path: allPaths(*this)) {
+		for (const LookupPath& path: paths) {
 			UNPACK_QRESULT_MOVE(auto expr =, pathAsExpression(ctx, path, origin));
 			expressions.push_back(std::move(expr));
 		}
 		return expressions;
 	}
 
-	std::vector<SymID> Node::leaves() const {
-		if (not inner.has_value()) return { id };
-		return inner.value()->leaves();
-	}
+	LookupPath stripQualifiers(query::Context& ctx, LookupPath path, bool keep_using_imports) {
+		usize start = path.symbols.size();
+		while (
+			start > 0
+			and (isUsingOrImport(path.symbols.at(start - 1)) or isInstanceMember(ctx, path.symbols.at(start - 1)))
+		)
+			start--;
+		const usize first_kept = start == 0 ? 0 : start - 1;
 
-	bool Node::passesThroughValue() const {
-		if (not inner.has_value()) return false;
-		return isValueSymbol(id)
-		    or std::ranges::any_of(inner.value()->nodes, &Node::passesThroughValue);
-	}
-
-	bool isValueSymbol(SymID symbol) {
-		switch (kind(symbol)) {
-		case SymbolKind::Variable:
-		case SymbolKind::Parameter:
-		case SymbolKind::Const:
-		case SymbolKind::Field:
-			return true;
-		default:
-			return false;
+		LookupPath result;
+		for (usize i = 0; i < path.symbols.size(); i++) {
+			const SymID symbol = path.symbols.at(i);
+			if (isUsingOrImport(symbol) ? keep_using_imports : i >= first_kept)
+				result.symbols.push_back(symbol);
 		}
-	}
-
-	LookupChains withLeafInner(const LookupChains& unique, CRef<LookupChains> inner) {
-		CORE_ASSERT(unique.isSingle(), "withLeafInner called on a lookup result that is not single");
-
-		const Node&  node = unique.nodes.front();
-		LookupChains result;
-		if (not node.inner.has_value()) {
-			result.nodes.push_back(Node::nested(node.id, inner));
-			return result;
-		}
-
-		auto rebuilt = makeBox<LookupChains>(withLeafInner(*node.inner.value(), inner));
-		result.nodes.push_back(Node::nested(node.id, &*rebuilt));
-		result.storage.push_back(std::move(rebuilt));
 		return result;
-	}
-
-	void appendUnderLeaf(LookupChains& into, const LookupChains& chain, const LookupChains& found) {
-		for (const Node& node: found.nodes) {
-			auto root = makeBox<LookupChains>();
-			root->nodes.push_back(node);
-			auto attached = withLeafInner(chain, &*root);
-			into.storage.push_back(std::move(root));
-			into.nodes.insert(into.nodes.end(), attached.nodes.begin(), attached.nodes.end());
-			std::ranges::move(attached.storage, std::back_inserter(into.storage));
-		}
-		into.inaccessible.insert(
-			into.inaccessible.end(), found.inaccessible.begin(), found.inaccessible.end()
-		);
 	}
 }

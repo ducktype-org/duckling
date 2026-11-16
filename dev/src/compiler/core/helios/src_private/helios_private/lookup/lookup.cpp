@@ -15,12 +15,11 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-
-#include <ranges>
 
 namespace compiler::helios {
 	ScopeID scopeOfNamespaceLike(query::Context& ctx, SymID symbol) {
@@ -97,17 +96,11 @@ namespace compiler::helios {
 		 * wildcard points at, and following them here would make resolving a `using N.*;` ask the
 		 * very scope it lives in for `N` again.
 		 */
-		static query::QResult<LookupChains> resolveChain(
+		static query::QResult<LookupPath> resolveChain(
 			Context& ctx, std::variant<ScopeID, SymID> start, const SelectorPath& names
 		) {
-			LookupChains                    chain;
-			std::vector<CRef<LookupChains>> steps;
-			if (v_matches(start, SymID)) {
-				auto root = makeBox<LookupChains>();
-				root->nodes.push_back(Node::symbol(v_get(start, SymID)));
-				steps.push_back(&*root);
-				chain.storage.push_back(std::move(root));
-			}
+			LookupPath chain;
+			if (v_matches(start, SymID)) chain.symbols.push_back(v_get(start, SymID));
 
 			for (const auto& name_locked: names) {
 				auto interface = VARIANT_VISIT(
@@ -122,24 +115,17 @@ namespace compiler::helios {
 						name->getStablePosition(), ctx, name->unwrap(), { .with_wildcards = false }
 					)
 				);
-				steps.push_back(step);
+				const auto& step_symbols = step->paths.front().symbols;
+				base::appendToVector(chain.symbols, step_symbols);
 				start = step->uniqueLeaf();
 			}
-
-			CRef<LookupChains> current = steps.back();
-			for (const CRef<LookupChains> step: steps | std::views::reverse | std::views::drop(1)) {
-				auto attached = makeBox<LookupChains>(withLeafInner(*step, current));
-				current       = &*attached;
-				chain.storage.push_back(std::move(attached));
-			}
-			chain.nodes = current->nodes;
 			return chain;
 		}
 
 		/**
 		 * @brief The chain of a `using` selector, looked up from the scope the `using` is in.
 		 */
-		static query::QResult<LookupChains> resolveUsingPath(
+		static query::QResult<LookupPath> resolveUsingPath(
 			Context& ctx, SymID symbol, pst::Access<pst::Selector> selector
 		) {
 			return resolveChain(ctx, scope(symbol), selectorPath(selector));
@@ -151,7 +137,7 @@ namespace compiler::helios {
 		 * The prefix of the selector is a module path, so the lookup continues in the root scope
 		 * of that module.
 		 */
-		static query::QResult<LookupChains> resolveImportPath(
+		static query::QResult<LookupPath> resolveImportPath(
 			Context& ctx, SymID symbol, pst::Access<pst::Selector> selector
 		) {
 			auto path_idents = selectorPath(selector);
@@ -187,28 +173,31 @@ namespace compiler::helios {
 			);
 		}
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto symbol_kind = kind(key);
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			const auto symbol_kind = kind(key.symbol);
 			CORE_ASSERT(
 				symbol_kind == SymbolKind::Using or symbol_kind == SymbolKind::Import, "Invalid call"
 			);
 
-			auto selector = selectorOf(ctx, key);
+			auto selector = selectorOf(ctx, key.symbol);
 			UNPACK_QRESULT_MOVE(
-				LookupChains chain =,
-				symbol_kind == SymbolKind::Using ? resolveUsingPath(ctx, key, selector)
-												 : resolveImportPath(ctx, key, selector)
+				LookupPath chain =,
+				symbol_kind == SymbolKind::Using ? resolveUsingPath(ctx, key.symbol, selector)
+												 : resolveImportPath(ctx, key.symbol, selector)
 			);
+			auto pointed = chain.leaf();
+			if (not key.keep_whole_chains) chain = stripQualifiers(ctx, std::move(chain), true);
 
 			if (selector->getTailKind() != pst::SelectorTail::Star)
 				return UsingImportTarget{ TargetExpr{ std::move(chain) } };
 
-			auto pointed = chain.uniqueLeaf();
 			switch (kind(pointed)) {
 			case SymbolKind::Module:
 			case SymbolKind::Namespace:
-				return UsingImportTarget{ TargetScope{ .scope = scopeOfNamespaceLike(ctx, pointed),
-					                                   .chain = std::move(chain) } };
+				return UsingImportTarget{ TargetScope{
+					.scope = scopeOfNamespaceLike(ctx, pointed),
+					.chain = key.keep_whole_chains ? std::move(chain) : LookupPath{},
+				} };
 			case SymbolKind::Class:
 			case SymbolKind::Variable:
 			case SymbolKind::Parameter:

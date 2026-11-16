@@ -120,7 +120,7 @@ namespace compiler::helios {
 				if (not isReachable(key.mode, element)) continue;
 
 				if (isVisible(ctx, element, accessing_class))
-					result.nodes.push_back(Node::symbol(element.getSymbol()));
+					result.paths.push_back(LookupPath{ .symbols = { element.getSymbol() } });
 				else
 					result.inaccessible.emplace_back(element.getSymbol());
 			}
