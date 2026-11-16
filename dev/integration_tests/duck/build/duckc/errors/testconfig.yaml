@@ -1,6 +1,8 @@
 SubDirs:
   - duplicate-libs
   - external-libs-on-dvm
+  - invalid-external-lib
   - nonexistent-feature
   - nonexistent-profile
+  - renamed-links
   - workers-count
