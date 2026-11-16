@@ -44,6 +44,12 @@ class BeforeI8 {
 	c: i8;
 }
 
+# `?box i64` is the variant `box i64 | ()`, so it is 8-aligned too.
+class OptionalBoxAfterBool {
+	b: bool;
+	v: ?box i64;
+}
+
 # A class holding a variant, after a small field of the outer class.
 class Nested {
 	flag: bool;
@@ -85,6 +91,15 @@ fun main() -> i64 = {
 	var odd: BeforeI8[2] = [BeforeI8(3i8, 7i8), BeforeI8((1i8, 1i8, 1i8, 1i8, 1i8), 8i8)];
 	check(asSum(odd[0].v) * 10i64 + asSum(odd[1].v), 35i64, 52i64);
 	check(odd[0].c as i64 * 10i64 + odd[1].c as i64, 78i64, 53i64);
+
+	var p = OptionalBoxAfterBool(true, new (5 as i64));
+	check(p.b as i64, 1i64, 60i64);
+	check(p.v.value(), 5i64, 61i64);
+	p.v = none;
+	check(p.v.isEmpty() as i64, 1i64, 62i64);
+	check(p.b as i64, 1i64, 63i64);
+	p.v = new (8 as i64);
+	check(p.v.value(), 8i64, 64i64);
 
 	return 0i64;
 }
