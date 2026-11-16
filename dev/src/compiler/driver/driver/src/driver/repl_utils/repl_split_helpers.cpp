@@ -79,12 +79,7 @@ namespace compiler::repl {
 			std::cout << "\n\n";
 		}
 
-		if (pst->getLogger()->bad()) {
-			// Diagnostics are rendered once, at log time, by the global immediate-print
-			// mechanism (see dia::configureImmediatePrint), like every other diagnostic in
-			// the compiler. Re-rendering the log here would print each message twice.
-			return std::unexpected(std::string("Parse error"));
-		}
+		if (pst->getLogger()->bad()) return std::unexpected(std::string("Parse error"));
 
 		auto root = pst->getRootElement().unlock(ctx);
 		return extractStatementSources(ctx, *root);
