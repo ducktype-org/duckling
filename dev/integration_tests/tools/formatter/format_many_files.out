@@ -1,0 +1,17 @@
+==> format_unformatted.duck <==
+fun f() = { # body comment
+	x = 1;
+	y = 2; # trailing
+
+
+	z = 3;
+}
+
+==> format_formatted.duck <==
+fun f() = { # body comment
+	x = 1;
+	y = 2; # trailing
+
+
+	z = 3;
+}

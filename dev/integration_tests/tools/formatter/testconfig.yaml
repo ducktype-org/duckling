@@ -34,3 +34,32 @@ Tests:
         # A misspelled indentStyle is rejected instead of silently meaning tabs.
         run_args: "-c bad_indent_style.json format_unformatted.duck"
         ExitCode: 1
+  format-many-files:
+    # Several files in one call. Paths in the output are absolute, so the cases strip the
+    # directory before comparing.
+    Env:
+      DIT_TMP_DIR: "@{new_tmp_dir}"
+    PostCase: "@{cleanup_tmp_env}"
+    Cases:
+      many-stdout:
+        # Each output starts with a `==> <file> <==` header, with a blank line between files.
+        Run: "@{duckfmt_path} format_unformatted.duck format_formatted.duck | sed 's#^==> .*/#==> #'"
+        Output:
+          File: format_many_files.out
+      many-check-ok:
+        # --check succeeds only when every file is formatted.
+        run_args: "-k format_formatted.duck format_formatted.duck"
+      many-check-fail-reports-all:
+        # --check goes on after the first unformatted file and reports each of them.
+        Run: "set -o pipefail; @{duckfmt_path} -k format_unformatted.duck format_formatted.duck
+          format_unformatted.duck 2>&1 >/dev/null | sed 's#^.*/##'"
+        ExitCode: 1
+        Output:
+          String: "format_unformatted.duck: not formatted\nformat_unformatted.duck: not formatted\n"
+      many-in-place:
+        # --in-place rewrites every file.
+        Run: "cp format_unformatted.duck $DIT_TMP_DIR/a.duck && cp format_unformatted.duck $DIT_TMP_DIR/b.duck
+          && @{duckfmt_path} -i $DIT_TMP_DIR/a.duck $DIT_TMP_DIR/b.duck
+          && diff format_formatted.duck $DIT_TMP_DIR/a.duck && diff format_formatted.duck $DIT_TMP_DIR/b.duck"
+        Output:
+          String: ""
