@@ -153,14 +153,15 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @brief Rounds a size up to a multiple of the default alignment of that size, so that
-		 * consecutive values of the type (e.g. array elements) all stay aligned.
+		 * @brief Rounds a size up to a multiple of the default alignment of that size.
+		 *
+		 * For layouts aligned by size whose raw size is not a multiple of that alignment, e.g. a
+		 * VariantTypeLayout (`i8 | (i8, i8, i8, i8, i8)`: 13 bytes, 8-aligned, so 16). Without it,
+		 * the next array element or class field would be misaligned, and the LLVM backend, which
+		 * places class fields with its own struct layout, would disagree with TSL.
 		 */
-		static Bits roundUpToDefaultAlignment(const Bits size_in_bits) {
-			return base::bytes2bits(base::bytesRoundTo(
-				base::bits2bytesRoundUp(size_in_bits), computeDefaultAlignment(size_in_bits)
-			));
-		}
+		[[nodiscard]]
+		static Bits roundUpToDefaultAlignment(Bits size_in_bits);
 
 		/**
 		 * @brief Compute the default alignment for a type from its size in bits.

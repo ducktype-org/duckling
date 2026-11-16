@@ -361,6 +361,12 @@ namespace compiler::tsl {
 		  source_type(source_type),
 		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
 
+	Bits TypeLayoutABC::roundUpToDefaultAlignment(const Bits size_in_bits) {
+		return bytes2bits(base::bytesRoundTo(
+			base::bits2bytesRoundUp(size_in_bits), computeDefaultAlignment(size_in_bits)
+		));
+	}
+
 	StaticArrayTypeLayout::StaticArrayTypeLayout(
 		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
 	):
