@@ -29,8 +29,11 @@ Tests:
       format-missing-config:
         # A non-existent config path errors cleanly instead of crashing.
         run_args: "-c does_not_exist.json format_unformatted.duck"
-        ExitCode: 1
+        ExitCode: 2
       format-bad-indent-style:
         # A misspelled indentStyle is rejected instead of silently meaning tabs.
         run_args: "-c bad_indent_style.json format_unformatted.duck"
-        ExitCode: 1
+        ExitCode: 2
+      format-check-lexer-error:
+        run_args: "-k format_lexer_error.duck"
+        ExitCode: 2
