@@ -1495,7 +1495,7 @@ private:
 		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function->body->statements.size(), 8);
+		ASSERT_EQUAL(function->body->statements.size(), 9);
 
 		auto& statements = function->body->statements;
 
@@ -1570,10 +1570,9 @@ private:
 		}
 
 		{
-			// @TODO: #1412 fix dealias
-			// auto& var = get_var_ref(6);
-			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
-			// ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
+			auto& var = get_var_ref(6);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
+			ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
 		}
 
 		// debug print test just for cov and to see if it does not throw:
@@ -3461,7 +3460,7 @@ private:
 	}
 
 	void testAliases() {
-		// @TODO: #1412 make this less of a stub once proper dealias lands
+		// @TODO: #4082 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
 		// `using M.c;` brings `c` in under its own name, so looking `c` up in the root scope
