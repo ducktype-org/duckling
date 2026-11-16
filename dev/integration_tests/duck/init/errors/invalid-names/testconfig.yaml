@@ -18,9 +18,8 @@ Tests:
         test-cmd: duck init std
         ExitCode: 0
         Err:
-          String: "warning: initializing a project with name \\`std\\` can have weird effects, as it's one of the packages from the Duckling standard library\n"
-        Output:
           Run: |+
+            echo "warning: initializing a project with name \`std\` can have weird effects, as it's one of the packages from the Duckling standard library" &&
             echo "info: successfully created a new project \`std\` at \`$DIT_TMP_DIR/std\`"
 
   keyword:
@@ -30,7 +29,6 @@ Tests:
         test-cmd: duck init self
         ExitCode: 0
         Err:
-          String: "warning: initializing a project with name \\`self\\` can have weird effects, as it's a Duckling keyword\n"
-        Output:
           Run: |+
+            echo "warning: initializing a project with name \`self\` can have weird effects, as it's a Duckling keyword" &&
             echo "info: successfully created a new project \`self\` at \`$DIT_TMP_DIR/self\`"

@@ -27,13 +27,6 @@ use crate::QuackResult;
 
 type BoxError = Box<dyn Error + Send + Sync + 'static>;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-/// Where to display an error.
-pub enum DisplayPlace {
-    StdOut,
-    StdErr,
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 /// A type of a single [`Error`] on the errors' stack.
 ///
@@ -60,7 +53,6 @@ pub enum ErrorType {
 /// Quackpack error type, contains a stack of messages for the user.
 pub struct QuackError {
     errors: Vec<BoxError>,
-    display_place: DisplayPlace,
 }
 
 impl QuackError {
@@ -70,17 +62,8 @@ impl QuackError {
     where
         T: Error + Send + Sync + 'static,
     {
-        let dyn_err = &err as &dyn Error;
-        let display_place = if let Some(clap_err) = dyn_err.downcast_ref::<clap::Error>()
-            && !clap_err.use_stderr()
-        {
-            DisplayPlace::StdOut
-        } else {
-            DisplayPlace::StdErr
-        };
         Self {
             errors: vec![Box::new(err)],
-            display_place,
         }
     }
 
@@ -109,21 +92,14 @@ impl QuackError {
     }
 
     /// Gets the exit code of the error.
+    ///
+    /// It is `0` when the error is a clap message which is not a failure (e.g. `--help` or
+    /// `--version`), and `1` otherwise.
     pub fn exit_code(&self) -> i32 {
-        match self.display_place {
-            DisplayPlace::StdOut => 0,
-            DisplayPlace::StdErr => 1,
+        match self.downcast_ref_in_chain::<clap::Error>() {
+            Some(clap_err) if !clap_err.use_stderr() => 0,
+            _ => 1,
         }
-    }
-
-    /// Sets the display place.
-    pub fn set_display_place(&mut self, display_place: DisplayPlace) {
-        self.display_place = display_place;
-    }
-
-    /// Gets the display place.
-    pub fn display_place(&self) -> &DisplayPlace {
-        &self.display_place
     }
 
     /// Iterates over the messages stack, from the top to the bottom.

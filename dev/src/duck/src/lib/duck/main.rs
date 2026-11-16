@@ -12,22 +12,18 @@ use tracing::info;
 
 use crate::duck::util::indent::indent;
 use crate::duck::util::terminal::Terminal;
-use crate::util::error::{DisplayPlace, ErrorExt, ErrorType, InternalError};
-use crate::{DuckContext, QuackError, QuackResult, qp_bail_internal};
+use crate::util::error::{ErrorExt, ErrorType, InternalError};
+use crate::{DuckContext, QuackError};
 
 /// Actual main entry point for the duck-binary.
 pub fn main() {
     setup_logger();
     let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,
-        Err(err) => {
-            let stdout = Terminal::stdout();
-            let stderr = Terminal::stderr();
-            print_error_and_exit(err, &stdout, &stderr);
-        }
+        Err(err) => print_error_and_exit(err, &Terminal::stderr()),
     };
     if let Err(e) = crate::duck::driver::run::run(&mut ctx) {
-        print_error_and_exit(e, ctx.stdout(), ctx.stderr())
+        print_error_and_exit(e, ctx.stderr())
     }
 }
 
@@ -54,49 +50,10 @@ pub fn setup_logger() {
     info!("started at {}", Local::now());
 }
 
-/// Print returned [`QuackError`] to the appropriate [`Terminal`] and exit.
-fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal) -> ! {
-    if matches!(error.display_place(), DisplayPlace::StdOut) {
-        if let Err(e) = print_message(&error, stdout) {
-            print_error_and_exit(e, stdout, stderr)
-        }
-    } else {
-        print_error(&error, stderr);
-    }
+/// Print returned [`QuackError`] to stderr and exit.
+fn print_error_and_exit(error: QuackError, stderr: &Terminal) -> ! {
+    print_error(&error, stderr);
     std::process::exit(error.exit_code())
-}
-
-/// Print [`QuackError`] as a message.
-fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
-    // NOTE: We intentionally ignore any printing errors here.
-    for error in msgs.sources() {
-        let msg = if let Some(clap_error) = error.downcast_ref::<clap::Error>() {
-            // Clap internally adds a trailing newline, remove it.
-            clap_error
-                .render()
-                .ansi()
-                .to_string()
-                .trim_end()
-                .to_string()
-        } else {
-            error.to_string()
-        };
-        match error.error_type() {
-            ErrorType::Hint => {
-                let _ = term.hint(msg);
-            }
-            ErrorType::Note => {
-                let _ = term.note(msg);
-            }
-            ErrorType::BareMessage => {
-                let _ = term.print(msg);
-            }
-            error_type => qp_bail_internal!(
-                "errors and internal errors should not be printed on stdout; {error_type:?}"
-            ),
-        }
-    }
-    Ok(())
 }
 
 /// Print [`QuackError`] as an error.

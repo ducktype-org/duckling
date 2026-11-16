@@ -15,7 +15,7 @@ Tests:
       dependency:
         expected-manifest: only-b
         test-cmd: duck -C foo remove a
-        Output:
+        Err:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
             echo "info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
@@ -31,7 +31,7 @@ Tests:
       dev-dependency-flag:
         expected-manifest: only-a
         test-cmd: duck -C foo remove b --dev
-        Output:
+        Err:
           Run: |+
             echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
             echo "info: successfully removed dev dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"

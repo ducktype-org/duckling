@@ -48,7 +48,7 @@ Tests:
     Cases:
       build:
         test-cmd: duck -C root build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 4 packages, 0 were downloaded, 4 were already present
             info: successfully synchronized venv \`root\`

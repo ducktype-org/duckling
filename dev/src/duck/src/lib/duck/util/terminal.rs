@@ -8,13 +8,13 @@ use std::fmt::{self, Display};
 use std::io::{Read, Write};
 use std::str::FromStr;
 
-use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
+use console::{Term, WithoutAnsi, colors_enabled_stderr, style};
 use dialoguer::{Input, Password};
 
 use crate::duck::util::indent::indent;
 use crate::{QuackResult, QuackResultContext};
 
-/// A struct which is responsible for printing to stdout/stderr.
+/// A struct which is responsible for printing to stderr.
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
@@ -91,15 +91,6 @@ impl Terminal {
     /// Set whether colors are enabled on this terminal.
     pub fn set_color(&mut self, colors_enabled: bool) {
         self.colors_enabled = colors_enabled;
-    }
-
-    /// Get the default [`Terminal`] for stdout.
-    pub fn stdout() -> Terminal {
-        Terminal {
-            term: Term::stdout(),
-            verbosity: Verbosity::Default,
-            colors_enabled: colors_enabled(),
-        }
     }
 
     /// Get the default [`Terminal`] for stderr.

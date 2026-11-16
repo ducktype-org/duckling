@@ -13,7 +13,5 @@ Tests:
         Err:
           String: |+
             warning: feature \`xd\` implies itself [self_implying_features]
-        Output:
-          String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`

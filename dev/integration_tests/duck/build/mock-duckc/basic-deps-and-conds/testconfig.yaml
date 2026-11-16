@@ -21,7 +21,7 @@ Tests:
     Cases:
       without-bar:
         test-cmd: duck -C foo build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -29,7 +29,7 @@ Tests:
       with-bar:
         test-cmd: duck -C foo build --features use-bar
         features: use-bar
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
