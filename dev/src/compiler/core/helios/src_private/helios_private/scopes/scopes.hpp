@@ -28,7 +28,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_query/generic_pst_query_key.hpp>
 #include <helios/scope_id.hpp>
-#include <helios_private/lookup/lookup_chains.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 
 #include <base/types/bit256.hpp>
 
@@ -155,7 +155,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<LookupChains>>, ({})
+		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	/**

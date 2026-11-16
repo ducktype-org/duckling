@@ -33,7 +33,7 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_chains.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -515,7 +515,7 @@ namespace compiler::helios::code {
 			case lexer::Token::Round: {
 				const auto lookup_qresult
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
-				UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
@@ -617,7 +617,7 @@ namespace compiler::helios::code {
 			auto name  = ident->getName().unlock(query_ctx)->unwrap();
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_CREF(
-				CRef<LookupChains> found = &,
+				CRef<LookupResult> found = &,
 				HInterface::ofScopeWithParents(scope).lookup(query_ctx, name)
 			);
 			if (not found->isSingle()) {
@@ -715,7 +715,7 @@ namespace compiler::helios::code {
 						  { .accessing_scope
 			                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 					  );
-			UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup_qresult);
+			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			if (lookup_result->isEmpty() and lookup_result->hasInaccessible()) {
 				query_ctx.log<dia::PlaceholderError>(
 					"Accessed value is not visible from here.",
@@ -836,7 +836,7 @@ namespace compiler::helios::code {
 							  { .accessing_scope
 				                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 						  );
-				UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
@@ -903,7 +903,7 @@ namespace compiler::helios::code {
 				auto lookup_qresult
 					= HInterface::ofSymbol(query_ctx, namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
-				UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
@@ -967,7 +967,7 @@ namespace compiler::helios::code {
 					expr_access->getName().unlock(query_ctx)->unwrap(),
 					{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 				);
-				UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup_qresult);
+				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
@@ -1144,7 +1144,7 @@ namespace compiler::helios::code {
 					auto lookup_qresult
 						= HInterface::ofScopeWithParents(scope).lookup(ctx, base::StrID("self"));
 
-					UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup_qresult);
+					UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 					if (lookup_result->isEmpty()) {
 						ctx.log<dia::PlaceholderError>(
 							"Method call without `self` argument.", call_expr->getStablePosition()

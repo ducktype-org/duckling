@@ -847,21 +847,21 @@ private:
 			= compiler::helios::HInterface::ofTypeInstance(simple_class_abstract_type);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			using compiler::helios::LookupChains;
-			CRef<LookupChains> a_result
+			using compiler::helios::LookupResult;
+			CRef<LookupResult> a_result
 				= &h_interface.lookup(ctx, base::StrID("pub_field"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
 			auto a_symbol = a_result->leaves().at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
-			CRef<LookupChains> get_a_result
+			CRef<LookupResult> get_a_result
 				= &h_interface.lookup(ctx, base::StrID("getPub"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
 			auto get_a_symbol = get_a_result->leaves().at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
-			CRef<LookupChains> empty_result
+			CRef<LookupResult> empty_result
 				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 		});
@@ -879,10 +879,10 @@ private:
 		auto i32 = st(getIntegralTypeNoContext(32, Signed));
 		auto f32 = st(getFloatTypeNoContext(32));
 		query::utils::withContextDo([&](query::Context& ctx) {
-			using compiler::helios::LookupChains;
+			using compiler::helios::LookupResult;
 			auto str = st(compiler::tsh::getCharSliceType(ctx));
 
-			CRef<LookupChains> first_result
+			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
 			ASSERT_TRUE(first_result->isSingle());
 			auto first_symbol = first_result->leaves().at(0);
@@ -891,7 +891,7 @@ private:
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)->valueOrThrow(), i32
 			);
 
-			CRef<LookupChains> second_result
+			CRef<LookupResult> second_result
 				= &h_interface.lookup(ctx, base::StrID("_2"))->valueOrPanic();
 			ASSERT_TRUE(second_result->isSingle());
 			auto second_symbol = second_result->leaves().at(0);
@@ -900,7 +900,7 @@ private:
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)->valueOrThrow(), f32
 			);
 
-			CRef<LookupChains> third_result
+			CRef<LookupResult> third_result
 				= &h_interface.lookup(ctx, base::StrID("_3"))->valueOrPanic();
 			ASSERT_TRUE(third_result->isSingle());
 			auto third_symbol = third_result->leaves().at(0);
@@ -909,7 +909,7 @@ private:
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)->valueOrThrow(), str
 			);
 
-			CRef<LookupChains> empty_result
+			CRef<LookupResult> empty_result
 				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 

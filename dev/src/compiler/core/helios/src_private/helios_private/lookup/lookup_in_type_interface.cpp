@@ -108,14 +108,14 @@ namespace compiler::helios {
 		 * @brief Look a name up in the interface of a type, keeping the elements the given kind of
 		 * access can reach, and splitting them by whether the lookup's scope may use them.
 		 */
-		LookupChains lookupInTypeInterface(query::Context& ctx, const KeyOf_LookupInType& key) {
+		LookupResult lookupInTypeInterface(query::Context& ctx, const KeyOf_LookupInType& key) {
 			auto        interface = key.type.getInterface(ctx);
 			const auto& elements  = interface->getElementsWithName(key.name);
 
 			base::Optional<tsh::ClassAbstractType> accessing_class
 				= enclosingClassOf(ctx, key.accessing_scope);
 
-			LookupChains result;
+			LookupResult result;
 			for (const auto& element: elements) {
 				if (not isReachable(key.mode, element)) continue;
 
@@ -129,7 +129,7 @@ namespace compiler::helios {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupInType, query::QResult<LookupChains>) {
+	struct IMPLEMENT_QUERY(QueryLookupInType, query::QResult<LookupResult>) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
 			return lookupInTypeInterface(ctx, key);
 		}

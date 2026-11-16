@@ -12,8 +12,8 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_chains.hpp>
 #include <helios_private/lookup/lookup_in_type_interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -114,7 +114,7 @@ private:
 		);
 	}
 
-	static CRef<LookupChains> lookupInType(
+	static CRef<LookupResult> lookupInType(
 		query::Context&         ctx,
 		AbstractType            type,
 		std::string_view        name,
@@ -245,12 +245,12 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto instance_lookup
-				= [&](std::string_view name, ScopeID scope) -> const LookupChains& {
+				= [&](std::string_view name, ScopeID scope) -> const LookupResult& {
 				return HInterface::ofTypeInstance(fixture.base)
 				    .lookup(ctx, base::StrID(name), { .accessing_scope = scope })
 				    ->valueOrThrow();
 			};
-			auto meta_lookup = [&](std::string_view name, ScopeID scope) -> const LookupChains& {
+			auto meta_lookup = [&](std::string_view name, ScopeID scope) -> const LookupResult& {
 				return HInterface::ofTypeMeta(fixture.base)
 				    .lookup(ctx, base::StrID(name), { .accessing_scope = scope })
 				    ->valueOrThrow();

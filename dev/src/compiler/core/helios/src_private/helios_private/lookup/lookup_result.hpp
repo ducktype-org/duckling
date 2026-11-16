@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 /**
- * @file lookup_chains.hpp
+ * @file lookup_result.hpp
  */
 
 #pragma once
@@ -52,7 +52,7 @@ namespace compiler::helios {
 	/**
 	 * @brief The symbols found by a lookup, every path being one found symbol.
 	 */
-	struct LookupChains final {
+	struct LookupResult final {
 		std::vector<LookupPath> paths;
 
 		/**

@@ -51,7 +51,7 @@ namespace compiler::helios {
 		}
 	}
 
-	CRef<query::QResult<LookupChains>> HInterface::lookup(
+	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
 		variant_match(data) {
@@ -98,7 +98,7 @@ namespace compiler::helios {
 		base::StrID                name,
 		AdditionalLookupParameters params
 	) const {
-		UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup(ctx, name, params));
+		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
 		if (lookup_result->isSingle()) return &lookup_result->paths.front();
 
 		logNotSingleLookup(ctx, error_args, name, *lookup_result);
@@ -139,7 +139,7 @@ namespace compiler::helios {
 		query::Context&        ctx,
 		const LookupErrorArgs& error_args,
 		base::StrID            name,
-		const LookupChains&    result
+		const LookupResult&    result
 	) {
 		CORE_ASSERT(not result.isSingle(), "The lookup found a single symbol");
 

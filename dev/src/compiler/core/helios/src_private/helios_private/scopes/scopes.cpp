@@ -24,7 +24,7 @@
 #include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup.hpp>
-#include <helios_private/lookup/lookup_chains.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
@@ -781,7 +781,7 @@ namespace compiler::helios {
 			     static_cast<u64>(with_parents) };
 	}
 
-	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupChains>) {
+	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupResult>) {
 		/**
 		 * @brief Hash of a path, skipping the symbols above its leaf that do not change what the
 		 * path gives access to: the `using`/`import` symbols and the modules, namespaces and
@@ -834,14 +834,14 @@ namespace compiler::helios {
 		 * there, the ones found through a wildcard of a module or namespace being preceded by the
 		 * `using`/`import` symbol.
 		 */
-		static query::QResult<LookupChains> searchScope(
+		static query::QResult<LookupResult> searchScope(
 			Context&                     ctx,
 			const QKey&                  key,
 			ScopeID                      start,
 			std::unordered_set<ScopeID>& visited,
 			SeenPaths&                   seen
 		) {
-			LookupChains found;
+			LookupResult found;
 			if (not visited.insert(start).second) return found;
 
 			const auto add_path = [&found, &seen](LookupPath path) {
@@ -866,7 +866,7 @@ namespace compiler::helios {
 				variant_match(target) {
 					variant_case(TargetScope, target_scope) {
 						UNPACK_QRESULT_MOVE(
-							LookupChains in_scope =,
+							LookupResult in_scope =,
 							searchScope(ctx, key, target_scope.scope, visited, seen)
 						);
 						for (LookupPath& in_scope_path: in_scope.paths) {
@@ -878,7 +878,7 @@ namespace compiler::helios {
 					variant_case(TargetExpr, target_expr) { add_path(target_expr.chain); }
 					variant_case(WildcardExpr, wildcard) {
 						UNPACK_QRESULT_CREF(
-							CRef<LookupChains> inner = &,
+							CRef<LookupResult> inner = &,
 							HInterface::ofSymbol(ctx, wildcard.chain.leaf())
 								.lookup(ctx, key.name, { .with_wildcards = key.with_wildcards })
 						);
@@ -898,7 +898,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			std::unordered_set<ScopeID> visited;
 			SeenPaths                   seen;
-			LookupChains                result;
+			LookupResult                result;
 
 			const auto search = [&](ScopeID scope) -> query::QResult<std::monostate> {
 				UNPACK_QRESULT_MOVE(auto found =, searchScope(ctx, key, scope, visited, seen));

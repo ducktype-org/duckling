@@ -61,7 +61,7 @@ namespace compiler::helios::test_utils {
 				                        : HInterface::ofSymbol(ctx, result.back())
 				                              .lookup(ctx, name, { .with_wildcards = false });
 
-				CRef<LookupChains> symbol = &lookup_qresult->valueOrThrow();
+				CRef<LookupResult> symbol = &lookup_qresult->valueOrThrow();
 				CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 
 				result.pushBack(symbol->uniqueLeaf());

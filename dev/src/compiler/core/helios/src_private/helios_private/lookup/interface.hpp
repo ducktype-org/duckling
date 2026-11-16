@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "lookup_chains.hpp"
+#include "lookup_result.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/access/source_position_locked.hpp>
@@ -78,7 +78,7 @@ namespace compiler::helios {
 		 * @param params Additional parameters for the lookup.
 		 * @return The result of the lookup.
 		 */
-		virtual CRef<query::QResult<LookupChains>> lookup(
+		virtual CRef<query::QResult<LookupResult>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 		) = 0;
 	};
@@ -165,7 +165,7 @@ namespace compiler::helios {
 		/**
 		 * Performs a lookup in a given interface.
 		 */
-		CRef<query::QResult<LookupChains>> lookup(
+		CRef<query::QResult<LookupResult>> lookup(
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
 		) const;
 
@@ -240,6 +240,6 @@ namespace compiler::helios {
 		query::Context&        ctx,
 		const LookupErrorArgs& error_args,
 		base::StrID            name,
-		const LookupChains&    result
+		const LookupResult&    result
 	);
 }

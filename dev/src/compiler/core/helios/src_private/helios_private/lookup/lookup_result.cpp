@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "lookup_chains.hpp"
+#include "lookup_result.hpp"
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -69,26 +69,26 @@ namespace compiler::helios {
 		return std::ranges::distance(accessedSymbols(*this)) > 1;
 	}
 
-	bool LookupChains::isEmpty() const { return paths.empty(); }
+	bool LookupResult::isEmpty() const { return paths.empty(); }
 
-	bool LookupChains::isSingle() const { return paths.size() == 1; }
+	bool LookupResult::isSingle() const { return paths.size() == 1; }
 
-	bool LookupChains::hasInaccessible() const { return not inaccessible.empty(); }
+	bool LookupResult::hasInaccessible() const { return not inaccessible.empty(); }
 
-	std::vector<SymID> LookupChains::leaves() const {
+	std::vector<SymID> LookupResult::leaves() const {
 		return paths | std::views::transform(&LookupPath::leaf) | std::ranges::to<std::vector>();
 	}
 
-	SymID LookupChains::uniqueLeaf() const {
+	SymID LookupResult::uniqueLeaf() const {
 		CORE_ASSERT(isSingle(), "Expected a single symbol in the lookup result");
 		return paths.front().leaf();
 	}
 
-	bool LookupChains::constructsAccessExpr() const {
+	bool LookupResult::constructsAccessExpr() const {
 		return std::ranges::any_of(paths, &LookupPath::constructsAccessExpr);
 	}
 
-	query::QResult<std::vector<Box<code::Expr>>> LookupChains::asExpressions(
+	query::QResult<std::vector<Box<code::Expr>>> LookupResult::asExpressions(
 		query::Context& ctx, code::ElementOrigin origin
 	) const {
 		std::vector<Box<code::Expr>> expressions;

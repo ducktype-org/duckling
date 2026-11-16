@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "lookup_chains.hpp"
+#include "lookup_result.hpp"
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
