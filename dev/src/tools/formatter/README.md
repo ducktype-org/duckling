@@ -173,15 +173,19 @@ ignored, missing keys keep their default:
 ## The `duckfmt` CLI
 
 ```
-duckfmt <file> [options]
+duckfmt <file> [file...] [options]
   -c, --config <path>   JSON formatter config file
-  -i, --in-place        write the result back to the file instead of stdout
-  -k, --check           report on stderr; exit non-zero if the file is not formatted
+  -i, --in-place        write the result back to the files instead of stdout
+  -k, --check           report on stderr; exit non-zero if a file is not formatted
 ```
 
-By default it prints the formatted file to stdout. `--check` is the CI-friendly
-mode: stdout stays empty, the name of an unformatted file goes to stderr, and the
-exit code reports whether the file is already formatted. Unlike `duckc`,
+By default it prints the formatted file to stdout. With several files, each
+output starts with a `==> <file> <==` header line and two outputs are separated
+by a blank line; a single file is printed without a header. `--check` is the
+CI-friendly mode: stdout stays empty, the name of every unformatted file goes to
+stderr, and the exit code reports whether all files are already formatted.
+Every file is processed even when one of them fails, and the exit code is
+non-zero if any of them did. Unlike `duckc`,
 `duckfmt` does not initialize the compiler driver — it only tokenizes and
 formats.
 
