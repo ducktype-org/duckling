@@ -110,14 +110,13 @@ namespace compiler::helios {
 				);
 				auto name = name_locked.unlock(ctx);
 				UNPACK_QRESULT_MOVE(
-					CRef<LookupChains> step =,
-					interface.lookupExpectUnique(
+					CRef<LookupPath> step =,
+					interface.lookupExpectSingle(
 						name->getStablePosition(), ctx, name->unwrap(), { .with_wildcards = false }
 					)
 				);
-				const auto& step_symbols = step->paths.front().symbols;
-				base::appendToVector(chain.symbols, step_symbols);
-				start = step->uniqueLeaf();
+				base::appendToVector(chain.symbols, step->symbols);
+				start = step->leaf();
 			}
 			return chain;
 		}

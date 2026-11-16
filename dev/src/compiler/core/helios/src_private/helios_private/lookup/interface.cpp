@@ -92,45 +92,68 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::QResult<CRef<LookupChains>> HInterface::lookupExpectUnique(
+	query::QResult<CRef<LookupPath>> HInterface::lookupExpectSingle(
 		const dia::StablePosition  error_position,
 		query::Context&            ctx,
 		base::StrID                name,
 		AdditionalLookupParameters params
 	) const {
 		UNPACK_QRESULT_CREF(CRef<LookupChains> lookup_result = &, lookup(ctx, name, params));
-		if (lookup_result->isSingle()) return lookup_result;
+		if (lookup_result->isSingle()) return &lookup_result->paths.front();
 
-		if (lookup_result->isEmpty() and lookup_result->hasInaccessible()) {
+		logNotSingleLookup(ctx, error_position, name, *lookup_result);
+		return query::Failed();
+	}
+
+	query::QResult<SymID> HInterface::lookupExpectSingleSym(
+		const dia::StablePosition  error_position,
+		query::Context&            ctx,
+		base::StrID                name,
+		AdditionalLookupParameters params
+	) const {
+		UNPACK_QRESULT_MOVE(
+			CRef<LookupPath> path =, lookupExpectSingle(error_position, ctx, name, params)
+		);
+		return path->leaf();
+	}
+
+	void logNotSingleLookup(
+		query::Context&           ctx,
+		const dia::StablePosition error_position,
+		base::StrID               name,
+		const LookupChains&       result
+	) {
+		CORE_ASSERT(not result.isSingle(), "The lookup found a single symbol");
+
+		if (result.isEmpty() and result.hasInaccessible()) {
 			auto msg = makeBox<InaccessibleSymbolLookupError>(error_position);
-			for (auto& hidden: lookup_result->inaccessible) {
+			for (auto& hidden: result.inaccessible) {
 				if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
 					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
 					msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
 				}
 			}
 			ctx.log(std::move(msg));
-			return query::Failed();
+			return;
 		}
 
-		if (lookup_result->isEmpty()) {
+		if (result.isEmpty()) {
 			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Symbol '", name, "' not found in lookup"),
 				error_position,
 				"",
 				"symbol lookup here"
 			);
-			return query::Failed();
+			return;
 		}
 
 		auto msg = makeBox<ShadowedVariableLookupError>(error_position);
-		for (auto& leaf: lookup_result->leaves()) {
+		for (auto& leaf: result.leaves()) {
 			if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
 				auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
 				msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 			}
 		}
 		ctx.log(std::move(msg));
-		return query::Failed();
 	}
 }

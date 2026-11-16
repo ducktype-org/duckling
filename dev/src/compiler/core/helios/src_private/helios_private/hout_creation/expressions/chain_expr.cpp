@@ -613,12 +613,17 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
-			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				ident->getStablePosition(), query_ctx, ident->getName().unlock(query_ctx)->unwrap()
-			);
+			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			auto name  = ident->getName().unlock(query_ctx)->unwrap();
 			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_MOVE(CRef<LookupChains> found =, lookup_result);
+			UNPACK_QRESULT_CREF(
+				CRef<LookupChains> found = &,
+				HInterface::ofScopeWithParents(scope).lookup(query_ctx, name)
+			);
+			if (not found->isSingle()) {
+				logNotSingleLookup(query_ctx, ident->getStablePosition(), name, *found);
+				return query::Failed();
+			}
 			if (found->isAccessedThroughValue()) {
 				UNPACK_QRESULT_MOVE(auto exprs =, found->asExpressions(query_ctx, pstOrigin(ident)));
 				return ChainState::ofExpr(std::move(exprs.front()));
@@ -792,16 +797,16 @@ namespace compiler::helios::code {
 			SymID namespace_like_symbol, pst::Access<pst::expr::AccessExpr> expr_access
 		) -> query::QResult<ChainState> {
 			const auto& lookup_result = HInterface::ofSymbol(query_ctx, namespace_like_symbol)
-			                                .lookupExpectUnique(
+			                                .lookupExpectSingleSym(
 												expr_access->getStablePosition(),
 												query_ctx,
 												expr_access->getName().unlock(query_ctx)->unwrap()
 											);
 			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_MOVE(CRef<LookupChains> found =, lookup_result);
+			UNPACK_QRESULT_MOVE(const SymID found =, lookup_result);
 			auto whole_expr_origin
 				= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
-			return processNamespaceOrValue(found->uniqueLeaf(), whole_expr_origin, expr_access);
+			return processNamespaceOrValue(found, whole_expr_origin, expr_access);
 		}
 
 		/**
@@ -927,17 +932,17 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::AccessExpr> expr_access)
 			-> query::QResult<ChainState> {
-			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectUnique(
+			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectSingleSym(
 				expr_access->getStablePosition(),
 				query_ctx,
 				expr_access->getName().unlock(query_ctx)->unwrap(),
 				{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 			);
 			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_MOVE(CRef<LookupChains> found =, lookup_result);
+			UNPACK_QRESULT_MOVE(const SymID found =, lookup_result);
 
 			auto whole_expr_origin = pstOriginOrdered(type.origin, expr_access);
-			return processNamespaceOrValue(found->uniqueLeaf(), whole_expr_origin, expr_access);
+			return processNamespaceOrValue(found, whole_expr_origin, expr_access);
 		}
 
 		/**
@@ -1085,14 +1090,15 @@ namespace compiler::helios::code {
 			pst::Access<pst::LangElement> pst_elem
 		) -> query::QResult<base::Box<Expr>> {
 			// @TODO: #2135 handle ambiguity in class scopes
-			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
-			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				pst_elem->getStablePosition(), ctx, base::StrID("self")
+			auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
+			UNPACK_QRESULT_MOVE(
+				const SymID self_symbol =,
+				HInterface::ofScopeWithParents(scope).lookupExpectSingleSym(
+					pst_elem->getStablePosition(), ctx, base::StrID("self")
+				)
 			);
-			UNPACK_QRESULT_MOVE(CRef<LookupChains> self_lookup =, sym_list_result);
 
-			auto self_expr
-				= makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_lookup->uniqueLeaf());
+			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_symbol);
 			auto self_type = self_expr->expression_type.getSymbolType().getType();
 
 			auto fields = self_type.getInterface(query_ctx)->getFieldsView();

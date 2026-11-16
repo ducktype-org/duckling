@@ -149,11 +149,21 @@ namespace compiler::helios {
 		 * @brief Performs a lookup that has to find exactly one symbol.
 		 *
 		 * If the lookup does not find exactly one symbol, an error is reported at
-		 * @p error_position.
+		 * @p error_position (@see logNotSingleLookup).
 		 *
-		 * @return The result of the lookup, owned by the cache of the lookup query.
+		 * @return The path of the found symbol, owned by the cache of the lookup query.
 		 */
-		query::QResult<CRef<LookupChains>> lookupExpectUnique(
+		query::QResult<CRef<LookupPath>> lookupExpectSingle(
+			dia::StablePosition error_position,
+			query::Context&     ctx,
+			base::StrID         name,
+			AdditionalLookupParameters = {}
+		) const;
+
+		/**
+		 * @brief The symbol found by @ref lookupExpectSingle.
+		 */
+		query::QResult<SymID> lookupExpectSingleSym(
 			dia::StablePosition error_position,
 			query::Context&     ctx,
 			base::StrID         name,
@@ -198,4 +208,17 @@ namespace compiler::helios {
 			return HInterface{ CustomInterface{ std::move(custom) } };
 		}
 	};
+
+	/**
+	 * @brief Logs at @p error_position why the lookup of @p name, which gave @p result, did not
+	 * find exactly one symbol: the symbols of that name are inaccessible, there are none, or there
+	 * are several.
+	 * @warning Panics if @p result is single.
+	 */
+	void logNotSingleLookup(
+		query::Context&     ctx,
+		dia::StablePosition error_position,
+		base::StrID         name,
+		const LookupChains& result
+	);
 }
