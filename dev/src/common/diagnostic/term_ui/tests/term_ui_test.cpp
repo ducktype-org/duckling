@@ -7,15 +7,20 @@
 #include <base/collections/hashmap.hpp>
 
 #include <diagnostic/core/term_ui_view.hpp>
+#include <diagnostic/term_ui/code_section.hpp>
+#include <diagnostic/term_ui/display_width.hpp>
 #include <diagnostic/term_ui/printers.hpp>
 #include <tester/tester.hpp>
+
+#include <regex>
+#include <sstream>
 
 using namespace term_ui;
 using namespace dia::term_ui_view;
 
 // NOLINTBEGIN(missing-field-initializers)
 
-constexpr dia::CodeLocation SAMPLE_LOCATION{
+const dia::CodeLocation SAMPLE_LOCATION{
 	.file = "main.dk", .line = 15, .column = 16, .end_line = {}, .end_column = {}
 };
 
@@ -190,17 +195,117 @@ Message sample5() {
 	return m;
 }
 
+CodeSection pointedSection(std::string before, std::string pointed, std::string after) {
+	auto ptrs = base::HashMap<u64, PointerMessage>();
+	ptrs.put(0, PointerMessage{ .text = "here", .type = StyleType::Error, .priority = 0 });
+
+	auto line = CodeLine(
+		2,
+		{ CodePiece{ .text = std::move(before), .pointer_ids = {} },
+	      CodePiece{ .text = std::move(pointed), .pointer_ids = { 0 } },
+	      CodePiece{ .text = std::move(after), .pointer_ids = {} } }
+	);
+
+	return CodeSection(SAMPLE_LOCATION, { line }, ptrs);
+}
+
 // NOLINTEND(missing-field-initializers)
 
+std::string renderPlain(const CodeSection& section) {
+	std::stringstream out;
+	print(section, out);
+	return std::regex_replace(out.str(), std::regex("\x1b\\[[0-9;]*m"), "");
+}
 
 class TermUITester: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS TermUITester
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(mainTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(mainTest);
+		TESTER_ADD_TEST(displayWidthTest);
+		TESTER_ADD_TEST(asciiHighlightTest);
+		TESTER_ADD_TEST(emojiHighlightTest);
+		TESTER_ADD_TEST(polishHighlightTest);
+		TESTER_ADD_TEST(cjkHighlightTest);
+		TESTER_ADD_TEST(tabHighlightTest);
+		TESTER_ADD_TEST(combiningMarkHighlightTest);
+	}
 
 private:
+	void displayWidthTest() {
+		ASSERT_EQUAL(0u, displayWidth(""));
+		ASSERT_EQUAL(3u, displayWidth("abc"));
+		ASSERT_EQUAL(4u, displayWidth("łódź"));
+		ASSERT_EQUAL(4u, displayWidth("中文"));
+		ASSERT_EQUAL(2u, displayWidth("😃"));
+		ASSERT_EQUAL(1u, displayWidth("e\u0301"));
+		ASSERT_EQUAL(2u, displayWidth("\u2764\uFE0F"));
+		ASSERT_EQUAL(TAB_WIDTH + 1, displayWidth("\ta"));
+		ASSERT_EQUAL(1u, displayWidth("\xff"));
+	}
+
+	void asciiHighlightTest() {
+		ASSERT_EQUAL_PRINT(
+			"  > main.dk:15:16\n"
+			"  | \n"
+			"2 | let x = foo(y);\n"
+			"  |         ^^^ here\n",
+			renderPlain(pointedSection("let x = ", "foo", "(y);"))
+		);
+	}
+
+	void emojiHighlightTest() {
+		ASSERT_EQUAL_PRINT(
+			"  > main.dk:15:16\n"
+			"  | \n"
+			"2 | fun 😀(😃: 😛) -> 😛 {\n"
+			"  |        ^^ here\n",
+			renderPlain(pointedSection("fun 😀(", "😃", ": 😛) -> 😛 {"))
+		);
+	}
+
+	void polishHighlightTest() {
+		ASSERT_EQUAL_PRINT(
+			"  > main.dk:15:16\n"
+			"  | \n"
+			"2 | let żółw = źdźbło;\n"
+			"  |            ^^^^^^ here\n",
+			renderPlain(pointedSection("let żółw = ", "źdźbło", ";"))
+		);
+	}
+
+	void cjkHighlightTest() {
+		ASSERT_EQUAL_PRINT(
+			"  > main.dk:15:16\n"
+			"  | \n"
+			"2 | \"中文\" + 名字;\n"
+			"  |          ^^^^ here\n",
+			renderPlain(pointedSection("\"中文\" + ", "名字", ";"))
+		);
+	}
+
+	void tabHighlightTest() {
+		ASSERT_EQUAL_PRINT(
+			"  > main.dk:15:16\n"
+			"  | \n"
+			"2 |     return x;\n"
+			"  |            ^ here\n",
+			renderPlain(pointedSection("\treturn ", "x", ";"))
+		);
+	}
+
+	void combiningMarkHighlightTest() {
+		ASSERT_EQUAL_PRINT(
+			"  > main.dk:15:16\n"
+			"  | \n"
+			"2 | cafe\u0301 + x\n"
+			"  |        ^ here\n",
+			renderPlain(pointedSection("cafe\u0301 + ", "x", ""))
+		);
+	}
+
 	void mainTest() {
 		print(sample1(), std::cerr);
 		std::cerr << '\n';
