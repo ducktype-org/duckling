@@ -1,7 +1,7 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
-  echo "  links: sqlite" >> foo/quackconfig.yaml
+  echo "  external-libs: [sqlite]" >> foo/quackconfig.yaml
   echo "profiles:
     dvm:
       dvm-bytecode: true" >> foo/quackconfig.yaml
