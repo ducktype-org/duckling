@@ -434,9 +434,12 @@ namespace compiler::backend_llvm {
 			}
 			variant_case(tsl::VariantTypeLayout, variant_layout) {
 				// Variants lower to a literal struct (structurally uniqued by LLVM), mirroring the
-				// TSL layout: { tag, [pad x i8], [payload x i8], [0 x iA] }. The empty array of
-				// `iA` (A = the TSL alignment) takes no space but gives the struct the TSL
-				// alignment, so classes holding a variant get their TSL field offsets from LLVM.
+				// TSL layout: { tag, [pad x i8], [payload x i8], [0 x iA] }.
+				// A class struct gets its TSL alignment from its typed members. Here the payload
+				// is untyped bytes, so without the empty array of `iA` (A = the TSL alignment)
+				// the struct would only be as aligned as its tag. That array takes no space, but
+				// it gives the struct the TSL alignment, so a variant inside a class lands at its
+				// TSL field offset.
 				const usize data_offset = variant_layout.getDataOffset().asInt();
 				const usize tag_bytes   = base::bits2bytes(variant_layout.getTagSize()).asInt();
 				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
