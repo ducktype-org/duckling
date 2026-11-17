@@ -13,7 +13,8 @@ if(ENABLE_COVERAGE)
 	# since the compiler, the VM and many tests are multithreaded.
 	# -fprofile-exclude-files skips counters in system headers (std, LLVM): the coverage report
 	# drops them anyway, and their shared atomic counters make the instrumented binaries much slower.
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic -fprofile-exclude-files=^/usr/")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
+	add_compile_options("-fprofile-exclude-files=^/usr/|^${CMAKE_BINARY_DIR}/")
 
 	find_program(FASTCOV fastcov REQUIRED)
 
