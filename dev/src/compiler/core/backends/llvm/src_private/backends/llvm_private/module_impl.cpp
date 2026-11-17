@@ -78,18 +78,25 @@ namespace compiler::backend_llvm {
 				auto features = "";
 
 				llvm::TargetOptions opt;
-				this->target_machine
-					= Box<llvm::TargetMachine>::fromPointer(target->createTargetMachine(
-						target_triple,
-						cpu,
-						features,
-						opt,
-						llvm::Reloc::PIC_,
-						std::nullopt,
-						toLLVMCodeGenOptLevel(
-							global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
-						)
-					));
+				auto machine = Box<llvm::TargetMachine>::fromPointer(target->createTargetMachine(
+					target_triple,
+					cpu,
+					features,
+					opt,
+					llvm::Reloc::PIC_,
+					std::nullopt,
+					toLLVMCodeGenOptLevel(
+						global_state::getBackendOptions()->llvm_backend->llvm_optimization_level
+					)
+				));
+				// AArch64 selects instructions with GlobalISel at -O0, but GlobalISel falls back to
+				// SelectionDAG for each function it cannot select (e.g. `llvm.fptosi.sat`). On
+				// Apple arm64 the two selectors place small stack arguments differently (1-byte vs
+				// 4-byte slots), so a GlobalISel caller and a SelectionDAG callee would disagree on
+				// where a by-value aggregate's stack part is. With GlobalISel off, every function
+				// uses the same argument lowering, at every optimization level.
+				machine->setGlobalISel(false);
+				this->target_machine = std::move(machine);
 				return this->target_machine.refMut().toOpt().value();
 			}
 		}

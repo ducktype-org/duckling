@@ -1,0 +1,27 @@
+import core.builtins.*;
+
+# 16 one-byte fields: passed by value, the first 8 go in registers and the last 8 on the stack.
+class Bytes16 {
+	a0: i8; a1: i8; a2: i8; a3: i8; a4: i8; a5: i8; a6: i8; a7: i8;
+	b0: i8; b1: i8; b2: i8; b3: i8; b4: i8; b5: i8; b6: i8; b7: i8;
+}
+
+# Reads every byte in its own decimal digit position, so a misplaced byte changes the result.
+fun lastBytes(v: Bytes16) -> i64 = {
+	return v.b0 as i64 + v.b1 as i64 * 10i64 + v.b2 as i64 * 100i64 + v.b3 as i64 * 1000i64
+		+ v.b4 as i64 * 10000i64 + v.b5 as i64 * 100000i64 + v.b6 as i64 * 1000000i64
+		+ v.b7 as i64 * 10000000i64;
+}
+
+# The same, plus a float-to-int cast in the callee. On arm64 at -O0 that cast is selected by a
+# different instruction selector than the caller, which must still agree on the stack arguments.
+fun lastBytesWithCast(v: Bytes16, scale: f64) -> i64 = {
+	return lastBytes(v) * (scale as i64);
+}
+
+fun main() -> i64 = {
+	let v = Bytes16(9i8, 9i8, 9i8, 9i8, 9i8, 9i8, 9i8, 9i8, 1i8, 2i8, 3i8, 4i8, 5i8, 6i8, 7i8, 8i8);
+	builtin_output_i64(lastBytes(v));
+	builtin_output_i64(lastBytesWithCast(v, 2.0));
+	return 0i64;
+}
