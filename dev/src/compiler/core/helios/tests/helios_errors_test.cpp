@@ -61,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
+		TESTER_ADD_TEST(testOperatorNamedLikeNonFunction);
 		TESTER_ADD_TEST(testCopyMoveErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
@@ -2424,6 +2425,34 @@ private:
 				var g: i64 = 5;
 				fun moveGlobal() = {
 					move g;
+				}
+			)",
+			{ msg },
+			1
+		);
+	}
+
+	void testOperatorNamedLikeNonFunction() {
+		const std::string_view msg = "Call failed because no matching functions were found.";
+
+		// `0 x` applies the suffix operator `x`, but the only `x` in scope is a variable.
+		checkForErrorOnCompileModule(
+			R"(
+				fun suffixNamedLikeVariable() = {
+					var x = 0;
+					var y = 0 x;
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// The same when the name belongs to a class.
+		checkForErrorOnCompileModule(
+			R"(
+				class Cls { x: i64; }
+				fun suffixNamedLikeClass() = {
+					var y = 0 Cls;
 				}
 			)",
 			{ msg },

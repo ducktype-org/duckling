@@ -160,18 +160,20 @@ namespace {
 	}
 
 	/**
-	 * @brief Filters a list of function symbols based on their operatoriness.
-	 * @note This throws when a given symbol cannot be associated with a function declaration.
+	 * @brief Keeps only the function symbols with the given operatoriness.
+	 * @note Symbols that are not functions (e.g. a variable named like the operator) are
+	 * removed too. This throws when the declaration of a function symbol cannot be obtained.
 	 * @param ctx The context of the query
-	 * @param function_syms The list of function symbols to filter
+	 * @param syms The looked-up symbols to filter
 	 * @param opiness The operatoriness to filter by
 	 */
 	void filterFunctionsByOperatoriness(
 		query::Context&                              ctx,
-		std::vector<SymID>&                          function_syms,
+		std::vector<SymID>&                          syms,
 		const HOUTFunctionDeclaration::Operatoriness opiness
 	) {
-		base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
+		base::filterVectorInPlace(syms, [&](const SymID& sym) {
+			if (not isFunctionLike(kind(sym))) return false;
 			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
 		});
 	}
