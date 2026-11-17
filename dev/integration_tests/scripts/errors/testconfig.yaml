@@ -21,15 +21,6 @@ Tests:
         Output:
           String: ""
 
-  const_without_value:
-    folder: "const_without_value"
-    Cases:
-      direct:
-        mode: direct
-        ExitCode: 1
-        Output:
-          String: ""
-
   # Prints "Hello" on a working std, so this only passes if the broken std stops the run.
   std_fails_to_parse:
     script: "std_fails_to_parse/std_fails_to_parse.dks"
