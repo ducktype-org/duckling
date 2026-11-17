@@ -14,6 +14,8 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -38,6 +40,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <lexer/token_common.hpp>
@@ -469,8 +472,46 @@ namespace compiler::helios {
 		}
 
 		void visitFun(pst::Access<pst::Fun> function) override {
+			failNotSupportedInFunction("Nested functions are", function);
+		}
+
+		void visitFunDecl(pst::Access<pst::FunDecl> fun_decl) override {
+			failNotSupportedInFunction("Nested function declarations are", fun_decl);
+		}
+
+		void visitClass(pst::Access<pst::Class> class_decl) override {
+			failNotSupportedInFunction("Classes declared inside a function are", class_decl);
+		}
+
+		void visitNamespace(pst::Access<pst::Namespace> namespace_decl) override {
+			failNotSupportedInFunction("Namespaces declared inside a function are", namespace_decl);
+		}
+
+		void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_stmt) override {
+			failNotSupportedInFunction("Templates declared inside a function are", template_stmt);
+		}
+
+		void visitPattern(pst::Access<pst::Pattern> pattern) override {
+			failNotSupportedInFunction("Patterns declared inside a function are", pattern);
+		}
+
+		void visitImport(pst::Access<pst::Import> import) override {
+			failNotSupportedInFunction("`import` statements inside a function are", import);
+		}
+
+		void visitSpecifierBlock(pst::Access<pst::SpecifierBlock> block) override {
+			failNotSupportedInFunction("Specifier blocks inside a function are", block);
+		}
+
+	private:
+		/**
+		 * @brief Logs a not-yet-implemented error `<what> not supported yet.` at `stmt` and marks
+		 * the statement as failed.
+		 */
+		template<class Element>
+		void failNotSupportedInFunction(std::string_view what, pst::Access<Element> stmt) {
 			ctx.log<dia::NotYetImplementedCodeError>(
-				"Nested functions are not supported yet.", function->getStablePosition()
+				base::strConcat(what, " not supported yet."), stmt->getStablePosition()
 			);
 			is_failed = true;
 		}

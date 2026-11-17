@@ -75,6 +75,7 @@ public:
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
 		TESTER_ADD_TEST(testStatementsOutsideFunctions);
+		TESTER_ADD_TEST(testDeclarationsInsideFunctions);
 	}
 
 protected:
@@ -3278,6 +3279,27 @@ private:
 			{ "Only declarations are allowed at module level." },
 			1
 		);
+	}
+
+	void testDeclarationsInsideFunctions() {
+		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
+			{ "class Z { v: i64 = 0; }",
+			  "Classes declared inside a function are not supported yet." },
+			{ "import std.math;", "`import` statements inside a function are not supported yet." },
+			{ "namespace N { const a = 1; }",
+			  "Namespaces declared inside a function are not supported yet." },
+			{ "template(T: type) fun g(x: T) -> T = x;",
+			  "Templates declared inside a function are not supported yet." },
+			{ "export { const a = 1; }",
+			  "Specifier blocks inside a function are not supported yet." },
+		};
+
+		for (const auto& [declaration, message]: cases)
+			checkForErrorOnCompileModule(
+				base::strConcat("fun main() -> i64 = { ", declaration, " return 0; }"),
+				{ message },
+				1
+			);
 	}
 };
 
