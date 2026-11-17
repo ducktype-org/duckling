@@ -24,6 +24,7 @@
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -812,12 +813,19 @@ namespace compiler::helios {
 				variant_case(PstImplementedSemantics, pst_data) {
 					const auto pst
 						= pst_data.getElement().unlock(ctx).dynamicCast<pst::Const>().value();
+					// The parser accepts `const x: T;`, but a const needs a value.
+					const auto value_holder = pst->getValue();
+					if (!value_holder.has_value()) {
+						ctx.log<ConstWithoutValueError>(pst->getStablePosition());
+						return query::Failed();
+					}
+
 					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
 					// Get the coerced HOUT expression
 					const auto hout_qresult = getHoutOfExprWithExpectedType(
 						ctx,
-						pst->getValue().value().unlock(ctx)->getExpr(),
+						value_holder.value().unlock(ctx)->getExpr(),
 						type,
 						pst->getName().unlock(ctx)->getStablePosition()
 					);

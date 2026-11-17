@@ -912,6 +912,45 @@ private:
 				1
 			);
 
+			// The parser accepts a const without a value, so HELIOS must report it.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				namespace n { const g: bool; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					const g: i64;
+					return 0;
+				}
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			// Using the const must not report the missing value a second time.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+				const h: i64 = g + 1;
+				fun main() -> i64 = { return h; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -2860,6 +2899,9 @@ private:
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
 				ss, dia::StablePosition::fakePosition()
 			);
+
+			// ConstWithoutValueError
+			testDiagnosticMessage<ConstWithoutValueError>(ss, dia::StablePosition::fakePosition());
 		});
 	}
 
