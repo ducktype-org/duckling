@@ -1729,9 +1729,9 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 
 			/// Floating point comparisons ///
-			// @note: We use Oxx instead of Uxx for the comparisons to be "ordered". This basically
-			// means if any of the operands is NaN the result of the operation is always false. The
-			// `unordered` alternative returns true if any of the operands is NaN.
+			// @note: All comparisons but `!=` use Oxx ("ordered"): they are false if any operand
+			// is NaN. `!=` uses UNE ("unordered"): it is true if any operand is NaN, so `a != b`
+			// is always `not (a == b)`, as in IEEE 754 and the DVM.
 			case FloatLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOLT)
 			case FloatGt:
@@ -1743,7 +1743,7 @@ namespace compiler::backend_llvm {
 			case FloatEq:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOEQ)
 			case FloatNeq:
-				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpONE)
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpUNE)
 
 			/// Logic ///
 			case BooleanAnd:

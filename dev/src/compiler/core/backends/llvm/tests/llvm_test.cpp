@@ -554,8 +554,8 @@ entry:
 			"Expected 'fcmp oeq' for f64 =="
 		);
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(fcmp\s+one\s+double)" }),
-			"Expected 'fcmp one' for f64 !="
+			std::regex_search(ir, std::regex{ R"(fcmp\s+une\s+double)" }),
+			"Expected 'fcmp une' for f64 !=, true when an operand is NaN"
 		);
 	}
 
