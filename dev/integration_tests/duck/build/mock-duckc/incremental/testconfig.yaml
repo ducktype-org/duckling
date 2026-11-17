@@ -18,7 +18,7 @@ Tests:
     Cases:
       nothing-changes:
         test-cmd: duck -C foo build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -26,7 +26,7 @@ Tests:
             info: reusing previous build artifacts for \`foo\`
       foo-changed:
         test-cmd: echo "\n" >> foo/src/src.dk && duck -C foo build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -34,7 +34,7 @@ Tests:
             info: compiling \`foo\`...
       bar-changed:
         test-cmd: echo "\n" >> bar/src/src.dk && duck -C foo build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -42,7 +42,7 @@ Tests:
             info: compiling \`foo\`...
       layout-changed:
         test-cmd: duck -C foo build --shared-artifacts
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -53,7 +53,7 @@ Tests:
           mv foo/src/src.dk foo/src/rename.dk &&
           mv foo/src/rename.dk foo/src/src.dk &&
           duck -C foo build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -62,7 +62,7 @@ Tests:
       duckc-version-changed:
         # Set mock duckc version to `2.0.0` (in Precase it is `1.0.0`).
         test-cmd: MOCK_DUCKC_VERSION=2.0.0 duck -C foo build
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`

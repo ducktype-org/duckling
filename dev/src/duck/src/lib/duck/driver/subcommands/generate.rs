@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+use std::io::{self, Write};
+
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 use clap_complete::{Generator, Shell, generate};
 
@@ -25,17 +27,18 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `generate` subcommand.
-pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+pub fn execute(_ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let Some(generator) = matches.get_one::<Shell>("generator").cloned() else {
         qp_bail_internal!("no generator; this should be guarded by the parser")
     };
-    print_completions(generator, cli(), ctx);
+    print_completions(generator, cli());
     Ok(())
 }
 
 /// Print shell completion file to the stdout.
-fn print_completions<G: Generator>(generator: G, mut cli: Command, ctx: &DuckContext) {
-    let mut stdout = ctx.stdout();
+///
+/// This is the only exception from printing to stderr, and it also ignores `--quiet`.
+fn print_completions<G: Generator>(generator: G, mut cli: Command) {
     let name = cli.get_name().to_string();
-    generate(generator, &mut cli, name, &mut stdout);
+    generate(generator, &mut cli, name, io::stdout().lock().by_ref());
 }

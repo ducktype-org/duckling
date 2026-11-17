@@ -7,19 +7,19 @@ Tests:
     Cases:
       expose-freezefile:
         test-cmd: duck init --expose-freezefile foo
-        Output:
+        Err:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         post-check-action: expose-freezefile
       ephemeral:
         test-cmd: duck init --ephemeral foo
-        Output:
+        Err:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         post-check-action: ephemeral
       local-storage:
         test-cmd: duck init --local-storage foo
-        Output:
+        Err:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         post-check-action: local-storage

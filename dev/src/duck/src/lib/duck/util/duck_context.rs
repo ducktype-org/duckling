@@ -21,8 +21,7 @@ use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 pub struct DuckContext {
-    stdout: Terminal,
-    stderr: Terminal,
+    term: Terminal,
     duck_cfg: DuckCfg,
     cwd: PathBuf,
     user_home: PathBuf,
@@ -52,15 +51,13 @@ impl DuckContext {
     pub fn new() -> QuackResult<Self> {
         trace!("linked against `{:#?}`", curl::Version::get());
         let env = Env::default();
-        let stdout = Terminal::stdout();
-        let stderr = Terminal::stderr();
+        let term = Terminal::default();
         let user_home = home_dir().context("failed to get the user home directory")?;
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
         let config = DuckCfg::new(&duck_home)?;
         let cwd = current_dir().context("failed to get the current working directory")?;
         Ok(Self {
-            stdout,
-            stderr,
+            term,
             duck_cfg: config,
             cwd,
             user_home,
@@ -70,24 +67,14 @@ impl DuckContext {
         })
     }
 
-    /// Get the [`Terminal`] for stdout.
-    pub(in crate::duck) fn stdout(&self) -> &Terminal {
-        &self.stdout
+    /// Get the [`Terminal`] for printing.
+    pub(in crate::duck) fn term(&self) -> &Terminal {
+        &self.term
     }
 
-    /// Get the [`Terminal`] for stdout.
-    pub(in crate::duck) fn stdout_mut(&mut self) -> &mut Terminal {
-        &mut self.stdout
-    }
-
-    /// Get the [`Terminal`] for stderr.
-    pub(in crate::duck) fn stderr(&self) -> &Terminal {
-        &self.stderr
-    }
-
-    /// Get the [`Terminal`] for stderr.
-    pub(in crate::duck) fn stderr_mut(&mut self) -> &mut Terminal {
-        &mut self.stderr
+    /// Get the mutable [`Terminal`] for printing.
+    pub(in crate::duck) fn term_mut(&mut self) -> &mut Terminal {
+        &mut self.term
     }
 
     /// Get the [`DuckCfg`].
@@ -150,13 +137,9 @@ impl DuckContext {
     // Printing functions
     // ------------------
     forward_printing_helpers! {
-        stderr,
+        term,
         error error_verbose
         warning warning_verbose
-    }
-
-    forward_printing_helpers! {
-        stdout,
         print print_verbose
         info info_verbose
         hint hint_verbose
@@ -165,13 +148,13 @@ impl DuckContext {
 
     /// Get a [`String`] input from the user.
     pub fn prompt_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
-        self.stdout.prompt_once(prompt)
+        self.term.prompt_once(prompt)
     }
 
     /// Get a [`String`] input from the user as password.
     /// This means that the inputted letters are invisible.
     pub fn password_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
-        self.stdout.password_once(prompt)
+        self.term.password_once(prompt)
     }
 
     /// Get a [`String`] input from the user, with a default value supplied.
@@ -180,7 +163,7 @@ impl DuckContext {
         prompt: impl Into<String>,
         default: String,
     ) -> QuackResult<String> {
-        self.stdout.prompt_once_with_default(prompt, default)
+        self.term.prompt_once_with_default(prompt, default)
     }
 
     /// Prompt user for an input until it can be correctly deserialized.
@@ -189,7 +172,7 @@ impl DuckContext {
         T: ToString + FromStr + Clone,
         <T as std::str::FromStr>::Err: std::fmt::Display,
     {
-        self.stdout.prompt_until_valid(prompt)
+        self.term.prompt_until_valid(prompt)
     }
 
     /// Prompt user for an input until it can be correctly deserialized, with a default value supplied.
@@ -202,17 +185,12 @@ impl DuckContext {
         T: ToString + FromStr + Clone,
         <T as std::str::FromStr>::Err: std::fmt::Display,
     {
-        self.stdout.prompt_until_valid_with_default(prompt, default)
-    }
-
-    /// Get the verbosity of the stdout handler.
-    pub fn verbosity(&self) -> Verbosity {
-        self.stdout.verbosity()
+        self.term.prompt_until_valid_with_default(prompt, default)
     }
 
     /// Get the verbosity of the stderr handler.
-    pub fn verbosity_stderr(&self) -> Verbosity {
-        self.stderr.verbosity()
+    pub fn verbosity(&self) -> Verbosity {
+        self.term.verbosity()
     }
 }
 
@@ -225,13 +203,10 @@ impl Default for DuckContext {
         let env = Default::default();
         let user_home = home_dir().unwrap();
         let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
-        let mut stdout = Terminal::stdout();
-        let mut stderr = Terminal::stderr();
-        stdout.set_verbosity(Verbosity::Quiet);
-        stderr.set_verbosity(Verbosity::Quiet);
+        let mut term = Terminal::default();
+        term.set_verbosity(Verbosity::Quiet);
         Self {
-            stdout,
-            stderr,
+            term,
             duck_cfg: DuckCfg::new(&duck_home).unwrap(),
             env,
             cwd: current_dir().unwrap(),
