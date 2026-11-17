@@ -3285,12 +3285,17 @@ private:
 		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
 			{ "class Z { v: i64 = 0; }",
 			  "Classes declared inside a function are not supported yet." },
-			{ "import std.math;", "`import` statements inside a function are not supported yet." },
+			{ "import std.math;",
+			  "`import` statements are not allowed inside a function. Move it to the module "
+			  "level." },
 			{ "namespace N { const a = 1; }",
 			  "Namespaces declared inside a function are not supported yet." },
 			{ "template(T: type) fun g(x: T) -> T = x;",
 			  "Templates declared inside a function are not supported yet." },
 			{ "export { const a = 1; }",
+			  "`export` blocks are not allowed inside a function. Only module-level declarations "
+			  "can be exported." },
+			{ "debug { const a = 1; }",
 			  "Specifier blocks inside a function are not supported yet." },
 		};
 

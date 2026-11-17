@@ -46,6 +46,8 @@
 #include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 
+#include <algorithm>
+
 namespace compiler::helios {
 
 	// Forward declaration for processBlock so HoutStmtMaker can call it.
@@ -496,10 +498,22 @@ namespace compiler::helios {
 		}
 
 		void visitImport(pst::Access<pst::Import> import) override {
-			failNotSupportedInFunction("`import` statements inside a function are", import);
+			failNotAllowedInFunction(
+				"`import` statements are not allowed inside a function. Move it to the module "
+				"level.",
+				import
+			);
 		}
 
 		void visitSpecifierBlock(pst::Access<pst::SpecifierBlock> block) override {
+			if (hasSpecifier(block, pst::Keyword::Export)) {
+				failNotAllowedInFunction(
+					"`export` blocks are not allowed inside a function. Only module-level "
+					"declarations can be exported.",
+					block
+				);
+				return;
+			}
 			failNotSupportedInFunction("Specifier blocks inside a function are", block);
 		}
 
@@ -514,6 +528,26 @@ namespace compiler::helios {
 				base::strConcat(what, " not supported yet."), stmt->getStablePosition()
 			);
 			is_failed = true;
+		}
+
+		/**
+		 * @brief Logs an error for a statement that is never allowed inside a function body (by
+		 * language design, not a missing feature) and marks the statement as failed.
+		 */
+		template<class Element>
+		void failNotAllowedInFunction(std::string message, pst::Access<Element> stmt) {
+			ctx.log<dia::PlaceholderError>(std::move(message), stmt->getStablePosition());
+			is_failed = true;
+		}
+
+		/**
+		 * @brief Tells whether `stmt` carries the specifier `keyword`.
+		 */
+		template<class Element>
+		bool hasSpecifier(pst::Access<Element> stmt, pst::Keyword keyword) {
+			return std::ranges::any_of(stmt->getSpecifiers(), [&](const auto& specifier) {
+				return specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap() == keyword;
+			});
 		}
 	};
 
