@@ -3,6 +3,5 @@ PreNode: ""
 SubDirs:
   - builtin-subcommands
   - errors
-  - messages-on-stderr
   - external-subcommands
   - version
