@@ -816,7 +816,7 @@ namespace compiler::helios {
 					// The parser accepts `const x: T;`, but a const needs a value.
 					const auto value_holder = pst->getValue();
 					if (!value_holder.has_value()) {
-						ctx.log<ImmutableVariableNoInitError>(pst->getStablePosition());
+						ctx.log<ConstWithoutValueError>(pst->getStablePosition());
 						return query::Failed();
 					}
 

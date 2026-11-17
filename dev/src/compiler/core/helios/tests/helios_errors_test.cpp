@@ -917,7 +917,7 @@ private:
 				R"(
 				const g: i64;
 			)",
-				{ "Immutable variables must have an initial value." },
+				{ "A const must have a value." },
 				1
 			);
 
@@ -925,7 +925,7 @@ private:
 				R"(
 				namespace n { const g: bool; }
 			)",
-				{ "Immutable variables must have an initial value." },
+				{ "A const must have a value." },
 				1
 			);
 
@@ -936,7 +936,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Immutable variables must have an initial value." },
+				{ "A const must have a value." },
 				1
 			);
 
@@ -947,7 +947,7 @@ private:
 				const h: i64 = g + 1;
 				fun main() -> i64 = { return h; }
 			)",
-				{ "Immutable variables must have an initial value." },
+				{ "A const must have a value." },
 				1
 			);
 
@@ -2899,6 +2899,9 @@ private:
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
 				ss, dia::StablePosition::fakePosition()
 			);
+
+			// ConstWithoutValueError
+			testDiagnosticMessage<ConstWithoutValueError>(ss, dia::StablePosition::fakePosition());
 		});
 	}
 
