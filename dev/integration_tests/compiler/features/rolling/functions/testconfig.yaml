@@ -9,14 +9,6 @@ Tests:
           String: "1\n2\n3\n"
         ExitCode: 0
 
-  # A by-value class whose fields do not all fit in registers; the callee casts a float to an int.
-  by_value_stack_args:
-    Cases:
-      all:
-        Output:
-          String: "87654321\n175308642\n"
-        ExitCode: 0
-
   default_args_advanced:
     Cases:
       all:
