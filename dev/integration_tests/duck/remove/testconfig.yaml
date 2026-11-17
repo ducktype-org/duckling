@@ -17,24 +17,24 @@ Tests:
         test-cmd: duck -C foo remove a
         Err:
           Run: |+
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            info: successfully removed dependency \`a\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       dev-dependency-no-flag-error:
         expected-manifest: all
         test-cmd: duck -C foo remove b
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: there is no dependency \`b\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`" &&
-            echo "" &&
-            echo "hint: if you want to remove a dev dependency use flag \`--dev\`"
+            echo "error: there is no dependency \`b\` in the project \`foo\` at \`$DIT_TMP_DIR/foo\`
+
+            hint: if you want to remove a dev dependency use flag \`--dev\`"
       dev-dependency-flag:
         expected-manifest: only-a
         test-cmd: duck -C foo remove b --dev
         Err:
           Run: |+
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`"
-            echo "info: successfully removed dev dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            info: successfully removed dev dependency \`b\` from the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       no-dependency-error:
         expected-manifest: all
         test-cmd: duck -C foo remove c

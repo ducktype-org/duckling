@@ -12,13 +12,13 @@ Tests:
         test-cmd: duck -C foo add --local ../a a
         Err:
           Run: |+
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            info: successfully added dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         expected-manifest: 1
       dev:
         test-cmd: duck -C foo add --dev --local ../a a
         Err:
           Run: |+
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added dev dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            info: successfully added dev dependency \`a\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         expected-manifest: 2

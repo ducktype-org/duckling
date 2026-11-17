@@ -19,8 +19,8 @@ Tests:
         ExitCode: 0
         Err:
           Run: |+
-            echo "warning: initializing a project with name \`std\` can have weird effects, as it's one of the packages from the Duckling standard library" &&
-            echo "info: successfully created a new project \`std\` at \`$DIT_TMP_DIR/std\`"
+            echo "warning: initializing a project with name \`std\` can have weird effects, as it's one of the packages from the Duckling standard library
+            info: successfully created a new project \`std\` at \`$DIT_TMP_DIR/std\`"
 
   keyword:
     Description: can initialise a project with a keyword name
@@ -30,5 +30,5 @@ Tests:
         ExitCode: 0
         Err:
           Run: |+
-            echo "warning: initializing a project with name \`self\` can have weird effects, as it's a Duckling keyword" &&
-            echo "info: successfully created a new project \`self\` at \`$DIT_TMP_DIR/self\`"
+            echo "warning: initializing a project with name \`self\` can have weird effects, as it's a Duckling keyword
+            info: successfully created a new project \`self\` at \`$DIT_TMP_DIR/self\`"
