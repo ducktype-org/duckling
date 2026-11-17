@@ -9,9 +9,11 @@ if (ENABLE_COVERAGE AND BUILD_TYPE_IS_OPTIMISED)
 endif()
 
 if(ENABLE_COVERAGE)
-	# --coverage -fprofile-update=atomic is needed, 
+	# --coverage -fprofile-update=atomic is needed,
 	# since the compiler, the VM and many tests are multithreaded.
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
+	# -fprofile-exclude-files skips counters in system headers (std, LLVM): the coverage report
+	# drops them anyway, and their shared atomic counters make the instrumented binaries much slower.
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic -fprofile-exclude-files=^/usr/")
 
 	find_program(FASTCOV fastcov REQUIRED)
 
