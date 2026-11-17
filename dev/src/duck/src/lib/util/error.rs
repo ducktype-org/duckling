@@ -92,9 +92,6 @@ impl QuackError {
     }
 
     /// Gets the exit code of the error.
-    ///
-    /// It is `0` when the error is a clap message which is not a failure (e.g. `--help` or
-    /// `--version`), and `1` otherwise.
     pub fn exit_code(&self) -> i32 {
         match self.downcast_ref_in_chain::<clap::Error>() {
             Some(clap_err) if !clap_err.use_stderr() => 0,

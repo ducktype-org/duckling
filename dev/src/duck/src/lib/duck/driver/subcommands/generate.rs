@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+use std::io::{self, Write};
+
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 use clap_complete::{Generator, Shell, generate};
 
@@ -35,9 +37,8 @@ pub fn execute(_ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
 
 /// Print shell completion file to the stdout.
 ///
-/// The completion script is the output of this command, not a message, so unlike everything else
-/// `duck` prints it goes to stdout and ignores `--quiet`.
+/// This is the only exception from printing to stderr, and it also ignores `--quiet`.
 fn print_completions<G: Generator>(generator: G, mut cli: Command) {
     let name = cli.get_name().to_string();
-    generate(generator, &mut cli, name, &mut std::io::stdout());
+    generate(generator, &mut cli, name, io::stdout().lock().by_ref());
 }

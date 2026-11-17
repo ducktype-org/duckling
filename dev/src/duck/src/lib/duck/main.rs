@@ -20,10 +20,10 @@ pub fn main() {
     setup_logger();
     let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,
-        Err(err) => print_error_and_exit(err, &Terminal::stderr()),
+        Err(err) => print_error_and_exit(err, &Terminal::default()),
     };
     if let Err(e) = crate::duck::driver::run::run(&mut ctx) {
-        print_error_and_exit(e, ctx.stderr())
+        print_error_and_exit(e, ctx.term())
     }
 }
 
@@ -50,9 +50,9 @@ pub fn setup_logger() {
     info!("started at {}", Local::now());
 }
 
-/// Print returned [`QuackError`] to stderr and exit.
-fn print_error_and_exit(error: QuackError, stderr: &Terminal) -> ! {
-    print_error(&error, stderr);
+/// Print returned [`QuackError`] and exit.
+fn print_error_and_exit(error: QuackError, term: &Terminal) -> ! {
+    print_error(&error, term);
     std::process::exit(error.exit_code())
 }
 
