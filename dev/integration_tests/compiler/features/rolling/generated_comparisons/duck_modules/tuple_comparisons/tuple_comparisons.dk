@@ -40,6 +40,7 @@ fun main() -> i64 = {
     # equal and let the next element decide.
     let nan = math.sqrt(-1.0f64);
     show((nan, 1) == (nan, 1));  # 0
+    show((nan, 1) != (nan, 1));  # 1
     show((nan, 1) <= (nan, 1));  # 0
     show((1, nan) >= (1, nan));  # 0
     show((nan, 1) < (nan, 2));   # 1
