@@ -1,0 +1,70 @@
+class Person {}
+
+namespace Types {
+	class Inner {}
+
+	template(T: type)
+	class Boxed {
+		value: T
+	}
+}
+
+template(T: type)
+class Boxed {
+	value: T
+}
+
+template(N: i64, T: type)
+class Sized {
+	value: T
+}
+
+template(F: f64)
+class FloatT {}
+
+template(F: f32)
+class Float32T {}
+
+template(T: type)
+fun topFn(x: T) -> T = x;
+
+namespace FnNs {
+	template(T: type)
+	fun ident(x: T) -> T = x;
+
+	template(T: type)
+	fun other(x: T) -> T = x;
+
+	template(N: i64)
+	namespace Number {
+		const value = N;
+	}
+}
+
+import other_mod as om;
+
+var primitive: i64;
+var string: str;
+var const_slice: slice const char;
+var pointer: ptr Types.Inner;
+var many_pointer: manyptr i64;
+var c_pointer: cptr i64;
+var pointer_array: (ptr i64)[3];
+var array_pointer: ptr (i64[3]);
+var nested_array: i64[3][2];
+var qualified_nested_array: (const i64)[3][2];
+var variant_array: (i64 | bool)[3];
+var tuple: (i64, bool);
+var variant: i64 | bool;
+var class_value: Person;
+var template_value: Boxed[i64];
+var namespaced_template: Types.Boxed[Person];
+var value_template: Sized[3i64, bool];
+var tiny_float: FloatT[0.000000001];
+var another_tiny_float: FloatT[0.000000002];
+var simple_float: FloatT[1.5];
+var single_precision_float: Float32T[0.1f32];
+var round_trip_tiny_float: FloatT[1e-09f64];
+var other_class: om.Person;
+var other_nested_class: om.NS.Deep;
+var other_template_argument: Boxed[om.Person];

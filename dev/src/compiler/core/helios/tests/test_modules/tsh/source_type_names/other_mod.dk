@@ -1,0 +1,5 @@
+class Person {}
+
+namespace NS {
+	class Deep {}
+}
