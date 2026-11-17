@@ -139,6 +139,22 @@ namespace pst {
 		}
 
 		template<class T>
+		concept VarLike = std::same_as<T, Variable> || std::same_as<T, Const>;
+
+		template<class T>
+		requires VarLike<T> struct StmtFinder<T> {
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				u64 length
+					= 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(base + 1);
+				// A keyword in the mandatory name slot (e.g. `let fun = ...`) is a bad name, not
+				// the start of the next statement. Include it so the parser reports the keyword
+				// instead of a truncated-window sentinel.
+				if (length == 1 && state[base + 1].isKeyword()) length = 2;
+				return length;
+			}
+		};
+
+		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 
 		template<class T>

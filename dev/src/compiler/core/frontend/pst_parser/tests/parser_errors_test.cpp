@@ -659,7 +659,7 @@ class PSTErrorTests: public tester::TestSuite {
 		// Tests regarding the end of a fallback window.
 		{
 			auto parsed = pst::ParsedPST<>::fromContents(
-				"fun main() = {\n    var var = 10;\n}\n", pst::PSTType::Program
+				"fun main() = {\n    fun fun = 10;\n}\n", pst::PSTType::Program
 			);
 			const std::string text = renderedDiagnostics(parsed.ref());
 
@@ -669,7 +669,7 @@ class PSTErrorTests: public tester::TestSuite {
 			);
 			assertTrue(
 				text.find("the end of the statement") != std::string::npos,
-				base::strConcat("`var var = 10;` should describe the boundary, got:\n", text)
+				base::strConcat("`fun fun = 10;` should describe the boundary, got:\n", text)
 			);
 			assertTrue(
 				text.find("''") == std::string::npos,
@@ -677,7 +677,7 @@ class PSTErrorTests: public tester::TestSuite {
 			);
 			// The next token is real, so its diagnostic must keep its informative rendering.
 			assertTrue(
-				text.find("Operator '='") != std::string::npos,
+				text.find("Operator `=`") != std::string::npos,
 				base::strConcat("the second diagnostic lost its token text, got:\n", text)
 			);
 			// The caret must keep pointing at the offending token: line 2, column 9.

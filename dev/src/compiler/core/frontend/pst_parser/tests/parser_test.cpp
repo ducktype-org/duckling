@@ -1,4 +1,4 @@
-﻿// Copyright 2026 DuckType LLC
+// Copyright 2026 DuckType LLC
 //
 // This file is part of the Duckling project, licensed under the DuckType
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
@@ -85,6 +85,7 @@ public:
 		TESTER_ADD_TEST(testOperatorFun);
 		TESTER_ADD_TEST(testMutMethod);
 		TESTER_ADD_TEST(testSimpleExpand);
+		TESTER_ADD_TEST(testKeywordAsIdentifierName);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -239,6 +240,33 @@ private:
 	void testMissingSemiErr() {
 		auto pst = prepare(path("snippets/missing_semicolon_err.duck"));
 		assertTrue(pst->getLogger()->errorCount() == 3, "Expected 3 errors");
+	}
+
+	void testKeywordAsIdentifierName() {
+		auto pst = pst::ParsedPST<>::fromContents("let fun = 10;", pst::PSTType::Script);
+		std::stringstream ss;
+		pst->getLogger()->terminalPrint(ss);
+		const std::string rendered = ss.str();
+
+		assertTrue(
+			rendered.find("Keyword 'fun'") != std::string::npos,
+			"Expected `Keyword 'fun'` diagnostic"
+		);
+		assertTrue(
+			rendered.find("Sentinel") == std::string::npos, "Sentinel leaked into diagnostics"
+		);
+		assertTrue(
+			rendered.find("the end of the statement") == std::string::npos,
+			"Expected the offending keyword, not the fallback sentinel"
+		);
+
+		auto if_pst = pst::ParsedPST<>::fromContents("let if = 10;", pst::PSTType::Script);
+		std::stringstream if_ss;
+		if_pst->getLogger()->terminalPrint(if_ss);
+		assertTrue(
+			if_ss.str().find("Keyword 'if'") != std::string::npos,
+			"Normal-path keyword diagnostic was disturbed"
+		);
 	}
 
 	void testFunctionParameterVisitors() {
