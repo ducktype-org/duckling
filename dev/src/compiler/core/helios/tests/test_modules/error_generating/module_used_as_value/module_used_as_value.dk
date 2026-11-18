@@ -1,0 +1,4 @@
+import sub;
+
+let as_value = sub;
+var as_type: sub;

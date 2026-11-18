@@ -28,6 +28,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/errors.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/square_call_processing.hpp>
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
@@ -1439,6 +1440,16 @@ namespace compiler::helios::code {
 				);
 			}
 			if (this->current_state.isNamespaceLike()) {
+				// A module has no type, so it can be neither a value nor a type.
+				if (kind(this->current_state.getNamespaceLikeSymbol()) == SymbolKind::Module) {
+					auto position
+						= this->current_state.getNamespaceLikePstOrigin().getStablePosition();
+					query_ctx.log<ModuleUsedAsValueError>(
+						position.has_value() ? position.value()
+											 : whole_chain_pst->getStablePosition()
+					);
+					return query::Failed();
+				}
 				auto namespace_expr = makeBox<IdentifierExpr>(
 					query_ctx,
 					this->current_state.getNamespaceLikePstOrigin(),

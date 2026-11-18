@@ -99,4 +99,17 @@ namespace compiler::helios::code {
 		}
 	};
 
+	/** @brief A module name used where a value or a type is expected, e.g. `let r = math;`. */
+	class ModuleUsedAsValueError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "module_used_as_value" };
+		}
+
+	public:
+		ModuleUsedAsValueError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
 }

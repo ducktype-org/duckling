@@ -76,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testParseErrorsFailModule);
 		TESTER_ADD_TEST(testStatementsOutsideFunctions);
 		TESTER_ADD_TEST(testDeclarationsInsideFunctions);
+		TESTER_ADD_TEST(testModuleUsedAsValueOrType);
 	}
 
 protected:
@@ -2909,6 +2910,9 @@ private:
 
 			// ConstWithoutValueError
 			testDiagnosticMessage<ConstWithoutValueError>(ss, dia::StablePosition::fakePosition());
+
+			// ModuleUsedAsValueError
+			testDiagnosticMessage<ModuleUsedAsValueError>(ss, dia::StablePosition::fakePosition());
 		});
 	}
 
@@ -3311,6 +3315,20 @@ private:
 				{ message },
 				1
 			);
+	}
+
+	void testModuleUsedAsValueOrType() {
+		auto [module_id, _] = helios::test_utils::getModule(
+			fs::File(path("test_modules/error_generating/module_used_as_value"))
+		);
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+		assertTrue(result->hasFailed(), "Expected HOUT query to fail for a module used as a value.");
+		checkForError(
+			{ "A module cannot be used as a value or a type.",
+		      "A module cannot be used as a value or a type." },
+			2
+		);
 	}
 };
 
