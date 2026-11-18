@@ -42,8 +42,8 @@ pub struct InitOptions<'duck, 'matches> {
 }
 
 impl InitOptions<'_, '_> {
-    /// Get the initial project name.
-    fn initial_project_name(&self) -> QuackResult<Cow<'_, str>> {
+    /// Get the inferred project name.
+    fn inferred_project_name(&self) -> QuackResult<Cow<'_, str>> {
         let name = match self.explicit_name {
             Some(explicit) => Cow::Borrowed(explicit),
             None => self
@@ -56,12 +56,12 @@ impl InitOptions<'_, '_> {
     }
 
     /// Get the [`MetadataConfigBuilder`] from this [`InitOptions`].
-    fn metatadata_config_builder(&self) -> QuackResult<MetadataConfigBuilder<'_>> {
-        let initial_name = self.initial_project_name()?;
+    fn metadata_config_builder(&self) -> QuackResult<MetadataConfigBuilder<'_>> {
+        let inferred_name = self.inferred_project_name()?;
         if self.full {
-            MetadataConfigBuilder::new_from_prompts(self.ctx, initial_name)
+            MetadataConfigBuilder::new_from_prompts(self.ctx, inferred_name)
         } else {
-            Ok(MetadataConfigBuilder::default_with_name(initial_name))
+            Ok(MetadataConfigBuilder::default_with_name(inferred_name))
         }
     }
 }
@@ -162,7 +162,7 @@ const DEFAULT_GITIGNORE: &str = "\
 
 /// Initialize a new project with the given options.
 pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
-    let config = opts.metatadata_config_builder()?;
+    let config = opts.metadata_config_builder()?;
     validate_new_package_name(
         opts.ctx,
         &config.name,
@@ -195,7 +195,7 @@ fn has_inferred_name(opts: &InitOptions<'_, '_>, config: &MetadataConfigBuilder<
         return opts.explicit_name.is_none();
     }
     // Name has been created by prompt. Check if it matches the default.
-    opts.initial_project_name()
+    opts.inferred_project_name()
         .is_ok_and(|name| name == config.name)
 }
 
