@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(compilesBothBackendsWithoutLinking);
 		TESTER_ADD_TEST(preservesDumpsAfterFailure);
 		TESTER_ADD_TEST(runOnDVMPanicShowsScriptLines);
+		TESTER_ADD_TEST(reportsConstThatCannotBeLowered);
 	}
 
 protected:
@@ -116,6 +117,31 @@ private:
 		const auto module_name = repl::getScriptModuleID(script).str();
 		checkDumps(module_name);
 		ASSERT_TRUE(!std::filesystem::exists(artifacts_path.getPath() / (module_name + ".o")));
+	}
+
+	void reportsConstThatCannotBeLowered() {
+		// No backend can lower the initial value of a tuple constant yet. Every path reports it as
+		// an error instead of aborting, and writes no object code.
+		auto script = fs::FileManager::createRandomVirtualFile(
+			"const T: (i64, i64) = (5i64, 6i64);\nvar x = 1i64;"
+		);
+		global_state::setters::setScriptContext(script);
+		const auto                            module_name = repl::getScriptModuleID(script).str();
+		driver::options_types::LinkingOptions linking_options;
+		linking_options.no_link = true;
+		for (auto backend: { driver::BackendType::LLVM, driver::BackendType::DVM }) {
+			ASSERT_TRUE(driver::compileScript(backend, {}, linking_options).isBad());
+			const auto object_suffix = backend == driver::BackendType::LLVM ? ".o" : ".o.dbc";
+			// The artifact file may already be created, but nothing is written into it.
+			const auto object_path    = artifacts_path.getPath() / (module_name + object_suffix);
+			const bool no_object_code = !std::filesystem::exists(object_path)
+			                         || std::filesystem::file_size(object_path) == 0;
+			ASSERT_TRUE(no_object_code);
+		}
+
+		const auto run = driver::runScriptOnDVM(false);
+		ASSERT_TRUE(!run.has_value());
+		assertTrue(run.error().contains("Failed to compile script to DVM bytecode"), run.error());
 	}
 
 	void runOnDVMPanicShowsScriptLines() {
