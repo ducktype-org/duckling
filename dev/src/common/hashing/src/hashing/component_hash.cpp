@@ -13,16 +13,26 @@
 
 namespace hashing {
 
+	namespace {
+		/**
+		 * Walk the path from its last element to the root and return the names root first.
+		 * A template, so that it is only instantiated where `last_element` is a real list (Dev).
+		 */
+		template<typename LastElement>
+		std::vector<std::string> collectPathElements(const LastElement& last_element) {
+			std::vector<std::string> out;
+			for (auto link = &last_element; link->has_value(); link = &link->value()->parent)
+				out.push_back(link->value()->name);
+			std::ranges::reverse(out);
+			return out;
+		}
+	}
+
 	std::vector<std::string> ComponentHash::elements() const {
-#if defined(BUILD_TYPE_DEV)
-		std::vector<std::string> out;
-		for (auto link = &last_element; link->has_value(); link = &link->value()->parent)
-			out.push_back(link->value()->name);
-		std::ranges::reverse(out);
-		return out;
-#else
-		throw std::logic_error("ComponentHash::elements() is not available in Release build");
-#endif
+		if constexpr (base::IS_BUILD_TYPE_DEV)
+			return collectPathElements(last_element);
+		else
+			throw std::logic_error("ComponentHash::elements() is not available in Release build");
 	}
 
 	std::string ComponentHash::str() const {
@@ -44,8 +54,13 @@ namespace hashing {
 	}
 
 	void ComponentHash::addElementToPath([[maybe_unused]] std::string_view name) {
-#if defined(BUILD_TYPE_DEV)
-		last_element = base::makeSharedBox<PathElement>(std::string(name), std::move(last_element));
-#endif
+		if constexpr (base::IS_BUILD_TYPE_DEV) {
+			last_element
+				= base::makeSharedBox<PathElement>(std::string(name), std::move(last_element));
+		} else {
+			throw std::logic_error(
+				"ComponentHash::addElementToPath() is not available in Release build"
+			);
+		}
 	}
 }
