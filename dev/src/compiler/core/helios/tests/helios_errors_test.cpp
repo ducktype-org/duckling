@@ -1120,6 +1120,12 @@ private:
 				"match (v) { case x = 0i64; };",
 				{ "Match pattern bindings without a type constraint" }
 			);
+
+			// Literal patterns are not supported yet.
+			check_ref_match_error(
+				"match (v) { case 1i64 = 0i64; case _ = 1i64; };",
+				{ "Match pattern kind: Value Pattern." }
+			);
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
