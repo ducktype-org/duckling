@@ -9,6 +9,7 @@
 #include <base/types/ints.hpp>
 
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 
 namespace vm {
@@ -16,10 +17,22 @@ namespace vm {
 	class GIL final {
 	private:
 		/**
-		 * @brief Main GIL mutex for a process.
-		 * It stems from assumption that only one thread can be executing DVM code at the time.
+		 * @brief Guards `held`, `next_ticket` and `now_serving`. Held only briefly, never while
+		 * interpreting.
 		 */
-		std::timed_mutex gil;
+		std::mutex              state_mutex;
+		std::condition_variable state_cv;
+
+		/**
+		 * @brief Whether some thread currently has the right to interpret DVM code.
+		 */
+		bool held = false;
+
+		/**
+		 * @brief Ticket counters. Waiting threads get the GIL in the order they took tickets.
+		 */
+		u64 next_ticket = 0;
+		u64 now_serving = 0;
 
 		/**
 		 * @brief Count of how many times GIL was exchanged between threads.
@@ -40,11 +53,10 @@ namespace vm {
 
 
 	public:
-		~GIL();
-
 		/**
 		 * @brief Acquires GIL. After you call this function you always have right to interpret DVM
 		 * code.
+		 * @note Waiting threads get the GIL in the order they called this function.
 		 */
 		void acquire();
 

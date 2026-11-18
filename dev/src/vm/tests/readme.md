@@ -12,6 +12,7 @@ and starts with a comment saying what should be tested in it.
 | `common/` | `VmTestSuite` / `VmRuntimeTestSuite` / `VmLoaderTestSuite` / `VmParserTestSuite` helpers (`vm_tester_utils.{hpp,cpp}`). |
 | `common/programs/` | Fixtures shared by several suites (`while_true`, `spin_threads`, `breakpoint`, leaks, `fib_*`, ...). |
 | `utils/` | VM data structures that need no program (`persistent_structures`, `stable_obj_id_name_map`). |
+| `concurrency/` | Concurrency primitives used directly, without a program (the GIL). |
 | `bytecode/` | Instruction naming, program builders (`builders/`), the assembly parser (`assembly/`, syntax errors only), the serializer (`serializer/`). |
 | `loader/verification/` | Static verification: every semantic error found before a program runs, C pointer instructions included (written inline with `inlineDbc`). Programs that must load go in `right/`, programs that must fail go in `wrong/<area>/`. |
 | `loader/lowering/` | Load-time lowering (GIL placement, local initialization, inheritance metadata and vtables). |
