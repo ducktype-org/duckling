@@ -14,7 +14,9 @@ use super::parse_manifest;
 use crate::quackpack::core::lints::{Lint, LintLevel};
 use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::script::Script;
-use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
+use crate::quackpack::core::{
+    ExternalLib, GitReference, LinkKind, OptLevel, Profile, Version, capture_frontmatter,
+};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops::{normalize, touch, try_fsync_dir, write_file};
@@ -1881,14 +1883,75 @@ metadata:
     assert_eq!(
         build_options.external_libs,
         [
-            StrId::from("sqlite3"),
-            StrId::from("python3.12"),
-            StrId::from("sqlite3")
+            ExternalLib::dynamic("sqlite3"),
+            ExternalLib::dynamic("python3.12"),
+            ExternalLib::dynamic("sqlite3")
         ]
     );
     assert_eq!(
         build_options.external_lib_paths,
         [PathBuf::from("libs"), PathBuf::from("/opt/foo/lib")]
+    );
+}
+
+#[test]
+fn external_libs_with_link_kinds() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  external-libs:
+    - z
+    - { name: answer, kind: static }
+    - { name: m, kind: dynamic }
+    - name: curl
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert_eq!(
+        build_options.external_libs,
+        [
+            ExternalLib::dynamic("z"),
+            ExternalLib {
+                name: "answer".into(),
+                kind: LinkKind::Static
+            },
+            ExternalLib::dynamic("m"),
+            ExternalLib::dynamic("curl"),
+        ]
+    );
+}
+
+/// Parse a manifest whose only `external-libs` entry is `entry`, and return the error message.
+fn external_lib_entry_error(entry: &str) -> (TempDir, String) {
+    let (dir, manifest_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  external-libs: [{entry}]
+"#
+    ));
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    (dir, err.to_string())
+}
+
+#[test]
+fn external_lib_unknown_link_kind() {
+    let (_dir, message) = external_lib_entry_error("{ name: z, kind: shared }");
+    assert!(message.contains("unknown variant `shared`"), "{message}");
+}
+
+#[test]
+fn external_lib_table_name_is_validated() {
+    let (_dir, message) = external_lib_entry_error("{ name: libz.so, kind: static }");
+    assert!(
+        message.contains("invalid external library name `libz.so`"),
+        "{message}"
     );
 }
 

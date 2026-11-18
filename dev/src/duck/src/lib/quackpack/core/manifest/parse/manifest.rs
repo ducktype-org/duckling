@@ -18,11 +18,11 @@ use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    BuildOptions, Dependencies, DependencyKind, Features, Lints, Manifest, OptLevel,
+    BuildOptions, Dependencies, ExternalLib, DependencyKind, Features, Lints, Manifest, OptLevel,
     PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    DuckLints as DuckLintsSchema, Lints as LintsSchema, Manifest as ManifestSchema,
+    DuckLints as DuckLintsSchema, ExternalLib as ExternalLibSchema, Lints as LintsSchema, Manifest as ManifestSchema,
     Metadata as MetadataSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
     VenvConfig as VenvConfigSchema,
 };
@@ -288,14 +288,15 @@ fn parse_build_options(
     })
 }
 
-/// Parse the `metadata.external-libs` list, checking that every entry is a bare library name.
-fn parse_external_libs(input: Option<&[String]>) -> QuackResult<Vec<StrId>> {
+/// Parse the `metadata.external-libs` list, checking that every entry names a library by its bare
+/// name.
+fn parse_external_libs(input: Option<&[ExternalLibSchema]>) -> QuackResult<Vec<ExternalLib>> {
     input
         .unwrap_or_default()
         .iter()
-        .map(|name| {
-            validate_external_lib_name(name)?;
-            Ok(name.into())
+        .map(|lib| {
+            validate_external_lib_name(lib.name())?;
+            Ok(lib.into())
         })
         .collect()
 }

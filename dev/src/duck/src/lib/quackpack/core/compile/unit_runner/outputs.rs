@@ -15,9 +15,7 @@ use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::{CompilationInput, GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit::{Unit, UnitType};
 use crate::quackpack::core::compile::unit_runner::CompilationOutput;
-use crate::quackpack::core::compile::unit_runner::external_libs::{
-    ExternalLibrary, gather_external_libraries,
-};
+use crate::quackpack::core::compile::unit_runner::external_libs::gather_external_libraries;
 
 /// Get the output of this [`run`] pass.
 ///
@@ -99,15 +97,13 @@ pub fn get_linker_options(
 ) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
     let outputs = get_deps_outputs(unit_id_in_graph, graph, layout, bcx)?;
     let external_libs = gather_external_libraries(unit_id_in_graph, graph);
-    let args = outputs
+    let mut args = outputs
         .into_iter()
         .map(|output| output.display().to_string())
-        .chain(
-            external_libs
-                .iter()
-                .flat_map(ExternalLibrary::native_linker_args),
-        )
         .collect::<Vec<_>>();
+    for lib in &external_libs {
+        args.extend(lib.native_linker_args()?);
+    }
     debug!(?args, "raw linker args");
     if args.is_empty() && bcx.profile.c_std {
         return Ok(None);

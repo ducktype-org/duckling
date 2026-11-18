@@ -1,0 +1,11 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "  external-libs: [{ name: duck-surely-not-installed, kind: static }]" >> foo/quackconfig.yaml
+Tests:
+  static-lib-not-found:
+    Description: errors when a library linked statically has no archive, instead of linking the shared one
+    Cases:
+      static-lib-not-found:
+        test-cmd: duck -C foo build
+        ExitCode: 1

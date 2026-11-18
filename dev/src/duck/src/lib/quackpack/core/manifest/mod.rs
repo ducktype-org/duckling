@@ -19,7 +19,7 @@ mod profiles;
 mod source;
 mod venv_config;
 
-pub use build_options::BuildOptions;
+pub use build_options::{BuildOptions, ExternalLib, LinkKind};
 pub use dependency::*;
 pub use features::*;
 pub use lints::*;
@@ -182,7 +182,7 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             profiles.into(),
             VenvConfig::default_for_package(ctx),
             BuildOptions {
-                external_libs: external_libs.into_iter().map(Into::into).collect(),
+                external_libs: external_libs.iter().map(Into::into).collect(),
                 external_lib_paths,
             },
             lints,

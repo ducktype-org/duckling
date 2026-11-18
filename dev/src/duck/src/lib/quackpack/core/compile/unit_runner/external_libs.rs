@@ -17,7 +17,8 @@ use tracing::debug;
 use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph, UnitGraphNode};
 use crate::quackpack::core::compile::unit::graph_visitor::GraphVisitor;
 use crate::quackpack::core::compile::unit::{STATIC_LIB_SUFFIX, Unit};
-use crate::{QuackResult, StrId, qp_bail};
+use crate::quackpack::core::{ExternalLib, LinkKind};
+use crate::{QuackResult, StrId, qp_bail, qp_err};
 
 #[derive(Debug)]
 /// Marker struct indicating that we have found an external library.
@@ -27,7 +28,7 @@ use crate::{QuackResult, StrId, qp_bail};
 ///
 /// This struct has a logic invariant that
 /// ```rust,ignore (illustrative)
-/// self.unit.package().manifest().build_options().external_libs.first() == Some(&self.lib)
+/// self.unit.package().manifest().build_options().external_libs.first().map(|lib| lib.name) == Some(self.lib)
 /// ```
 /// but allows caller to get `lib` without going through an [`Option`].
 pub struct ExternalLibrariesFound {
@@ -57,9 +58,9 @@ pub fn has_external_libraries(
             };
             let external_libs = &unit.package().manifest().build_options().external_libs;
             match external_libs.first() {
-                Some(&lib) => ControlFlow::Break(ExternalLibrariesFound {
+                Some(lib) => ControlFlow::Break(ExternalLibrariesFound {
                     unit: unit.clone(),
-                    lib,
+                    lib: lib.name,
                 }),
                 None => ControlFlow::Continue(()),
             }
@@ -88,7 +89,8 @@ pub fn validate_external_libraries(
             let Some(unit) = node.as_unit() else {
                 return ControlFlow::Continue(());
             };
-            for &lib in &unit.package().manifest().build_options().external_libs {
+            for lib in &unit.package().manifest().build_options().external_libs {
+                let lib = lib.name;
                 let maybe_previous = self.0.insert(lib, unit.clone());
                 // Duplicates are allowed in the same package.
                 let Some(previous) = maybe_previous.filter(|previous| previous != unit) else {
@@ -135,6 +137,8 @@ pub enum ExternalLibraryKind {
 pub struct ExternalLibrary {
     /// The library's name, as written in `external-libs`.
     pub name: StrId,
+    /// How the package asked for the library to be linked.
+    pub link_kind: LinkKind,
     /// [`Unit`] whose package lists the library, for diagnostics.
     pub unit: Unit,
     /// What kind of file the library was found as.
@@ -145,11 +149,26 @@ impl ExternalLibrary {
     /// The native linker arguments for this library.
     ///
     /// A found library is passed by its path; a shared one also gets an `rpath` entry, so the
-    /// binary finds it at runtime. A library that was not found falls back to `-l<name>`, which
-    /// leaves the search to the linker.
-    pub fn native_linker_args(&self) -> Vec<String> {
-        match &self.kind {
-            ExternalLibraryKind::NotFound => vec![format!("-l{}", self.name)],
+    /// binary finds it at runtime. A dynamic library that was not found falls back to
+    /// `-l<name>`, which leaves the search to the linker. A static library that was not found is
+    /// an error, because the linker would pick the shared library instead.
+    pub fn native_linker_args(&self) -> QuackResult<Vec<String>> {
+        Ok(match &self.kind {
+            ExternalLibraryKind::NotFound => match self.link_kind {
+                LinkKind::Dynamic => vec![format!("-l{}", self.name)],
+                LinkKind::Static => {
+                    let mut err = qp_err!(
+                        "package {} links `{}` statically, but `lib{}{STATIC_LIB_SUFFIX}` was not found",
+                        self.unit.pkg_descriptive_name(),
+                        self.name,
+                        self.name,
+                    );
+                    err.add_hint(
+                        "put the archive's directory in `metadata.external-lib-paths`, or link the library dynamically",
+                    );
+                    return Err(err);
+                }
+            },
             ExternalLibraryKind::Static { path } => vec![path.display().to_string()],
             ExternalLibraryKind::Shared { path } => {
                 let mut args = vec![path.display().to_string()];
@@ -160,7 +179,7 @@ impl ExternalLibrary {
                 }
                 args
             }
-        }
+        })
     }
 }
 
@@ -228,10 +247,11 @@ pub fn gather_external_libraries(
             }
             let search_dirs = search_dirs_for(unit);
             self.0
-                .extend(external_libs.iter().map(|&name| ExternalLibrary {
-                    name,
+                .extend(external_libs.iter().map(|&lib| ExternalLibrary {
+                    name: lib.name,
+                    link_kind: lib.kind,
                     unit: unit.clone(),
-                    kind: resolve_external_library(name, &search_dirs),
+                    kind: resolve_external_library(lib, &search_dirs),
                 }));
             ControlFlow::Continue(())
         }
@@ -242,33 +262,30 @@ pub fn gather_external_libraries(
     visitor.0
 }
 
-/// File names under which the library `name` is searched for, in order of preference.
-///
-/// The static archive comes first, so the produced binary does not need the library at runtime.
-fn native_library_file_names(name: StrId) -> [String; 2] {
-    [
-        format!("lib{name}{STATIC_LIB_SUFFIX}"),
-        format!("{DLL_PREFIX}{name}{DLL_SUFFIX}"),
-    ]
+/// The file name under which the library `name` is searched for, when linked as `kind`.
+fn native_library_file_name(name: StrId, kind: LinkKind) -> String {
+    match kind {
+        LinkKind::Dynamic => format!("{DLL_PREFIX}{name}{DLL_SUFFIX}"),
+        LinkKind::Static => format!("lib{name}{STATIC_LIB_SUFFIX}"),
+    }
 }
 
-/// Find the external library `name` in `search_dirs`.
+/// Find the external library `lib` in `search_dirs`.
 ///
-/// The library is searched for by file name only, as `lib<name>.a` first and then as a shared
-/// library, in each of `search_dirs` in order. Nothing else is consulted (no `pkg-config`).
-pub fn resolve_external_library(name: StrId, search_dirs: &[PathBuf]) -> ExternalLibraryKind {
-    let file_names = native_library_file_names(name);
-    let found = search_dirs.iter().find_map(|dir| {
-        file_names
-            .iter()
-            .map(|file_name| dir.join(file_name))
-            .find(|path| path.is_file())
-    });
-    debug!(%name, ?search_dirs, ?found, "resolved external library");
-    match found {
-        None => ExternalLibraryKind::NotFound,
-        Some(path) if path.ends_with(&file_names[0]) => ExternalLibraryKind::Static { path },
-        Some(path) => ExternalLibraryKind::Shared { path },
+/// The library is searched for by file name only, in each of `search_dirs` in order: the shared
+/// library if `lib` is linked dynamically, the static archive if it is linked statically. Nothing
+/// else is consulted (no `pkg-config`).
+pub fn resolve_external_library(lib: ExternalLib, search_dirs: &[PathBuf]) -> ExternalLibraryKind {
+    let file_name = native_library_file_name(lib.name, lib.kind);
+    let found = search_dirs
+        .iter()
+        .map(|dir| dir.join(&file_name))
+        .find(|path| path.is_file());
+    debug!(name = %lib.name, kind = ?lib.kind, ?search_dirs, ?found, "resolved external library");
+    match (found, lib.kind) {
+        (None, _) => ExternalLibraryKind::NotFound,
+        (Some(path), LinkKind::Static) => ExternalLibraryKind::Static { path },
+        (Some(path), LinkKind::Dynamic) => ExternalLibraryKind::Shared { path },
     }
 }
 
@@ -277,38 +294,79 @@ mod tests {
     use super::*;
     use crate::util::path_ops::touch;
 
-    #[test]
-    fn test_resolve_prefers_first_search_dir_and_static_archive() {
-        let first = tempfile::tempdir().unwrap();
-        let second = tempfile::tempdir().unwrap();
-        let [static_name, shared_name] = native_library_file_names("duckfoo".into());
-        touch(first.path().join(&shared_name)).unwrap();
-        touch(first.path().join(&static_name)).unwrap();
-        touch(second.path().join(&static_name)).unwrap();
+    fn lib(kind: LinkKind) -> ExternalLib {
+        ExternalLib {
+            name: "duckfoo".into(),
+            kind,
+        }
+    }
 
-        let kind = resolve_external_library(
-            "duckfoo".into(),
-            &[first.path().to_path_buf(), second.path().to_path_buf()],
-        );
+    /// Two search directories holding both kinds of `duckfoo`, in the first one only the given
+    /// kinds.
+    fn two_dirs(first_has: &[LinkKind]) -> [tempfile::TempDir; 2] {
+        let dirs = [tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap()];
+        for &kind in first_has {
+            touch(dirs[0].path().join(native_library_file_name("duckfoo".into(), kind))).unwrap();
+        }
+        for kind in [LinkKind::Dynamic, LinkKind::Static] {
+            touch(dirs[1].path().join(native_library_file_name("duckfoo".into(), kind))).unwrap();
+        }
+        dirs
+    }
+
+    fn paths(dirs: &[tempfile::TempDir]) -> Vec<PathBuf> {
+        dirs.iter().map(|dir| dir.path().to_path_buf()).collect()
+    }
+
+    #[test]
+    fn test_dynamic_takes_the_shared_library_even_next_to_an_archive() {
+        let dirs = two_dirs(&[LinkKind::Dynamic, LinkKind::Static]);
+        let kind = resolve_external_library(lib(LinkKind::Dynamic), &paths(&dirs));
         assert_eq!(
             kind,
-            ExternalLibraryKind::Static {
-                path: first.path().join(static_name)
+            ExternalLibraryKind::Shared {
+                path: dirs[0]
+                    .path()
+                    .join(native_library_file_name("duckfoo".into(), LinkKind::Dynamic))
             }
         );
     }
 
     #[test]
-    fn test_resolve_shared_library() {
-        let dir = tempfile::tempdir().unwrap();
-        let [_, shared_name] = native_library_file_names("duckfoo".into());
-        touch(dir.path().join(&shared_name)).unwrap();
+    fn test_static_takes_the_archive_even_next_to_a_shared_library() {
+        let dirs = two_dirs(&[LinkKind::Dynamic, LinkKind::Static]);
+        let kind = resolve_external_library(lib(LinkKind::Static), &paths(&dirs));
+        assert_eq!(
+            kind,
+            ExternalLibraryKind::Static {
+                path: dirs[0]
+                    .path()
+                    .join(native_library_file_name("duckfoo".into(), LinkKind::Static))
+            }
+        );
+    }
 
-        let kind = resolve_external_library("duckfoo".into(), &[dir.path().to_path_buf()]);
+    #[test]
+    fn test_each_kind_skips_directories_without_it() {
+        let dirs = two_dirs(&[LinkKind::Static]);
+        let kind = resolve_external_library(lib(LinkKind::Dynamic), &paths(&dirs));
         assert_eq!(
             kind,
             ExternalLibraryKind::Shared {
-                path: dir.path().join(shared_name)
+                path: dirs[1]
+                    .path()
+                    .join(native_library_file_name("duckfoo".into(), LinkKind::Dynamic))
+            }
+        );
+
+        let dirs = two_dirs(&[LinkKind::Dynamic]);
+        let kind = resolve_external_library(lib(LinkKind::Static), &paths(&dirs));
+        assert_eq!(
+            kind,
+            ExternalLibraryKind::Static {
+                path: dirs[1]
+                    .path()
+                    .join(native_library_file_name("duckfoo".into(), LinkKind::Static))
             }
         );
     }
@@ -316,10 +374,13 @@ mod tests {
     #[test]
     fn test_resolve_missing_library() {
         let dir = tempfile::tempdir().unwrap();
-        let kind = resolve_external_library(
-            "duck-surely-not-installed".into(),
-            &[dir.path().to_path_buf()],
-        );
-        assert_eq!(kind, ExternalLibraryKind::NotFound);
+        for kind in [LinkKind::Dynamic, LinkKind::Static] {
+            let missing = ExternalLib {
+                name: "duck-surely-not-installed".into(),
+                kind,
+            };
+            let found = resolve_external_library(missing, &[dir.path().to_path_buf()]);
+            assert_eq!(found, ExternalLibraryKind::NotFound);
+        }
     }
 }
