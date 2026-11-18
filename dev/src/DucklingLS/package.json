@@ -56,6 +56,17 @@
                     "dark": "./images/file-icon.svg"
                 },
                 "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "fatbytecode",
+                "aliases": [
+                    "Duckling Bytecode",
+                    "fatbytecode"
+                ],
+                "extensions": [
+                    ".dbc"
+                ],
+                "configuration": "./language-configuration.json"
             }
         ],
         "grammars": [
@@ -63,6 +74,11 @@
                 "language": "duckling",
                 "scopeName": "source.duckling",
                 "path": "./syntaxes/duckling.tmLanguage.json"
+            },
+            {
+                "language": "fatbytecode",
+                "scopeName": "source.fatbytecode",
+                "path": "./syntaxes/fatbytecode.tmLanguage.json"
             }
         ],
         "configuration": {

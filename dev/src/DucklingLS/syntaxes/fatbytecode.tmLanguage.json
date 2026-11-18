@@ -1,0 +1,754 @@
+{
+  "scopeName": "source.fatbytecode",
+  "name": "Duckling Bytecode",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#typeDeclaration"
+    },
+    {
+      "include": "#globalData"
+    },
+    {
+      "include": "#ffiObject"
+    },
+    {
+      "include": "#functionDeclaration"
+    },
+    {
+      "include": "#instructions"
+    },
+    {
+      "include": "#entries"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#identifiers"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.fatbytecode",
+          "begin": "#\\{",
+          "end": "#\\}",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.begin.fatbytecode"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.end.fatbytecode"
+            }
+          }
+        },
+        {
+          "name": "comment.line.number-sign.fatbytecode",
+          "match": "(#).*$",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.comment.fatbytecode"
+            }
+          }
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.fatbytecode",
+          "begin": "\"",
+          "end": "\"|(?=\\n)",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.fatbytecode"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.fatbytecode"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.fatbytecode",
+              "match": "\\\\(?:.|\\n)"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.binary.fatbytecode",
+          "match": "\\b0[bB][01]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.fatbytecode"
+            }
+          }
+        },
+        {
+          "name": "constant.numeric.octal.fatbytecode",
+          "match": "\\b0[oO][0-7]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.fatbytecode"
+            }
+          }
+        },
+        {
+          "name": "constant.numeric.hex.fatbytecode",
+          "match": "\\b0[xX][0-9A-Fa-f]*+(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.fatbytecode"
+            }
+          }
+        },
+        {
+          "name": "constant.numeric.decimal.fatbytecode",
+          "match": "(?:\\b[0-9]++|(?<![\\w.])(?=\\.[0-9]))(?:\\.[0-9]*+)?(?:[eE][+-]?[0-9]++)?(?:(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f128)|[_\\p{L}\\p{N}]*)(?![\\w])",
+          "captures": {
+            "1": {
+              "name": "storage.type.numeric.fatbytecode"
+            }
+          }
+        }
+      ]
+    },
+    "typeDeclaration": {
+      "begin": "\\b(type)\\s+(primitive|pointer|cpointer|fixed_size_table|dynamic_table|data|variant|fun|opaque|class|interface)\\b\\s*(:)\\s*([_\\p{L}][\\w]*)?",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.type.fatbytecode"
+        },
+        "2": {
+          "name": "storage.modifier.kind.fatbytecode"
+        },
+        "3": {
+          "name": "punctuation.separator.colon.fatbytecode"
+        },
+        "4": {
+          "name": "entity.name.type.fatbytecode"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#typeBody"
+        },
+        {
+          "include": "#typeModifiers"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "include": "#typeNames"
+        },
+        {
+          "include": "#punctuation"
+        }
+      ]
+    },
+    "typeBody": {
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.bracket.fatbytecode"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.bracket.fatbytecode"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#entries"
+        },
+        {
+          "include": "#constants"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "include": "#typeBody"
+        },
+        {
+          "include": "#typeNames"
+        },
+        {
+          "include": "#punctuation"
+        }
+      ]
+    },
+    "typeModifiers": {
+      "patterns": [
+        {
+          "name": "storage.modifier.fatbytecode",
+          "match": "\\b(packed|assert_size)\\b"
+        }
+      ]
+    },
+    "typeNames": {
+      "patterns": [
+        {
+          "name": "entity.name.type.fatbytecode",
+          "match": "\\b[_\\p{L}][\\w]*\\b"
+        }
+      ]
+    },
+    "entries": {
+      "patterns": [
+        {
+          "begin": "\\b(implementations)\\s*(:)\\s*(\\{)",
+          "end": "\\}",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.other.fatbytecode"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.fatbytecode"
+            },
+            "3": {
+              "name": "punctuation.bracket.fatbytecode"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.bracket.fatbytecode"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comments"
+            },
+            {
+              "match": "\\b([_\\p{L}][\\w]*)\\s*(:)\\s*([_\\p{L}][\\w]*)?",
+              "captures": {
+                "1": {
+                  "name": "variable.other.member.fatbytecode"
+                },
+                "2": {
+                  "name": "punctuation.separator.colon.fatbytecode"
+                },
+                "3": {
+                  "name": "entity.name.function.fatbytecode"
+                }
+              }
+            },
+            {
+              "include": "#punctuation"
+            }
+          ]
+        },
+        {
+          "match": "\\b(constructor|destructor)\\s*(:)\\s*([_\\p{L}][\\w]*)?",
+          "captures": {
+            "1": {
+              "name": "keyword.other.fatbytecode"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.fatbytecode"
+            },
+            "3": {
+              "name": "entity.name.function.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "\\b(extends)\\s*(:)\\s*([_\\p{L}][\\w]*)?",
+          "captures": {
+            "1": {
+              "name": "keyword.other.fatbytecode"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.fatbytecode"
+            },
+            "3": {
+              "name": "entity.name.type.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "\\b(fields|virtual_methods|implementations|implements|abstract|is_constant|initial_value)\\s*(:)",
+          "captures": {
+            "1": {
+              "name": "keyword.other.fatbytecode"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "\\b([_\\p{L}][\\w]*)\\s*(:)\\s*(?:([_\\p{L}][\\w]*)\\b(?!\\s*[\\[{]))?",
+          "captures": {
+            "1": {
+              "name": "variable.other.member.fatbytecode"
+            },
+            "2": {
+              "name": "punctuation.separator.colon.fatbytecode"
+            },
+            "3": {
+              "name": "entity.name.type.fatbytecode"
+            }
+          }
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.fatbytecode",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "storage.type.constant.fatbytecode",
+          "match": "\\b(class|fixed_size_table)\\b(?=\\s*[\\[{])"
+        }
+      ]
+    },
+    "globalData": {
+      "patterns": [
+        {
+          "match": "\\b(global_data)\\s+([_\\p{L}][\\w]*)(?:\\s+([_\\p{L}][\\w]*))?",
+          "captures": {
+            "1": {
+              "name": "storage.type.global.fatbytecode"
+            },
+            "2": {
+              "name": "variable.other.global.fatbytecode"
+            },
+            "3": {
+              "name": "entity.name.type.fatbytecode"
+            }
+          }
+        }
+      ]
+    },
+    "ffiObject": {
+      "patterns": [
+        {
+          "match": "\\b(ffi)\\s+(object)\\b",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.ffi.fatbytecode"
+            },
+            "2": {
+              "name": "storage.type.object.fatbytecode"
+            }
+          }
+        }
+      ]
+    },
+    "functionDeclaration": {
+      "begin": "\\b(?:(ffi)\\s+)?(function)\\s+([_\\p{L}][\\w]*)?",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.modifier.ffi.fatbytecode"
+        },
+        "2": {
+          "name": "storage.type.function.fatbytecode"
+        },
+        "3": {
+          "name": "entity.name.function.fatbytecode"
+        }
+      },
+      "end": "(?<=\\})(?=\\s*[{;])|$",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "begin": "\\{",
+          "end": "\\}|$",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.bracket.fatbytecode"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.bracket.fatbytecode"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#typeNames"
+            },
+            {
+              "include": "#punctuation"
+            }
+          ]
+        },
+        {
+          "include": "#operators"
+        }
+      ]
+    },
+    "instructions": {
+      "patterns": [
+        {
+          "match": "(?:^|(?<=[;{]))\\s*(label|[a-z][A-Za-z0-9]*_label)\\s+([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "name": "entity.name.label.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_builtinfunc)\\s+([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "name": "support.function.builtin.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_(?:func|cfunc|ffifunc))\\s+([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "name": "entity.name.function.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_type)\\s+([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "name": "entity.name.type.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_[a-z0-9]+_func)\\s+([^\\s,;#]+)\\s*(,)\\s*([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "4": {
+              "name": "entity.name.function.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_[a-z0-9]+_method)\\s+([^\\s,;#]+)\\s*(,)\\s*([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "4": {
+              "name": "entity.name.function.member.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_[a-z0-9]+_type)\\s+([^\\s,;#]+)\\s*(,)\\s*([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "4": {
+              "name": "entity.name.type.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_[a-z0-9]+_type_[a-z0-9]+)\\s+([^\\s,;#]+)\\s*(,)\\s*([_\\p{L}][\\w]*)\\s*(,)\\s*([^\\s,;#]+)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "4": {
+              "name": "entity.name.type.fatbytecode"
+            },
+            "5": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "6": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_[a-z0-9]+_[a-z0-9]+_type)\\s+([^\\s,;#]+)\\s*(,)\\s*([^\\s,;#]+)\\s*(,)\\s*([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "4": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "5": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "6": {
+              "name": "entity.name.type.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*([a-z][A-Za-z0-9]*_[a-z0-9]+_[a-z0-9]+_field)\\s+([^\\s,;#]+)\\s*(,)\\s*([^\\s,;#]+)\\s*(,)\\s*([_\\p{L}][\\w]*)\\s*(\\.)\\s*([_\\p{L}][\\w]*)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            },
+            "2": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "3": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "4": {
+              "patterns": [
+                {
+                  "include": "#operands"
+                }
+              ]
+            },
+            "5": {
+              "name": "punctuation.separator.comma.fatbytecode"
+            },
+            "6": {
+              "name": "entity.name.type.fatbytecode"
+            },
+            "7": {
+              "name": "punctuation.accessor.fatbytecode"
+            },
+            "8": {
+              "name": "variable.other.member.fatbytecode"
+            }
+          }
+        },
+        {
+          "match": "(?:^|(?<=[;{]))\\s*(?!(?:function|ffi|object|assert_size|type|primitive|pointer|cpointer|fixed_size_table|dynamic_table|data|variant|fun|global_data|constructor|destructor|opaque|class|abstract|interface|extends|implements|virtual_methods|fields|implementations|true|false|is_constant|initial_value|packed)\\b)([a-z][A-Za-z0-9]*(?:_[a-z0-9]+)*)\\b(?!\\s*:)",
+          "captures": {
+            "1": {
+              "patterns": [
+                {
+                  "include": "#opcodeName"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "opcodeName": {
+      "patterns": [
+        {
+          "name": "keyword.control.instruction.fatbytecode",
+          "match": "\\b(?:label|jmp|jmpIf|jmpIfNot|ret|retTailcall|call|virtualCall|exit)(?:_[a-z0-9]+)*\\b"
+        },
+        {
+          "name": "keyword.other.instruction.fatbytecode",
+          "match": "\\b[a-z][A-Za-z0-9]*(?:_[a-z0-9]+)*\\b"
+        }
+      ]
+    },
+    "operands": {
+      "patterns": [
+        {
+          "include": "#operators"
+        },
+        {
+          "include": "#numbers"
+        },
+        {
+          "include": "#identifiers"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arrow.fatbytecode",
+          "match": "->"
+        },
+        {
+          "name": "keyword.operator.sign.fatbytecode",
+          "match": "[-+](?=\\s*\\.?[0-9])"
+        },
+        {
+          "name": "punctuation.accessor.fatbytecode",
+          "match": "\\."
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.fatbytecode",
+          "match": "\\b[_\\p{L}][\\w]*\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.statement.fatbytecode",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.separator.comma.fatbytecode",
+          "match": ","
+        },
+        {
+          "name": "punctuation.separator.colon.fatbytecode",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.bracket.fatbytecode",
+          "match": "[(){}\\[\\]]"
+        }
+      ]
+    }
+  }
+}
