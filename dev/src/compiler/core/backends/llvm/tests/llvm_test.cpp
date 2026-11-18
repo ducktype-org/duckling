@@ -136,9 +136,10 @@ entry:
 			auto mir_result = mir::lowerToMIRUnit(ctx, &module_hout).valueOrPanic();
 			auto lir_result = lir::lowerToLIRUnit(ctx, mir_result);
 
-			llvm_module_opt.emplace(
-				backend_llvm::Module::fromLIRUnit(ctx, lir_result, base::StrID("test_module"))
-			);
+			auto lowered_module
+				= backend_llvm::Module::fromLIRUnit(ctx, lir_result, base::StrID("test_module"));
+			assertTrue(lowered_module.has_value(), "Lowering the module to LLVM failed");
+			llvm_module_opt.emplace(std::move(lowered_module).value());
 		});
 
 		// debug print for coverage only:

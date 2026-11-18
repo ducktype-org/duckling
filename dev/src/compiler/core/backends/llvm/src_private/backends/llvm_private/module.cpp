@@ -21,7 +21,6 @@
 #include <diagnostic/placeholder.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
-#include <query_framework/query_errors.hpp>
 
 #include <iostream>
 
@@ -36,10 +35,12 @@ namespace compiler::backend_llvm {
 		return { parseLLVMBCToModuleImpl(llvm_bc_data) };
 	}
 
-	Module Module::fromLIRUnit(
+	base::Optional<Module> Module::fromLIRUnit(
 		query::Context& ctx, const lir::LIRUnit& lir_unit, base::StrID module_id
 	) {
 		backend_llvm::Module mod(module_id);
+
+		bool has_failed = false;
 
 		std::vector<CRef<lir::Function>> ctors;
 		std::vector<CRef<lir::Function>> dtors;
@@ -83,12 +84,14 @@ namespace compiler::backend_llvm {
 							),
 							global.metadata.position
 						);
-						query::throwFailed();
+						has_failed = true;
 					}
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}
 		}
+
+		if (has_failed) return {};
 
 		if (not ctors.empty()) {
 			auto module_ctor = lir::createFunctionInvoker(

@@ -90,6 +90,8 @@ namespace compiler::backend_vm {
 		 * @note The newly lowered code might not include all entities from the LIR unit,
 		 * as some of them might have been lowered in previous statements and are already present in
 		 * the context.
+		 * @note Throws a query failure when something in the unit cannot be lowered. The
+		 * diagnostic is already logged then.
 		 */
 		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit
 		);

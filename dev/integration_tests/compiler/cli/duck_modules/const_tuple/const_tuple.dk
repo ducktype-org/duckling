@@ -1,0 +1,6 @@
+# The initial value of a tuple constant cannot be lowered yet, on any backend.
+const T: (i64, i64) = (5i64, 6i64);
+
+fun main() -> i64 = {
+    return 0i64;
+}

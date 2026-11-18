@@ -62,9 +62,10 @@ namespace compiler::backend_llvm {
 		/**
 		 * @brief Creates an LLVM module from LIRUnit.
 		 *
-		 * @return Module created by lowering the given LIRUnit.
+		 * @return Module created by lowering the given LIRUnit, or an empty optional when the
+		 * initial value of a global cannot be lowered. The diagnostic is already logged then.
 		 */
-		static Module fromLIRUnit(
+		static base::Optional<Module> fromLIRUnit(
 			query::Context&, const lir::LIRUnit& lir_unit, base::StrID module_id
 		);
 

@@ -54,6 +54,8 @@ namespace compiler::backend_vm::internal {
 		 * Otherwise, a fresh name will be generated.
 		 * @param position Source position of the global's declaration, if known. Error messages
 		 * about a value that cannot be lowered point at it.
+		 * @note A value that cannot be lowered logs a diagnostic and marks `pctx` as failed. The
+		 * global is still defined, without an initial value, so the lowering can go on.
 		 */
 		static const DVMPlace& lowerCTVToNewGlobal(
 			ProgramLoweringContext&             pctx,

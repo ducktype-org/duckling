@@ -21,6 +21,8 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 
+#include <utility>
+
 namespace compiler::backend_vm::internal {
 	class CTVLowering;
 
@@ -246,6 +248,22 @@ namespace compiler::backend_vm::internal {
 
 		[[nodiscard]] bool isCompTimeLowering() const;
 
+		/**
+		 * @brief Records that something could not be lowered. Its diagnostic must already be
+		 * logged. Lowering may go on, but the produced code must not be used.
+		 */
+		void markFailed() { has_failed = true; }
+
+		/**
+		 * @brief Whether markFailed was called since the construction or the last takeFailure.
+		 */
+		[[nodiscard]] bool hasFailed() const { return has_failed; }
+
+		/**
+		 * @brief Returns hasFailed and resets it, so a persistent context can go on lowering.
+		 */
+		[[nodiscard]] bool takeFailure() { return std::exchange(has_failed, false); }
+
 	private:
 		/**
 		 * @brief Computes the name of the DVM type a TypeLayout lowers to, without lowering it.
@@ -269,6 +287,9 @@ namespace compiler::backend_vm::internal {
 		/// or for the final output module. This affects how certain compile time values (e.g.
 		/// symbol types) are lowered.
 		bool is_comp_time_lowering;
+
+		/// Set by markFailed. See hasFailed.
+		bool has_failed = false;
 
 		base::StrID module_id;
 

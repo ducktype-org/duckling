@@ -25,6 +25,8 @@ namespace compiler::backend_vm {
 		  )),
 		  build_debug_info(build_debug_info) {}
 
+	bool DVMCodeBuilder::hasFailed() const { return program_context->hasFailed(); }
+
 	vm::code::CodeCollection DVMCodeBuilder::build() const {
 		return program_context->produceCodeCollection();
 	}

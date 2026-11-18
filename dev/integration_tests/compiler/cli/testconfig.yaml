@@ -250,6 +250,43 @@ Tests:
           && test ! -e @{case_build}/foo.dbc
         ExitCode: 0
 
+  const-not-implemented:
+    # A `const` whose initial value a backend cannot lower yet gets the "not implemented"
+    # diagnostic and exit code 1, never an abort (134).
+    PreCase: "@{copy_std_artifacts}"
+    TimeOut: 10
+    Run: |
+      @{command} 2> "$DIT_TMP_DIR/stderr"
+      exit_code=$?
+      grep -Fq "[Feature not implemented]" "$DIT_TMP_DIR/stderr" || exit 2
+      exit $exit_code
+    compile_flags: "-a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
+    Cases:
+      script-llvm:
+        command: "@{duckc_path} compile_script ./duck_scripts/const_tuple.dks @{compile_flags}"
+        ExitCode: 1
+      script-dvm:
+        command: >-
+          @{duckc_path} compile_script ./duck_scripts/const_tuple.dks --dvm-backend
+          @{compile_flags}
+        ExitCode: 1
+      script-run:
+        # `run` has no artifact location option and builds in the working directory.
+        command: >-
+          script="$(pwd)/duck_scripts/const_tuple.dks" && cd "$DIT_TMP_DIR"
+          && @{duckc_path} run "$script" --custom-std-artifacts-path @{case_std_artifacts}
+        ExitCode: 1
+      package-llvm:
+        command: >-
+          @{duckc_path} compile_package ./duck_modules/const_tuple -n const_tuple
+          --no-incremental @{compile_flags}
+        ExitCode: 1
+      package-dvm:
+        command: >-
+          @{duckc_path} compile_package ./duck_modules/const_tuple -n const_tuple
+          --no-incremental --dvm-backend @{compile_flags}
+        ExitCode: 1
+
   compile-package-inferred-name:
     # Without -n, compile_package names the package after its directory or root module file.
     # The package id is the prefix of the dumped IR file name, so check that file exists.

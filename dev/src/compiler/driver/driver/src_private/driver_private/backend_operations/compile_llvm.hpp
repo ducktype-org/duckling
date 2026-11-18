@@ -16,8 +16,10 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Compiles the LIRUnitWithBackendName to LLVM Module.
+	 * @return An empty optional when the module cannot be lowered. The diagnostic is already
+	 * logged then.
 	 */
-	backend_llvm::Module compileLIRModuleToLLVM(
+	[[nodiscard]] base::Optional<backend_llvm::Module> compileLIRModuleToLLVM(
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
 	);
 }

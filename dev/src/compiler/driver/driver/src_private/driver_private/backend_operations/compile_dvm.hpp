@@ -10,6 +10,8 @@
 
 #include <debug_info/debug_info.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -27,8 +29,10 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Compiles the LIRUnitWithBackendName to DVM CodeCollection.
+	 * @return An empty optional when the module cannot be lowered. The diagnostic is already
+	 * logged then.
 	 */
-	[[nodiscard]] DVMModuleData compileLIRModuleToDVM(
+	[[nodiscard]] base::Optional<DVMModuleData> compileLIRModuleToDVM(
 		CRef<LIRUnitWithBackendName> lir_module, query::Context& query_ctx, bool build_debug_info
 	);
 }

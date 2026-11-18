@@ -141,7 +141,7 @@ namespace compiler::backend_vm::internal {
 					pctx.query_ctx.value()->log<dia::NotYetImplementedCodeError>(
 						"VMValue based comp-time values to file lowering.", position
 					);
-					query::throwFailed();
+					pctx.markFailed();
 				}
 			}
 		}

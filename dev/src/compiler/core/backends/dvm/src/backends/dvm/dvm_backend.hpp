@@ -67,6 +67,12 @@ namespace compiler::backend_vm {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
+		 * @brief Whether something inserted so far could not be lowered. Its diagnostic is
+		 * already logged, and the code from build() must not be used.
+		 */
+		[[nodiscard]] bool hasFailed() const;
+
+		/**
 		 * @brief Produces the per-module bytecode collection without cross-module validation.
 		 * Full validation is performed at link time after all modules are merged.
 		 */

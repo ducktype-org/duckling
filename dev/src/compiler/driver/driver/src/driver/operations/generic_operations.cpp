@@ -258,7 +258,12 @@ namespace compiler::driver {
 
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
-				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
+				auto llvm_module_opt = compileLIRModuleToLLVM(ctx, &lir_data);
+				if (!llvm_module_opt.has_value()) {
+					moduleLog(key, "Compilation failed");
+					return query::Failed();
+				}
+				auto& llvm_module = llvm_module_opt.value();
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
 						base::StrID(lir_data.module_id_human.str() + ".ll")
@@ -309,7 +314,13 @@ namespace compiler::driver {
 					output_file.close();
 				};
 
-				auto dvm_module_data = compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
+				auto dvm_module_data_opt
+					= compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
+				if (!dvm_module_data_opt.has_value()) {
+					moduleLog(key, "Compilation failed");
+					return query::Failed();
+				}
+				auto& dvm_module_data = dvm_module_data_opt.value();
 
 				checkDBCDebugPrint(dvm_module_data.code, lir_data.module_id_human);
 
@@ -691,7 +702,12 @@ namespace compiler::driver {
 					base::StrID(object_name.c_str())
 				);
 
-				auto llvm_module = compileLIRModuleToLLVM(ctx, &script_lir.value());
+				auto llvm_module_opt = compileLIRModuleToLLVM(ctx, &script_lir.value());
+				if (!llvm_module_opt.has_value()) {
+					error_message = "Failed to compile script to LLVM";
+					return;
+				}
+				auto& llvm_module = llvm_module_opt.value();
 
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
@@ -764,7 +780,12 @@ namespace compiler::driver {
 					return;
 				}
 
-				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+				auto dvm_module_opt = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+				if (!dvm_module_opt.has_value()) {
+					error_message = "Failed to compile script to DVM bytecode";
+					return;
+				}
+				auto& dvm_module = dvm_module_opt.value();
 
 				checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
 
@@ -848,7 +869,12 @@ namespace compiler::driver {
 			}
 
 			// With debug info, so that a panic's stack trace can show the script's lines.
-			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, true);
+			auto dvm_module_opt = compileLIRModuleToDVM(&script_lir.value(), ctx, true);
+			if (!dvm_module_opt.has_value()) {
+				error_message = "Failed to compile script to DVM bytecode";
+				return;
+			}
+			auto& dvm_module = dvm_module_opt.value();
 
 			checkDBCDebugPrint(dvm_module.code, script_lir->module_id_human);
 

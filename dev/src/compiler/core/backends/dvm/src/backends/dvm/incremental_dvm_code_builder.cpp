@@ -10,6 +10,7 @@
 #include <base/pointers/box.hpp>
 
 #include <logger/logger.hpp>
+#include <query_framework/query_errors.hpp>
 
 namespace compiler::backend_vm {
 
@@ -55,6 +56,7 @@ namespace compiler::backend_vm {
 		);
 
 		code_builder.insertLIRUnit(lir_unit);
+		if (code_builder.program_context->takeFailure()) query::throwFailed();
 
 		vm::code::CodeCollection new_code
 			= code_builder.program_context->collectNewCodeSince(snapshot);
