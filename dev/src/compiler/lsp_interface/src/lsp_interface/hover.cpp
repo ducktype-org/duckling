@@ -6,25 +6,22 @@
 
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/meta.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/wrapper_elements/identifier_wrapper.hpp>
-#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst/parsed_pst.hpp>
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
-
 #include <lsp_interface/hover.hpp>
 
 #include <diagnostic/source_position.hpp>
-
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -39,7 +36,7 @@ namespace duck_ls {
 
 	namespace {
 
-        using namespace compiler::helios;
+		using namespace compiler::helios;
 
 		/**
 		 * @brief Whether `position`, the range a node takes in the file, covers `offset`. The end
@@ -109,7 +106,7 @@ namespace duck_ls {
 			}
 		}
 
-    	/**
+		/**
 		 * @brief Finds the smallest HOUT expression under the cursor.
 		 *
 		 * Visits every expression in the HOUT of `PstPath::top_expression` and keeps the
@@ -164,9 +161,7 @@ namespace duck_ls {
 				consider(expr);
 			}
 
-			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
-				consider(expr);
-			}
+			void visitIdentifierExpr(const code::IdentifierExpr& expr) override { consider(expr); }
 
 			void visitReusableExpr(const code::ReusableExpr& expr) override {
 				consider(expr);
@@ -213,7 +208,8 @@ namespace duck_ls {
 				expr.result->acceptVisitor(*this);
 			}
 
-			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr) override {
+			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
+			) override {
 				consider(expr);
 				expr.value_type->acceptVisitor(*this);
 			}
@@ -292,9 +288,7 @@ namespace duck_ls {
 
 			// The statements inside a block are not visited: the language has no syntax for block
 			// expressions yet (#3292), so a hover can only reach the blocks HELIOS creates itself.
-			void visitBlockExpr(const code::BlockExpr& expr) override { 
-				consider(expr);
-			}
+			void visitBlockExpr(const code::BlockExpr& expr) override { consider(expr); }
 
 		private:
 			/// Used to ask HELIOS where each expression comes from in the source.
@@ -417,8 +411,8 @@ namespace duck_ls {
 	) {
 		try {
 			auto pst = file->getPST();
-			// Like the diagnostics (see `isModuleTreeParsedSuccessfully` in compiler.cpp), we only run
-			// HELIOS on a file that parsed without errors: it expects a complete parse tree.
+			// Like the diagnostics (see `isModuleTreeParsedSuccessfully` in compiler.cpp), we only
+			// run HELIOS on a file that parsed without errors: it expects a complete parse tree.
 			if (pst->hasErrors()) return {};
 
 			auto root = pst->getRootElement().illegalAccess();

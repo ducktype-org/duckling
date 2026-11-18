@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <frontend/module_tree/module_flags/module_flags.hpp>
+#include <global_state/global_logger.hpp>
 #include <lsp/io/stream.h>
 #include <lsp/types.h>
 #include <lsp/uri.h>
@@ -13,16 +15,13 @@
 #include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
 
-#include <frontend/module_tree/module_flags/module_flags.hpp>
-#include <global_state/global_logger.hpp>
-#include <diagnostic/logger.hpp>
-#include <query_framework/module_flags/module_flags.hpp>
-
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <filesystem/vfs.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
 #include <cstring>
 #include <string>

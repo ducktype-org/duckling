@@ -22,8 +22,8 @@
 #include <helios/queries/queries.hpp>
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/diagnostics.hpp>
-#include <lsp_interface/positions.hpp>
 #include <lsp_interface/hover.hpp>
+#include <lsp_interface/positions.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <diagnostic/core/common_classes.hpp>
@@ -446,16 +446,17 @@ namespace duck_ls {
 		auto cache_path = files->cachePathFor(uri);
 		if (cache_path.empty()) return nullptr;
 
-		auto path = files->isOpened(uri) ? cache_path.value() : files->sourcePath(cache_path.value());
+		auto path
+			= files->isOpened(uri) ? cache_path.value() : files->sourcePath(cache_path.value());
 
 		auto source_files = SourceFile::getSourceFilesFromPath(path);
 		if (source_files.empty()) return nullptr;
 		auto source_file = source_files.back();
 
-				const auto content = source_file->getFileIllegalAccess().getContent();
+		const auto content = source_file->getFileIllegalAccess().getContent();
 		auto       offset  = toCodePointOffset(content.view().stringView(), position);
 		if (offset.empty()) return nullptr;
-		
+
 		auto markdown = hoverMarkdownAt(source_file, offset.value());
 		if (markdown.empty()) return nullptr;
 

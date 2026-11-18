@@ -12,11 +12,11 @@
 #include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
 
+#include <base/str/str_utils.hpp>
+
 #include <diagnostic/logger.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 #include <tester/tester.hpp>
-
-#include <base/str/str_utils.hpp>
 
 #include <string>
 #include <variant>
@@ -28,10 +28,10 @@ namespace {
 	/**
 	 * @brief A program that compiles without the standard library.
 	 *
-	 * The tests hover at fixed line and column numbers (from zero) in it, 
-     * so adding or removing a line here means updating them.
-     * The comment on line 11 holds characters of two, 
-     * three and four UTF-8 bytes, so every position below it
+	 * The tests hover at fixed line and column numbers (from zero) in it,
+	 * so adding or removing a line here means updating them.
+	 * The comment on line 11 holds characters of two,
+	 * three and four UTF-8 bytes, so every position below it
 	 * only works if offsets are counted in code points.
 	 */
 	constexpr std::string_view PROGRAM
@@ -130,7 +130,14 @@ private:
 		const auto text = hoverAt(under_test, uri, line, character);
 		assertTrue(
 			text.empty(),
-			base::strConcat("Expected no hover at ", std::to_string(line), ":", std::to_string(character), ", got:\n", text)
+			base::strConcat(
+				"Expected no hover at ",
+				std::to_string(line),
+				":",
+				std::to_string(character),
+				", got:\n",
+				text
+			)
 		);
 	}
 
