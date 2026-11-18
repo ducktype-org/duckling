@@ -248,7 +248,8 @@ private:
 		const ComponentHash root(std::vector<std::string>{ "a", "b" });
 		const ComponentHash left(root, "c");
 		const ComponentHash right(root, "d");
-		const ComponentHash left_copy = left;
+		ComponentHash       left_copy;
+		left_copy = left;
 		const ComponentHash deeper(left_copy, "e");
 		const ComponentHash same(left, "");
 
