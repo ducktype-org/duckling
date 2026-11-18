@@ -665,6 +665,10 @@ DEF_INSTR(cast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr
 
 DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
 
+/// Writes the native address held by a C pointer of any cpointer type into the 64-bit integer
+/// `dst`, which must be an `i64` (the analogue of a C pointer-to-integer cast).
+DEF_INSTR(cast_p64_pcptr, (vm::opargs::Place64, dst), (vm::opargs::PlaceCPtr, src))
+
 /// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
 DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
 

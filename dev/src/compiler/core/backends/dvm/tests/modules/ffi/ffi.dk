@@ -149,6 +149,18 @@ fun cPointerAddressOfTest() = {
     builtin_output_i64(v.inner.b as i64);
 }
 
+# `cptr` -> integer: the native address. A narrower integer keeps its low bits.
+fun cPointerToIntegerTest() = {
+    var bytes: u8[4];
+    let first = &bytes[0] as cptr u8;
+    let third = &bytes[2] as cptr u8;
+    let address = first as u64;
+    builtin_output_i64((address != 0u64) as i64);                              # 1
+    builtin_output_i64((third as i64) - (first as i64));                       # 2
+    builtin_output_i64(((first as u32) as u64 == address % 4294967296u64) as i64);  # 1
+    builtin_output_i64(((first as u8) as u64 == address % 256u64) as i64);     # 1
+}
+
 # libm, and a `cptr` used as an out parameter.
 fun mathTest() = {
     builtin_output_i64(sqrt(16.0) as i64);              # 4
@@ -165,6 +177,7 @@ fun main() -> i64 = {
     cPointerToCTest();
     cPointerRepointingTest();
     cPointerAddressOfTest();
+    cPointerToIntegerTest();
     mathTest();
     return 0;
 }
