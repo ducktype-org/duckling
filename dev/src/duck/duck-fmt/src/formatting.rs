@@ -65,12 +65,16 @@ impl<'duck> PackageFormatter<'duck> {
             duckfmt_command.set_fmt_config_path(&fmt_config_path);
         }
         let files = self.collect_source_files()?;
+        if files.is_empty() {
+            // Nothing to do.
+            return Ok(());
+        }
         duckfmt_command.add_files_to_format(&files);
         duckfmt_command.execute_and_replace()?;
         Ok(())
     }
 
-    /// Collects all source files inside the package, so that we can add them to `duckfmt` inctance.
+    /// Collects all source files inside the package, so that we can add them to `duckfmt` instance.
     pub fn collect_source_files(&self) -> QuackResult<Vec<PathBuf>> {
         struct SourceFilesCollector {
             inner: Vec<PathBuf>,

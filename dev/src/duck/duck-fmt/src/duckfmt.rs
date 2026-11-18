@@ -35,7 +35,7 @@ impl DuckFmt {
 }
 
 #[derive(Debug)]
-/// Wrapper around [`Command`], handles specific duckc options.
+/// Wrapper around [`Command`], handles specific `duckfmt` options.
 pub struct DuckFmtProcessBuilder {
     inner: Command,
 }

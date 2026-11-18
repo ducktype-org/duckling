@@ -6,7 +6,7 @@
 
 //! Utilities for visiting all Duckling source files inside [`AnyPackage`].
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +14,7 @@ use crate::QuackResult;
 use crate::quackpack::core::AnyPackage;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::util::dir_iterator::create_dir_iterator;
+use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
 
 /// A visitor of [`Path`].
 ///
@@ -22,7 +23,7 @@ pub trait TryFileVisitor {
     /// Value reported by visitor if it stops visiting, for any reason.
     type Break;
 
-    /// The role of this function is to gather information from the currently visited [`UnitGraphNode`].
+    /// Visits one Duckling source file at `path`.
     fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>>;
 }
 
@@ -70,19 +71,18 @@ impl AnyPackage {
                 }
             },
         };
-        let mut visited_paths = HashSet::new();
         let mut paths_to_visit: VecDeque<PathBuf> = [start_file.to_path_buf()].into();
         while let Some(path) = paths_to_visit.pop_front() {
-            if visited_paths.contains(&path) {
-                // We already visited this path, skip.
-                continue;
-            }
             if path.is_file() {
-                // If a file, visit it.
-                if let ControlFlow::Break(b) = visitor.visit(&path)? {
+                // Check if Duckling file, if so visit it.
+                if let Some(extention) = path.extension()
+                    && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
+                        .iter()
+                        .any(|&e| e == extention)
+                    && let ControlFlow::Break(b) = visitor.visit(&path)?
+                {
                     return Ok(Some(b));
                 }
-                visited_paths.insert(path);
             } else {
                 // If a directory, mark all its entries as to be visited.
                 for entry in create_dir_iterator(&path)? {

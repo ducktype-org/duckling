@@ -43,7 +43,6 @@ use crate::quackpack::core::compile::unit::graph::{
 };
 use crate::quackpack::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
 use crate::quackpack::core::compile::unit_runner::outputs::unit_output;
-use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
 use crate::util::path_ops::{change_time, modification_time};
 
 impl UnitGraphNode {
@@ -162,18 +161,11 @@ impl TryFileVisitor for InputCheckVisitor {
     type Break = Infallible;
 
     fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
-        if let Some(extention) = path.extension()
-            && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
-                .iter()
-                .any(|&e| e == extention)
-        {
-            // `path` is a Duckling file.
-            let mtime = modification_time(path)?;
-            let ctime = change_time(path)?;
-            let mtime_ok = mtime < self.timestamp && ctime < self.timestamp;
-            self.all_mtimes_ok &= mtime_ok;
-            self.number_of_source_files += 1;
-        }
+        let mtime = modification_time(path)?;
+        let ctime = change_time(path)?;
+        let mtime_ok = mtime < self.timestamp && ctime < self.timestamp;
+        self.all_mtimes_ok &= mtime_ok;
+        self.number_of_source_files += 1;
         Ok(ControlFlow::Continue(()))
     }
 }

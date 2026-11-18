@@ -73,3 +73,7 @@ bundled-sqlite3 = ["rusqlite/bundled"]
 # NOTE: These two should not be enabled at the same time.
 bundled-scip = ["russcip/bundled"]
 static-scip = ["russcip/from-source"]
+
+[workspace]
+members = ["duck-fmt"]
+default-members = [".", "duck-fmt"]
