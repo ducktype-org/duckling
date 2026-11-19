@@ -11,4 +11,4 @@ mod main;
 pub mod util;
 pub mod version;
 
-pub use main::{main, setup_logger};
+pub use main::{main, main_runner, setup_logger};

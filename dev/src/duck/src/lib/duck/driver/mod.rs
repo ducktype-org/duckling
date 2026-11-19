@@ -8,7 +8,7 @@ use clap::builder::ValueParser;
 use clap::{Command, ValueHint};
 
 pub mod cli_args_preprocessing;
-pub(crate) mod cli_ext;
+pub mod cli_ext;
 pub mod external_subcommands;
 pub mod global_options;
 pub mod run;
