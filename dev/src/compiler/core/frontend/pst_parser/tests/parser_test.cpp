@@ -16,6 +16,7 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
+#include <array>
 #include <iostream>
 #include <sstream>
 
@@ -248,12 +249,15 @@ private:
 			std::string_view needle;
 		};
 
-		constexpr Case cases[] = {
-			{ "let fun = 10;", "Keyword 'fun'" },    { "let if = 10;", "Keyword 'if'" },
-			{ "fun fun() = 1;", "Keyword 'fun'" },   { "class fun {}", "Keyword 'fun'" },
-			{ "namespace fun {}", "Keyword 'fun'" }, { "let a = fun + 1;", "Keyword 'fun'" },
+		constexpr std::array CASES = {
+			Case{ .code = "let fun = 10;", .needle = "Keyword 'fun'" },
+			Case{ .code = "let if = 10;", .needle = "Keyword 'if'" },
+			Case{ .code = "fun fun() = 1;", .needle = "Keyword 'fun'" },
+			Case{ .code = "class fun {}", .needle = "Keyword 'fun'" },
+			Case{ .code = "namespace fun {}", .needle = "Keyword 'fun'" },
+			Case{ .code = "let a = fun + 1;", .needle = "Keyword 'fun'" },
 		};
-		for (const Case& c: cases) {
+		for (const Case& c: CASES) {
 			auto              pst = pst::ParsedPST<>::fromContents(c.code, pst::PSTType::Script);
 			std::stringstream ss;
 			pst->getLogger()->terminalPrint(ss);
