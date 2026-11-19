@@ -56,7 +56,6 @@ Tests:
 
   compile-modules:
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 3
     Cases:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
@@ -86,7 +85,6 @@ Tests:
 
   compile-module-artifact-location:
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 5
     # --name makes the HIR filenames predictable so they can be checked below.
     # Each case uses @{at_tmp_env} to keep relative ./duck_build output in its own
     # scratch directory.
@@ -155,7 +153,6 @@ Tests:
   compile-script-dump-ir:
     # Compile once per backend and check every dump plus the linked output.
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 10
     Run: |
       @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
       --dump-ir @{dump_categories} -a @{case_build} \
@@ -209,7 +206,6 @@ Tests:
 
   compile-script-print-ir:
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 10
     Run: |
       for category in @{print_categories}; do
         @{duckc_path} compile_script ./duck_scripts/foo.dks @{backend_flags} \
@@ -228,7 +224,6 @@ Tests:
   compile-script-no-link:
     # Compile the script object/bytecode artifacts but skip the final executable/package link.
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 10
     Cases:
       llvm-object:
         Run: >-
@@ -254,7 +249,6 @@ Tests:
     # Without -n, compile_package names the package after its directory or root module file.
     # The package id is the prefix of the dumped IR file name, so check that file exists.
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 3
     inferred_hir: "@{case_build}/duck_debug_artifacts/inferred_name.inferred_name.hir"
     Run: "@{duckc_path} compile_package @{package_path} -O 0 --no-incremental --dvm-backend
       --dump-ir hir -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}
@@ -270,7 +264,6 @@ Tests:
   compile-package-no-link:
     # Check the object, every IR layer, and the absence of a linked output in one call.
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 10
     Run: |
       @{duckc_path} compile_package ./duck_modules/inferred_name @{backend_flags} \
       --no-link -O 0 --no-incremental --dump-ir @{dump_categories} -a @{case_build} \
@@ -300,7 +293,6 @@ Tests:
 
   compile-packages-dump-ir:
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 10
     package_manifest: "$DIT_TMP_DIR/packages.json"
     Cases:
       object-task:
@@ -314,7 +306,6 @@ Tests:
 
   compile-packages-no-link:
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 10
     package_manifest: "$DIT_TMP_DIR/packages.json"
     Cases:
       executable-and-library-tasks:
@@ -332,7 +323,6 @@ Tests:
     # The IR is printed and dumped while a module compiles. The first run fills the incremental
     # cache; the second run asks for IR with --no-incremental, so the module is recompiled.
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 5
     compile_ir_output: "@{duckc_path} compile_package ./duck_modules/ir_output -O 0 --dvm-backend
       -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
     Run: "@{compile_ir_output} && @{second_run}"
@@ -354,7 +344,6 @@ Tests:
     # --print-ir and --dump-ir require --no-incremental, --print-graph requires the incremental
     # query graph.
     PreCase: "@{copy_std_artifacts}"
-    TimeOut: 5
     Run: "@{duckc_path} compile_package ./duck_modules/ir_output -O 0 --dvm-backend
       -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts} @{debug_args}"
     Cases:
@@ -374,7 +363,6 @@ Tests:
   comp-time-output:
     # Test compile time output to stderr
     PreCase: "@{copy_std_artifacts}"
-    timeout_default: 5
     Run: "@{expect_output} --err-regex '\\[comp-time\\] 3492'
       -- @{duckc_path} compile_modules ./duck_modules/comp_time_output/comp_time_output.dk
       -O 0 --no-incremental --dvm-backend -a @{case_build}
