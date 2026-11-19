@@ -24,7 +24,11 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/lookup/errors.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
@@ -915,6 +919,59 @@ namespace compiler::helios::code {
 		);
 	}
 
+	namespace {
+		/**
+		 * @brief Common part of @p processMethodCall and @p processBracketOperatorCall, which only
+		 * differ in what the callee of the call is.
+		 *
+		 * @param whole_call_origin The origin of the whole call, including `self`.
+		 * @param callee_origin The origin of the called method, like the `foo` of `object.foo(10)`
+		 * or the `[10]` of `object[10]`.
+		 */
+		query::QResult<Box<Expr>> processMethodCallWithOrigins(
+			query::Context&              ctx,
+			const std::vector<SymID>&    candidates,
+			ElementOrigin                whole_call_origin,
+			ElementOrigin                callee_origin,
+			pst::Access<pst::expr::Call> call_expr,
+			Box<Expr>                    self_arg
+		) {
+			// Unwrap and validate call arguments.
+			std::vector<Box<Expr>>                          positional_arguments;
+			std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
+			UNPACK_QRESULT(
+				auto arguments_origin =,
+				fillCallArgs(
+					ctx, call_expr, whole_call_origin, positional_arguments, named_arguments
+				)
+			);
+			arguments_origin.insert(arguments_origin.begin(), self_arg->origin);
+			positional_arguments.insert(positional_arguments.begin(), std::move(self_arg));
+
+			CallArguments call_arguments{
+				.positional_arguments = std::move(positional_arguments),
+				.named_arguments      = std::move(named_arguments),
+			};
+			CallPstOrigin pst_origin{
+				.whole_call_origin = whole_call_origin,
+				.callee_origin     = callee_origin,
+				.arguments_origin  = std::move(arguments_origin),
+			};
+
+			// Resolve overloads and construct call expression. Every candidate is a method, so
+			// `self` may be implicitly taken by `ref`.
+			auto overload_resolution_qresult
+				= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, candidates);
+			UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+			const auto [callee_sym, argument_origin, coercions]
+				= std::move(overload_resolution_result);
+
+			return constructCallExpr(
+				ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+			);
+		}
+	}
+
 	query::QResult<Box<Expr>> processMethodCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
@@ -924,36 +981,55 @@ namespace compiler::helios::code {
 	) {
 		auto whole_call_origin
 			= pstOriginOrdered(pstOriginOrdered(self_arg->origin, callee_element), call_expr);
-
-		// Unwrap and validate call arguments.
-		std::vector<Box<Expr>>                          positional_arguments;
-		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
-		UNPACK_QRESULT(
-			auto arguments_origin =,
-			fillCallArgs(ctx, call_expr, whole_call_origin, positional_arguments, named_arguments)
+		return processMethodCallWithOrigins(
+			ctx,
+			candidates,
+			whole_call_origin,
+			pstOrigin(callee_element),
+			call_expr,
+			std::move(self_arg)
 		);
-		arguments_origin.insert(arguments_origin.begin(), self_arg->origin);
-		positional_arguments.insert(positional_arguments.begin(), std::move(self_arg));
+	}
 
-		CallArguments call_arguments{
-			.positional_arguments = std::move(positional_arguments),
-			.named_arguments      = std::move(named_arguments),
-		};
-		CallPstOrigin pst_origin{
-			.whole_call_origin = whole_call_origin,
-			.callee_origin     = pstOrigin(callee_element),
-			.arguments_origin  = std::move(arguments_origin),
-		};
+	query::QResult<std::vector<SymID>> findBracketOperatorCandidates(
+		query::Context&              ctx,
+		const Expr&                  self_arg,
+		base::StrID                  name,
+		pst::Access<pst::expr::Call> call_expr
+	) {
+		const auto self_type = self_arg.expression_type.getType();
+		if (self_type.getKind() != tsh::Kind::Class) return std::vector<SymID>{};
 
-		// Resolve overloads and construct call expression. Every candidate is a method, so `self`
-		// may be implicitly taken by `ref`.
-		auto overload_resolution_qresult
-			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, candidates);
-		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
-		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+		const auto lookup_qresult = HInterface::ofTypeInstance(self_type).lookup(
+			ctx, name, { .accessing_scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr }) }
+		);
+		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-		return constructCallExpr(
-			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+		// The operators exist, but none of them can be used here.
+		if (lookup_result->leaves.empty() && lookup_result->hasInaccessible()) {
+			auto msg = makeBox<InaccessibleSymbolLookupError>(call_expr->getStablePosition());
+			for (const auto hidden: lookup_result->inaccessible) {
+				if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
+					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
+					msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
+				}
+			}
+			ctx.log(std::move(msg));
+			return query::Failed();
+		}
+
+		return lookup_result->leaves;
+	}
+
+	query::QResult<Box<Expr>> processBracketOperatorCall(
+		query::Context&              ctx,
+		const std::vector<SymID>&    candidates,
+		pst::Access<pst::expr::Call> call_expr,
+		Box<Expr>                    self_arg
+	) {
+		auto whole_call_origin = pstOriginOrdered(self_arg->origin, call_expr);
+		return processMethodCallWithOrigins(
+			ctx, candidates, whole_call_origin, pstOrigin(call_expr), call_expr, std::move(self_arg)
 		);
 	}
 

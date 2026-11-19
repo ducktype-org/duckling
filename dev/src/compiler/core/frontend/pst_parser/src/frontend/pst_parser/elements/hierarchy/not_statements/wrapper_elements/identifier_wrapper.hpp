@@ -33,8 +33,13 @@ namespace pst {
 		 * function definition).
 		 *
 		 * @TODO: #3119 This will probably end up being a separate subclass here.
+		 *
+		 * @param allow_bracket_operators Whether the name may be a bracket operator, `()` or `[]`,
+		 * which only methods can declare.
 		 */
-		static MBox<IdentifierWrapper> parseFunctionName(LangParserState& state);
+		static MBox<IdentifierWrapper> parseFunctionName(
+			LangParserState& state, bool allow_bracket_operators
+		);
 		~IdentifierWrapper() final = default;
 
 		void     dprint(std::ostream& out) const final;

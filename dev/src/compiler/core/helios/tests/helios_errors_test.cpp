@@ -51,6 +51,7 @@ public:
 		TESTER_ADD_TEST(testCoercionErrors);
 		TESTER_ADD_TEST(testOptionalErrors);
 		TESTER_ADD_TEST(testClassErrors);
+		TESTER_ADD_TEST(testBracketOperatorErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -1584,6 +1585,46 @@ private:
 	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
 	 * that a class does not declare at all.
 	 */
+	void testBracketOperatorErrors() {
+		// The bracket operators are called on a value, so they cannot be static.
+		checkForErrorOnCompileModule(
+			R"( class C {
+					v: i64 = 0;
+					global fun ()(x: i64) -> i64 = x;
+				}
+				fun main() -> i64 = 0; )",
+			{ "Operator `()` cannot be a static method." },
+			1
+		);
+
+		// An operator hidden by its visibility is reported as such.
+		checkForErrorOnCompileModule(
+			R"( class C {
+					public v: i64 = 0;
+					private fun [](i: i64) -> i64 = i;
+				}
+				fun main() -> i64 = {
+					var c = C();
+					return c[1];
+				} )",
+			{ "Accessed value is not visible from here.", "Found declaration:" },
+			1
+		);
+
+		// A class value without a `()` operator cannot be called.
+		checkForErrorOnCompileModule(
+			R"( class C {
+					v: i64 = 0;
+				}
+				fun main() -> i64 = {
+					var c = C();
+					return c(1);
+				} )",
+			{ "cannot be called, because it is not a function." },
+			1
+		);
+	}
+
 	void testClassErrors() {
 		// ==================== Duplicated member specifiers ====================
 		{

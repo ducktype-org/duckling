@@ -14,4 +14,8 @@ class Foo {
 	fun +*(a: u64) -> Foo = {
 		return self;
 	}
+
+	fun ()(a: i64) -> i64 = a;
+
+	fun [](i: i64, j: i64) -> i64 = i;
 }

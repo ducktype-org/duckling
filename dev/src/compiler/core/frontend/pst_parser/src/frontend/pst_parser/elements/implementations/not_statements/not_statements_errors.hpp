@@ -156,6 +156,41 @@ namespace pst {
 	};
 
 	/**
+	 * @brief Error for a `()` or `[]` operator declared outside of a class.
+	 */
+	class BracketOperatorOutsideClassError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bracket_operator_outside_class" };
+		}
+
+	public:
+		BracketOperatorOutsideClassError(dia::SourcePosition pos, std::string op):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("operator", std::move(op));
+		}
+	};
+
+	/**
+	 * @brief Error for a `()` or `[]` operator name with something inside the brackets, like
+	 * `fun [i: i64]()`.
+	 */
+	class BracketOperatorNameNotEmptyError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "bracket_operator_name_not_empty" };
+		}
+
+	public:
+		BracketOperatorNameNotEmptyError(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	/**
 	 * @brief Error for custom assignment operators, which are not supported yet.
 	 */
 	class AssignmentOperatorFunNameError final: public dia::MessageWithCodeFragmentAndCause {
