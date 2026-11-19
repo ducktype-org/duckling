@@ -7,7 +7,7 @@
 //! Command line interface of `duck-fmt`.
 
 use clap::Command;
-use duck::duck::driver::cli_ext::flag;
+use duck::duck::driver::{cli_ext::flag, styles::get_styles};
 
 /// Returns command line interface of `duck-fmt` as a [`Command`].
 pub(super) fn cli() -> Command {
@@ -21,5 +21,6 @@ pub(super) fn cli() -> Command {
             .short('p')
             .conflicts_with("check")
         )
+        .styles(get_styles())
         .about("Formats all Duckling files inside the current package using `duckfmt`")
 }
