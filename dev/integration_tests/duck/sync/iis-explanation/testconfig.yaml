@@ -1,0 +1,31 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+PostCase: python3 check.py && @{cleanup_tmp_env}
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar
+      features: [nonexistent]" >> foo/quackconfig.yaml
+
+Tests:
+  basic:
+    Description: can explain why no solution is possible
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync --external-errors
+        ExitCode: 1
+        Output:
+          String: ""
+        Err:
+          Run: |+
+            echo "error: no solution to the dependency problem found; SCIP run's status is Infeasible
+
+            note: the explanation why there is no solution was written to \`$DIT_TMP_DIR/foo/.duck_sync/iis_expl.txt\`"
