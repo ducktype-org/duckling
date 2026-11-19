@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::OneEntryMap;
+use crate::quackpack::schemas::manifest::ExternalLib;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
@@ -49,9 +50,9 @@ pub struct Metadata {
     pub name: String,
     /// Package's description.
     pub description: String,
-    /// Names of the external libraries this package links against.
+    /// External libraries this package links against.
     #[serde(default)]
-    pub external_libs: Vec<String>,
+    pub external_libs: Vec<ExternalLib>,
     /// Directories searched for [`Metadata::external_libs`], relative to the package's root.
     #[serde(default)]
     pub external_lib_paths: Vec<PathBuf>,

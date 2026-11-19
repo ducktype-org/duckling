@@ -5,4 +5,5 @@ SubDirs:
   - nonexistent-feature
   - nonexistent-profile
   - renamed-links
+  - static-lib-not-found
   - workers-count

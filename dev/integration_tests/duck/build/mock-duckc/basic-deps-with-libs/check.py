@@ -37,8 +37,9 @@ assert bar_deps.exists()
 
 text = bar_deps.read_text()
 
-# `found` is in foo's `external-lib-paths`, so it is passed by its path. bar's two libraries are
-# not in any search directory, so they fall back to `-l<name>` and the linker looks for them.
+# `found` is linked statically and its archive is in foo's `external-lib-paths`, so it is passed by
+# its path. bar's two libraries are linked dynamically and are not in any search directory, so they
+# fall back to `-l<name>` and the linker looks for them.
 expected = f"""{{
   "packages": [
     {{

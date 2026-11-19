@@ -10,7 +10,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use itertools::Itertools;
-use serde::{Deserialize, de};
+use serde::{Deserialize, Serialize, de};
 use serde_untagged::UntaggedEnumVisitor;
 use yaml_edit::{Mapping, MappingBuilder, SequenceBuilder};
 
@@ -85,14 +85,77 @@ pub struct Metadata {
     pub license: Option<String>,
     /// Package's description.
     pub description: Option<String>,
-    /// Names of the external libraries to link against, e.g. `sqlite3` (for `libsqlite3.a`).
-    pub external_libs: Option<Vec<String>>,
+    /// External libraries to link against, e.g. `sqlite3` (for `libsqlite3.so`).
+    pub external_libs: Option<Vec<ExternalLib>>,
     /// Directories searched for [`Metadata::external_libs`] before the system ones.
     /// Paths are relative to the package's root.
     pub external_lib_paths: Option<Vec<PathBuf>>,
     /// The old name of `external-libs`; only kept to report a helpful error.
     // @TODO: #3999 remove this field in a future release.
     pub links: Option<de::IgnoredAny>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(untagged)]
+/// Schema of a single `metadata.external-libs` entry.
+pub enum ExternalLib {
+    /// Only the library's name; the library is linked dynamically.
+    Name(String),
+    /// The library's name and how it is linked.
+    Detailed(DetailedExternalLib),
+}
+
+impl ExternalLib {
+    /// The library's name, as written.
+    pub fn name(&self) -> &str {
+        match self {
+            ExternalLib::Name(name) => name,
+            ExternalLib::Detailed(detailed) => &detailed.name,
+        }
+    }
+
+    /// How the library is linked; dynamic unless stated otherwise.
+    pub fn kind(&self) -> LinkKind {
+        match self {
+            ExternalLib::Name(_) => LinkKind::Dynamic,
+            ExternalLib::Detailed(detailed) => detailed.kind.unwrap_or_default(),
+        }
+    }
+}
+
+impl<'de> de::Deserialize<'de> for ExternalLib {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("a library name or a table with `name` and `kind`")
+            .string(|value| Ok(ExternalLib::Name(value.to_owned())))
+            .map(|value| value.deserialize().map(ExternalLib::Detailed))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+/// Schema of a `metadata.external-libs` entry written as a table.
+pub struct DetailedExternalLib {
+    /// The library's name, e.g. `sqlite3`.
+    pub name: String,
+    /// How the library is linked.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<LinkKind>,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+/// Schema of `kind` in a `metadata.external-libs` entry.
+pub enum LinkKind {
+    /// Link against the shared library.
+    #[default]
+    Dynamic,
+    /// Copy the static archive into the binary.
+    Static,
 }
 
 #[derive(Clone, Debug, Deserialize)]
