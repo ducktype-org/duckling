@@ -1,0 +1,5 @@
+// The missing `;` makes the parser read `0 x` as the suffix operator `x` applied to `0`.
+fun main() -> i64 = {
+    var x = 0 x = 0;
+    return 0i64;
+}

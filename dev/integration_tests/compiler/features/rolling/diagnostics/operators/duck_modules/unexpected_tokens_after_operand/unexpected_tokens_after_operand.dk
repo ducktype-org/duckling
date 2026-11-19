@@ -1,0 +1,6 @@
+// The parser rejects the tokens after `a` here. The compiler must report it, not panic later on.
+fun main() -> i64 = {
+    var a = true;
+    var b = a xor a;
+    return 0i64;
+}
