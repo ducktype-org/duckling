@@ -44,10 +44,4 @@ pub trait UnitTaskGenerator: Debug {
         layout: &dyn ProfileLayout,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<Vec<multipackage_schema::Task>>;
-
-    /// Whether the given [`Unit`] should be compiled.
-    ///
-    /// Note that, in the future, some [`Unit`]s (mainly build scripts) will _always_ be compiled,
-    /// no matter what this function returns.
-    fn should_run(&self, unit: &Unit, graph: &UnitGraph, bcx: &BuildContext<'_, '_>) -> bool;
 }

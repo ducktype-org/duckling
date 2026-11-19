@@ -46,10 +46,6 @@ impl UnitTaskGenerator for DefaultTaskGenerator {
         let task = create_task(unit, unit_id_in_graph, graph, layout, bcx)?;
         Ok(vec![task])
     }
-
-    fn should_run(&self, _unit: &Unit, _graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) -> bool {
-        true
-    }
 }
 
 /// Create a task for a single [`Unit`].
