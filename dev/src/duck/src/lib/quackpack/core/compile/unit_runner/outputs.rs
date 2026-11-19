@@ -124,6 +124,23 @@ pub fn get_linker_options(
     Ok(Some(linker_options))
 }
 
+/// Get DVM linking options for the given node.
+pub fn get_dvm_linking_options(
+    unit_id_in_graph: GraphNodeId,
+    graph: &UnitGraph,
+    layout: &dyn ProfileLayout,
+    bcx: &BuildContext<'_, '_>,
+) -> QuackResult<Option<multipackage_schema::DvmLinkingOptions>> {
+    let bytecode_dependencies = get_deps_outputs(unit_id_in_graph, graph, layout, bcx)?;
+    if bytecode_dependencies.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(multipackage_schema::DvmLinkingOptions {
+        shared_libraries: None,
+        bytecode_dependencies: Some(bytecode_dependencies),
+    }))
+}
+
 /// Collect outputs of dependencies (direct and transitive) of this `unit`.
 /// Note:
 /// -----

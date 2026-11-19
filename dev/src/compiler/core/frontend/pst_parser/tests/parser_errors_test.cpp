@@ -298,6 +298,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::TopLevel, true> nested_template{
 		"template(A: type) template(B: type) class P {}\nfun g() = {}"
 	};
+	Example<pst::TopLevel, false> template_without_decl_at_end{ "template(T: type)" };
+	Example<pst::TopLevel, false> template_with_prefix_at_end{ "template(T: type) public" };
+	Example<pst::TopLevel, false> template_before_expr_stmt{ "template(T: type)\nprint(1i64);" };
+	Example<pst::TopLevel, false> template_before_unnamed_block{
+		"template(T: type) {}\nfun g() = {}"
+	};
 	Example<pst::Class, true> class_with_template_method{
 		"class C { template(T: type) fun m(x: T) = {} fun n() = {} }"
 	};
@@ -568,6 +574,9 @@ class PSTErrorTests: public tester::TestSuite {
 		);
 		testDiagnosticMessage<pst::PatternBracketError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::ForBracketError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::TemplateNotDeclarationError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
 		testDiagnosticMessage<pst::VariableNoTypeAndValueError>(
 			ss, dia::SourcePosition::fakePosition()
 		);

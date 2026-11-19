@@ -75,6 +75,7 @@ public:
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
 		TESTER_ADD_TEST(testStatementsOutsideFunctions);
+		TESTER_ADD_TEST(testDeclarationsInsideFunctions);
 	}
 
 protected:
@@ -912,6 +913,45 @@ private:
 				1
 			);
 
+			// The parser accepts a const without a value, so HELIOS must report it.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				namespace n { const g: bool; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					const g: i64;
+					return 0;
+				}
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			// Using the const must not report the missing value a second time.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+				const h: i64 = g + 1;
+				fun main() -> i64 = { return h; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -1079,6 +1119,12 @@ private:
 			check_ref_match_error(
 				"match (v) { case x = 0i64; };",
 				{ "Match pattern bindings without a type constraint" }
+			);
+
+			// Literal patterns are not supported yet.
+			check_ref_match_error(
+				"match (v) { case 1i64 = 0i64; case _ = 1i64; };",
+				{ "Match pattern kind: Value Pattern." }
 			);
 			checkForErrorOnCompileModule(
 				R"(
@@ -2860,6 +2906,9 @@ private:
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
 				ss, dia::StablePosition::fakePosition()
 			);
+
+			// ConstWithoutValueError
+			testDiagnosticMessage<ConstWithoutValueError>(ss, dia::StablePosition::fakePosition());
 		});
 	}
 
@@ -3236,6 +3285,32 @@ private:
 			{ "Only declarations are allowed at module level." },
 			1
 		);
+	}
+
+	void testDeclarationsInsideFunctions() {
+		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
+			{ "class Z { v: i64 = 0; }",
+			  "Classes declared inside a function are not supported yet." },
+			{ "import std.math;",
+			  "`import` statements are not allowed inside a function. Move it to the module "
+			  "level." },
+			{ "namespace N { const a = 1; }",
+			  "Namespaces declared inside a function are not supported yet." },
+			{ "template(T: type) fun g(x: T) -> T = x;",
+			  "Templates declared inside a function are not supported yet." },
+			{ "export { const a = 1; }",
+			  "`export` blocks are not allowed inside a function. Only module-level declarations "
+			  "can be exported." },
+			{ "debug { const a = 1; }",
+			  "Specifier blocks inside a function are not supported yet." },
+		};
+
+		for (const auto& [declaration, message]: cases)
+			checkForErrorOnCompileModule(
+				base::strConcat("fun main() -> i64 = { ", declaration, " return 0; }"),
+				{ message },
+				1
+			);
 	}
 };
 
