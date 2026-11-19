@@ -144,9 +144,9 @@ namespace clah {
 		if (name.empty())
 			throw clah::exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
 
-		const clah::Parameter* parameter = findParameter(params, name, NameType::LongName);
-		if (parameter == nullptr) throw clah::exceptions::InvalidParameterName(name);
-		parseWithParameter(*parameter, name);
+		const auto parameter = findParameter(params, name, NameType::LongName);
+		if (!parameter) throw clah::exceptions::InvalidParameterName(name);
+		parseWithParameter(*parameter.value(), name);
 	}
 
 	void ParsingState::parseShortParameters(const std::vector<clah::Parameter>& params) {
@@ -156,8 +156,9 @@ namespace clah {
 			if (name == "=")
 				throw exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
 
-			const clah::Parameter* parameter = findParameter(params, name, NameType::ShortName);
-			if (parameter == nullptr) throw clah::exceptions::InvalidParameterName(name);
+			const auto maybe_parameter = findParameter(params, name, NameType::ShortName);
+			if (!maybe_parameter) throw clah::exceptions::InvalidParameterName(name);
+			const CRef<clah::Parameter> parameter = maybe_parameter.value();
 			advanceChar();
 
 			if (parameter->getValueParser() == nullptr) {
@@ -179,7 +180,7 @@ namespace clah {
 		return not is_inside;
 	}
 
-	const clah::Parameter* ParsingState::findParameter(
+	base::Optional<CRef<clah::Parameter>> ParsingState::findParameter(
 		const std::vector<clah::Parameter>& parameters,
 		const std::string&                  param_name,
 		NameType                            name_type
@@ -195,7 +196,7 @@ namespace clah {
 				}
 			}
 		}
-		return nullptr;
+		return {};
 	}
 
 	void ParsingState::parseWithParameter(const clah::Parameter& parameter, const std::string& name) {

@@ -120,9 +120,9 @@ namespace clah {
 		 * @param parameters All of the available parameters.
 		 * @param param_name The parsed name. For a short name only the first character is used.
 		 * @param name_type Type of the parsed name.
-		 * @return The matching parameter, or nullptr if there is none.
+		 * @return The matching parameter, or none if there is no such parameter.
 		 */
-		static const clah::Parameter* findParameter(
+		static base::Optional<CRef<clah::Parameter>> findParameter(
 			const std::vector<clah::Parameter>& parameters,
 			const std::string&                  param_name,
 			NameType                            name_type
