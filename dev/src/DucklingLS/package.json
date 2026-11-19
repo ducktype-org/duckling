@@ -58,10 +58,9 @@
                 "configuration": "./language-configuration.json"
             },
             {
-                "id": "fatbytecode",
+                "id": "ducklingbytecode",
                 "aliases": [
-                    "Duckling Bytecode",
-                    "fatbytecode"
+                    "Duckling Bytecode"
                 ],
                 "extensions": [
                     ".dbc"
@@ -76,9 +75,9 @@
                 "path": "./syntaxes/duckling.tmLanguage.json"
             },
             {
-                "language": "fatbytecode",
-                "scopeName": "source.fatbytecode",
-                "path": "./syntaxes/fatbytecode.tmLanguage.json"
+                "language": "ducklingbytecode",
+                "scopeName": "source.ducklingbytecode",
+                "path": "./syntaxes/ducklingbytecode.tmLanguage.json"
             }
         ],
         "configuration": {
