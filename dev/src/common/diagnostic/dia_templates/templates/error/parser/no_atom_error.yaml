@@ -12,9 +12,13 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
+  but_got:
+    description: "What was found instead of the expected expression."
 
 header_message:
-  - "Expected an atom here (singular expression value)."
+  - "Expected an atom here (singular expression value), but got: "
+  - param: "but_got"
+  - "."
 
 description:
   - codeblock:

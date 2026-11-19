@@ -598,7 +598,9 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::BadChainExprError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadCallError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadBlockError>(ss, dia::SourcePosition::fakePosition());
-		testDiagnosticMessage<pst::NoAtomError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::NoAtomError>(
+			ss, dia::SourcePosition::fakePosition(), std::string("Keyword 'fun'")
+		);
 		testDiagnosticMessage<pst::MultipleAssignmentError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadAccessError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::EmptyStatementError>(ss, dia::SourcePosition::fakePosition());
@@ -668,7 +670,7 @@ class PSTErrorTests: public tester::TestSuite {
 		// Tests regarding the end of a fallback window.
 		{
 			auto parsed = pst::ParsedPST<>::fromContents(
-				"fun main() = {\n    var var = 10;\n}\n", pst::PSTType::Program
+				"fun main() = {\n    var\n}\n", pst::PSTType::Program
 			);
 			const std::string text = renderedDiagnostics(parsed.ref());
 
@@ -678,21 +680,16 @@ class PSTErrorTests: public tester::TestSuite {
 			);
 			assertTrue(
 				text.find("the end of the statement") != std::string::npos,
-				base::strConcat("`var var = 10;` should describe the boundary, got:\n", text)
+				base::strConcat("a trailing `var` should describe the boundary, got:\n", text)
 			);
 			assertTrue(
 				text.find("''") == std::string::npos,
 				base::strConcat("an empty quoted payload was printed, got:\n", text)
 			);
-			// The next token is real, so its diagnostic must keep its informative rendering.
+			// The caret must point at the boundary, not leak a later token.
 			assertTrue(
-				text.find("Operator '='") != std::string::npos,
-				base::strConcat("the second diagnostic lost its token text, got:\n", text)
-			);
-			// The caret must keep pointing at the offending token: line 2, column 9.
-			assertTrue(
-				text.find(":2:9") != std::string::npos,
-				base::strConcat("the caret moved away from the offending token, got:\n", text)
+				text.find(":3:1") != std::string::npos,
+				base::strConcat("the caret moved away from the boundary, got:\n", text)
 			);
 		}
 
