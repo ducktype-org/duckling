@@ -21,13 +21,17 @@
 
 namespace pst::expr {
 	namespace {
-		bool isKeywordLiteral(lang_def::Keyword key) {
-			// A keyword is a valid atom when it is a type keyword, a boolean/self literal, or
-			// `const` (a type modifier). Statement-start keywords (fun, class, ...) are
-			// declarations, not expression values.
-			return lang_def::keywordFlags(key).contains(lang_def::KeywordFlagsOptions::IsType)
-			    || key == lang_def::Keyword::True || key == lang_def::Keyword::False
-			    || key == lang_def::Keyword::Self || key == lang_def::Keyword::Const;
+		/**
+		 * @brief Whether @p key is a statement/specifier keyword that cannot be an expression
+		 * value (e.g. `fun`, `class`). `const` is a type modifier, so it is allowed. Other
+		 * non-literal keywords (`sizeof`, `assert`, ...) are left to `KeywordLiteral::parse`
+		 * and reported as not-yet-implemented by HELIOS.
+		 */
+		bool isMisusedStatementKeyword(lang_def::Keyword key) {
+			if (key == lang_def::Keyword::Const) return false;
+			const auto flags = lang_def::keywordFlags(key);
+			return flags.contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+			    || flags.contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 		}
 	}
 
@@ -37,7 +41,7 @@ namespace pst::expr {
 		if (state[0].is(Keyword::Match)) {
 			return MatchExpr::parse(state);
 		} else if (state[0].isKeyword()) {
-			if (!isKeywordLiteral(state[0].asKeyword())) {
+			if (isMisusedStatementKeyword(state[0].asKeyword())) {
 				state.logInt(
 					makeBox<NoAtomError>(state.getPosition(), state.ctokens().peek().describe())
 				);

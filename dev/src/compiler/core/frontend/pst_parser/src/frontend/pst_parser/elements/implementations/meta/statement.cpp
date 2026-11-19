@@ -52,18 +52,6 @@ namespace pst {
 			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 		}
 
-		/**
-		 * @brief Whether the token `fwd` tokens ahead continues a declaration's name. When the
-		 * name slot holds a keyword and the next token matches, the keyword is a misused name
-		 * rather than the start of the next statement.
-		 */
-		bool isNameContinuation(const TokenStream& state, i64 fwd) {
-			return state[fwd].is(NamedOperator::Assign) || state[fwd].is(NamedOperator::Colon)
-			    || state[fwd].isBracketGroup(lexer::Token::BracketType::Round)
-			    || state[fwd].isBracketGroup(lexer::Token::BracketType::Curly)
-			    || state[fwd].is(Keyword::Extends) || state[fwd].is(Keyword::Implements);
-		}
-
 		template<class T>
 		struct StmtClassifiers {
 			/**
@@ -166,6 +154,25 @@ namespace pst {
 
 		template<class T>
 		requires NamedDecl<T> struct StmtFinder<T> {
+		private:
+			/**
+			 * @brief Whether the token `fwd` tokens ahead can follow this declaration's name.
+			 */
+			static bool isNameContinuation(const TokenStream& state, i64 fwd) {
+				if constexpr (std::same_as<T, Class>) {
+					return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly)
+					    || state[fwd].is(Keyword::Extends) || state[fwd].is(Keyword::Implements)
+					    || state[fwd].is(NamedOperator::Colon);
+				} else if constexpr (std::same_as<T, Namespace>) {
+					return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
+				} else {
+					// Variable, Const
+					return state[fwd].is(NamedOperator::Assign)
+					    || state[fwd].is(NamedOperator::Colon);
+				}
+			}
+
+		public:
 			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
 				u64 length
 					= 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(base + 1);
@@ -207,7 +214,7 @@ namespace pst {
 				// A keyword in the name slot (e.g. `fun fun() = ...`) is a misused name, not the
 				// start of the next statement. Skip it so the window reaches the real `=`/body.
 				if (initial_length == base::safeIntConv<u64>(head) && state[base + head].isKeyword()
-				    && isNameContinuation(state.ctokens(), base + head + 1))
+				    && state[base + head + 1].isBracketGroup(lexer::Token::BracketType::Round))
 					initial_length = base::safeIntConv<u64>(head + 1)
 					               + state.ctokens().countUntil<isAssignOrEnd>(base + head + 1);
 				if (!state[base + base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
