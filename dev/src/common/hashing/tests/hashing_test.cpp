@@ -284,6 +284,12 @@ private:
 				deeper.str(), std::string("a.b.c.e"), "str() should join the elements with dots"
 			);
 			assertTrue(ComponentHash().elements().empty(), "a default path should have no elements");
+			assertTrue(
+				left.last_element.value()->parent.value().get() == root.last_element.value().get()
+					&& right.last_element.value()->parent.value().get()
+						   == root.last_element.value().get(),
+				"child paths should share the parent's last element instead of copying it"
+			);
 		})
 	}
 

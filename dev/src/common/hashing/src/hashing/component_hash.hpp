@@ -15,6 +15,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -106,9 +108,25 @@ namespace hashing {
 
 		/**
 		 * Return the path elements in order, from the root to this component.
-		 * Works only in Dev builds.
+		 * Works only in Dev builds, throws std::logic_error otherwise.
+		 * Takes an explicit object parameter, so it is a template: outside Dev the skipped
+		 * branch is never instantiated, and `base::Ignore` needs no `has_value()`.
 		 */
-		[[nodiscard]] std::vector<std::string> elements() const;
+		[[nodiscard]] std::vector<std::string> elements(this const auto& self) {
+			if constexpr (base::IS_BUILD_TYPE_DEV) {
+				std::vector<std::string> out;
+				const auto*              link = &self.last_element;
+				while (link->has_value()) {
+					out.push_back(link->value()->name);
+					link = &link->value()->parent;
+				}
+				std::ranges::reverse(out);
+				return out;
+			} else {
+				throw std::logic_error("ComponentHash::elements() is not available in Release build"
+				);
+			}
+		}
 
 		/**
 		 * Return elements joined by '.' (represents the hierarchical path).
@@ -119,8 +137,17 @@ namespace hashing {
 	private:
 		/**
 		 * Link a new last element with the given name to the current path.
-		 * Works only in Dev builds.
+		 * Works only in Dev builds, throws std::logic_error otherwise.
 		 */
-		void addElementToPath(std::string_view name);
+		void addElementToPath([[maybe_unused]] std::string_view name) {
+			if constexpr (base::IS_BUILD_TYPE_DEV) {
+				last_element
+					= base::makeSharedBox<PathElement>(std::string(name), std::move(last_element));
+			} else {
+				throw std::logic_error(
+					"ComponentHash::addElementToPath() is not available in Release build"
+				);
+			}
+		}
 	};
 }
