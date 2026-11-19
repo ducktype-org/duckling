@@ -20,12 +20,29 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	namespace {
+		bool isKeywordLiteral(lang_def::Keyword key) {
+			// A keyword is a valid atom when it is a type keyword, a boolean/self literal, or
+			// `const` (a type modifier). Statement-start keywords (fun, class, ...) are
+			// declarations, not expression values.
+			return lang_def::keywordFlags(key).contains(lang_def::KeywordFlagsOptions::IsType)
+			    || key == lang_def::Keyword::True || key == lang_def::Keyword::False
+			    || key == lang_def::Keyword::Self || key == lang_def::Keyword::Const;
+		}
+	}
+
 	MBox<ExprElement> Atom::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
 		if (state[0].is(Keyword::Match)) {
 			return MatchExpr::parse(state);
 		} else if (state[0].isKeyword()) {
+			if (!isKeywordLiteral(state[0].asKeyword())) {
+				state.logInt(
+					makeBox<NoAtomError>(state.getPosition(), state.ctokens().peek().describe())
+				);
+				return nullptr;
+			}
 			return KeywordLiteral::parse(state);
 		} else if (state[0].isIdentifier()) {
 			return IdentifierLiteral::parse(state);
@@ -47,7 +64,8 @@ namespace pst::expr {
 			i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 			state.logInt(makeBox<NoAtomError>(
-				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd()),
+				state.ctokens().peek().describe()
 			));
 			return nullptr;
 		}

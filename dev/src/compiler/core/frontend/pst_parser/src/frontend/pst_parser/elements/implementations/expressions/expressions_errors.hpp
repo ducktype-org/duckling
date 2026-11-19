@@ -249,7 +249,10 @@ namespace pst {
 		}
 
 	public:
-		NoAtomError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		NoAtomError(dia::SourcePosition pos, std::string_view but_got):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("but_got", std::string(but_got));
+		}
 	};
 
 	class MultipleAssignmentError final: public dia::MessageWithCodeFragmentAndCause {

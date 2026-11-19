@@ -243,30 +243,41 @@ private:
 	}
 
 	void testKeywordAsIdentifierName() {
-		auto pst = pst::ParsedPST<>::fromContents("let fun = 10;", pst::PSTType::Script);
-		std::stringstream ss;
-		pst->getLogger()->terminalPrint(ss);
-		const std::string rendered = ss.str();
+		struct Case {
+			std::string_view code;
+			std::string_view needle;
+		};
 
-		assertTrue(
-			rendered.find("Keyword 'fun'") != std::string::npos,
-			"Expected `Keyword 'fun'` diagnostic"
-		);
-		assertTrue(
-			rendered.find("Sentinel") == std::string::npos, "Sentinel leaked into diagnostics"
-		);
-		assertTrue(
-			rendered.find("the end of the statement") == std::string::npos,
-			"Expected the offending keyword, not the fallback sentinel"
-		);
+		constexpr Case cases[] = {
+			{ "let fun = 10;", "Keyword 'fun'" },    { "let if = 10;", "Keyword 'if'" },
+			{ "fun fun() = 1;", "Keyword 'fun'" },   { "class fun {}", "Keyword 'fun'" },
+			{ "namespace fun {}", "Keyword 'fun'" }, { "let a = fun + 1;", "Keyword 'fun'" },
+		};
+		for (const Case& c: cases) {
+			auto              pst = pst::ParsedPST<>::fromContents(c.code, pst::PSTType::Script);
+			std::stringstream ss;
+			pst->getLogger()->terminalPrint(ss);
+			const std::string rendered = ss.str();
 
-		auto if_pst = pst::ParsedPST<>::fromContents("let if = 10;", pst::PSTType::Script);
-		std::stringstream if_ss;
-		if_pst->getLogger()->terminalPrint(if_ss);
-		assertTrue(
-			if_ss.str().find("Keyword 'if'") != std::string::npos,
-			"Normal-path keyword diagnostic was disturbed"
-		);
+			assertTrue(
+				pst->getLogger()->errorCount() == 1,
+				"expected exactly one error for `" + std::string(c.code) + "`"
+			);
+			assertTrue(
+				rendered.find(c.needle) != std::string::npos,
+				"expected `" + std::string(c.needle) + "` diagnostic for `" + std::string(c.code)
+					+ "`"
+			);
+			assertTrue(
+				rendered.find("Sentinel") == std::string::npos,
+				"sentinel leaked into diagnostics for `" + std::string(c.code) + "`"
+			);
+			assertTrue(
+				rendered.find("the end of the statement") == std::string::npos,
+				"expected the offending keyword, not the fallback sentinel, for `"
+					+ std::string(c.code) + "`"
+			);
+		}
 	}
 
 	void testFunctionParameterVisitors() {
