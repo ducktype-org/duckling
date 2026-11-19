@@ -31,10 +31,16 @@ namespace pst {
 			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
 			// @TODO: #4062 Remove this once we have explicit self.
 			if (state[fwd].is(Keyword::Mut) && state[fwd + 1].is(Keyword::Fun)) return true;
-			// A statement-start keyword right after `=` used as a binary operand (e.g.
-			// `let a = fun + 1`) is a misused value, not the start of the next statement.
-			if (state[fwd - 1].is(NamedOperator::Assign) && state[fwd + 1].isOperatorSymbol())
-				return false;
+			// A statement-start keyword used as an expression operand (after `=` or a general
+			// binary operator, e.g. `let a = fun;`, `let a = fun + 1`, or `let a = 1 + fun`) is
+			// a misused value, not the start of the next statement. A keyword followed by an
+			// identifier is a genuine declaration (`fun f()`).
+			const bool preceded_by_value_op
+				= state[fwd - 1].is(NamedOperator::Assign)
+			   || (state[fwd - 1].isOperatorSymbol()
+			       && state[fwd - 1].asBinaryOperator().map([](auto op) { return op.isGenBinOp(); }
+			       ).copyValueOr(false));
+			if (preceded_by_value_op && !state[fwd + 1].isIdentifier()) return false;
 			return keywordFlags(state[fwd].asKeyword())
 			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}

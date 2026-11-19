@@ -256,6 +256,8 @@ private:
 			Case{ .code = "class fun {}", .needle = "Keyword 'fun'" },
 			Case{ .code = "namespace fun {}", .needle = "Keyword 'fun'" },
 			Case{ .code = "let a = fun + 1;", .needle = "Keyword 'fun'" },
+			Case{ .code = "let a = fun;", .needle = "Keyword 'fun'" },
+			Case{ .code = "let a = 1 + fun;", .needle = "Keyword 'fun'" },
 		};
 		for (const Case& c: CASES) {
 			auto              pst = pst::ParsedPST<>::fromContents(c.code, pst::PSTType::Script);
