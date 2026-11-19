@@ -100,19 +100,29 @@ namespace clah {
 
 	private:
 		/**
-		 * @brief Tries to parse a name of the parameter.
-		 * @return The name and it's type: EmptyName, ShortName or LongName.
+		 * @brief Parses a long parameter (`--name`, `--name=value`, `--name value`).
+		 * Expects the position to be right after the hyphens.
+		 * @param parameters All the available parameters.
 		 */
-		std::pair<std::string, NameType> parseName();
+		void parseLongParameter(const std::vector<clah::Parameter>& parameters);
 
 		/**
-		 * @brief Iterates over a collection of parameters and matches a name to the parameter,
-		 * then performs parsing using it's ValueParser if provided.
-		 * @param parameters All of the available parameters.
-		 * @param param_name The parsed name.
-		 * @param name_type Type of the parsed name.
+		 * @brief Parses a group of short parameters, e.g. `-abc`, expecting the position to be
+		 * right after the hyphen. Flags are read until the first value parameter, which takes the
+		 * rest of the word as its value (`-O3`, `-O=3`), or the next word if nothing is left
+		 * (`-O 3`).
+		 * @param parameters All the available parameters.
 		 */
-		bool findParameterAndParse(
+		void parseShortParameters(const std::vector<clah::Parameter>& parameters);
+
+		/**
+		 * @brief Finds the parameter with the given name.
+		 * @param parameters All of the available parameters.
+		 * @param param_name The parsed name. For a short name only the first character is used.
+		 * @param name_type Type of the parsed name.
+		 * @return The matching parameter, or nullptr if there is none.
+		 */
+		static const clah::Parameter* findParameter(
 			const std::vector<clah::Parameter>& parameters,
 			const std::string&                  param_name,
 			NameType                            name_type

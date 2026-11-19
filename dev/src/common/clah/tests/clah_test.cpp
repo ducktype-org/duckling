@@ -43,6 +43,8 @@ public:
 		TESTER_ADD_TEST(argumentParsingTest);
 		TESTER_ADD_TEST(categoryParserTest);
 		TESTER_ADD_TEST(categoryListParserTest);
+		TESTER_ADD_TEST(shortParameterAttachedValueTest);
+		TESTER_ADD_TEST(shortParameterAttachedValueErrorsTest);
 	}
 
 private:
@@ -615,6 +617,71 @@ private:
 		assertThrows<clah::exceptions::ValueParsingException>(
 			[&]() { clah.parse(argv_bad.size(), argv_bad.data()); },
 			"Clah did not reject an invalid category in category-list parser."
+		);
+	}
+
+	clah::Clah makeAttachedValueClah() {
+		return clah::Clah("prog")
+		    .add(clah::ParamBuilder::ofFlag().addShortName('v').addShortDesc("Verbose").build())
+		    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
+		             .addShortName('O')
+		             .addShortDesc("Optimization level")
+		             .build())
+		    .add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		             .addShortName('o')
+		             .addShortDesc("Output")
+		             .build());
+	}
+
+	void shortParameterAttachedValueTest() {
+		auto clah = makeAttachedValueClah();
+
+		auto parses_optimization_level
+			= [&](const std::vector<const char*>& argv, i64 expected, bool verbose) {
+				  auto res = clah.parse(argv.size(), argv.data());
+				  ASSERT_EQUAL(expected, res.getValue<i64>('O').value());
+				  ASSERT_EQUAL(verbose, res.isFlag('v'));
+				  ASSERT_EQUAL(0, res.getExtraParameterCount());
+			  };
+		// The value glued to the name, like `gcc -O3`.
+		parses_optimization_level({ "./prog", "-O3" }, 3, false);
+		parses_optimization_level({ "./prog", "-O3", "-v" }, 3, true);
+		parses_optimization_level({ "./prog", "-O-1" }, -1, false);
+		// The value in the next word or after `=` keeps working.
+		parses_optimization_level({ "./prog", "-O", "3" }, 3, false);
+		parses_optimization_level({ "./prog", "-O=3" }, 3, false);
+		// Flags before the value parameter in the same group.
+		parses_optimization_level({ "./prog", "-vO2" }, 2, true);
+		parses_optimization_level({ "./prog", "-vO", "2" }, 2, true);
+
+		// The value parameter ends the group, the rest of the word is its value.
+		std::array argv{ "./prog", "-ov.txt", "-O1" };
+		auto       res = clah.parse(argv.size(), argv.data());
+		ASSERT_EQUAL("v.txt", *res.getValue<std::string>('o'));
+		ASSERT_EQUAL(1, res.getValue<i64>('O').value());
+		ASSERT_EQUAL(false, res.isFlag('v'));
+	}
+
+	void shortParameterAttachedValueErrorsTest() {
+		auto clah = makeAttachedValueClah();
+
+		auto throws = [&]<typename E>(std::vector<const char*> argv, const std::string& msg) {
+			assertThrows<E>([&]() { clah.parse(argv.size(), argv.data()); }, msg);
+		};
+		throws.operator()<clah::exceptions::ValueParsingException>(
+			{ "./prog", "-O3v" }, "The whole rest of the word should be the value of -O."
+		);
+		throws.operator()<clah::exceptions::ParameterRequiresValue>(
+			{ "./prog", "-vO" }, "-O at the end of the arguments has no value."
+		);
+		throws.operator()<clah::exceptions::DuplicatedParameter>(
+			{ "./prog", "-O3", "-O2" }, "-O was passed twice."
+		);
+		throws.operator()<clah::exceptions::InvalidParameterName>(
+			{ "./prog", "-vx" }, "There is no parameter named x."
+		);
+		throws.operator()<clah::exceptions::ExpectedParameterIdentifier>(
+			{ "./prog", "-v=1" }, "A flag does not take a value."
 		);
 	}
 };
