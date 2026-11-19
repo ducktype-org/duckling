@@ -10,6 +10,7 @@
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
 #include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -94,6 +95,11 @@ namespace compiler::repl {
 			// Assignment is syntactically an expression, but its HOUT lowering currently lives in
 			// statement compilation. Route it as instruction to use that lowering path.
 			if (inner_expr.dynamicCast<pst::expr::Assignment>().has_value())
+				return InstructionSingleStatementInfo{ .instruction_stmt = expr_stmt };
+
+			// A block expression lowers to a block statement, not a sub-expression; routing it as
+			// an expression reaches the (unhandled) expression visitor and panics.
+			if (inner_expr.dynamicCast<pst::expr::BlockExpr>().has_value())
 				return InstructionSingleStatementInfo{ .instruction_stmt = expr_stmt };
 
 			return ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt };

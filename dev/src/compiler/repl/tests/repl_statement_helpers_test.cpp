@@ -23,6 +23,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testClassifySingleExpression);
 		TESTER_ADD_TEST(testClassifyAssignmentExpressionAsInstruction);
+		TESTER_ADD_TEST(testClassifyBlockExpressionAsInstruction);
 		TESTER_ADD_TEST(testClassifySingleInstruction);
 		TESTER_ADD_TEST(testClassifySingleDefinition);
 		TESTER_ADD_TEST(testClassifySingleVariable);
@@ -30,6 +31,7 @@ public:
 		TESTER_ADD_TEST(testClassifyRejectsSingleActionStatements);
 		TESTER_ADD_TEST(testBuildExpressionWrapper);
 		TESTER_ADD_TEST(testBuildInstructionWrapper);
+		TESTER_ADD_TEST(testBuildBlockExpressionWrapper);
 		TESTER_ADD_TEST(testBuildWrapperRejectsDefinition);
 		TESTER_ADD_TEST(testBuildWrapperRejectsVariable);
 		TESTER_ADD_TEST(testBuildVariableWrapper);
@@ -68,6 +70,22 @@ private:
 		assignment_test("x = 10;");
 		assignment_test("x += 10;");
 		assignment_test("x -= 10;");
+	}
+
+	void testClassifyBlockExpressionAsInstruction() {
+		auto block_test = [&](std::string_view code) {
+			auto module_id = createModule(code);
+
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto result = repl::classifySingleStatement(ctx, module_id);
+				ASSERT_HAS_VALUE(result, "Block expression classification should succeed");
+				ASSERT_MATCHES(*result, repl::InstructionSingleStatementInfo);
+			});
+		};
+
+		block_test("{1}");
+		block_test("{ 1; }");
+		block_test("{}");
 	}
 
 	void testClassifySingleInstruction() {
@@ -168,6 +186,18 @@ private:
 				wrapped->wrapper_func_name.find("__repl_input_wrapper_202") != std::string::npos,
 				"Wrapper function name should include instruction counter"
 			);
+		});
+	}
+
+	void testBuildBlockExpressionWrapper() {
+		auto module_id = createModule("{1}");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto classified = repl::classifySingleStatement(ctx, module_id);
+			ASSERT_HAS_VALUE(classified, "Classification should succeed");
+
+			auto wrapped = repl::buildStatementWrapper(ctx, classified.value(), 505);
+			ASSERT_HAS_VALUE(wrapped, "Block expression wrapper build should succeed");
 		});
 	}
 
