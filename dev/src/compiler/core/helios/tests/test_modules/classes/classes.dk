@@ -19,7 +19,7 @@ class Base {
         return pub_field;
     }
 
-    public fun setPub(new_value: i64) = {
+    public mut fun setPub(new_value: i64) = {
         pub_field = new_value;
     }
 

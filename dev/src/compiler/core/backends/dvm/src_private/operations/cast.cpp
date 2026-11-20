@@ -173,6 +173,28 @@ namespace compiler::backend_vm::internal {
 							CORE_PANIC("Unsupported cast between different pointer kinds");
 						}
 					}
+					variant_case_novalue(tsl::IntegralTypeLayout) {
+						// ================== CPointer -> Int ==================
+						// Only a `cptr` is a native address. A VM pointer is a (block, offset)
+						// pair, which `dvm_ptr_parts` takes apart instead.
+						CORE_ASSERT(
+							pointer_layout.getPointerKind()
+								== tsl::PointerTypeLayout::PointerKind::CPointer,
+							"Only a cptr can be cast to an integral in DVM lowering"
+						);
+						if (target_layout->getSize() == tsl::POINTER_SIZE) return OpKind::cast;
+
+						CORE_ASSERT(
+							target_layout->getSize() < tsl::POINTER_SIZE,
+							"Unsupported cast from cptr to an integral wider than a pointer"
+						);
+						// Read the whole address as a 64-bit integer, then narrow it.
+						const DVMPlace address_tmp
+							= ctx->pushTempLocal(DVMImmediate::u64(0).type, "cast_address_tmp");
+						ctx->pushInstruction({ OpKind::cast, address_tmp, out_arguments[0] });
+						out_arguments[0] = address_tmp;
+						return OpKind::trunc;
+					}
 					variant_default {
 						CORE_PANIC("Unsupported cast from pointer-layout to target layout");
 					}

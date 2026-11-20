@@ -328,7 +328,7 @@ private:
 
 	// Calls into libc/libm through libffi: scalars, a struct returned by value, `cptr char`
 	// strings, and `cptr`s to a struct, to a field, and to a static array element - both
-	// projected by the DVM itself and written through by C.
+	// projected by the DVM itself and written through by C - and a `cptr` read as an integer.
 	void ffiTest() {
 		runFFITest(
 			"ffi",
@@ -337,6 +337,7 @@ private:
 			"100\n2\n50\n0\n0\n3\n3\n"
 			"5\n6\n7\n"
 			"12\n13\n17\n8\n"
+			"1\n2\n1\n1\n"
 			"4\n50\n4\n"
 		);
 	}

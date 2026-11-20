@@ -45,7 +45,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Determine build matrix
         id: set-matrix
@@ -132,7 +132,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup build environment
         uses: ./.github/actions/setup-build-env/
@@ -178,7 +178,7 @@ jobs:
         id: restore-build-cache
         # macOS keeps its ccache on the machine - see "Point caches at local storage".
         if: ${{ env.PLATFORM != 'macos' }}
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           # main builds from an empty cache on purpose: the entry it saves is what every branch
           # falls back to, so it holds one fresh build rather than every object ever compiled
@@ -192,15 +192,15 @@ jobs:
           # Most recent entry is used when multiple match to the same key.
           # See readme for details.
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main-
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-
 
       # macOS keeps its sccache on the machine as well - see "Point caches at local storage".
       - name: Restore sccache cache
         id: restore-sccache-cache
         if: ${{ env.PLATFORM != 'macos' }}
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           lookup-only: ${{ env.BRANCH_NAME == 'main' }}
           path: |
@@ -323,7 +323,7 @@ jobs:
         id: save-build-cache
         if: ${{ env.PLATFORM != 'macos' }}
         background: true
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ env.CCACHE_DIR }}
@@ -335,7 +335,7 @@ jobs:
         id: save-sccache-cache
         if: ${{ env.PLATFORM != 'macos' }}
         background: true
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ${{ env.SCCACHE_DIR }}
@@ -414,7 +414,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Delete superseded cache entries for this branch
         env:
@@ -433,7 +433,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Fetch origin/main
         run: git fetch origin main

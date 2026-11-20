@@ -12,4 +12,4 @@ Tests:
     Description: last_access and last_synchronization are set properly
     Cases:
       verify-timestamps:
-        test-cmd: "duck -C foo info > duck-info-output.txt"
+        test-cmd: "duck -C foo info 2> duck-info-output.txt"

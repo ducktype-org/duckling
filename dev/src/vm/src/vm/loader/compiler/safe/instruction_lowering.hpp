@@ -394,6 +394,11 @@ namespace vm::loader::compiler::safe::detail {
 				// A reinterpreting cast is a plain 8-byte move.
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
 			}
+			instr_case(high::Op_cast_p64_pcptr, i) {
+				// A C pointer is a plain 8-byte native address, so reading it as an integer is a
+				// move.
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
 			instr_case(high::Op_add_pcptr_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.offset); }
 			instr_case(high::Op_add_pcptr_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.offset); }
 			instr_case(high::Op_cmpNull_pcptr, i) {

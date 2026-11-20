@@ -38,6 +38,20 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
+	/** @brief A `const` declared without a value, e.g. `const x: i64;`. */
+	class ConstWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "const_without_value" };
+		}
+
+	public:
+		ConstWithoutValueError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
 	class DuplicateVariantAlternativeError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

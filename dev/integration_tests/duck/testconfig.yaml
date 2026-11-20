@@ -21,8 +21,8 @@ cd-tmp-dir: cd ${DIT_TMP_DIR}
 # It's because when we create a fetcher cache (an SQLite database), we execute a statement to create a basic table.
 # This causes SQLite to create a file and some other stuff. It also calls fsync on a parent directory.
 # This can be slow in CI/CD running under Docker, so increase artificially the timeout.
-# 5 seconds seems to be enough.
-timeout_default: 5
+timeout_default: 30
+timeout_jit: 30
 
 PreNode: |
   @{load-cargo}

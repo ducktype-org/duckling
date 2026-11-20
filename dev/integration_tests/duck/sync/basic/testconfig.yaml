@@ -9,7 +9,7 @@ Tests:
     Cases:
       sync:
         test-cmd: duck -C foo sync
-        Output:
+        Err:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`

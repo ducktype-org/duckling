@@ -20,3 +20,16 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+  variant_fields:
+    # Disabled on macOS: on Apple arm64 the LLVM build reads wrong values from a by-value variant
+    # argument whose second half is passed on the stack (an LLVM backend bug that is already on main).
+    Enabled: '[ "@{is_macos}" != "true" ]'
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        Output:
+          String: ""
+        ExitCode: 0

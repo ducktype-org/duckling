@@ -9,5 +9,5 @@ Tests:
     Cases:
       basic:
         test-cmd: duck -C foo clean-storage --venv foo
-        Output:
+        Err:
           String: 'info: successfully removed venv \`foo\`\n'

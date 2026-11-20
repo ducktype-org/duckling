@@ -13,7 +13,7 @@ Tests:
     Cases:
       basic:
         test-cmd: duck -C foo clean-storage
-        Output:
+        Err:
           String: |+
             info: successfully cleaned the storage
             Removed 1 venv

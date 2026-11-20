@@ -2,7 +2,8 @@ before-cmd: export PATH="@{duckc_dir}:$PATH"
 
 # These build real packages with duckc, which competes with every other
 # concurrently compiling case.
-timeout_default: 20
+timeout_default: 180
+timeout_jit: 180
 
 # @TODO: #3023 Enable output in all tests; we don't check it, because it contains not-portable hashes
 SubDirs:
@@ -13,6 +14,7 @@ SubDirs:
   - diamond
   - dvm-deps
   - errors
+  - external-libs
   - features
   - local-cycle
   - no-cstd
