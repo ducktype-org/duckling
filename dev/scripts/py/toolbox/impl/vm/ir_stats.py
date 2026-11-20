@@ -19,9 +19,16 @@ from ..helpers import exit_with_error
 DEFAULT_LLVM_BIN = pathlib.Path("scripts/downloads/llvm_lib_19.1.7_native/bin")
 DEFAULT_SOURCES = [
     "src/vm/src/vm/core/fast/eval/instruction_functions.cpp",
+    "src/vm/src/vm/core/fast/eval/helpers.cpp",
     "src/vm/src/vm/core/fast/program/instructions/executable.cpp",
 ]
-DEFAULT_FILTER = r"FastExecutor::(Instr_\w+)|\b(dispatcher_\w+)|\b(stencil_\w+)"
+DEFAULT_FILTER = r"FastExecutor::(Instr_\w+|eval)\b|\b(dispatcher_\w+)|\b(stencil_\w+)|(FastHelpers::\w+)"
+# Helpers may contain exception handling, but every exception must end in their catch-all.
+HELPER_PREFIX = "FastHelpers::"
+# Only the dispatch functions may call indirectly: the next instruction's dispatcher.
+DISPATCH_NAMES = re.compile(r"^(eval|dispatcher_\w+)$")
+# Ending a catch block may throw, which clang routes to terminate; that is not an escape.
+END_CATCH = "__cxa_end_catch"
 VARIANT_DEFINES = {"tc": "-DUSE_TAIL_CALLS", "sc": "-DUSE_SWITCH_CASE"}
 UNWIND_MARKERS = ("__cxa_throw", "__cxa_rethrow", "_Unwind_Resume")
 
@@ -32,18 +39,18 @@ class FunctionStats:
     ir_instructions: int | None = 0
     basic_blocks: int | None = 0
     calls: list[str] = field(default_factory=list)
-    # Unwinding instructions plus direct calls to functions that are not `nounwind`.
+    # Ways an exception can leave the function, see `--check-no-unwind`.
     unwind: int | None = 0
     may_unwind_calls: list[str] = field(default_factory=list)
-    x86_instructions: int = 0
-    bytes: int = 0
+    x86_instructions: int | None = 0
+    bytes: int | None = 0
     rthroughput: float | None = None
 
 
 def _tool(llvm_bin: pathlib.Path, name: str) -> str:
     path = llvm_bin / name
     if not path.exists():
-        exit_with_error(f"`{path}` does not exist, run `./toolbox.py download-llvm` or pass --llvm-bin")
+        exit_with_error(f"`{path}` does not exist, run `./toolbox.py install-llvm` or pass --llvm-bin")
     return str(path)
 
 
@@ -110,6 +117,8 @@ def _demangle(llvm_bin: pathlib.Path, names: list[str]) -> dict[str, str]:
 IR_DEFINE = re.compile(r'^define [^@]*@("?[^"(]+"?)\(')
 IR_FUNCTION = re.compile(r'^(?:define|declare) [^@]*@("?[^"(]+"?)\(')
 IR_CALL = re.compile(r'\b(?:call|invoke)\b[^@]*@("?[\w.$]+"?)\(')
+IR_INDIRECT_CALL = re.compile(r"\b(?:call|invoke)\b[^@(]*\s%[\w.$-]+\(")
+INDIRECT_CALL = "<indirect call>"
 IR_ATTRIBUTE_GROUP = re.compile(r"^attributes #(\d+) = \{(.*)\}")
 
 
@@ -129,10 +138,15 @@ def _nounwind_functions(ir: str) -> tuple[set[str], set[str]]:
     return result, nounwind_groups
 
 
-def _ir_stats(ir: str, mangled: str, nounwind: tuple[set[str], set[str]]) -> FunctionStats:
+def _ir_stats(body: list[str], nounwind: tuple[set[str], set[str]]) -> tuple[FunctionStats, int]:
+    """
+    Counts the function's instructions and its calls. Calls that may unwind, i.e. to functions not
+    known to be `nounwind`, go to `may_unwind_calls`; the returned count is the number of
+    `invoke`, `landingpad` and `resume` instructions and of throws.
+    """
     nounwind_functions, nounwind_groups = nounwind
-    stats = FunctionStats(name=mangled)
-    body = _split_functions(ir, IR_DEFINE, re.compile(r"^}"))[mangled]
+    stats = FunctionStats(name="")
+    unwinding_instructions = 0
     stats.basic_blocks = 1
     for line in body:
         line = line.strip()
@@ -145,17 +159,54 @@ def _ir_stats(ir: str, mangled: str, nounwind: tuple[set[str], set[str]]) -> Fun
         if re.search(r"\b(invoke|landingpad|resume)\b", line) or any(
             marker in line for marker in UNWIND_MARKERS
         ):
-            stats.unwind += 1
-        elif (m := IR_CALL.search(line)) and not m.group(1).startswith("llvm."):
-            # Indirect calls (the next-instruction dispatch) are not checked.
+            unwinding_instructions += 1
+            if m := IR_CALL.search(line):
+                stats.calls.append(m.group(1).strip('"'))
+            continue
+
+        if (m := IR_CALL.search(line)) and not m.group(1).startswith("llvm."):
             callee = m.group(1).strip('"')
+            stats.calls.append(callee)
             call_site_groups = set(re.findall(r"#(\d+)", line[m.end() :]))
             if callee not in nounwind_functions and not (call_site_groups & nounwind_groups):
-                stats.unwind += 1
                 stats.may_unwind_calls.append(callee)
-        if (m := IR_CALL.search(line)) and not m.group(1).startswith("llvm."):
-            stats.calls.append(m.group(1).strip('"'))
-    return stats
+        elif m := IR_INDIRECT_CALL.search(line):
+            call_site_groups = set(re.findall(r"#(\d+)", line[m.end() :]))
+            if not (call_site_groups & nounwind_groups) and not re.search(r"\bnounwind\b", line):
+                stats.may_unwind_calls.append(INDIRECT_CALL)
+    return stats, unwinding_instructions
+
+
+def _escaping_invokes(body: list[str]) -> list[str]:
+    """Callees of the `invoke`s whose exceptions are not caught by a catch-all landing pad."""
+    blocks: dict[str, list[str]] = {}
+    current = blocks.setdefault("", [])
+    for line in body:
+        if m := re.match(r"^([\w.$-]+):", line):
+            current = blocks.setdefault(m.group(1), [])
+        else:
+            current.append(line.strip())
+
+    def catches_all(label: str) -> bool:
+        # clang's terminate pad of a `noexcept` function is a catch-all that terminates.
+        block = blocks.get(label, [])
+        return any(line.startswith("catch ptr null") for line in block) and not any(
+            "__clang_call_terminate" in line or "@_ZSt9terminatev" in line for line in block
+        )
+
+    escaping = []
+    lines = [line.strip() for line in body]
+    for i, line in enumerate(lines):
+        if line.startswith("resume "):
+            escaping.append("<resume>")
+            continue
+        if not (m := re.search(r"\binvoke\b[^@(]*\s(@\"?[\w.$]+\"?|%[\w.$-]+)\(", line)):
+            continue
+        callee = m.group(1).lstrip("@").strip('"') if m.group(1).startswith("@") else INDIRECT_CALL
+        unwind = re.search(r"unwind label %([\w.$-]+)", line + " " + (lines[i + 1] if i + 1 < len(lines) else ""))
+        if callee != END_CATCH and not (unwind and catches_all(unwind.group(1))):
+            escaping.append(callee)
+    return escaping
 
 
 def _asm_stats(asm: str) -> dict[str, list[str]]:
@@ -193,6 +244,7 @@ def collect(
     link: bool,
     name_filter: re.Pattern,
     mca: bool,
+    ir_only: bool = False,
 ) -> dict[str, FunctionStats]:
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = pathlib.Path(tmp_str)
@@ -219,29 +271,44 @@ def collect(
         results: dict[str, FunctionStats] = {}
         for module in modules:
             ir = _run([_tool(llvm_bin, "llvm-dis"), str(module), "-o", "-"])
-            asm = _asm_stats(_run([_tool(llvm_bin, "llc"), "-O3", str(module), "-o", "-"]))
+            asm = {} if ir_only else _asm_stats(_run([_tool(llvm_bin, "llc"), "-O3", str(module), "-o", "-"]))
 
-            mangled_names = [m.group(1).strip('"') for m in map(IR_DEFINE.match, ir.splitlines()) if m]
-            demangled = _demangle(llvm_bin, mangled_names)
+            bodies = _split_functions(ir, IR_DEFINE, re.compile(r"^}"))
+            demangled = _demangle(llvm_bin, list(bodies))
             nounwind = _nounwind_functions(ir)
-            for mangled in mangled_names:
+            selected: list[tuple[str, FunctionStats]] = []
+            for mangled, body in bodies.items():
                 m = name_filter.search(demangled[mangled])
                 if not m:
                     continue
-                short = next(g for g in m.groups() if g) if m.groups() else m.group(0)
-                stats = _ir_stats(ir, mangled, nounwind)
-                stats.name = short
-                stats.calls = sorted(set(_demangle(llvm_bin, stats.calls).values())) if stats.calls else []
-                if stats.may_unwind_calls:
-                    stats.may_unwind_calls = sorted(set(_demangle(llvm_bin, stats.may_unwind_calls).values()))
-                if mangled in asm:
+                stats, unwinding_instructions = _ir_stats(body, nounwind)
+                stats.name = next(g for g in m.groups() if g) if m.groups() else m.group(0)
+                if stats.name.startswith(HELPER_PREFIX):
+                    # A helper may handle exceptions; only those its catch-all misses escape.
+                    stats.may_unwind_calls += _escaping_invokes(body)
+                    stats.unwind = len(stats.may_unwind_calls)
+                else:
+                    if DISPATCH_NAMES.match(stats.name):
+                        stats.may_unwind_calls = [c for c in stats.may_unwind_calls if c != INDIRECT_CALL]
+                    stats.unwind = unwinding_instructions + len(stats.may_unwind_calls)
+                selected.append((mangled, stats))
+
+            callee_names = sorted({c for _, s in selected for c in s.calls + s.may_unwind_calls} - {INDIRECT_CALL})
+            callees = _demangle(llvm_bin, callee_names) if callee_names else {}
+            for mangled, stats in selected:
+                short = stats.name
+                stats.calls = sorted({callees.get(c, c) for c in stats.calls})
+                stats.may_unwind_calls = sorted({callees.get(c, c) for c in stats.may_unwind_calls})
+                if ir_only:
+                    stats.x86_instructions = stats.bytes = None
+                elif mangled in asm:
                     stats.x86_instructions = len(asm[mangled])
                     if mca:
                         stats.rthroughput = _mca_rthroughput(llvm_bin, asm[mangled])
                 results[short] = stats
 
         obj_sizes = {}
-        for module in modules:
+        for module in [] if ir_only else modules:
             obj = module.with_suffix(".o")
             _run([_tool(llvm_bin, "llc"), "-O3", "-filetype=obj", "--function-sections", str(module), "-o", str(obj)])
             for line in _run([_tool(llvm_bin, "llvm-nm"), "-S", "-C", "--defined-only", str(obj)]).splitlines():
@@ -354,7 +421,7 @@ def print_table(variant: str, stats: dict[str, FunctionStats], baseline: dict | 
         line = f"{name:<40}" + "".join(f"{c:>14}" for c in cells)
         click.echo(click.style(line, fg="red") if s.unwind else line)
         if show_calls:
-            for callee in s.calls:
+            for callee in sorted(set(s.calls) | set(s.may_unwind_calls)):
                 suffix = "  (may unwind)" if callee in s.may_unwind_calls else ""
                 click.echo(f"    -> {callee}{suffix}")
 
@@ -367,6 +434,7 @@ def ir_stats_impl(
     extra_flag: tuple[str, ...],
     no_link: bool,
     from_build: bool,
+    ir_only: bool,
     filter: str,
     mca: bool,
     calls: bool,
@@ -374,6 +442,8 @@ def ir_stats_impl(
     compare: str | None,
     check_no_unwind: bool,
 ) -> None:
+    if from_build and ir_only:
+        exit_with_error("--from-build and --ir-only exclude each other")
     if from_build and (check_no_unwind or extra_flag or no_link):
         exit_with_error("--from-build reads the built objects; it cannot be combined with -X, --no-link or --check-no-unwind")
 
@@ -395,7 +465,8 @@ def ir_stats_impl(
                 list(extra_flag),
                 not no_link,
                 name_filter,
-                mca,
+                mca and not ir_only,
+                ir_only,
             )
         print_table(v, stats, baseline.get(v), calls)
         report[v] = {name: asdict(s) for name, s in stats.items()}
