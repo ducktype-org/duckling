@@ -41,6 +41,45 @@ namespace compiler::helios {
 	};
 
 	/**
+	 * @brief Symbol data for symbols declared in a match pattern.
+	 */
+	struct PatternSemantics final {
+		/**
+		 * Scope in which the symbol was defined.
+		 */
+		ScopeID scope;
+
+		/**
+		 * Hash of the PST element that the symbol was created from.
+		 */
+		pst::HashType pst_element_hash;
+
+		/**
+		 * Hash of the PST pattern element that the symbol was created from.
+		 */
+		pst::HashType pattern_hash;
+
+		PatternSemantics(ScopeID scope, pst::HashType pst_element_hash, pst::HashType pattern_hash):
+			  scope(scope),
+			  pst_element_hash(pst_element_hash),
+			  pattern_hash(pattern_hash) {}
+
+		/**
+		 * Return associated pst_element.
+		 */
+		[[nodiscard]] pst::AccessLocked<pst::LangElement> getElement() const {
+			return pst::LangElement::getByStableHash(pst_element_hash);
+		}
+
+		/**
+		 * Return associated pst_element.
+		 */
+		[[nodiscard]] pst::AccessLocked<pst::LangElement> getPattern() const {
+			return pst::LangElement::getByStableHash(pattern_hash);
+		}
+	};
+
+	/**
 	 * @brief Symbol data for symbols declared in a class body, i.e. fields, methods,
 	 * constructors and destructors.
 	 */

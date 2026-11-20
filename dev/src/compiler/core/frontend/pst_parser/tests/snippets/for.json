@@ -10,193 +10,201 @@
 				"sourceEnd": 45
 			},
 			"For": {
-				"identifier": {
+				"iteration": {
 					"position": {
 						"sourceStart": 4,
-						"sourceEnd": 4
+						"sourceEnd": 27
 					},
-					"Identifier Wrapper": {
-						"value": "a"
-					}
-				},
-				"type": {
-					"position": {
-						"sourceStart": 7,
-						"sourceEnd": 10
-					},
-					"Top Level Expression": {
-						"expr": {
+					"For Iteration": {
+						"identifier": {
+							"position": {
+								"sourceStart": 4,
+								"sourceEnd": 4
+							},
+							"Identifier Wrapper": {
+								"value": "a"
+							}
+						},
+						"type": {
 							"position": {
 								"sourceStart": 7,
 								"sourceEnd": 10
 							},
-							"Comma Expr": {
-								"sub-expressions": [
-									{
-										"position": {
-											"sourceStart": 7,
-											"sourceEnd": 7
-										},
-										"Identifier Expression": {
-											"name": {
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 7,
+										"sourceEnd": 10
+									},
+									"Comma Expr": {
+										"sub-expressions": [
+											{
 												"position": {
 													"sourceStart": 7,
 													"sourceEnd": 7
 												},
-												"Identifier Wrapper": {
-													"value": "T"
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 7,
+															"sourceEnd": 7
+														},
+														"Identifier Wrapper": {
+															"value": "T"
+														}
+													}
 												}
-											}
-										}
-									},
-									{
-										"position": {
-											"sourceStart": 10,
-											"sourceEnd": 10
-										},
-										"Identifier Expression": {
-											"name": {
+											},
+											{
 												"position": {
 													"sourceStart": 10,
 													"sourceEnd": 10
 												},
-												"Identifier Wrapper": {
-													"value": "U"
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 10,
+															"sourceEnd": 10
+														},
+														"Identifier Wrapper": {
+															"value": "U"
+														}
+													}
 												}
 											}
-										}
+										]
 									}
-								]
+								}
 							}
-						}
-					}
-				},
-				"iterable": {
-					"position": {
-						"sourceStart": 15,
-						"sourceEnd": 27
-					},
-					"Top Level Expression": {
-						"expr": {
+						},
+						"iterable": {
 							"position": {
 								"sourceStart": 15,
 								"sourceEnd": 27
 							},
-							"Chain Expression": {
-								"atom": {
+							"Top Level Expression": {
+								"expr": {
 									"position": {
 										"sourceStart": 15,
-										"sourceEnd": 15
+										"sourceEnd": 27
 									},
-									"Identifier Expression": {
-										"name": {
+									"Chain Expression": {
+										"atom": {
 											"position": {
 												"sourceStart": 15,
 												"sourceEnd": 15
 											},
-											"Identifier Wrapper": {
-												"value": "x"
+											"Identifier Expression": {
+												"name": {
+													"position": {
+														"sourceStart": 15,
+														"sourceEnd": 15
+													},
+													"Identifier Wrapper": {
+														"value": "x"
+													}
+												}
 											}
-										}
-									}
-								},
-								"chain": [
-									{
-										"position": {
-											"sourceStart": 16,
-											"sourceEnd": 17
 										},
-										"Access Expression": {
-											"type": {
+										"chain": [
+											{
 												"position": {
 													"sourceStart": 16,
-													"sourceEnd": 16
-												},
-												"Operator Wrapper": {
-													"value": "."
-												}
-											},
-											"name": {
-												"position": {
-													"sourceStart": 17,
 													"sourceEnd": 17
 												},
-												"Identifier Wrapper": {
-													"value": "b"
+												"Access Expression": {
+													"type": {
+														"position": {
+															"sourceStart": 16,
+															"sourceEnd": 16
+														},
+														"Operator Wrapper": {
+															"value": "."
+														}
+													},
+													"name": {
+														"position": {
+															"sourceStart": 17,
+															"sourceEnd": 17
+														},
+														"Identifier Wrapper": {
+															"value": "b"
+														}
+													}
 												}
-											}
-										}
-									},
-									{
-										"position": {
-											"sourceStart": 18,
-											"sourceEnd": 27
-										},
-										"Call Expression": {
-											"type": "()",
-											"arguments": {
+											},
+											{
 												"position": {
-													"sourceStart": 19,
-													"sourceEnd": 26
+													"sourceStart": 18,
+													"sourceEnd": 27
 												},
-												"call list": [
-													{
+												"Call Expression": {
+													"type": "()",
+													"arguments": {
 														"position": {
 															"sourceStart": 19,
-															"sourceEnd": 23
+															"sourceEnd": 26
 														},
-														"Call argument": {
-															"value": {
+														"call list": [
+															{
 																"position": {
 																	"sourceStart": 19,
 																	"sourceEnd": 23
 																},
-																"Expression Holder": {
-																	"expr": {
+																"Call argument": {
+																	"value": {
 																		"position": {
 																			"sourceStart": 19,
 																			"sourceEnd": 23
 																		},
-																		"Binary Operator": {
-																			"left_expr": {
+																		"Expression Holder": {
+																			"expr": {
 																				"position": {
 																					"sourceStart": 19,
-																					"sourceEnd": 19
+																					"sourceEnd": 23
 																				},
-																				"Identifier Expression": {
-																					"name": {
+																				"Binary Operator": {
+																					"left_expr": {
 																						"position": {
 																							"sourceStart": 19,
 																							"sourceEnd": 19
 																						},
-																						"Identifier Wrapper": {
-																							"value": "c"
+																						"Identifier Expression": {
+																							"name": {
+																								"position": {
+																									"sourceStart": 19,
+																									"sourceEnd": 19
+																								},
+																								"Identifier Wrapper": {
+																									"value": "c"
+																								}
+																							}
 																						}
-																					}
-																				}
-																			},
-																			"operator": {
-																				"position": {
-																					"sourceStart": 21,
-																					"sourceEnd": 21
-																				},
-																				"Operator Wrapper": {
-																					"value": "+"
-																				}
-																			},
-																			"right_expr": {
-																				"position": {
-																					"sourceStart": 23,
-																					"sourceEnd": 23
-																				},
-																				"Identifier Expression": {
-																					"name": {
+																					},
+																					"operator": {
+																						"position": {
+																							"sourceStart": 21,
+																							"sourceEnd": 21
+																						},
+																						"Operator Wrapper": {
+																							"value": "+"
+																						}
+																					},
+																					"right_expr": {
 																						"position": {
 																							"sourceStart": 23,
 																							"sourceEnd": 23
 																						},
-																						"Identifier Wrapper": {
-																							"value": "d"
+																						"Identifier Expression": {
+																							"name": {
+																								"position": {
+																									"sourceStart": 23,
+																									"sourceEnd": 23
+																								},
+																								"Identifier Wrapper": {
+																									"value": "d"
+																								}
+																							}
 																						}
 																					}
 																				}
@@ -204,49 +212,49 @@
 																		}
 																	}
 																}
-															}
-														}
-													},
-													{
-														"position": {
-															"sourceStart": 26,
-															"sourceEnd": 26
-														},
-														"Call argument": {
-															"value": {
+															},
+															{
 																"position": {
 																	"sourceStart": 26,
 																	"sourceEnd": 26
 																},
-																"Expression Holder": {
-																	"expr": {
+																"Call argument": {
+																	"value": {
 																		"position": {
 																			"sourceStart": 26,
 																			"sourceEnd": 26
 																		},
-																		"Identifier Expression": {
-																			"name": {
+																		"Expression Holder": {
+																			"expr": {
 																				"position": {
 																					"sourceStart": 26,
 																					"sourceEnd": 26
 																				},
-																				"Identifier Wrapper": {
-																					"value": "w"
+																				"Identifier Expression": {
+																					"name": {
+																						"position": {
+																							"sourceStart": 26,
+																							"sourceEnd": 26
+																						},
+																						"Identifier Wrapper": {
+																							"value": "w"
+																						}
+																					}
 																				}
 																			}
 																		}
 																	}
 																}
-															}
-														}
-													},
-												]
+															},
+														]
+													}
+												}
 											}
-										}
+										]
 									}
-								]
+								}
 							}
-						}
+				}
 					}
 				},
 				"body": {

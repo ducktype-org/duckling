@@ -53,7 +53,7 @@ namespace compiler::helios {
 		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
+			variant_case_novalue(PstImplementedSemantics, PatternSemantics, ClassMemberSemantics) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
 			}
 			variant_case(BuiltinSemantics, data) {
@@ -90,6 +90,9 @@ namespace compiler::helios {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstImplementedSemantics, pst_data) {
 				return pst_emission_policy(pst_data.getElement());
+			}
+			variant_case(PatternSemantics, pattern_data) {
+				return pst_emission_policy(pattern_data.getElement());
 			}
 			variant_case(ClassMemberSemantics, member_data) {
 				return pst_emission_policy(member_data.getElement());
@@ -192,6 +195,7 @@ namespace compiler::helios {
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::ForIteration:
 				case pst::ElementKind::RoundGroupExpr:
 				case pst::ElementKind::ArrayLiteralList:
 				case pst::ElementKind::CallList:
@@ -684,7 +688,7 @@ namespace compiler::helios {
 					scope,
 					stmt->getHash(),
 					ctx.query<tsh::QueryClassType>(
-						ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+						ctx.query<QuerySymbolFromPST>(owner_class_element.value()).valueOrThrow()
 					)
 				)
 			);
@@ -710,23 +714,33 @@ namespace compiler::helios {
 				);
 			}
 
+			if (auto for_iteration_opt = element.dynamicCast<pst::ForIteration>()) {
+				auto for_iteration = for_iteration_opt.value();
+				return SymbolData::makePSTSymbolData(
+					{
+						.name = for_iteration->getIteratorIdentifier().unlock(ctx)->unwrap(),
+						.kind = SymbolKind::Variable,
+					},
+					PstImplementedSemantics(scope, element->getHash())
+				);
+			}
+
 			if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
 				auto ident_wrapper = ident_wrapper_opt.value();
 				auto parent_opt    = ident_wrapper->getParent();
 				CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without parent");
 
 				auto parent_elem = parent_opt.value().unlock(ctx);
-				if (parent_elem.dynamicCast<pst::For>().has_value()
-				    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
-					return SymbolData::makePSTSymbolData(
+				if (parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
+					return SymbolData::makePatternSymbolData(
 						{
 							.name = ident_wrapper->unwrap(),
 							.kind = SymbolKind::Variable,
 						},
-						PstImplementedSemantics(scope, element->getHash())
+						PatternSemantics(scope, element->getHash(), parent_elem->getHash())
 					);
 				} else {
-					CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
+					CORE_PANIC("IdentifierWrapper in QuerySymbolFromPST with unsupported parent");
 				}
 			}
 
@@ -738,7 +752,7 @@ namespace compiler::helios {
 		return (*selectorsOf(stmt).unlock(ctx)->begin()).unlock(ctx);
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
+	struct IMPLEMENT_QUERY(QuerySymbolFromPST, query::QResult<SymbolData>) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
@@ -756,7 +770,8 @@ namespace compiler::helios {
 			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
 			// have symbols.
 			CORE_ASSERT(
-				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
+				parent.isLangElement(),
+				"PST element without LangElement parent in QuerySymbolFromPST"
 			);
 			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
 		}
@@ -799,7 +814,7 @@ namespace compiler::helios {
 		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolFromPST);
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -1053,7 +1068,7 @@ namespace compiler::helios {
 			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
-		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto pst_symbols = ImplementationOf_QuerySymbolFromPST::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 

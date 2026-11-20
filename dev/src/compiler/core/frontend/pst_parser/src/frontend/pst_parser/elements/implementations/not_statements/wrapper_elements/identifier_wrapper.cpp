@@ -58,10 +58,6 @@ namespace pst {
 		return partial_hash;
 	}
 
-	void IdentifierWrapper::acceptVisitor(PstVisitor& visitor) const {
-		visitor.visitIdentifierWrapper(*this);
-	}
-
 	void IdentifierWrapper::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"value\" : ";

@@ -83,6 +83,7 @@ namespace pst {
 		// others:
 		Param,
 		ParamList,
+		ForIteration,
 		FlowPatternList,
 		DottedName,
 		CallArgument,

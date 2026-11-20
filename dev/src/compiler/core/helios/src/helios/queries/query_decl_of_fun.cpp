@@ -449,7 +449,7 @@ namespace compiler::helios {
 				std::vector<code::Parameter> parameters;
 				for (auto param_locked: *param_list) {
 					auto  param        = param_locked.unlock(ctx);
-					auto  param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
+					auto  param_symbol = ctx.query<QuerySymbolFromPST>({ param }).valueOrThrow();
 					auto  param_name   = name(param_symbol);
 					auto& param_type
 						= ctx.query<QueryTypeOfSymbol>({ param_symbol })->valueOrThrow();
@@ -753,7 +753,10 @@ namespace compiler::helios {
 			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(
-						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+						PstImplementedSemantics,
+						PatternSemantics,
+						ClassMemberSemantics,
+						BuiltinSemantics
 					) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
