@@ -257,10 +257,6 @@ namespace compiler::helios {
 				setTypeOfSymbol(iter_type);
 			}
 
-			void visitFor(pst::Access<pst::For> stmt) final {
-				setTypeOfForIterator(stmt->getIteration().unlock(ctx), stmt->getIsConst());
-			}
-
 			void visitForIteration(pst::Access<pst::ForIteration> iteration) final {
 				auto parent = iteration->getParent();
 				CORE_ASSERT(parent.has_value(), "ForIteration without parent");
@@ -297,9 +293,10 @@ namespace compiler::helios {
 
 					return visitor.symbol_type_qresult;
 				}
-				variant_case(PstInferredSemantics, data) {
+				variant_case(PatternSemantics, data) {
 					PstVisitor_GetTypeOf visitor(ctx);
-					data.getParent(ctx).unlock(ctx)->acceptVisitor(visitor);
+					auto pattern = data.getPattern().unlock(ctx);
+					pattern->acceptVisitor(visitor);
 					return visitor.symbol_type_qresult;
 				}
 				variant_case(defgen::Constructor, ctor) {

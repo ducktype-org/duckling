@@ -78,7 +78,7 @@ namespace compiler::helios {
 	struct SymbolData final {
 		using SymbolSemantics = std::variant<
 			PstImplementedSemantics,
-			PstInferredSemantics,
+			PatternSemantics,
 			ClassMemberSemantics,
 			BuiltinSemantics,
 			GENERATED_SYMBOL_SEMANTICS_LIST>;
@@ -97,8 +97,8 @@ namespace compiler::helios {
 			CommonSymbolData common_data, PstImplementedSemantics pst_data
 		);
 
-		static SymbolData makePSTInferredSymbolData(
-			CommonSymbolData common_data, PstInferredSemantics pst_data
+		static SymbolData makePatternSymbolData(
+			CommonSymbolData common_data, PatternSemantics pattern_data
 		);
 
 		static SymbolData makeClassMemberSymbolData(

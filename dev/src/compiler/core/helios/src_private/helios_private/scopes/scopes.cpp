@@ -408,17 +408,27 @@ namespace compiler::helios {
 
 			void visitFun(pst::Access<pst::Fun> fun) override {
 				// Scope of "fun →()← {}"
-				output(ctx.query<QueryInferredSymbols>(fun).valueOrThrow());
+				
+				std::vector<SymID> out;
+				for (auto params: *fun->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
+
+				output(std::move(out));
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> fun_decl) override {
-				output(ctx.query<QueryInferredSymbols>(fun_decl).valueOrThrow());
+				std::vector<SymID> out;
+				for (auto param: *fun_decl->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(param).valueOrThrow());
+				output(std::move(out));
 			}
 
 			void visitMethod(pst::Access<pst::Method> meth) override {
 				// Scope of "fun →()← {}"
 
-				std::vector<SymID> out = ctx.query<QueryInferredSymbols>(meth).valueOrThrow();
+				std::vector<SymID> out;
+				for (auto params: *meth->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
 
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
@@ -460,7 +470,11 @@ namespace compiler::helios {
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
 				// Scope of "T.copy →(other)← = {}".
-				output(ctx.query<QueryInferredSymbols>(cctor).valueOrThrow());
+				std::vector<SymID> out;
+				for (auto params: *cctor->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
+
+				output(std::move(out));
 			}
 
 			void visitIf(pst::Access<pst::If>) override {
@@ -564,7 +578,7 @@ namespace compiler::helios {
 				if (auto binding
 				    = flow->getPattern().unlock(ctx).dynamicCast<pst::BindingPattern>()) {
 					out.emplace_back(
-						ctx.query<QueryInferredSymbols>(binding.value()).valueOrThrow().at(0)
+						ctx.query<QuerySymbolOfSTMT>({ binding.value()->getName() }).valueOrThrow()
 					);
 				}
 				return out;

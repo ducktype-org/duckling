@@ -228,7 +228,7 @@ namespace compiler::helios {
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
 				variant_case_novalue(
-					PstImplementedSemantics, PstInferredSemantics, ClassMemberSemantics
+					PstImplementedSemantics, PatternSemantics, ClassMemberSemantics
 				) {
 					CORE_ASSERT(
 						isFunctionLike(kind(sym_id)),

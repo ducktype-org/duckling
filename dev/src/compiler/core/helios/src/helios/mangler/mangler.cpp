@@ -431,7 +431,7 @@ namespace compiler::helios::mangler {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(
 							PstImplementedSemantics,
-							PstInferredSemantics,
+							PatternSemantics,
 							ClassMemberSemantics,
 							BuiltinSemantics
 						) {
@@ -636,7 +636,7 @@ namespace compiler::helios::mangler {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(
 							PstImplementedSemantics,
-							PstInferredSemantics,
+							PatternSemantics,
 							ClassMemberSemantics,
 							BuiltinSemantics
 						) {

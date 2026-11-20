@@ -15,7 +15,7 @@
 
 namespace compiler::helios {
 	/**
-	 * @brief Symbol data for all symbols that are declared in the code created from PST elements.
+	 * @brief Symbol data for all symbols that are created from PST elements.
 	 */
 	struct PstImplementedSemantics final {
 		/**
@@ -41,13 +41,10 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Symbol data for all symbols that are created from PST elements but not directly
-	 * declared. e.g. symbols like loop iterators. Their parent statements
-	 * usually have some other symbol declared and associated with the parent, so those are sort of
-	 * byproduct symbols. The semantics are very similar to PstImplementedSemantics, but associated
-	 * PST elements are not statements.
+	 * @brief Symbol data for symbols declared in a match pattern.
 	 */
-	struct PstInferredSemantics final {
+	// @TODO: expand this to facilitate type inference for match patterns
+	struct PatternSemantics final {
 		/**
 		 * Scope in which the symbol was defined.
 		 */
@@ -58,9 +55,15 @@ namespace compiler::helios {
 		 */
 		pst::HashType pst_element_hash;
 
-		PstInferredSemantics(ScopeID scope, pst::HashType pst_element_hash):
+		/**
+		 * Hash of the PST pattern element that the symbol was created from.
+		 */
+		pst::HashType pattern_hash;
+
+		PatternSemantics(ScopeID scope, pst::HashType pst_element_hash, pst::HashType pattern_hash):
 			  scope(scope),
-			  pst_element_hash(pst_element_hash) {}
+			  pst_element_hash(pst_element_hash),
+			  pattern_hash(pattern_hash) {}
 
 		/**
 		 * Return associated pst_element.
@@ -70,15 +73,10 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * Return the parent of associated pst_element.
+		 * Return associated pst_element.
 		 */
-		[[nodiscard]] pst::AccessLocked<pst::LangElement> getParent(query::Context& ctx) const {
-			auto parent_opt
-				= pst::LangElement::getByStableHash(pst_element_hash).unlock(ctx)->getParent();
-			CORE_ASSERT(
-				parent_opt.has_value(), "PST element without a parent in PstInferredSemantics"
-			);
-			return parent_opt.value();
+		[[nodiscard]] pst::AccessLocked<pst::LangElement> getPattern() const {
+			return pst::LangElement::getByStableHash(pattern_hash);
 		}
 	};
 
