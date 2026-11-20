@@ -9,6 +9,11 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use clap::ArgMatches;
+use duck_utils::cli::cli_ext::ArgMatchesExt;
+use duck_utils::util::command_ext::CommandExt;
+use duck_utils::util::path_ops::{is_executable, resolve_with_tilde};
+use quackpack::core::compile::duckc::Duckc;
+use quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use tracing::{debug, trace};
 
 use super::cli;
@@ -17,13 +22,8 @@ use super::cli_args_preprocessing::typos_fixing::fix_typos;
 use super::global_options::GlobalOptions;
 use super::subcommands::exec_for;
 use super::subcommands::run_script::check_is_script;
-use crate::duck::driver::cli_ext::ArgMatchesExt;
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
-use crate::quackpack::core::compile::duckc::Duckc;
-use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
-use crate::util::command_ext::CommandExt;
-use crate::util::path_ops::{is_executable, resolve_with_tilde};
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 /// Run the duck with the given [`DuckContext`].

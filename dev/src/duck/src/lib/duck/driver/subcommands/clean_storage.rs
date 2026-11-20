@@ -5,14 +5,12 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
+use duck_utils::cli::cli_ext::{flag, optional, subcommand};
+use duck_utils::util::error::HintMessage;
+use quackpack::core::storage::venv_id::ToVenvId;
+use quackpack::core::{AllowGlobalPackage, PackageLoader};
+use quackpack::subcommands::clean_storage::{CleanStorageMode, CleanStorageOptions, clean_storage};
 
-use crate::duck::driver::cli_ext::{flag, optional, subcommand};
-use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::quackpack::subcommands::clean_storage::{
-    CleanStorageMode, CleanStorageOptions, clean_storage,
-};
-use crate::util::error::HintMessage;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Creates parser for the `clean-storage` subcommand.

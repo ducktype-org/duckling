@@ -7,13 +7,13 @@
 use std::ffi::{OsStr, OsString};
 
 use clap::{Arg, ArgMatches, Command, value_parser};
-
-use crate::duck::driver::cli_ext::{
-    CommandExt, features_from_matches, flag, jobs_from_matches, multi, profile_from_matches,
-    subcommand,
+use duck_utils::cli::cli_ext::{
+    CommandExt, flag, jobs_from_matches, multi, profile_from_matches, subcommand,
 };
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::quackpack::subcommands::run::{RunOptions, run};
+use quackpack::core::{AllowGlobalPackage, PackageLoader};
+use quackpack::subcommands::run::{RunOptions, run};
+
+use super::features_from_matches;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `run` subcommand.

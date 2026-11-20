@@ -8,12 +8,12 @@ use std::path::Path;
 use std::str::FromStr;
 
 use clap::{Arg, ArgGroup, ArgMatches, Command, ValueHint};
-
-use crate::duck::driver::cli_ext::{flag, multi, optional, subcommand};
-use crate::quackpack::core::{DependencyKind, Version};
-use crate::quackpack::subcommands::add::{
+use duck_utils::cli::cli_ext::{flag, multi, optional, subcommand};
+use quackpack::core::{DependencyKind, Version};
+use quackpack::subcommands::add::{
     AddOptions, DependencySpecification, NameSpecification, SourceSpecification, add,
 };
+
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `add` subcommand.

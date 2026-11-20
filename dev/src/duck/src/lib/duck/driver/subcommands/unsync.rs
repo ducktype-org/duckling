@@ -7,7 +7,7 @@
 use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{ArgMatches, Command};
 
-use crate::duck::driver::cli_ext::{optional, subcommand};
+use duck_utils::cli::cli_ext::{optional, subcommand};
 
 /// Creates parser for the `unsync` subcommand.
 pub fn get_parser() -> Command {

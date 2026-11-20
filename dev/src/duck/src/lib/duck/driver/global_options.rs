@@ -7,9 +7,9 @@
 use std::str::FromStr;
 
 use clap::ArgMatches;
+use duck_utils::cli::cli_ext::ArgMatchesExt;
+use duck_utils::context::terminal::Verbosity;
 
-use crate::duck::driver::cli_ext::ArgMatchesExt;
-use crate::duck::util::terminal::Verbosity;
 use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
 /// Struct containing all global duck options, adjustable from cli.

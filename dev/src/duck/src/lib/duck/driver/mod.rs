@@ -8,19 +8,17 @@ use clap::builder::ValueParser;
 use clap::{Command, ValueHint};
 
 pub mod cli_args_preprocessing;
-pub(crate) mod cli_ext;
 pub mod external_subcommands;
 pub mod global_options;
 pub mod run;
-pub mod styles;
 pub mod subcommands;
 
-use crate::duck::driver::cli_ext::{flag, optional};
-use crate::duck::driver::styles::get_styles;
+use duck_utils::cli::cli_ext::{flag, optional};
+use duck_utils::cli::styles::get_styles;
 
 /// Create main cli parser.
 fn cli() -> Command {
-    let style = *styles::get_styles().get_literal();
+    let style = *get_styles().get_literal();
     let after_help = format!(
         "To run a script you can also use syntax `{style}duck [OPTIONS] <path-to-script>{style:#}`"
     );

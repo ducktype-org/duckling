@@ -6,7 +6,9 @@
 
 use clap::{ArgMatches, Command};
 
-use crate::{DuckContext, QuackResult};
+use quackpack::core::Package;
+
+use crate::{DuckContext, QuackResult, StrId};
 
 mod add;
 mod build;
@@ -65,4 +67,20 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         _ => return None,
     };
     Some(f)
+}
+
+/// Get enabled features from `args` for package `pkg`.
+pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
+    if args.get_flag("all-features") {
+        pkg.manifest()
+            .features()
+            .all_features()
+            .keys()
+            .copied()
+            .collect()
+    } else if let Some(cli_features) = args.get_many::<String>("features") {
+        cli_features.map(StrId::from).collect()
+    } else {
+        vec![]
+    }
 }

@@ -36,4 +36,4 @@ It should look like this:
 Notice that there are no brackets, since we don't want to execute this function, but return a function pointer instead.
 
 Also please note that the [`src/lib/duck/driver/subcommands/`](./) directory is not responsible for any complex actions.
-Your `execute` should only collect arguments from the command-line into some `struct`, and then call into the [`src/lib/quackpack/subcommands/`](../../../quackpack/subcommands/) directory.
+Your `execute` should only collect arguments from the command-line into some `struct`, and then call into the [`quackpack/src/subcommands/`](../../../../../quackpack/src/subcommands/) directory.

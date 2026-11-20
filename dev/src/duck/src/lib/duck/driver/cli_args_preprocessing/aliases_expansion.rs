@@ -4,53 +4,19 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use std::collections::HashMap;
 use std::ffi::OsString;
 
 use clap::ArgMatches;
+use duck_utils::context::aliases::Alias;
 use itertools::chain;
-use serde::{Deserialize, de};
 use tracing::{debug, trace};
 
 use crate::duck::driver::cli;
 use crate::duck::driver::cli_args_preprocessing::builtin::{
     get_builtin_alias_expansion, is_builtin_subcommand,
 };
+
 use crate::{DuckContext, QuackResult, qp_bail};
-
-/// A single configuration alias.
-/// Can be a string ("build --release"), or a list (["build", "--release"]).
-#[derive(Debug)]
-pub enum Alias {
-    ToSplit(String),
-    Splitted(Vec<String>),
-}
-
-impl Alias {
-    pub fn split(&self) -> Vec<String> {
-        match self {
-            Self::ToSplit(joined) => joined.split(' ').map(String::from).collect(),
-            Self::Splitted(splitted) => splitted.clone(),
-        }
-    }
-}
-
-impl<'de> de::Deserialize<'de> for Alias {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        serde_untagged::UntaggedEnumVisitor::new()
-            .expecting("a string or a list of strings")
-            .string(|alias| Ok(Self::ToSplit(alias.into())))
-            .seq(|seq| seq.deserialize().map(Self::Splitted))
-            .deserialize(deserializer)
-    }
-}
-
-#[derive(Debug, Default, Deserialize)]
-#[serde(transparent)]
-pub struct Aliases(pub HashMap<String, Alias>);
 
 /// Recursively replace current subcommand with an expanded user alias.
 ///

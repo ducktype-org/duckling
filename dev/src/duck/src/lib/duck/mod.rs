@@ -5,10 +5,9 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Main duck driver implementation.
-//! Mainly, a home of the [`driver`] module, and [`DuckContext`](util::duck_context::DuckContext) struct.
+//! Mainly, a home of the [`driver`] module.
 pub mod driver;
 mod main;
-pub mod util;
 pub mod version;
 
 pub use main::{main, setup_logger};
