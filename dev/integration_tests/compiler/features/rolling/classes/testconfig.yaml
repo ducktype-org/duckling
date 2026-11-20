@@ -19,3 +19,9 @@ Tests:
       all:
         Output:
           String: "42\n69\n"
+  unit_only_fields:
+    Cases:
+      all:
+        Output:
+          String: "1\n1\n1\n7\n"
+        ExitCode: 0

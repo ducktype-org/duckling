@@ -647,6 +647,17 @@ private:
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("Empty", second_class_info.name);
 
+		// A class carries information only when one of its fields does.
+		auto carries_information = [&](std::string_view class_name) {
+			const auto class_sym = getChain(class_name, root_scope).back();
+			return query::entryPoint<compiler::helios::QueryClassSymbolData>(class_sym)
+			    ->valueOrThrow()
+			    .carries_information;
+		};
+		ASSERT_TRUE(not carries_information("UnitFields"));
+		ASSERT_TRUE(not carries_information("NestedUnitFields"));
+		ASSERT_TRUE(carries_information("UnitAndValue"));
+
 		const auto class_with_member = getChain("ClassWithMember", root_scope).back();
 		auto       class_with_member_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(class_with_member)
