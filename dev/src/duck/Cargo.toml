@@ -1,21 +1,21 @@
-[package]
-name = "duck"
-version = "0.3.0"
+[workspace]
+# `duck_utils`: what every duck tool shares (errors, `DuckContext`, terminal, CLI look and feel).
+# `quackpack`: the package manager. `duck` (this package): the CLI driver and the `duck` binary.
+# Dependency direction: duck -> quackpack -> duck_utils. Ecosystem tools depend on `duck_utils` only.
+members = [".", "duck_utils", "quackpack"]
+# Plain `cargo build/test/clippy` from this directory covers the whole workspace.
+default-members = [".", "duck_utils", "quackpack"]
+resolver = "3"
+
+[workspace.package]
 edition = "2024"
 publish = false
 
-[lib]
-name = "duck"
-path = "src/lib/lib.rs"
-
-[[bin]]
-name = "duck"
-
-[dependencies]
+[workspace.dependencies]
 base64 = "0.22.1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "serde"] }
 clap = { version = "4.6.4", features = ["cargo"] }
-clap_complete = { version = "4.6.7", optional = true }
+clap_complete = { version = "4.6.7" }
 console = { version = "0.16.4", default-features = false, features = ["std"] }
 curl = "0.4.50"
 dialoguer = { version = "0.12.0", default-features = false, features = ["password"] }
@@ -53,11 +53,47 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = { version = "2.5.8", features = ["serde"] }
 yaml-edit = { version = "0.3.2" }
 
-[target.'cfg(windows)'.dependencies]
+httpmock = { version = "0.8.3", default-features = false }
 windows-sys = { version = "0.61.2", features = [ "Win32_Foundation", "Win32_System_Console"] }
+duck_utils = { path = "duck_utils" }
+quackpack = { path = "quackpack", default-features = false }
+
+[package]
+name = "duck"
+version = "0.3.0"
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+name = "duck"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "duck"
+
+[dependencies]
+chrono = { workspace = true }
+clap = { workspace = true }
+clap_complete = { workspace = true, optional = true }
+console = { workspace = true }
+curl = { workspace = true }
+duck_utils = { workspace = true }
+git2 = { workspace = true }
+itertools = { workspace = true }
+libgit2-sys = { workspace = true }
+openssl = { workspace = true }
+openssl-sys = { workspace = true }
+quackpack = { workspace = true }
+rusqlite = { workspace = true }
+russcip = { workspace = true }
+scip-sys = { workspace = true }
+serde = { workspace = true }
+tempfile = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
-httpmock = { version = "0.8.3", default-features = false }
+duck_utils = { workspace = true, features = ["test-utils"] }
 
 [features]
 # Hack around https://github.com/scipopt/scip-sys/issues/39
@@ -71,5 +107,5 @@ bundled-git2 = ["libgit2-sys/vendored"]
 bundled-openssl = ["openssl/vendored"]
 bundled-sqlite3 = ["rusqlite/bundled"]
 # NOTE: These two should not be enabled at the same time.
-bundled-scip = ["russcip/bundled"]
-static-scip = ["russcip/from-source"]
+bundled-scip = ["russcip/bundled", "quackpack/bundled-scip"]
+static-scip = ["russcip/from-source", "quackpack/static-scip"]

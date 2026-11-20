@@ -8,16 +8,17 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 
 use chrono::Local;
-use tracing::info;
+use duck_utils::context::indent::indent;
+use duck_utils::context::terminal::Terminal;
+use duck_utils::util::error::{ErrorExt, ErrorType, InternalError};
+use tracing::{info, trace};
 
-use crate::duck::util::indent::indent;
-use crate::duck::util::terminal::Terminal;
-use crate::util::error::{ErrorExt, ErrorType, InternalError};
 use crate::{DuckContext, QuackError};
 
 /// Actual main entry point for the duck-binary.
 pub fn main() {
     setup_logger();
+    trace!("linked against `{:#?}`", curl::Version::get());
     let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,
         Err(err) => print_error_and_exit(err, &Terminal::default()),

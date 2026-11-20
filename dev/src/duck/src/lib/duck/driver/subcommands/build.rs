@@ -5,13 +5,13 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
-
-use crate::duck::driver::cli_ext::{
-    CommandExt, features_from_matches, flag, jobs_from_matches, multi, profile_from_matches,
-    subcommand,
+use duck_utils::cli::cli_ext::{
+    CommandExt, flag, jobs_from_matches, multi, profile_from_matches, subcommand,
 };
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::quackpack::subcommands::build::{BuildOptions, compile};
+use quackpack::core::{AllowGlobalPackage, PackageLoader};
+use quackpack::subcommands::build::{BuildOptions, compile};
+
+use super::features_from_matches;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `build` subcommand.

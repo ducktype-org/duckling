@@ -7,7 +7,7 @@
 use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{Arg, ArgMatches, Command};
 
-use crate::duck::driver::cli_ext::subcommand;
+use duck_utils::cli::cli_ext::subcommand;
 
 /// Creates parser for the `search` subcommand.
 pub fn get_parser() -> Command {

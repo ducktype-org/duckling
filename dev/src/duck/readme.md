@@ -19,40 +19,37 @@ Most of them could be avoided by passing appropriate `bundled-*` feature flag, o
 
 While duck is a binary and __the__ entry point for building Duckling programmes, quackpack is the engine behind package management.
 
-That being said, both [share a single code directory](../), with the following structure:
+The code is a Cargo workspace of three crates (this directory is its root):
 ```
-src
-├── bin
-│   └── duck
-│       └── main.rs
-└── lib
-    ├── duck
-    │   └── <duck files>
-    ├── quackpack
-    │   └── <quackpack files>
-    └── <more files>
+.
+├── Cargo.toml   <workspace root, and the `duck` package>
+├── src          <`duck`: the CLI driver and the `duck` binary>
+│   ├── bin/duck/main.rs
+│   └── lib/duck/<duck files>
+├── quackpack    <`quackpack`: the package manager>
+│   └── src/<quackpack files>
+└── duck_utils   <`duck_utils`: what every duck tool shares>
+    └── src/<shared files>
 ```
-The reasons behind this are not very obvious.
-First of all, duck in its subcommands needs to call into quackpack, so naturally duck depends on quackpack.
-However, quackpack uses types which are defined in duck.
-As a consequence, this creates a local dependency cycle, which isn't supported by rust.
+Dependencies go one way only: `duck` → `quackpack` → `duck_utils`.
+`duck` calls into quackpack from its subcommands, and quackpack needs `DuckContext`, `QuackError` and the other shared types.
+Keeping those shared types in `duck_utils` is what breaks the dependency cycle between duck and quackpack.
 
-This could be solved in two ways: first is to factor out common types into a third local dependency.
-Second is shown above: we have merged quackpack as a rust's submodule into duck package, but we have kept human-readable separation between the directories.
+`duck_utils` holds what gives every tool the same UX and behaviour: `QuackError` and `QuackResult`, `DuckContext` (terminal, user configuration, duck home), shared `clap` helpers and styles, and locating a package root (`package_root`).
+It does __not__ parse manifests: that is quackpack's job.
+So an ecosystem tool (e.g. a formatter) depends on `duck_utils` only, and does not link in the solver, the fetcher or git.
 
-The second reason, not obvious at a first glance, is more subtle and related to unit tests.
-It turns out that binary and library parts are internally treated as different packages, and when testing are built separately.
-Problems arose when we tried to run unit tests.
+Some functions only exist to mock the internal state in unit tests (e.g. `DuckContext::default`).
+They live behind `#[cfg(any(test, feature = "test-utils"))]` in `duck_utils`: `#[cfg(test)]` alone is not visible to other crates, so `quackpack` and `duck` enable the `test-utils` feature in their `[dev-dependencies]`.
+The binary stays a thin wrapper around `duck::main`, so all of duck can be unit tested as a library.
 
-We use `#[cfg(test)]` on some functions in order to mock the internal state in tests.
-Since the library and binary are different packages, they are built separately for tests, so the `#[cfg(test)]` from the library is not available in the binary's `#[cfg(test)]`, and vice versa.
-To solve this issue, we have moved __the entirety__ of duck into a library, and the binary is just a thin wrapper around a `duck::main` method, which in combination with the already merged quackpack, has allowed us to write unit test with an ease.
+`cargo build`, `cargo test` and `cargo clippy` run from this directory cover the whole workspace (`default-members`).
 
 ## More docs
 
 - [from CLI to library: binary side of duck](src/lib/duck/readme.md)
-- [editing the manifest file structure (schema)](src/lib/quackpack/schemas/readme.md)
+- [editing the manifest file structure (schema)](quackpack/src/schemas/readme.md)
 - [adding a new subcommand](src/lib/duck/driver/subcommands/readme.md)
-- [storage overview](src/lib/quackpack/core/storage/readme.md)
-- [solving a dependency graph](src/lib/quackpack/core/solver/solving/readme.md)
-- [networking module](src/lib/quackpack/core/fetcher/readme.md)
+- [storage overview](quackpack/src/core/storage/readme.md)
+- [solving a dependency graph](quackpack/src/core/solver/solving/readme.md)
+- [networking module](quackpack/src/core/fetcher/readme.md)

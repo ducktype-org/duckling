@@ -5,9 +5,9 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
+use duck_utils::cli::cli_ext::{flag, subcommand};
+use quackpack::subcommands::sync::{SyncOptions, sync};
 
-use crate::duck::driver::cli_ext::{flag, subcommand};
-use crate::quackpack::subcommands::sync::{SyncOptions, sync};
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `sync` subcommand.

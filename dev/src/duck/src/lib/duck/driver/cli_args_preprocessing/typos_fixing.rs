@@ -8,6 +8,7 @@
 use std::ffi::OsString;
 
 use clap::ArgMatches;
+use duck_utils::util::edit_distance::find_all_closest_targets;
 use itertools::Itertools;
 use tracing::{debug, trace};
 
@@ -18,7 +19,6 @@ use crate::duck::driver::cli_args_preprocessing::builtin::{
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
 use crate::duck::driver::subcommands::subcommands;
-use crate::util::edit_distance::find_all_closest_targets;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 /// Try to fix user typos.
@@ -138,8 +138,8 @@ mod tests {
     use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use crate::util::path_ops::write_file;
-    use crate::util::test_utils::setup_test;
+    use duck_utils::util::path_ops::write_file;
+    use duck_utils::util::test_utils::setup_test;
 
     fn setup_duck_home_with_a_given_max_fix_distance(dist: u64) -> (DuckContext, TempDir) {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without

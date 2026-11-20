@@ -5,10 +5,10 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{Arg, ArgMatches, Command};
+use duck_utils::cli::cli_ext::{flag, subcommand};
+use quackpack::core::DependencyKind;
+use quackpack::subcommands::remove::{RemoveOptions, remove};
 
-use crate::duck::driver::cli_ext::{flag, subcommand};
-use crate::quackpack::core::DependencyKind;
-use crate::quackpack::subcommands::remove::{RemoveOptions, remove};
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `remove` subcommand.

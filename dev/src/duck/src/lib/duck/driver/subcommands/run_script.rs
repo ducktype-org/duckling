@@ -9,11 +9,11 @@ use std::path::{Path, PathBuf};
 
 use clap::builder::ValueParser;
 use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
+use duck_utils::cli::cli_ext::{CommandExt, flag, subcommand};
+use duck_utils::util::duckling_consts::DUCKLING_SCRIPT_EXT;
+use duck_utils::util::path_ops::resolve_with_tilde;
+use quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 
-use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
-use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
-use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
-use crate::util::path_ops::resolve_with_tilde;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
 /// Creates parser for the `run_script` subcommand.

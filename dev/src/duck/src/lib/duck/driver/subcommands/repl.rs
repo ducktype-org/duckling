@@ -5,9 +5,9 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
+use duck_utils::cli::cli_ext::subcommand;
+use quackpack::core::compile::duckc::Duckc;
 
-use crate::duck::driver::cli_ext::subcommand;
-use crate::quackpack::core::compile::duckc::Duckc;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `repl` subcommand.

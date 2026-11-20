@@ -8,10 +8,10 @@ use std::path::PathBuf;
 
 use clap::builder::ValueParser;
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use duck_utils::cli::cli_ext::{flag, optional, subcommand};
+use duck_utils::util::path_ops::resolve_with_tilde;
+use quackpack::subcommands::init::{InitOptions, init};
 
-use crate::duck::driver::cli_ext::{flag, optional, subcommand};
-use crate::quackpack::subcommands::init::{InitOptions, init};
-use crate::util::path_ops::resolve_with_tilde;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `init` subcommand.

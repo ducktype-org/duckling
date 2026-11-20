@@ -4,27 +4,22 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Duck-library consists of two main modules: [`duck`], which is responsible for the binary side
-//! of the duck-binary, and [`quackpack`], the main package manager logic.
+//! Duck-library is the CLI driver behind the `duck` binary: argument parsing and subcommand
+//! dispatch. The work itself lives in two other crates of this workspace:
+//! - [`quackpack`]: the package manager, with its [`subcommands`](quackpack::subcommands) and
+//!   [`core`](quackpack::core) ([`solver`](quackpack::core::solver),
+//!   [`fetcher`](quackpack::core::fetcher), [`storage`](quackpack::core::storage),
+//!   [`compile`](quackpack::core::compile)),
+//! - [`duck_utils`]: what all duck tools share — [`DuckContext`], [`QuackError`], CLI helpers.
 //!
-//! Notable modules are:
-//! - [`duck::driver`][]: handling of the CLI driver,
-//! - [`quackpack::subcommands`][]: main subcommands execution logic,
-//! - [`quackpack::core`][]: core functionalities of the quackpack, which include:
-//!     - [`solver`](quackpack::core::solver)[]: resolving the dependency graph(s),
-//!     - [`fetcher`](quackpack::core::fetcher)[]: HTTP requests handlers,
-//!     - [`storage`](quackpack::core::storage)[]: storages' and venvs' management,
-//!     - [`compile`](quackpack::core::compile)[]: duckc integration(s).
+//! Notable module: [`duck::driver`][], the handling of the CLI driver.
 //!
 //! More information can be found in [`readme.md`]s.
 pub mod duck;
-pub mod quackpack;
-pub mod util;
 
 pub use duck::main;
-pub use duck::util::duck_context::DuckContext;
-pub use quackpack::util::str_id::*;
-pub use util::error::{QuackError, QuackResultContext};
-
-/// A common [`Result`] type used widely throughout the project.
-pub type QuackResult<T> = Result<T, QuackError>;
+pub use duck_utils::util::str_id::*;
+pub use duck_utils::{
+    DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
+    qp_internal,
+};
