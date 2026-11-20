@@ -326,12 +326,18 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief A class carries information when it declares at least one field.
+		 * @brief A class carries information when at least one of its fields does. A reference or
+		 * a box field always does, as it is stored as a pointer. So a class without fields, or
+		 * with only `()` or empty-class fields, carries no information, like `()`.
 		 */
-		static bool carriesInformation(const tsh::TypeInterface& class_interface) {
-			// this should probably be changed/expanded in the future:
-			auto fields = class_interface.getFieldsView();
-			return fields.begin() != fields.end();
+		static bool carriesInformation(
+			query::Context& ctx, const tsh::TypeInterface& class_interface
+		) {
+			return std::ranges::any_of(class_interface.getFieldsView(), [&](const auto& field) {
+				const auto field_type = field.getType(ctx);
+				return field_type.getRefKind() != tsh::ReferenceKind::Direct
+				    || field_type.getType().carriesInformation(ctx);
+			});
 		}
 
 		/**
@@ -415,7 +421,7 @@ namespace compiler::helios {
 				= isTriviallyCopyable(ctx, tmp_interface, user_members);
 			class_info.is_trivially_destructible
 				= isTriviallyDestructible(ctx, tmp_interface, user_members);
-			class_info.carries_information = carriesInformation(tmp_interface);
+			class_info.carries_information = carriesInformation(ctx, tmp_interface);
 
 			pushConstructors(
 				ctx, interface_builder, class_type, class_info.is_default_constructible
