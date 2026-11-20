@@ -21,14 +21,15 @@ CONF
 kill_stale_apt() {
     command -v ps >/dev/null || return 0
     local stale
-    stale=$(ps -eo pid=,etimes=,comm= |
+    stale=$(ps -eo pid=,etimes=,comm=,args= |
         awk -v limit="$STALE_AFTER_SECONDS" \
-            '$2 > limit && $3 ~ /^(apt|apt-get|dpkg|http|https|gpgv|store)$/ { print $1 }')
+            '$2 > limit && ($3 ~ /^(apt|apt-get|dpkg)$/ || $4 ~ /^\/usr\/lib\/apt\/methods\//) { print $1 }')
     [[ -n $stale ]] || return 0
     echo "::warning::Killing apt processes left behind by an earlier job: $(echo $stale)"
     # shellcheck disable=SC2086
     sudo kill -9 $stale || true
-    sudo env DEBIAN_FRONTEND=noninteractive dpkg --configure -a
+    sudo env DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s "$CALL_LIMIT" \
+        dpkg --configure -a || echo "::warning::dpkg --configure -a failed, apt-get will retry"
 }
 
 log=$(mktemp)
@@ -40,9 +41,11 @@ run() {
     while true; do
         kill_stale_apt
         local status=0
-        sudo env DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s "$CALL_LIMIT" \
-            apt-get "$@" 2>"$log" || status=$?
-        cat "$log" >&2
+        # A pipeline rather than `2> >(tee ...)`, so tee has finished writing $log before the grep.
+        {
+            sudo env DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s "$CALL_LIMIT" \
+                apt-get "$@" 2>&1 >&3 3>&- | tee "$log" >&2 3>&-
+        } 3>&1 || status=$?
         if ((status == 0)) || ! grep -q 'Could not get lock' "$log" || ((SECONDS >= deadline)); then
             return "$status"
         fi
