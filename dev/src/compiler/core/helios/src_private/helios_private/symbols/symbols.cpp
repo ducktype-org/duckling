@@ -1060,6 +1060,7 @@ namespace compiler::helios {
 		output.reserve(pst_symbols.size() + generated_symbols.size());
 
 		output.insert(output.end(), pst_symbols.begin(), pst_symbols.end());
+		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
 
 		return output;
 	}
