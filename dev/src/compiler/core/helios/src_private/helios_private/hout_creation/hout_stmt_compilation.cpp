@@ -365,7 +365,7 @@ namespace compiler::helios {
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
-			auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
+			auto symbol = ctx.query<QuerySymbolFromPST>(stmt).valueOrThrow();
 
 			auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
 

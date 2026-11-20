@@ -39,8 +39,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
-	// @TODO: Rename this
-	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
+	DECLARE_QUERY(QuerySymbolFromPST, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
 
 	/**
 	 * @brief The selector of the `using`/`import` @p stmt its symbol is made of: the first one.

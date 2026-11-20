@@ -402,7 +402,7 @@ namespace compiler::helios::mangler {
 				const auto val = ancestor.template dynamicCast<ElemT>().value();
 
 				if constexpr (std::same_as<ElemT, pst::Fun>) {
-					auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
+					auto sym = ctx.template query<QuerySymbolFromPST>({ val }).valueOrPanic();
 					ret += unscopedName(ctx, sym);
 
 					ret += func(ctx, sym);

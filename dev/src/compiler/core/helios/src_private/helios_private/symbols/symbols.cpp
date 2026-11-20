@@ -688,7 +688,7 @@ namespace compiler::helios {
 					scope,
 					stmt->getHash(),
 					ctx.query<tsh::QueryClassType>(
-						ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+						ctx.query<QuerySymbolFromPST>(owner_class_element.value()).valueOrThrow()
 					)
 				)
 			);
@@ -740,7 +740,7 @@ namespace compiler::helios {
 						PatternSemantics(scope, element->getHash(), parent_elem->getHash())
 					);
 				} else {
-					CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
+					CORE_PANIC("IdentifierWrapper in QuerySymbolFromPST with unsupported parent");
 				}
 			}
 
@@ -752,7 +752,7 @@ namespace compiler::helios {
 		return (*selectorsOf(stmt).unlock(ctx)->begin()).unlock(ctx);
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
+	struct IMPLEMENT_QUERY(QuerySymbolFromPST, query::QResult<SymbolData>) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
 		 * Should be in.
@@ -770,7 +770,8 @@ namespace compiler::helios {
 			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
 			// have symbols.
 			CORE_ASSERT(
-				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
+				parent.isLangElement(),
+				"PST element without LangElement parent in QuerySymbolFromPST"
 			);
 			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
 		}
@@ -813,7 +814,7 @@ namespace compiler::helios {
 		friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolFromPST);
 
 	struct IMPLEMENT_QUERY(QueryConstValueOf, query::QResult<ctv::CompileTimeValue>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -1067,7 +1068,7 @@ namespace compiler::helios {
 			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);
 
-		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
+		auto pst_symbols = ImplementationOf_QuerySymbolFromPST::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 

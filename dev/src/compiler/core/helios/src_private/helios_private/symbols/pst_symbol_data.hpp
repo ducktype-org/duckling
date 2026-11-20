@@ -43,7 +43,6 @@ namespace compiler::helios {
 	/**
 	 * @brief Symbol data for symbols declared in a match pattern.
 	 */
-	// @TODO: expand this to facilitate type inference for match patterns
 	struct PatternSemantics final {
 		/**
 		 * Scope in which the symbol was defined.
