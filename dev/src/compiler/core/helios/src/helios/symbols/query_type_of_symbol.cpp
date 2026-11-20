@@ -295,7 +295,7 @@ namespace compiler::helios {
 				}
 				variant_case(PatternSemantics, data) {
 					PstVisitor_GetTypeOf visitor(ctx);
-					auto pattern = data.getPattern().unlock(ctx);
+					auto                 pattern = data.getPattern().unlock(ctx);
 					pattern->acceptVisitor(visitor);
 					return visitor.symbol_type_qresult;
 				}

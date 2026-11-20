@@ -52,9 +52,7 @@ namespace compiler::helios {
 		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(
-				PstImplementedSemantics, PatternSemantics, ClassMemberSemantics
-			) {
+			variant_case_novalue(PstImplementedSemantics, PatternSemantics, ClassMemberSemantics) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
 			}
 			variant_case(BuiltinSemantics, data) {
