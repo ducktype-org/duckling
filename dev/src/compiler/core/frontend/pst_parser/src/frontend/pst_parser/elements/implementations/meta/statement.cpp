@@ -9,6 +9,7 @@
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
+#include "../statements/statements_errors.hpp"
 #include "meta_errors.hpp"
 #include "preamble.hpp"
 
@@ -19,8 +20,6 @@ namespace pst {
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace internal {
-		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
-
 		/**
 		 * @brief Whether the token `fwd` tokens ahead is a keyword that always starts a statement.
 		 *
@@ -35,11 +34,18 @@ namespace pst {
 			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}
 
-		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
-			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-			    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
+		static bool isStatementStartOrSpecifier(const TokenStream& state, i64 fwd) {
+			if (!state[fwd].isKeyword()) return false;
+			return isStmtStartKeyword(state, fwd)
 			    || keywordFlags(state[fwd].asKeyword())
 			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
+
+		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
+
+		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
+			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
+			    || state[fwd - 1].is(Special::Semicolon) || isStatementStartOrSpecifier(state, fwd);
 		}
 
 		template<class T>
@@ -59,9 +65,8 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || isStatementStartOrSpecifier(state, fwd)
 				    || (Conditions::isBlockGroup(state, fwd - 1)
 				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
@@ -83,11 +88,7 @@ namespace pst {
 
 				if (state[fwd - 1].is(Special::Semicolon)) return true;
 
-				if (isStmtStartKeyword(state, fwd)) return true;
-
-				if (keywordFlags(state[fwd].asKeyword())
-				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier))
-					return true;
+				if (isStatementStartOrSpecifier(state, fwd)) return true;
 
 				// When we have two curly bracket blocks as consecutive tokens, it probably means
 				// that the user intended to write two statements
@@ -113,9 +114,8 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || isStatementStartOrSpecifier(state, fwd);
 			}
 		};
 
@@ -137,6 +137,21 @@ namespace pst {
 		i64 tokensBeforeFun(LangParserState& state, i64 at) {
 			return state[at].is(Keyword::Mut) && state[at + 1].is(Keyword::Fun) ? 1 : 0;
 		}
+
+		template<>
+		struct StmtFinder<Action> {
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				if ((state[base].is(Keyword::Break) || state[base].is(Keyword::Continue))
+				    && state[base + 1].isKeyword()
+				    && isControlFlowTargetKeyword(state[base + 1].asKeyword())) {
+					// This keyword is the target, even when its suffix is invalid. Later
+					// statement starts still delimit recovery after a missing semicolon.
+					return 2
+					     + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(base + 2);
+				}
+				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(base + 1);
+			}
+		};
 
 		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
@@ -359,6 +374,9 @@ namespace pst {
 			bool could_implicitly_return
 				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
 			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
+			const bool is_control_flow_action
+				= std::same_as<T, Action>
+			   && (state[0].is(Keyword::Break) || state[0].is(Keyword::Continue));
 
 			fallbackLen(state, length);
 
@@ -368,8 +386,14 @@ namespace pst {
 			if (opt && opt.value()->trailingSemicolon()) {
 				if (could_implicitly_return)
 					makeImplicitReturn(out.refMut());
-				else
+				else {
+					if (is_control_flow_action && !state[0].is(Special::Semicolon)) {
+						state.logInt(
+							makeBox<MissingControlFlowTargetSemicolonError>(state.getPosition())
+						);
+					}
 					state.parse(opt.value()).one(Special::Semicolon);
+				}
 			}
 
 			exitFallback(state);
