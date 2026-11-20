@@ -6,98 +6,118 @@
 
 #include "lookup_result.hpp"
 
+#include <helios/hout/elements/expr.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
+
+#include <diagnostic/placeholder.hpp>
+#include <query_framework/context/context.hpp>
 
 #include <algorithm>
+#include <ranges>
 
 namespace compiler::helios {
-
-	NestedResult::NestedResult(SymID node, LookupResult inner):
-		  node(node),
-		  inner(std::move(inner)) {}
-
-	auto LookupResult::isEmpty() const -> bool {
-		if (!leaves.empty()) return false;
-		for (auto&& [node, inner]: children)
-			if (!inner.isEmpty()) return false;
-		return true;
-	}
-
-	bool LookupResult::isSingle() const { return symbolCount() == 1; }
-
-	bool LookupResult::hasInaccessible() const {
-		if (!inaccessible.empty()) return true;
-		for (auto&& [node, inner]: children)
-			if (inner.hasInaccessible()) return true;
-		return false;
-	}
-
-	GetAsSingleLookupQResult LookupResult::getAsSingle() const {
-		// The name exists, it just cannot be used from here, which is worth saying explicitly.
-		if (isEmpty()) {
-			if (hasInaccessible()) return errors::Inaccessible();
-			return errors::SymbolNotFound();
-		}
-		if (!isSingle()) return errors::Ambiguity();
-
-		// The following line must work, since at this point we know that
-		// symbolCount() == 1:
-		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
-
-		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
-
-		auto&& [node_id, inner] = children.at(0);
-		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
-
-		UNPACK_QRESULT(auto& child_path =, inner.getAsSingle());
-
-		variant_match(child_path) {
-			variant_case(SymbolList, symbols) {
-				SymbolList result;
-				result.pushBack(node_id);
-				result.appendList(symbols);
-				return result;
-			}
-			variant_case(errors::Ambiguity, _) { return errors::Ambiguity(); }
-			variant_case(errors::SymbolNotFound, _) { return errors::SymbolNotFound(); }
-			variant_case(errors::Inaccessible, _) { return errors::Inaccessible(); }
-			variant_default { CORE_PANIC("Invalid state"); }
-		}
-		CORE_UNREACHABLE();
-	}
-
-	u64 LookupResult::symbolCount() const {
-		u64 res = leaves.size();
-		for (auto&& [_, inner]: children) res += inner.symbolCount();
-		return res;
-	}
-
 	namespace {
-		template<typename T>
-		std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
-			std::ranges::sort(a);
-			std::ranges::sort(b);
-
-			std::vector<T> result;
-			std::ranges::set_union(a, b, std::back_inserter(result));
-			return result;
+		bool isUsingOrImport(SymID symbol) {
+			return kind(symbol) == SymbolKind::Using or kind(symbol) == SymbolKind::Import;
 		}
+
+		auto accessedSymbols(const LookupPath& path) {
+			return path.symbols
+			     | std::views::filter([](SymID symbol) { return not isUsingOrImport(symbol); });
+		}
+
 	}
 
-	void LookupResult::merge(LookupResult other) {
-		leaves       = mergeSet(std::move(leaves), std::move(other.leaves));
-		inaccessible = mergeSet(std::move(inaccessible), std::move(other.inaccessible));
-
-		children.insert(
-			children.end(),
-			std::make_move_iterator(other.children.begin()),
-			std::make_move_iterator(other.children.end())
-		);
+	SymID LookupPath::leaf() const {
+		CORE_ASSERT(not symbols.empty(), "Lookup path has no symbols");
+		return symbols.back();
 	}
 
-	NestedResult LookupResult::toNode(SymID node) const {
-		return { node, { .leaves = leaves, .inaccessible = inaccessible, .children = children } };
+	bool LookupPath::constructsAccessExpr() const {
+		return std::ranges::distance(accessedSymbols(*this)) > 1;
 	}
 
+	query::QResult<Box<code::Expr>> LookupPath::asExpression(
+		query::Context& ctx, code::ElementOrigin origin
+	) const {
+		auto symbols = stripQualifiers(ctx, *this, false).symbols;
+		if (isInstanceMember(ctx, symbols.front())) {
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat("Expression of the looked-up symbol '", name(leaf()), "'"),
+				origin.getStablePosition()
+			);
+			return query::Failed();
+		}
+
+		Box<code::Expr> expr = makeBox<code::IdentifierExpr>(ctx, origin, symbols.front());
+
+		for (const SymID field: symbols | std::views::drop(1)) {
+			if (kind(field) != SymbolKind::Field) {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					base::strConcat("Expression of the looked-up symbol '", name(field), "'"),
+					origin.getStablePosition()
+				);
+				return query::Failed();
+			}
+
+			if (expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct)
+				expr = makeBox<code::DerefExpr>(ctx, origin.generatedFrom(), std::move(expr));
+			expr = makeBox<code::AccessExpr>(ctx, origin, std::move(expr), field);
+		}
+		return expr;
+	}
+
+	bool LookupResult::isEmpty() const { return paths.empty(); }
+
+	bool LookupResult::isSingle() const { return paths.size() == 1; }
+
+	bool LookupResult::hasInaccessible() const { return not inaccessible.empty(); }
+
+	std::vector<SymID> LookupResult::leaves() const {
+		return paths | std::views::transform(&LookupPath::leaf) | std::ranges::to<std::vector>();
+	}
+
+	SymID LookupResult::uniqueLeaf() const {
+		CORE_ASSERT(isSingle(), "Expected a single symbol in the lookup result");
+		return paths.front().leaf();
+	}
+
+	bool LookupResult::constructsAccessExpr() const {
+		return std::ranges::any_of(paths, &LookupPath::constructsAccessExpr);
+	}
+
+	query::QResult<std::vector<Box<code::Expr>>> LookupResult::asExpressions(
+		query::Context& ctx, code::ElementOrigin origin
+	) const {
+		std::vector<Box<code::Expr>> expressions;
+		for (const LookupPath& path: paths) {
+			UNPACK_QRESULT_MOVE(auto expr =, path.asExpression(ctx, origin));
+			expressions.push_back(std::move(expr));
+		}
+		return expressions;
+	}
+
+	LookupPath stripQualifiers(query::Context& ctx, LookupPath path, bool keep_using_imports) {
+		usize start = path.symbols.size();
+		while (
+			start > 0
+			and (isUsingOrImport(path.symbols.at(start - 1)) or isInstanceMember(ctx, path.symbols.at(start - 1)))
+		)
+			start--;
+		const usize first_kept = start == 0 ? 0 : start - 1;
+
+		LookupPath result;
+		for (usize i = 0; i < path.symbols.size(); i++) {
+			const SymID symbol = path.symbols.at(i);
+			if (isUsingOrImport(symbol)) {
+				if (keep_using_imports) result.symbols.push_back(symbol);
+			} else if (i >= first_kept) {
+				result.symbols.push_back(symbol);
+			}
+		}
+		return result;
+	}
 }

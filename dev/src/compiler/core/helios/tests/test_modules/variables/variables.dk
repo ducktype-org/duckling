@@ -22,8 +22,7 @@ fun foo() -> i32 = {
 		var y: i32 | f32 = c;
 		b;
 	}
-	# @TODO: #1412 fix dealias
-	# var e: Q = Q();
+	var e: Q = Q();
 	a = 34 as i32;
 	return a;
 }
@@ -31,7 +30,6 @@ fun foo() -> i32 = {
 const abc: i64 = 123;
 
 namespace N {
-    # @TODO: #1412 fix dealias
-	# class Q {}
+	class Q {}
 	const in_n: i64 = 0;
 }

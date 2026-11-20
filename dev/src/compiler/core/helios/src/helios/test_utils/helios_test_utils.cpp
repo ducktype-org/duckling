@@ -64,13 +64,7 @@ namespace compiler::helios::test_utils {
 				CRef<LookupResult> symbol = &lookup_qresult->valueOrThrow();
 				CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 
-				auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
-				CORE_ASSERT(
-					v_matches(symbol_path_variant, SymbolList),
-					"Expected single symbol in chain lookup"
-				);
-
-				result.appendList(std::get<SymbolList>(symbol_path_variant));
+				result.pushBack(symbol->uniqueLeaf());
 				first_symbol = false;
 			}
 			return result;

@@ -1614,8 +1614,7 @@ private:
 						var x: i64 = c.hidden;
 						return 0;
 					} )",
-				// The access through a value does not point at the declaration yet.
-				{ "Accessed value is not visible from here." },
+				{ "Accessed value is not visible from here.", "Found declaration:" },
 				1
 			);
 
@@ -1655,6 +1654,36 @@ private:
 						return 0;
 					} )",
 				{ "Accessed value not found." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"( class C {
+						v: i64 = 1;
+						fun m() -> i64 = { return 1; }
+						fun m(a: i64) -> i64 = { return a; }
+					}
+					fun main() -> i64 = {
+						var c: C = C(1);
+						c.m;
+						return 0;
+					} )",
+				{ "Variable name is ambiguous" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"( class C {
+						v: i64 = 1;
+					}
+					var c: C;
+					namespace N {
+						using c.*;
+					}
+					fun main() -> i64 = {
+						return N.v;
+					} )",
+				{ "Symbol 'v' accessed through a value used as a symbol" },
 				1
 			);
 

@@ -16,7 +16,7 @@ using M.c;
 class T {
 	x: i64;
 
-	# aliases in classes not supported yet
+	# @TODO: #4082 aliases in classes are not supported yet
 	# using x.a.b.c.*;
 }
 

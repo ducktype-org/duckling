@@ -9,10 +9,13 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/selector.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios_private/lookup/lookup_chain.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <diagnostic/placeholder.hpp>
 #include <query_framework/query_result.hpp>
@@ -81,30 +84,59 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryResolveUsingImport, query::QResult<UsingImportTarget>) {
+		using SelectorPath = std::vector<pst::AccessLocked<pst::IdentifierWrapper>>;
+
 		/**
-		 * @brief The symbol a single `using` selector path points at.
+		 * @brief The chain of @p names, looked up one after another starting from @p start.
 		 *
-		 * The path is an ordinary chain of names, looked up from the scope the `using` is in.
+		 * Every name has to be found uniquely. When @p start is a symbol, it is the root of the
+		 * chain.
+		 *
+		 * The names are looked up without wildcards: a wildcard cannot be part of what another
+		 * wildcard points at, and following them here would make resolving a `using N.*;` ask the
+		 * very scope it lives in for `N` again.
 		 */
-		static query::QResult<SymID> resolveUsingPath(
-			Context& ctx, SymID symbol, pst::Access<pst::Selector> selector
+		static query::QResult<LookupPath> resolveChain(
+			Context& ctx, std::variant<ScopeID, SymID> start, const SelectorPath& names
 		) {
-			// The path of a `using` is resolved without wildcards: a wildcard cannot be part of
-			// what another wildcard points at, and following them here would make resolving a
-			// `using N.*;` ask the very scope it lives in for `N` again.
-			LookupChainKey chain_key{ .names  = selectorPath(selector),
-				                      .start  = scope(symbol),
-				                      .params = { .with_wildcards = false } };
-			return lastOfChain(ctx, chain_key);
+			LookupPath chain;
+			if (v_matches(start, SymID)) chain.symbols.push_back(v_get(start, SymID));
+
+			for (const auto& name_locked: names) {
+				auto interface = VARIANT_VISIT(
+					start,
+					VISIT_CASE_VAL(ScopeID, id, HInterface::ofScopeWithParents(id)),
+					VISIT_CASE_VAL(SymID, id, HInterface::ofSymbol(ctx, id))
+				);
+				auto name = name_locked.unlock(ctx);
+				UNPACK_QRESULT_MOVE(
+					CRef<LookupPath> step =,
+					interface.lookupExpectSingle(
+						name->getStablePosition(), ctx, name->unwrap(), { .with_wildcards = false }
+					)
+				);
+				base::appendToVector(chain.symbols, step->symbols);
+				start = step->leaf();
+			}
+			return chain;
 		}
 
 		/**
-		 * @brief The symbol a single `import` selector path points at.
+		 * @brief The chain of a `using` selector, looked up from the scope the `using` is in.
+		 */
+		static query::QResult<LookupPath> resolveUsingPath(
+			Context& ctx, SymID symbol, pst::Access<pst::Selector> selector
+		) {
+			return resolveChain(ctx, scope(symbol), selectorPath(selector));
+		}
+
+		/**
+		 * @brief The chain of an `import` selector.
 		 *
 		 * The prefix of the selector is a module path, so the lookup continues in the root scope
 		 * of that module.
 		 */
-		static query::QResult<SymID> resolveImportPath(
+		static query::QResult<LookupPath> resolveImportPath(
 			Context& ctx, SymID symbol, pst::Access<pst::Selector> selector
 		) {
 			auto path_idents = selectorPath(selector);
@@ -130,46 +162,53 @@ namespace compiler::helios {
 			}
 
 			// Phase 2: what is left of the path names items inside the module found above.
-			// Nothing left means the selector points at the module itself, which is an empty chain.
-			LookupChainKey chain_key{
-				.names = std::vector(
+			// Nothing left means the selector points at the module itself.
+			return resolveChain(
+				ctx,
+				symOfModule(ctx, current_module),
+				SelectorPath(
 					path_idents.begin() + base::safeIntConv<int>(names_taken), path_idents.end()
-				),
-				.start  = symOfModule(ctx, current_module),
-				.params = { .with_wildcards = false },
-			};
-			return lastOfChain(ctx, chain_key);
-		}
-
-		static query::QResult<SymID> lastOfChain(Context& ctx, const LookupChainKey& chain_key) {
-			UNPACK_QRESULT_MOVE(auto sym_chain =, lookupChain(ctx, chain_key));
-			CORE_ASSERT(
-				not sym_chain.empty(),
-				"It should be impossible to create chain that doesn't resolve to any symbol."
+				)
 			);
-			return sym_chain.back();
 		}
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto symbol_kind = kind(key);
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			const auto symbol_kind = kind(key.symbol);
 			CORE_ASSERT(
 				symbol_kind == SymbolKind::Using or symbol_kind == SymbolKind::Import, "Invalid call"
 			);
 
-			auto selector = selectorOf(ctx, key);
-			UNPACK_QRESULT(
-				SymID pointed =,
-				symbol_kind == SymbolKind::Using ? resolveUsingPath(ctx, key, selector)
-												 : resolveImportPath(ctx, key, selector)
+			auto selector = selectorOf(ctx, key.symbol);
+			UNPACK_QRESULT_MOVE(
+				LookupPath chain =,
+				symbol_kind == SymbolKind::Using ? resolveUsingPath(ctx, key.symbol, selector)
+												 : resolveImportPath(ctx, key.symbol, selector)
 			);
+			auto pointed = chain.leaf();
+			if (not key.keep_whole_chains) chain = stripQualifiers(ctx, std::move(chain), true);
 
 			if (selector->getTailKind() != pst::SelectorTail::Star)
-				return UsingImportTarget{ std::vector{ pointed } };
+				return UsingImportTarget{ TargetExpr{ std::move(chain) } };
 
-			if (kind(pointed) != SymbolKind::Module and kind(pointed) != SymbolKind::Namespace)
-				return UsingImportTarget{ pointed };
-
-			return UsingImportTarget{ scopeOfNamespaceLike(ctx, pointed) };
+			switch (kind(pointed)) {
+			case SymbolKind::Module:
+			case SymbolKind::Namespace:
+				return UsingImportTarget{ TargetScope{
+					.scope = scopeOfNamespaceLike(ctx, pointed),
+					.chain = key.keep_whole_chains ? std::move(chain) : LookupPath{},
+				} };
+			case SymbolKind::Class:
+			case SymbolKind::Variable:
+			case SymbolKind::Parameter:
+			case SymbolKind::Const:
+			case SymbolKind::Field:
+				return UsingImportTarget{ WildcardExpr{ std::move(chain) } };
+			default:
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Wildcard of a symbol that has no interface.", selector->getStablePosition()
+				);
+				return query::Failed();
+			}
 		}
 
 		QUERY_AUTO_CACHE_CREF

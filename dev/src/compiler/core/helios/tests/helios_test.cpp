@@ -851,14 +851,14 @@ private:
 			CRef<LookupResult> a_result
 				= &h_interface.lookup(ctx, base::StrID("pub_field"))->valueOrPanic();
 			ASSERT_TRUE(a_result->isSingle());
-			auto a_symbol = a_result->leaves.at(0);
+			auto a_symbol = a_result->leaves().at(0);
 
 			ASSERT_EQUAL(kind(a_symbol), compiler::helios::SymbolKind::Field);
 
 			CRef<LookupResult> get_a_result
 				= &h_interface.lookup(ctx, base::StrID("getPub"))->valueOrPanic();
 			ASSERT_TRUE(get_a_result->isSingle());
-			auto get_a_symbol = get_a_result->leaves.at(0);
+			auto get_a_symbol = get_a_result->leaves().at(0);
 			ASSERT_EQUAL(kind(get_a_symbol), compiler::helios::SymbolKind::Method);
 
 			CRef<LookupResult> empty_result
@@ -885,7 +885,7 @@ private:
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
 			ASSERT_TRUE(first_result->isSingle());
-			auto first_symbol = first_result->leaves.at(0);
+			auto first_symbol = first_result->leaves().at(0);
 			ASSERT_EQUAL(kind(first_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)->valueOrThrow(), i32
@@ -894,7 +894,7 @@ private:
 			CRef<LookupResult> second_result
 				= &h_interface.lookup(ctx, base::StrID("_2"))->valueOrPanic();
 			ASSERT_TRUE(second_result->isSingle());
-			auto second_symbol = second_result->leaves.at(0);
+			auto second_symbol = second_result->leaves().at(0);
 			ASSERT_EQUAL(kind(second_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)->valueOrThrow(), f32
@@ -903,7 +903,7 @@ private:
 			CRef<LookupResult> third_result
 				= &h_interface.lookup(ctx, base::StrID("_3"))->valueOrPanic();
 			ASSERT_TRUE(third_result->isSingle());
-			auto third_symbol = third_result->leaves.at(0);
+			auto third_symbol = third_result->leaves().at(0);
 			ASSERT_EQUAL(kind(third_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
 				ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)->valueOrThrow(), str
@@ -1495,7 +1495,7 @@ private:
 		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function->body->statements.size(), 8);
+		ASSERT_EQUAL(function->body->statements.size(), 9);
 
 		auto& statements = function->body->statements;
 
@@ -1570,10 +1570,9 @@ private:
 		}
 
 		{
-			// @TODO: #1412 fix dealias
-			// auto& var = get_var_ref(6);
-			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
-			// ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
+			auto& var = get_var_ref(6);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
+			ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
 		}
 
 		// debug print test just for cov and to see if it does not throw:
@@ -3461,7 +3460,7 @@ private:
 	}
 
 	void testAliases() {
-		// @TODO: #1412 make this less of a stub once proper dealias lands
+		// @TODO: #4082 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
 		// `using M.c;` brings `c` in under its own name, so looking `c` up in the root scope
