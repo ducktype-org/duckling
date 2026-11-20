@@ -231,10 +231,20 @@ namespace vm {
 		}
 
 		/**
-		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
+		 * @brief Frees the child blocks and runs the destructors of the data `dst` points to, so
+		 * it can be overwritten.
 		 */
-		void runDataCopyConstructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectCopyConstructor);
+		void releasePointedDataForOverwrite(
+			Pointer dst, base::TypedModRawView<EntryT> dst_view, TypeCRef type
+		) requires std::is_same_v<EntryT, byte> {
+			auto& dst_child_blocks = dst.getBlock()->children_blocks;
+			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
+			     iter != dst_child_blocks.end() && iter->first < dst.offset + dst_view.size();
+			     iter = dst_child_blocks.erase(iter)) {
+				freeBlockData(iter->second);
+			}
+
+			runDataDestructors(dst_view, type);
 		}
 
 		/**
@@ -401,6 +411,13 @@ namespace vm {
 		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type)
 			requires std::is_same_v<EntryT, byte> {
 			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
+		}
+
+		/**
+		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
+		 */
+		void runDataCopyConstructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectCopyConstructor);
 		}
 
 		GenericMemory() = default;
@@ -782,15 +799,7 @@ namespace vm {
 			const auto  dst_view    = getPointerData(dst, entry_count);
 			const auto  src_view    = getPointerData(src, entry_count);
 
-			// Free child blocks.
-			auto& dst_child_blocks = dst.getBlock()->children_blocks;
-			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
-			     iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
-			     iter = dst_child_blocks.erase(iter)) {
-				freeBlockData(iter->second);
-			}
-
-			runDataDestructors(dst_view, type);
+			releasePointedDataForOverwrite(dst, dst_view, type);
 
 			// Copy the child blocks
 			auto& src_child_blocks = src.getBlock()->children_blocks;
@@ -805,6 +814,42 @@ namespace vm {
 			// Copy the data itself
 			std::memcpy(dst_view.getBegin(), src_view.getBegin(), entry_count);
 			runDataCopyConstructors(dst_view, type);
+		}
+
+		/**
+		 * @brief Like `copyPointedData`, but the source is plain bytes outside of the memory
+		 * module, so it has no child blocks to copy.
+		 */
+		auto copyBytesIntoPointedData(Pointer dst, const EntryT* src, TypeCRef type) -> void
+			requires std::is_same_v<EntryT, byte> {
+			const usize entry_count = type->getSize().asInt();
+			const auto  dst_view    = getPointerData(dst, entry_count);
+
+			releasePointedDataForOverwrite(dst, dst_view, type);
+
+			std::memcpy(dst_view.getBegin(), src, entry_count);
+			runDataCopyConstructors(dst_view, type);
+		}
+
+		/**
+		 * @brief Replaces the value in `dst`, which has no child blocks, with the bytes at `src`:
+		 * the old value's destructors run, the new one's copy constructors.
+		 */
+		void overwriteBytes(base::TypedModRawView<EntryT> dst, const EntryT* src, TypeCRef type)
+			requires std::is_same_v<EntryT, byte> {
+			runDataDestructors(dst, type);
+			std::memcpy(dst.getBegin(), src, dst.size());
+			runDataCopyConstructors(dst, type);
+		}
+
+		/**
+		 * @brief Whether any child block lies within the `entry_count` entries `pointer` points
+		 * to. Data without them can be copied as plain bytes plus copy constructors.
+		 */
+		[[nodiscard]] static bool hasChildBlocks(Pointer pointer, usize entry_count) {
+			const auto& children = pointer.getBlock()->children_blocks;
+			auto        iter     = children.lower_bound(pointer.offset);
+			return iter != children.end() && iter->first < pointer.offset + entry_count;
 		}
 
 		auto destroyBlockReference(Pointer pointer) -> void requires std::is_same_v<EntryT, byte> {

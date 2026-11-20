@@ -563,16 +563,16 @@ namespace vm {
 			auto arg_count          = function_signature->parameters.size();
 
 			std::vector<Box<SafeVMValue>> args;
-			auto                          slot_stack_count
+			args.reserve(arg_count);
+			auto slot_stack_count
 				= usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 			u64 first_arg_idx = slot_stack_count - arg_count;
 
-			// Create VMValue objects from local arguments. The argument's actual block type is
-			// used (verification guarantees it matches what the builtin expects).
+			// Verification guarantees each argument's type matches what the builtin expects.
 			for (u64 i = 0; i < arg_count; i++) {
-				auto     block     = OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx + i);
-				TypeCRef real_type = Memory::getBlockType(block);
-				args.push_back(thread.safe_process.createOwnedVMValue(real_type, Pointer(block, 0)));
+				args.push_back(thread.safe_process.createOwnedVMValue(
+					frame->local_slot_stack_base[first_arg_idx + i]
+				));
 			}
 
 			std::vector<TypeCRef> result_types = {};
@@ -590,16 +590,13 @@ namespace vm {
 
 			if (return_value.has_value()) {
 				auto value = std::move(return_value.value());
-				value->exportData(
-					Pointer(OpFuns::readBlockRefFromArg(frame, thread, first_arg_idx - 1), 0)
-				);
+				value->exportToSlot(frame->local_slot_stack_base[first_arg_idx - 1]);
 				value->freeData();
 			}
 			for (auto& vm_value: args) vm_value->freeData();
 
-			// Similar as in call_func_off, but we deinit the arguments blocks as well,
-			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+			// The builtin consumes its arguments, but not the return value.
+			for (u64 i = 0; i < arg_count; i++) performDeinitDtor(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
