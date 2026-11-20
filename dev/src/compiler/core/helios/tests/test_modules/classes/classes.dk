@@ -1,8 +1,7 @@
 # Class fixtures shared by the HELIOS class, interface, symbol and lookup tests.
 #
 # `Base` declares a member of every kind, `Derived` inherits from it, `Empty` is as trivial as a
-# class gets, the `Unit…` classes hold zero-sized fields, and `ClassWithMember` holds a value of
-# `Base` while being unrelated to it.
+# class gets, and `ClassWithMember` holds a value of `Base` while being unrelated to it.
 
 class Base {
     public pub_field: i64 = 1;
@@ -48,23 +47,6 @@ class Derived extends Base {
 }
 
 class Empty extends Base {}
-
-# Classes whose fields are all zero-sized carry no information, like `Empty`. One real field is enough
-# for the class to carry information.
-class UnitFields {
-    public unit: ();
-    public units: ((), ());
-}
-
-class NestedUnitFields {
-    public inner: UnitFields;
-    public empty: Empty;
-}
-
-class UnitAndValue {
-    public unit: ();
-    public value: i64;
-}
 
 class ClassWithMember {
     public member: Base = Base(1, 2, 3, 4.0 as f32);
