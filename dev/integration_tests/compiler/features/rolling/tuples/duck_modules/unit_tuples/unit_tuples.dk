@@ -1,0 +1,34 @@
+# Tuples whose components carry no information (units, empty classes) have no size.
+# They must work like `()` itself in every position a value can be in.
+
+class Empty {}
+
+fun takeUnits(t: ((), ())) -> i64 = {
+    let first: () = t._1;
+    return 1;
+}
+
+fun makeUnits() -> ((), ()) = {
+    return ((), ());
+}
+
+fun main() -> i64 = {
+    var a: ((), ());
+    var b: ((), ()) = ((), ());
+    var nested: (((), ()), ()) = (((), ()), ());
+    var empties: (Empty, Empty);
+    var array: ((), ())[3];
+
+    let unit: () = a._2;
+    let inner: ((), ()) = nested._1;
+    a = b;
+    array[1] = makeUnits();
+
+    builtin_output_i64(takeUnits(a));          # 1
+    builtin_output_i64(takeUnits(makeUnits())); # 1
+    builtin_output_i64(takeUnits(array[2]));   # 1
+
+    var mixed: ((), i64, ((), ())) = ((), 7, ((), ()));
+    builtin_output_i64(mixed._2);              # 7
+    return 0;
+}
