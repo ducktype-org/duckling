@@ -22,27 +22,30 @@ runs:
       run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
     - name: Update apt
-      shell: bash
-      run: sudo apt update
+      uses: ./.github/actions/apt-get/
 
     # Pkg-config is required for finding OpenSSL on Linux.
     - name: Download pkg-config
-      shell: bash
-      run: sudo apt -y install pkg-config
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: pkg-config
 
     # We don't (yet) bundle SQLite with duck.
     - name: Download libsqlite3-dev
-      shell: bash
-      run: sudo apt -y install libsqlite3-dev
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: libsqlite3-dev
 
     # Russcip needs this
     - name: Download libgfortran5
-      shell: bash
-      run: sudo apt -y install libgfortran5
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: libgfortran5
 
     - name: Download sccache
-      shell: bash
-      run: sudo apt -y install sccache
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: sccache
 
     - name: Setup sccache environment
       shell: bash
