@@ -279,7 +279,8 @@ namespace pst {
 
 		/**
 		 * @brief Calculates the heuristic length of any statement starting `base` tokens ahead,
-		 * including its attributes and specifiers.
+		 * including its attributes and specifiers. Only the prefix is counted when the tokens run
+		 * out before the statement itself starts.
 		 */
 		u64 findAnyStatementLength(LangParserState& state, i64 base);
 
@@ -336,6 +337,7 @@ namespace pst {
 		u64 findAnyStatementLength(LangParserState& state, i64 base) {
 			auto prefix = countPrefixTokens(state, base);
 			i64  at     = base + base::safeIntConv<i64>(prefix.length);
+			if (state[at].is(Token::Type::Sentinel)) return prefix.length;
 			auto length_of
 				= [&]<class T>() -> u64 { return StmtFinder<T>::findStatementLength(state, at); };
 

@@ -1,0 +1,32 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add --local ../bar bar
+  cat <<'DK' > bar/src/src.dk
+  const BAR_MAX: i64 = 100i64;
+
+  fun bar_value() -> i64 = { return 28i64; }
+  DK
+  cat <<'DK' > foo/src/src.dk
+  import core.builtins.*;
+  import bar.*;
+
+  fun main() -> i64 = {
+      if (bar_value() + BAR_MAX != 128i64) { return 1i64; }
+      return 0i64;
+  }
+  DK
+  echo "profiles:
+    dvm:
+      dvm-bytecode: true" >> foo/quackconfig.yaml
+Tests:
+  deps:
+    Description: a function and a constant from a dependency resolve when the program runs
+    Cases:
+      native:
+        test-cmd: duck -C foo run
+        ExitCode: 0
+      dvm:
+        test-cmd: duck -C foo run --profile=dvm
+        ExitCode: 0

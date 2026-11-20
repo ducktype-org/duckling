@@ -161,9 +161,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         Ok((cur_build_data, incremental_data))
     }
 
-    /// Compile all needed [`Unit`]s, as determined by [`should_run`].
-    ///
-    /// [`should_run`]: UnitTaskGenerator::should_run
+    /// Compile all [`Unit`]s whose previous artifacts cannot be reused.
     fn run_all_needed_units(
         &self,
         incremental_data: &mut IncrementalData,
@@ -182,13 +180,6 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             let Some(unit) = node.as_unit() else {
                 continue;
             };
-            if !self.task_generator.should_run(unit, &self.graph, self.bcx) {
-                debug!("skipping compilation of `{}`", unit.package().name());
-                // Nothing truly depends on this unit (since task_generator skips it, even units having it as dependency do not use its artifacts).
-                // So we can safely make it green, potentially making more units green.
-                incremental_data.mark_as_green(node_id);
-                continue;
-            }
             if is_green {
                 self.ctx().info(format!(
                     "reusing previous build artifacts for `{}`",
@@ -207,9 +198,6 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
 
     #[instrument(skip_all, fields(id = %id_in_graph, name = %unit.package().name(), version = %unit.package().version(), identity = %unit.identity()))]
     /// Compile a single [`Unit`].
-    /// May panic, if this [`Unit`] shouldn't be compiled ([`should_run`] returned `false`).
-    ///
-    /// [`should_run`]: UnitTaskGenerator::should_run
     fn compile_unit(&self, unit: &Unit, id_in_graph: GraphNodeId) -> QuackResult<()> {
         debug!("starting compilation of the unit");
         self.set_unit_status(id_in_graph, unit, UnitStatus::InProgress);
