@@ -144,6 +144,10 @@ duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_
 duck_add_test_custom(vm vm_persistent_structures_test utils/persistent_structures_test.cpp
         USES LibVM Tester)
 
+# concurrency/ — the GIL used directly, no program involved.
+duck_add_test_custom(vm vm_gil_test concurrency/gil_test.cpp
+        USES LibVM_sc Tester)
+
 # debugger/ — the parts of the debugger tool that run no program: the CLI text helpers and the
 # source mapper.
 duck_add_test_custom(vm vm_debugger_cli_common_test debugger/debugger_cli_common_test.cpp

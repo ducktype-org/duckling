@@ -8,13 +8,14 @@ The `GIL` (defined in `gil.hpp` and `gil.cpp`) is a process-wide lock that ensur
 
 ### GIL Architecture
 
-- **Mutual Exclusion:** The GIL uses a `std::timed_mutex` to enforce that only one thread holds execution rights at a time.
+- **Mutual Exclusion:** The GIL is a ticket lock (a `std::mutex` + `std::condition_variable` guarding a `held` flag and two ticket counters) that ensures only one thread holds execution rights at a time.
+- **FIFO Hand-over:** Waiting threads take tickets and get the GIL in arrival order. A thread that releases the GIL and immediately calls `acquire()` again queues behind the threads already waiting.
 - **Exchange Counter:** Tracks how many times the GIL has been transferred between threads, allowing waiting threads to detect when the GIL holder has released it.
 - **Release Policy:** Implements a timeout-based policy where threads waiting for the GIL set a flag after 5 milliseconds, signaling the current holder to release it voluntarily.
 
 ### GIL Methods
 
-- `acquire()`: Acquires the GIL. If unavailable, waits with a timeout and signals the holding thread if contention is detected.
+- `acquire()`: Acquires the GIL. If unavailable, takes a ticket and waits for its turn, signalling the holding thread if it kept the GIL for a whole timeout.
 - `release()`: Releases the GIL and increments the exchange counter.
 - `shouldRelease()`: Checks if the current thread should release the GIL based on the contention flag.
 
