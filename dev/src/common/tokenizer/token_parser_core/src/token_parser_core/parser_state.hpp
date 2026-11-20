@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "token_stream.hpp"
+
+#include <base/pointers/box_or_ref.hpp>
 
 #include <diagnostic/logger_fwd.hpp>
 #include <diagnostic/message.hpp>
@@ -44,9 +52,9 @@ namespace tpc {
 		 * @brief Data needed to handle restoring to a fallback.
 		 */
 		struct Fallback final {
-			SubStreamType                                         type;
-			Box<TokenStream>                                      saved_stream;
-			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;
+			SubStreamType            type;
+			Box<TokenStream>         saved_stream;
+			BoxOrCRef<ParserContext> saved_context;
 			/**
 			 * @brief Jump done after restoring a fallback stored as a set jump length.
 			 */
@@ -62,7 +70,7 @@ namespace tpc {
 		 * such a statement is non-trivial.
 		 */
 		struct SoftFallback final {
-			std::variant<Box<ParserContext>, CRef<ParserContext>> saved_context;
+			BoxOrCRef<ParserContext> saved_context;
 			/**
 			 * @brief Condition to be skipped to on error.
 			 *
@@ -79,7 +87,7 @@ namespace tpc {
 		std::vector<std::variant<Fallback, SoftFallback>>
 			fallback_stack;  ///< Internal storage of fallback token streams
 
-		std::variant<Box<ParserContext>, CRef<ParserContext>> current_context;
+		BoxOrCRef<ParserContext> current_context;
 
 		ParserState(TokenStream&& tokens, Box<ParserContext>&& ctx, Ref<dia::Logger> int_err):
 			  current_stream(makeBox<TokenStream>(std::move(tokens))),

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../lists/call_list.hpp"
@@ -17,7 +23,7 @@ namespace pst::expr {
 		NAMED_CHILD(args, CallList);
 
 	public:
-		Call(const LangParserState& state): ExprElement(state, 300) {}
+		explicit Call(LangElementConstructionData state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

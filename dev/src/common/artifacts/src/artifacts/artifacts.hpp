@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/box.hpp>
@@ -283,7 +290,7 @@ namespace artifacts {
 		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
 
 		/**
-		 * Box, because we may need stable refs. Cannot be base::StableHashMap, because we are using
+		 * Box, because we may need stable refs. Cannot be base::HashMap, because we are using
 		 * a private constructor of collection.
 		 */
 		base::HashMap<base::StrID, Box<ArtifactCollection>> sub_collections;

@@ -5,7 +5,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "9\n9\n9\n18\n4\n2\n"
+          String: "9\n9\n9\n18\n4\n2\n64\n"
 
   single_comparison: # Any type of comparison between two values.
     Cases:
@@ -28,6 +28,13 @@ Tests:
           String: ""
         ExitCode: 0
 
+  complex_operators:
+    Cases:
+      all:
+        Output:
+          String: "9\n729\n0.137313\n0.167472\n7\n343\n15\n20\n9\n"
+        ExitCode: 0
+
   unit_simple:
     Cases:
       all:
@@ -46,7 +53,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n0\n"
+          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n0\n1\n2\n1\n"
         ExitCode: 0
 
   floating_point_arithmetic:

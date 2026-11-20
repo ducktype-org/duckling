@@ -1,19 +1,29 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "diagnostic_state.hpp"
+
+#include <base/collections/hashmap.hpp>
 
 #include <unordered_set>
 
 namespace dia::state {
-	static std::string expandTabs(const std::string& s, usize tab_width = 4) {
-		std::string out;
-		out.reserve(s.size());  // small optimization
+	namespace {
+		std::string expandTabs(const std::string& s, usize tab_width = 4) {
+			std::string out;
+			out.reserve(s.size());  // small optimization
 
-		for (char c: s)
-			if (c == '\t')
-				out.append(tab_width, ' ');  // append N spaces
-			else
-				out.push_back(c);
+			for (char c: s)
+				if (c == '\t')
+					out.append(tab_width, ' ');  // append N spaces
+				else
+					out.push_back(c);
 
-		return out;
+			return out;
+		}
 	}
 
 	void TextComponent::debugPrint(std::ostream& out, usize indent) const {
@@ -89,8 +99,8 @@ namespace dia::state {
 	}
 
 	void CodeLocationComponent::debugPrint(std::ostream& out, usize indent) const {
-		out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file << ":"
-			<< location.line << ":" << location.column << ")\n";
+		out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file.string()
+			<< ":" << location.line << ":" << location.column << ")\n";
 	}
 
 	void Diagnostic::debugPrint(std::ostream& out) const {

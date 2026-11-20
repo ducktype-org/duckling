@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "serializer.hpp"
 
 #include <base/misc/int_conv.hpp>
@@ -18,31 +24,33 @@
 #include <sstream>
 
 namespace vm::code {
-	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
+	namespace {
+		std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
 #define LOCAL_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
+		FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
 
-	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
+		std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
-	std::string toString(opargs::Field arg) {
-		return base::strConcat(arg.type_name, ".", arg.field_name);
+		std::string toString(opargs::Field arg) {
+			return base::strConcat(arg.type_name, ".", arg.field_name);
+		}
+
+		std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
+
+		std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
+
+		std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
+
+		std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
+
+		std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
+
+		std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 	}
-
-	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
-
-	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
-
-	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
-
-	std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
-
-	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
-
-	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
 	std::string argumentToString(const opargs::OpCodeArg& arg) {
 		return VISIT(arg, a, return toString(a));
@@ -52,30 +60,30 @@ namespace vm::code {
 		return VISIT(arg, a, return toString(*a));
 	}
 
-	void displayComment(const std::string_view comment_content, std::ostream& out) {
-		out << '#' << ' ' << comment_content;
-	}
+	namespace {
+		void displayComment(const std::string_view comment_content, std::ostream& out) {
+			out << '#' << ' ' << comment_content;
+		}
 
-	void displayInstruction(Instruction instruction, std::ostream& out) {
-		instr_match(instruction) {
-			instr_case(instructions::Comment, comment) {
-				displayComment(comment.comment.strView(), out);
-			}
-			instr_default {
-				out << std::setw(22) << std::left << instruction.name().strView();
-				auto args = instruction.args();
-				if (args.size() > 0) {
-					out << " ";
-					out << std::setw(8) << std::right << argumentToString(args[0]);
-					for (auto arg: args | std::views::drop(1))
-						out << ", " << std::setw(8) << std::right << argumentToString(arg);
+		void displayInstruction(Instruction instruction, std::ostream& out) {
+			instr_match(instruction) {
+				instr_case(instructions::Comment, comment) {
+					displayComment(comment.comment.strView(), out);
 				}
-				out << ';';
+				instr_default {
+					out << std::setw(22) << std::left << instruction.name().strView();
+					auto args = instruction.args();
+					if (args.size() > 0) {
+						out << " ";
+						out << std::setw(8) << std::right << argumentToString(args[0]);
+						for (auto arg: args | std::views::drop(1))
+							out << ", " << std::setw(8) << std::right << argumentToString(arg);
+					}
+					out << ';';
+				}
 			}
 		}
-	}
 
-	namespace {
 		/**
 		 * @brief Writes `{ param, ... } -> { result, ... }`, the signature form shared by
 		 * `function` and `ffi function` declarations.
@@ -204,7 +212,7 @@ namespace vm::code {
 			}
 
 			void operator()(const FunctionType& fun) const {
-				// type fun: main {} int64
+				// type fun: binop { i64, i64 } { i64 }
 				out << "type fun: ";
 				out << fun.name.strView() << " { ";
 				bool first = true;
@@ -213,7 +221,7 @@ namespace vm::code {
 					out << param.strView();
 					first = false;
 				}
-				out << " } -> { ";
+				out << " } { ";
 				first = true;
 				for (const auto& reslts: fun.result) {
 					if (!first) out << ", ";

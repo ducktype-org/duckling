@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../not_statements/format_string_sub_elements/format_sub_element.hpp"
@@ -15,7 +21,7 @@ namespace pst::expr {
 		std::vector<AccessInternalAnonymous<FormatSubElement>> sub_elements;
 
 	public:
-		explicit ExprFormatStrValue(const LangParserState& state): ExprElement(state, 0) {}
+		explicit ExprFormatStrValue(LangElementConstructionData state): ExprElement(state, 0) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

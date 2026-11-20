@@ -1,0 +1,22 @@
+# A function returning `void` never returns, so LLVM gets the `noreturn` attribute for it.
+# A function returning `()` does return, so it must not get it.
+
+fun fails() -> void = {
+    return fails();
+}
+
+fun returnsUnit() -> () = {
+    return ();
+}
+
+# A runtime index is bounds-checked, and a failed check calls the `panic` primitive.
+fun at(i: i64) -> i64 = {
+    var arr: i64[4];
+    return arr[i];
+}
+
+fun main() -> i64 = {
+    returnsUnit();
+    if (at(1i64) == 0i64) return fails();
+    return 0i64;
+}

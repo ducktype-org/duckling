@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Different versions of scripts.
 
 use std::fmt;
@@ -9,7 +15,7 @@ use crate::quackpack::core::{
     Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter,
 };
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
@@ -202,7 +208,7 @@ impl Script {
 
     /// Returns true if script at `path` has a frontmatter.
     pub fn has_frontmatter(path: &Path) -> QuackResult<bool> {
-        let contents = path.read_to_string()?;
+        let contents = read_from_path_to_string(path)?;
         capture_frontmatter(&contents).map(|maybe_frontmatter| maybe_frontmatter.is_some())
     }
 

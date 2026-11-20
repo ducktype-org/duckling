@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file errors.hpp
  * @author Wojciech Rzepliński
@@ -8,8 +14,8 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/coercions/coercion.hpp>
 #include <helios/tsh/symbol_type.hpp>
-#include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
@@ -48,9 +54,9 @@ namespace compiler::helios::code {
 	};
 
 	struct ArgumentCoercionFailure final {
-		Coercion failed;
-		usize    argument_index;
-		SymID    function;
+		tsh::coercions::Coercion failed;
+		usize                    argument_index;
+		SymID                    function;
 	};
 
 	struct MissingCallArgument final {

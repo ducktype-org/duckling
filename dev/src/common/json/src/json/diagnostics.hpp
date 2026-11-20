@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file diagnostics.hpp
  * @brief JSON extraction helpers that report diagnostics through a callback.
@@ -94,6 +100,20 @@ namespace js {
 
 	/** @brief Extract an array field; report an error on failure. */
 	base::Optional<std::vector<nlohmann::json>> getArray(
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
+		const DiagnosticLogger& report
+	);
+
+	/** @brief Assuming `array` is a JSON array extracted from key `key`, try to convert it into an
+	 * array of strings. */
+	base::Optional<std::vector<std::string>> extractListOfStringsFromJsonArray(
+		const nlohmann::json& array, std::string_view key, const DiagnosticLogger& report
+	);
+
+	/** @brief Try to extract an array of strings from the JSON at the key `key`. */
+	base::Optional<std::vector<std::string>> getArrayOfStrings(
 		const nlohmann::json&   json,
 		std::string_view        key,
 		std::string_view        error_message,

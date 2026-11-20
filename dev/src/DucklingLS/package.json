@@ -2,10 +2,16 @@
     "name": "duckling-language-support",
     "displayName": "Duckling",
     "description": "Duckling Language Support",
-    "version": "0.0.1",
+    "version": "0.3.0",
     "icon": "images/icon.png",
     "author": "DuckType",
     "publisher": "DuckType",
+    "license": "SEE LICENSE IN LICENSE.md",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ducktype-org/duckling.git",
+        "directory": "dev/src/DucklingLS"
+    },
     "categories": [
         "Programming Languages"
     ],
@@ -45,6 +51,20 @@
                     ".dk",
                     ".dks"
                 ],
+                "icon": {
+                    "light": "./images/file-icon.svg",
+                    "dark": "./images/file-icon.svg"
+                },
+                "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "ducklingbytecode",
+                "aliases": [
+                    "Duckling Bytecode"
+                ],
+                "extensions": [
+                    ".dbc"
+                ],
                 "configuration": "./language-configuration.json"
             }
         ],
@@ -53,6 +73,11 @@
                 "language": "duckling",
                 "scopeName": "source.duckling",
                 "path": "./syntaxes/duckling.tmLanguage.json"
+            },
+            {
+                "language": "ducklingbytecode",
+                "scopeName": "source.ducklingbytecode",
+                "path": "./syntaxes/ducklingbytecode.tmLanguage.json"
             }
         ],
         "configuration": {

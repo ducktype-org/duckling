@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/pointers/ref.hpp>
@@ -7,10 +13,12 @@ namespace global_state {
 	struct BackendOptions final {
 		struct DVMBackend {};
 
-		struct LLVMBackend {
+		struct LLVMBackend final {
 			enum class LLVMOptimizationLevel { O0, O1, O2, O3, Os, Oz };
+			enum class AssemblySyntax { Att, Intel };
 
 			LLVMOptimizationLevel llvm_optimization_level{ LLVMOptimizationLevel::O0 };
+			AssemblySyntax        asm_syntax{ AssemblySyntax::Att };
 		};
 
 		// /**

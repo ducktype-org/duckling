@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use super::outputs;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
@@ -7,8 +13,7 @@ use crate::quackpack::core::compile::early_graph::tests::{
     mock_local_identity, mock_local_pkg, mock_registry_pkg,
 };
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit::Unit;
-use crate::quackpack::core::compile::unit::graph::{UnitGraph, lower_early_graph};
+use crate::quackpack::core::compile::unit::graph::{GraphNodeId, UnitGraph, lower_early_graph};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::storage::load_deps::load_packages_in_freeze as load_packages;
 use crate::quackpack::core::storage::paths::Storage;
@@ -46,8 +51,11 @@ fn collects_packages() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
-    for unit in unit_graph.units_sorted_by_id() {
+    let unit_graph = lower_early_graph(graph).unwrap();
+    for node in unit_graph.compilation_order() {
+        let Some(unit) = node.as_unit() else {
+            continue;
+        };
         let expected: &[&str] = match unit.package().name().as_str() {
             "root" => &["bar", "baz", "foo", "root"],
             "foo" => &["baz", "foo"],
@@ -55,7 +63,7 @@ fn collects_packages() {
             "baz" => &["baz"],
             _ => unreachable!(),
         };
-        assert_packages_names(unit, &unit_graph, expected);
+        assert_packages_names(node.id(), &unit_graph, expected);
     }
 }
 
@@ -92,20 +100,23 @@ fn collects_packages_cycle() {
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx, packages.pkgs).unwrap();
-    let unit_graph = lower_early_graph(graph, &bcx);
-    for unit in unit_graph.units_sorted_by_id() {
+    let unit_graph = lower_early_graph(graph).unwrap();
+    for node in unit_graph.compilation_order() {
+        let Some(unit) = node.as_unit() else {
+            continue;
+        };
         let expected: &[&str] = match unit.package().name().as_str() {
             "root" | "cycle" => &["bar", "cycle", "foo", "root"],
             "foo" => &["foo"],
             "bar" => &["bar"],
             _ => unreachable!(),
         };
-        assert_packages_names(unit, &unit_graph, expected);
+        assert_packages_names(node.id(), &unit_graph, expected);
     }
 }
 
-fn assert_packages_names(unit: &Unit, graph: &UnitGraph, expected: &[&str]) {
-    let mut names = outputs::collect_packages(unit, graph)
+fn assert_packages_names(unit_id_in_graph: GraphNodeId, graph: &UnitGraph, expected: &[&str]) {
+    let mut names = outputs::collect_packages(unit_id_in_graph, graph)
         .unwrap()
         .into_iter()
         .map(|package| package.import_name)

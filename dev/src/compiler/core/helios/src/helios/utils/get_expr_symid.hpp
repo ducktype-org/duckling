@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>
@@ -11,4 +17,10 @@ namespace compiler::helios {
 	 * otherwise returns an empty optional.
 	 */
 	base::Optional<SymID> getIdentifierExprSymID(CRef<code::Expr> expr);
+
+	/**
+	 * If expression is an identifier expression naming a function, returns the function symbol ID,
+	 * otherwise returns an empty optional.
+	 */
+	base::Optional<SymID> getIdentifierExprFunctionID(CRef<code::Expr> expr);
 }

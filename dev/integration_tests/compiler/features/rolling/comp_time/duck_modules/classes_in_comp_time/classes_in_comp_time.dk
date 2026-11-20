@@ -4,8 +4,8 @@ class T {
 }
 
 class Q {
-    var t: T;
-    var b: i64 = 0;
+    t: T;
+    b: i64 = 0;
 }
 
 fun useTQ() -> i64 = {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "source_file.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -6,7 +12,7 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
@@ -33,25 +39,27 @@ namespace {
 	 */
 	concurrent::ConHashMap<usize, compiler::frontend::SourceFile> files;
 	std::atomic<usize>                                            next_storage_key = 0;
+
+	concurrent::ConHashMap<base::Bit256, base::Ref<compiler::frontend::SourceFile>> file_registry;
 }
 
 namespace compiler::frontend {
 
-	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
+	SourceFile::SourceFile(fs::File file, Ref<ModuleTree> linked_module):
 		  state_lock(base::makeBox<std::recursive_mutex>()),
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
 	}
 
-	Ref<SourceFile> SourceFile::create(fs::File file, ModuleID linked_module) {
+	Ref<SourceFile> SourceFile::create(fs::File file, Ref<ModuleTree> linked_module) {
 		auto abs_path = file.getFilePath().absolute();
 
 		const auto storage_key = next_storage_key.fetch_add(1);
 		auto       inserted    = files.put(storage_key, SourceFile(std::move(file), linked_module));
 		Ref<SourceFile> created_ref(&inserted->value);
 		created_ref->storage_handle = storage_key;
-		created_ref->file_id        = FileID(created_ref);
+		created_ref->self           = created_ref;
 
 		path_registry.maybePutAndUpdate(
 			abs_path,
@@ -87,37 +95,33 @@ namespace compiler::frontend {
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
 		std::scoped_lock lock(*state_lock);
 		if (!component_hash.has_value()) {
-			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
+			auto m_path_component_hash
+				= ModuleTree::getPathComponentHash(linked_module->getModuleID());
 			component_hash = hashing::ComponentHash(m_path_component_hash, lang_file_name);
+			file_registry.putOrAssign(component_hash->hash, self.value());
 		}
 		return component_hash.value();
 	}
 
-	CRef<pst::PST<>> SourceFile::getPST() {
+	CRef<pst::ParsedPST<>> SourceFile::getPST() {
 		std::scoped_lock lock(*state_lock);
 
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
-			return &parse_tree.value();
+			return parse_tree.ref().toOpt().value();
 		} else {
 			// @TODO: #1879 Program chosen as default type for non_REPL
-			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
-			                                                            : pst::PSTType::Program;
+			auto pst_type
+				= linked_module->isReplModule() ? pst::PSTType::Script : pst::PSTType::Program;
 
-			auto parsed_pst = pst::PST(file, pst_type, getComponentHash());
+			auto parsed_pst = pst::ParsedPST<>::fromFile(file, pst_type, getComponentHash());
 
-			// Illegal access is fine here because we are outside of any query and the PST is only
-			// being created.
-			if (parsed_pst.getRootElement().illegalAccess().has_value()) {
-				// @TODO: #2397 we could change it, such that root element is never null.
-				// Set additional root data only if the root element is not null:
-				parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
-					.pst_parent = pst::AdditionalRootData::ModuleParent{ this->linked_module, },
-				});
-			}
-			parse_tree.emplace(std::move(parsed_pst));
+			parsed_pst->setAdditionalRootData(pst::AdditionalRootData{
+				.pst_parent = pst::AdditionalRootData::ModuleParent{ linked_module->getModuleID(), },
+			});
+			parse_tree = std::move(parsed_pst);
 
-			return &parse_tree.value();
+			return parse_tree.ref().toOpt().value();
 		}
 	}
 
@@ -146,6 +150,16 @@ namespace compiler::frontend {
 		);
 
 		return *path_registry.at(abs_path)->content;
+	}
+
+	ModuleAccessLocked SourceFile::getModule() const {
+		return ModuleAccessLocked(linked_module->getModuleID());
+	}
+
+	Ref<SourceFile> SourceFile::getRegisteredFile(const base::Bit256& hash) {
+		auto registered = file_registry.atMaybeCopy(hash);
+		CORE_ASSERT(registered.has_value(), "No source file registered under the given hash");
+		return registered.value();
 	}
 
 	void SourceFile::invalidateComponentHash() {

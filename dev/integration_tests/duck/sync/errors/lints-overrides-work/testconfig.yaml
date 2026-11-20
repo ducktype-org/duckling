@@ -1,0 +1,18 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add bar --local=../bar
+  echo "    conditions:
+        package-features: []" >> foo/quackconfig.yaml
+  echo "lints:
+    duck:
+      always_false_conditions: allow" >> foo/quackconfig.yaml
+
+Tests:
+  lints-silencing:
+    Description: checks silencing lints
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 0

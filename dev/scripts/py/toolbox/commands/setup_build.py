@@ -1,3 +1,11 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+import platform
+
 from ..impl.setup_build import (setup_build_impl, LLVM_TOOLS)
 from .helpers import (
     build_system,
@@ -13,6 +21,7 @@ from ..impl.helpers import (
     default_gcov_from_ctx,
 )
 from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
+import click
 from click import Choice, option, command, prompt
 
 
@@ -34,6 +43,11 @@ def configure_presets(ctx, param, value):
             "strip_symbol_information": True,
             "embed_assets": True,
             "build_static_icu": True, # we want to have a static ICU in release to make the binary portable
+            
+            # macOS has no system zstd (which LLVM needs), so a portable binary must link it statically.
+            # Linux keeps the system libzstd, which (practically) every distribution has.
+            "link_static_zstd": platform.system() == "Darwin",
+
             "fixed_std_path": False, # we want to have a dynamic std path in release
         }
     elif value == "MaxPerformancePreset":
@@ -49,6 +63,20 @@ def configure_presets(ctx, param, value):
         raise ValueError(f"Unknown preset: {value}")
 
     ctx.default_map = preset_map
+
+    # Turning off the prompts below changes the Option objects of this command for the rest of the
+    # process. This might lead to unexpected behavior if setup_build is ever invoked twice
+    # in one process.
+    # If this is ever needed, restore them after parsing instead (Command.parse_args) or find a different approach.
+    assert not getattr(ctx.command, "_preset_disabled_prompts", False), "setup_build called again after a preset in the same process"
+
+    # We want for the options set by the preset to not prompt.
+    # Since click 8.3, it doesn't happen automatically, so we manually
+    # disable the prompt for options set by the preset.
+    for preset_param in ctx.command.params:
+        if preset_param.name in preset_map and isinstance(preset_param, click.Option):
+            preset_param.prompt = None
+    ctx.command._preset_disabled_prompts = True
 
 @command()
 @option(
@@ -206,6 +234,13 @@ def configure_presets(ctx, param, value):
 @option(
     "--build-static-icu/--no-build-static-icu",
     help="Forces building and linking against a custom-built static version of ICU.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--link-static-zstd/--no-link-static-zstd",
+    help="Links the zstd library that LLVM depends on statically (LINK_STATIC_ZSTD).",
     type=bool,
     default=False,
     is_flag=True,

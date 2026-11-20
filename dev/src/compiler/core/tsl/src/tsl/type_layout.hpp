@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "size_constants.hpp"
@@ -15,6 +21,7 @@
 #include <string_id/string_id.hpp>
 
 #include <variant>
+#include <vector>
 
 /**
  * @brief The namespace of all definitions of the Lower Type System.
@@ -145,7 +152,17 @@ namespace compiler::tsl {
 			return std::string(indent, '\t');
 		}
 
-	private:
+		/**
+		 * @brief Rounds a size up to a multiple of the default alignment of that size.
+		 *
+		 * For layouts aligned by size whose raw size is not a multiple of that alignment, e.g. a
+		 * VariantTypeLayout (`i8 | (i8, i8, i8, i8, i8)`: 13 bytes, 8-aligned, so 16). Without it,
+		 * the next array element or class field would be misaligned, and the LLVM backend, which
+		 * places class fields with its own struct layout, would disagree with TSL.
+		 */
+		[[nodiscard]]
+		static Bits roundUpToDefaultAlignment(Bits size_in_bits);
+
 		/**
 		 * @brief Compute the default alignment for a type from its size in bits.
 		 *
@@ -172,7 +189,7 @@ namespace compiler::tsl {
 	 */
 	class EmptyTypeLayout final: public TypeLayoutABC {
 		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type, query::Context& ctx):
-			  TypeLayoutABC(Bits(0), tsh::SymbolType<>::withDefaults(unit_type), ctx) {}
+			  TypeLayoutABC(Bits(0), tsh::SymbolType<>::withDefaultsMut(unit_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -193,7 +210,7 @@ namespace compiler::tsl {
 	 */
 	class MetaTypeLayout final: public TypeLayoutABC {
 		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type, query::Context& ctx):
-			  TypeLayoutABC(META_SIZE, tsh::SymbolType<>::withDefaults(meta_type), ctx) {}
+			  TypeLayoutABC(META_SIZE, tsh::SymbolType<>::withDefaultsMut(meta_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -211,19 +228,19 @@ namespace compiler::tsl {
 	 */
 	class IntegralTypeLayout final: public TypeLayoutABC {
 		explicit IntegralTypeLayout(const tsh::ByteAbstractType byte_type, query::Context& ctx):
-			  TypeLayoutABC(BYTE_SIZE, tsh::SymbolType<>::withDefaults(byte_type), ctx) {}
+			  TypeLayoutABC(BYTE_SIZE, tsh::SymbolType<>::withDefaultsMut(byte_type), ctx) {}
 
 		explicit IntegralTypeLayout(const tsh::BoolAbstractType bool_type, query::Context& ctx):
-			  TypeLayoutABC(BOOL_SIZE, tsh::SymbolType<>::withDefaults(bool_type), ctx) {}
+			  TypeLayoutABC(BOOL_SIZE, tsh::SymbolType<>::withDefaultsMut(bool_type), ctx) {}
 
 		explicit IntegralTypeLayout(const tsh::CharAbstractType char_type, query::Context& ctx):
-			  TypeLayoutABC(CHAR_SIZE, tsh::SymbolType<>::withDefaults(char_type), ctx) {}
+			  TypeLayoutABC(CHAR_SIZE, tsh::SymbolType<>::withDefaultsMut(char_type), ctx) {}
 
 		explicit IntegralTypeLayout(
 			const tsh::IntegralAbstractType integral_type, query::Context& ctx
 		):
 			  TypeLayoutABC(
-				  integral_type.getSize(), tsh::SymbolType<>::withDefaults(integral_type), ctx
+				  integral_type.getSize(), tsh::SymbolType<>::withDefaultsMut(integral_type), ctx
 			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
@@ -241,8 +258,9 @@ namespace compiler::tsl {
 	 */
 	class FloatTypeLayout final: public TypeLayoutABC {
 		explicit FloatTypeLayout(const tsh::FloatAbstractType float_type, query::Context& ctx):
-			  TypeLayoutABC(float_type.getSize(), tsh::SymbolType<>::withDefaults(float_type), ctx) {
-		}
+			  TypeLayoutABC(
+				  float_type.getSize(), tsh::SymbolType<>::withDefaultsMut(float_type), ctx
+			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -286,6 +304,10 @@ namespace compiler::tsl {
 
 	/**
 	 * @brief Layout of a variant type.
+	 * @note Alternative indices are zero-based. At runtime, tag 0 denotes no active alternative,
+	 * and an alternative with index `i` is encoded as tag `i + 1`. Its alignment comes from its
+	 * size, and its size is rounded up to a multiple of that alignment (like a class, whose size
+	 * is a multiple of its alignment), so the bytes after the payload are tail padding.
 	 */
 	class VariantTypeLayout final: public TypeLayoutABC {
 		Bytes tag_offset;
@@ -323,7 +345,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @return The offset of the actual data held by this variant, in bytes, up to 8.
+		 * @return The offset of the actual data held by this variant, in bytes.
 		 */
 		[[nodiscard]]
 		Bytes getDataOffset() const {
@@ -332,7 +354,7 @@ namespace compiler::tsl {
 
 		/**
 		 * @param key One of the options of the variant.
-		 * @return The index (tag value) of the given option.
+		 * @return The zero-based logical index of the given option.
 		 */
 		[[nodiscard]]
 		usize getIndexOfType(const tsh::SymbolType<> key) const {
@@ -340,7 +362,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @param index An in-bounds index (tag value) of the variant.
+		 * @param index An in-bounds, zero-based logical index of the variant.
 		 * @return The type layout corresponding to that index.
 		 */
 		[[nodiscard]]
@@ -463,18 +485,33 @@ namespace compiler::tsl {
 	};
 
 	/**
-	 * @brief Layout of a functional object or pointer type.
+	 * @brief Layout of a function type. A value of a raw function type is a pointer to the code of
+	 * the function. Closure function types have no layout yet, requesting one reports an error.
+	 *
+	 * The layout also describes the signature of the function: the layouts of its parameters and of
+	 * its result. They are looked up lazily, so that a type may hold a function referring to itself
+	 * (e.g. `class T { f: funptr(T) -> i64; }`) without a query cycle.
 	 */
 	class FunctionalTypeLayout final: public TypeLayoutABC {
-		// @TODO: Add support for function objects
-		explicit FunctionalTypeLayout(
-			const tsh::FunctionAbstractType function_type, query::Context& ctx
-		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(function_type), ctx) {}
+		explicit FunctionalTypeLayout(tsh::FunctionAbstractType function_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the layouts of the parameters that carry information, in order. Parameters
+		 * which carry no information (e.g. of unit type) are not passed, so they are skipped.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<TypeLayout>> getParameterLayouts(query::Context& ctx) const;
+
+		/**
+		 * @brief Get the layout of the result. A result which carries no information (e.g. a class
+		 * constructor result) is returned as unit.
+		 */
+		[[nodiscard]]
+		CRef<TypeLayout> getReturnLayout(query::Context& ctx) const;
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Functional : " + base::toString(getSize());
@@ -489,10 +526,10 @@ namespace compiler::tsl {
 		enum class PointerKind { SinglePointer, ManyPointer, CPointer };
 
 	private:
-		// The layout of the pointee type.
-		// Since a pointer may be untyped, the layout of the pointee may be unknown.
-		// Hence, the use of a nullable ref.
-		MCRef<TypeLayout> pointee{};
+		// The type of the pointee. Its layout is looked up lazily (see getPointee), so that a
+		// type may hold a pointer to itself (e.g. `class T { t: ptr T; }`) without a query
+		// cycle. Since a pointer may be untyped, the pointee may be unknown, hence the Optional.
+		base::Optional<tsh::SymbolType<>> pointee_type{};
 
 		PointerKind pointer_kind;
 
@@ -503,7 +540,7 @@ namespace compiler::tsl {
 		explicit PointerTypeLayout(
 			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
 		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx),
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(raw_pointer_type), ctx),
 			  pointer_kind(PointerKind::SinglePointer) {}
 
 		/**
@@ -538,19 +575,30 @@ namespace compiler::tsl {
 		friend struct ImplementationOf_QuerySymbolTypeLayout;
 
 	public:
+		/**
+		 * @brief Get the type of the pointee, if the pointer is typed.
+		 * @return The pointee type, or an empty Optional for an untyped pointer.
+		 */
 		[[nodiscard]]
-		base::Optional<CRef<TypeLayout>> getPointeeOpt() const {
-			return pointee.toOpt();
+		base::Optional<tsh::SymbolType<>> getPointeeTypeOpt() const {
+			return pointee_type;
 		}
 
+		/**
+		 * @brief Get the layout of the pointee. The pointer must be typed.
+		 * @param ctx The query::Context used to look up the layout of the pointee.
+		 * @return The layout of the pointee type.
+		 */
 		[[nodiscard]]
-		CRef<TypeLayout> getPointee() const {
-			return pointee.toOpt().value();
-		}
+		CRef<TypeLayout> getPointee(query::Context& ctx) const;
 
+		/**
+		 * @brief Check whether the pointer is typed, i.e. whether it has a pointee.
+		 * @return Whether the pointer has a pointee.
+		 */
 		[[nodiscard]]
 		bool hasPointee() const {
-			return pointee;
+			return pointee_type.has_value();
 		}
 
 		[[nodiscard]] PointerKind getPointerKind() const { return pointer_kind; }

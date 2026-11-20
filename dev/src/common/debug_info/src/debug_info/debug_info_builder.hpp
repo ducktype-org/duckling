@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "debug_info.hpp"
@@ -83,6 +89,7 @@ namespace debug_info {
 	 *   DebugInfo info = DebugInfoBuilder(Target::DBC,
 	 *                                     SourcePositionsType::PstHash)
 	 *     .addType("_TMyType", "MyType")
+	 *     .addGlobal("_Gcounter", "counter", globalPos)
 	 *     .beginFunction("foo", "foo", functionPos)
 	 *       .addParameter(0, "arg0", arg0Pos)
 	 *       .addInstruction(0,  instrPos0)
@@ -110,6 +117,18 @@ namespace debug_info {
 		 * @brief Convenience overload: builds TypeMetadata{ .name = display_name }.
 		 */
 		DebugInfoBuilder& addType(std::string mangled_name, std::string display_name);
+
+		// ------------------------------------------------------------------
+		// Globals
+
+		/**
+		 * @brief Adds a global variable or constant entry under its mangled name.
+		 */
+		DebugInfoBuilder& addGlobal(
+			std::string                    mangled_name,
+			std::string                    global_name,
+			base::Optional<SourcePosition> position
+		);
 
 		// ------------------------------------------------------------------
 		// Functions

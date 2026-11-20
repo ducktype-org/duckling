@@ -1,0 +1,23 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  touch a.ds
+Tests:
+  invalid-script-extensions:
+    Description: duck detects invalid scripts extensions
+    Cases:
+      fast-path:
+        test-cmd: duck a.ds
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: the file at \`$DIT_TMP_DIR/a.ds\` is not a Duckling script
+
+            hint: the extension of Duckling scripts is \`.dks\`"
+      subcommand:
+        test-cmd: duck run-script a.ds
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: the file at \`$DIT_TMP_DIR/a.ds\` is not a Duckling script
+
+            hint: the extension of Duckling scripts is \`.dks\`"

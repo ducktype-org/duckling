@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "frame.hpp"
@@ -23,5 +29,20 @@ namespace vm {
 
 		slot.block = block.get();
 		return block;
+	}
+
+	/**
+	 * @brief Releases what a local variable owns, without popping its slot. A variable with a
+	 * block frees the block; one that never needed a block has the destructors of its data run
+	 * directly, which is what freeing its block would have done.
+	 */
+	inline void releaseLocalSlot(const LocalSlot& slot, Memory& memory) {
+		if (Block* block = slot.block) {
+			memory.freeBlockData(block);
+			memory.decreaseBlockRefcount(block);
+			return;
+		}
+
+		memory.runDataDestructors({ slot.data, slot.type->getSize().asInt() }, slot.type);
 	}
 }

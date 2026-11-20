@@ -1,15 +1,22 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/collections/optional.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
+#include <filesystem/file_path.hpp>
+
 #include <functional>
-#include <string>
 
 namespace dia {
 	struct CodeLocation final {
-		std::string         file{};
+		fs::FilePath        file{ std::filesystem::path{} };
 		u64                 line{};
 		u64                 column{};
 		base::Optional<u64> end_line;

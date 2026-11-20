@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../lists/parameter_list.hpp"
 #include "../meta.hpp"
+#include "../not_statements/code_block_or_expr.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -9,14 +16,16 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public Stmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt, operator_fixity, is_mut);
 		CLONE_SUBELEMENTS();
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
+		OperatorFixity operator_fixity = OperatorFixity::None;
+		bool           is_mut          = false;
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
@@ -40,6 +49,19 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
 			return params.give();
+		}
+
+		[[nodiscard]]
+		OperatorFixity getOperatorFixity() const {
+			return operator_fixity;
+		}
+
+		/**
+		 * @brief Whether the method is declared with `mut fun`, so `self` is mutable.
+		 */
+		[[nodiscard]]
+		bool isMut() const {
+			return is_mut;
 		}
 
 		[[nodiscard]]

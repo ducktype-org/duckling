@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file metadata_storage.hpp
  * @brief Internal metadata storage infrastructure for Query Framework.
@@ -13,8 +19,8 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
@@ -107,12 +113,11 @@ namespace query::internal {
 	 * This is used when merging metadata from a previous compilation during graph merging.
 	 */
 	struct ExtractedNodeMetadata final {
-		NodeID                                                                    node_id;
-		base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> type_map;
+		NodeID                                                              node_id;
+		base::HashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> type_map;
 
 		ExtractedNodeMetadata(
-			NodeID                                                                      id,
-			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>>&& map
+			NodeID id, base::HashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>>&& map
 		):
 			  node_id(id),
 			  type_map(std::move(map)) {}

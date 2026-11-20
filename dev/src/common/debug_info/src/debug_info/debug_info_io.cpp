@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debug_info_io.hpp"
 
 #include <json/json.hpp>
@@ -214,7 +220,8 @@ namespace debug_info {
 			      { "module_path", v.module_path },
 			      { "source_positions_type", v.source_positions_type },
 			      { "functions", v.functions },
-			      { "types", v.types } };
+			      { "types", v.types },
+			      { "globals", v.globals } };
 	}
 
 	void from_json(const json& j, DebugInfo& v) {
@@ -223,6 +230,7 @@ namespace debug_info {
 		j.at("source_positions_type").get_to(v.source_positions_type);
 		j.at("functions").get_to(v.functions);
 		j.at("types").get_to(v.types);
+		j.at("globals").get_to(v.globals);
 	}
 
 	// NOLINTEND

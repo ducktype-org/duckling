@@ -1,39 +1,39 @@
 # alloc -> slice_from_ptr_len -> ptr_from_slice -> free, baked for `str` (i.e. slices of slices).
 fun strChain() -> i64 = {
-    var p = dvm_alloc_arr:{str}(2i64);
+    var p = dvm_alloc_arr[str](2i64);
     p[0]  = "ab";
     p[1]  = "cde";
 
-    let s: slice str = slice_from_ptr_len:{str}(p, 2i64);
-    let q            = ptr_from_slice:{str}(s);
+    let s: slice str = slice_from_ptr_len[str](p, 2i64);
+    let q            = ptr_from_slice[str](s);
     let len          = q[1].length();
 
-    dvm_free_arr:{str}(p);
+    dvm_free_arr[str](p);
     return len;
 }
 
 # The same chain baked for `i32`, so the builtins are instantiated for more than one element type.
 fun intChain() -> i32 = {
-    var p = dvm_alloc_arr:{i32}(2i64);
+    var p = dvm_alloc_arr[i32](2i64);
     p[0]  = 7i32;
     p[1]  = 9i32;
 
-    let s = slice_from_ptr_len:{i32}(p, 2i64);
-    let q = ptr_from_slice:{i32}(s);
+    let s = slice_from_ptr_len[i32](p, 2i64);
+    let q = ptr_from_slice[i32](s);
     let v = q[0] + q[1];
 
-    dvm_free_arr:{i32}(p);
+    dvm_free_arr[i32](p);
     return v;
 }
 
 # The single-object builtins `dvm_alloc` / `dvm_free`, which work on `ptr T` instead of the
 # `manyptr T` taken by the `_arr` builtins above.
 fun singleChain() -> i64 = {
-    var p = dvm_alloc:{i64}();
+    var p = dvm_alloc[i64]();
     *p = 5i64;
     let v = *p;
 
-    dvm_free:{i64}(p);
+    dvm_free[i64](p);
     return v;
 }
 
@@ -42,7 +42,7 @@ fun main() = {
     let x: i64 = builtin_input_i64();
     builtin_output_i64(x + 1);
 
-    let p = ptr_from_slice:{char}("abc");
+    let p = ptr_from_slice[char]("abc");
     builtin_output_char(p[0]);
 
     builtin_output_i64(strChain());

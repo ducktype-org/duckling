@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from pathlib import Path
 
@@ -13,12 +19,13 @@ storage = duck_home / "storage"
 locks = storage / "locks"
 
 check_empty_files([cache / "fetcher.lock",
-                   locks / "venv_data" / "foo",
-                   locks / "venv_sync" / "foo",
+                   locks / "data" / "foo",
+                   locks / "sync" / "foo",
                    locks / "clean.lock"])
 
-check_empty_dirs([cache / "artifacts",
-                  cache / "downloads"])
+# Because we lazy initialize in fetcher.
+check_files_dont_exist([cache / "downloads",
+                        cache / "artifacts"])
 
 metadata_base = storage / "venv" / "foo"
 metadata = metadata_base / "metadata"

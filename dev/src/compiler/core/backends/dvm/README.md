@@ -16,15 +16,15 @@ DVM backend translation layer currently does **not** support:
 * Tail calls
 * Other types (besides primitives)
 
-## REPL lowering
+## Incremental lowering (REPL, compile-time evaluation)
 
-The REPL uses `ReplDVMCodeBuilder` (DVM backend) to keep a persistent lowering state across
-statements. The context wraps `ProgramLoweringContext` and exposes an incremental API:
+The REPL and the compile-time evaluator use `IncrementalDVMCodeBuilder` (DVM backend) to keep a
+persistent lowering state across statements / evaluations. The context wraps `ProgramLoweringContext` and exposes an incremental API:
 
 - `insertLIRUnitAndCollectNewlyLoweredCode(lir_unit)`
 
 This allows REPL/script execution to load only new code into the VM instead of rebuilding the
 entire bytecode program on each statement.
 
-`ReplDVMCodeBuilder` is intended to be owned by a single REPL session and used from a single
-threaded compilation flow; sharing the context across concurrent sessions is not supported.
+`IncrementalDVMCodeBuilder` is intended to be owned by a single REPL session (or compile-time
+evaluator) and used from a single threaded compilation flow; sharing the context across concurrent sessions is not supported.

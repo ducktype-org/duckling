@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::PathBuf;
 
 use crate::duck::util::indent::indent;
@@ -37,10 +43,9 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
         CleanStorageMode::CleanStorage => {
             let CleanOutput {
                 removed_venvs,
-                removed_packages,
                 encountered_errors,
             } = storage::clean_storage(ctx, &storage_path)
-                .context("when trying to clean the storage")?;
+                .context("failed to clean the storage")?;
             ctx.print(format!(
                 "Removed {} venv{}",
                 removed_venvs.len(),
@@ -48,14 +53,6 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
             ))?;
             for venv in removed_venvs {
                 ctx.print(indent(&format!("venv with id `{}`", venv), 2))?;
-            }
-            ctx.print(format!(
-                "Removed {} package{}",
-                removed_packages.len(),
-                removed_packages.s_if_plural(),
-            ))?;
-            for pkg_path in removed_packages {
-                ctx.print(indent(&format!("package at `{}`", pkg_path.display()), 2))?;
             }
             if encountered_errors.has_errors() {
                 let count = encountered_errors.logged_errors();

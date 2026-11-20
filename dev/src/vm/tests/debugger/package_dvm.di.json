@@ -409,6 +409,7 @@
             }
         }
     },
+    "globals": {},
     "module_path": "/duckling/examples/duckmap/duck_build/package_dvm.dbc",
     "source_positions_type": "LineColumn",
     "target": "DBC",

@@ -1,8 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Common quackpack and duck functions.
 
 use std::collections::{HashMap, HashSet};
 pub mod command_ext;
 pub mod dependency_graph;
+pub mod duckling_consts;
+pub mod edit_distance;
 pub mod env;
 pub mod error;
 pub mod extend;
@@ -10,8 +18,8 @@ pub mod extract;
 pub mod file_locks;
 pub mod hash;
 pub mod hex;
-pub mod once_lock_ext;
-pub mod path_ops_ext;
+pub mod once_ext;
+pub mod path_ops;
 pub mod set_once;
 pub mod yaml_config;
 

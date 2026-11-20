@@ -2,8 +2,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "  links: sqlite" >> foo/quackconfig.yaml
-  echo "  links: sqlite" >> bar/quackconfig.yaml
+  echo "  external-libs: [sqlite]" >> foo/quackconfig.yaml
+  echo "  external-libs: [only-in-bar, sqlite]" >> bar/quackconfig.yaml
   @{duck-exe} -C foo add bar --local ../bar
 Tests:
   duplicate-libs:
@@ -12,16 +12,8 @@ Tests:
       duplicate-libs:
         test-cmd: duck -C foo build
         ExitCode: 1
-        Output:
-          Run: |+
-            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
-            info: starting solving the dependency graph
-            info: starting gathering the dependency graph
-            info: running gathering
-            info: starting the solver engine
-            info: starting loading 2 packages
-            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
-            info: successfully synchronized venv \`foo\`"
         Err:
           String: |+
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`
             error: two different packages foo version 1.0.0 and bar version 1.0.0 both link against external library \`sqlite\`

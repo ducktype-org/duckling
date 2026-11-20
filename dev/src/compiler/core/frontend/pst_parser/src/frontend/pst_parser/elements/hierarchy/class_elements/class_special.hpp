@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../meta.hpp"
@@ -21,7 +27,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		ClassSpecial(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+		ClassSpecial(StmtKind kind, LangElementConstructionData state): Stmt(kind, state) {}
 
 		PARSE_DECL();
 

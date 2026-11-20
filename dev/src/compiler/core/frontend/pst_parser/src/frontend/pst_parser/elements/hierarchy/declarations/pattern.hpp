@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include "../not_statements/code_block_or_expr.hpp"
 #include "../not_statements/param.hpp"
 #include "preamble.hpp"
 
@@ -15,7 +22,7 @@ namespace pst {
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(param, Param);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;

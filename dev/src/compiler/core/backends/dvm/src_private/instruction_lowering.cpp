@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
@@ -35,9 +41,8 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
-	pushInstruction(instructions::Comment(base::StrID(
-		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
-	)));
+	// No `Comment` before the terminator: a `.dbc` file keeps comments only as text, so a loaded
+	// function has none, and every debug info instruction index after one would be off by one.
 	pushInstruction(lir_terminator);
 }
 

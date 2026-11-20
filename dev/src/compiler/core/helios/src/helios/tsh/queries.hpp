@@ -1,4 +1,10 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
-#include "queries/implicit_coercibility.hpp"  // IWYU pragma: export
-#include "queries/types.hpp"                  // IWYU pragma: export
+#include "coercions/queries.hpp"  // IWYU pragma: export
+#include "queries/types.hpp"      // IWYU pragma: export

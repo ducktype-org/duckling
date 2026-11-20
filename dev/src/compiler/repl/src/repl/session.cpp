@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "session.hpp"
 
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
@@ -7,7 +13,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/repl_symbols.hpp>
@@ -437,6 +443,7 @@ namespace compiler::repl {
 	):
 		  m_should_exit(false),
 		  m_line_counter(0),
+		  m_session_id(ReplSessionID::next()),
 		  m_dvm_pid(0),
 		  m_frontend(completions_enabled, bracketed_paste_enabled, decorative_output),
 		  m_decorative_output(decorative_output),
@@ -449,8 +456,8 @@ namespace compiler::repl {
 		if (!teardown.has_value())
 			std::cerr << "Failed to teardown the DVM process: "
 					  << vm::api::errorToString(teardown.error()) << "\n";
-		else if (teardown->has_value() && !teardown->value())
-			std::cerr << "The DVM process failed its memory validation.\n";
+		else if (teardown->has_value())
+			std::cerr << teardown->value().toString();
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
@@ -944,7 +951,8 @@ namespace compiler::repl {
 						CORE_DEV_LOG(
 							REPL,
 							"Setting REPL parent to module #",
-							m_session_history.back().module_id.queryUnstablePerfectHash(),
+							m_session_history.back().module_id.queryUnstablePerfectHash().toStringHex(
+							),
 							"\n"
 						);
 					} else {
@@ -952,7 +960,7 @@ namespace compiler::repl {
 					}
 
 					auto module_ref = createSyntheticChainedStatementModule(
-						stmt_source, parent_module_id, m_line_counter, "repl_"
+						stmt_source, parent_module_id, m_line_counter, "repl_", m_session_id
 					);
 					auto module_id = module_ref->getModuleID();
 
@@ -960,7 +968,7 @@ namespace compiler::repl {
 					CORE_DEV_LOG(
 						REPL,
 						"Module created: #",
-						module_id.queryUnstablePerfectHash(),
+						module_id.queryUnstablePerfectHash().toStringHex(),
 						", isRepl=",
 						module_ref->isReplModule(),
 						", hasParent=",

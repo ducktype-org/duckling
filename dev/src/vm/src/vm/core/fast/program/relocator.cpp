@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "relocator.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -41,7 +47,7 @@ namespace {
 	 * executable function.
 	 */
 	exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
-		return &exec_functions[reloc_arg.asInt()];
+		return &exec_functions[exec::execFunctionIndex(reloc_arg.asInt())];
 	}
 
 	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
@@ -49,20 +55,19 @@ namespace {
 	}
 
 #undef TRANSLATOR_ARGUMENTS
-}
 
-/**
- * @brief Relocates an instruction to an executable instruction by translating its
- * arguments.
- */
-exec::Instruction relocInstruction(
-	const ProgramBase&                  program,
-	const exec::ExecFunctionCollection& exec_functions,
-	const exec::ExecFunction&           current_function,
-	const reloc::RelocFunction&         current_function_reloc,
-	const reloc::Instruction&           instruction
-) {
-	switch (instruction.id) {
+	/**
+	 * @brief Relocates an instruction to an executable instruction by translating its
+	 * arguments.
+	 */
+	exec::Instruction relocInstruction(
+		const ProgramBase&                  program,
+		const exec::ExecFunctionCollection& exec_functions,
+		const exec::ExecFunction&           current_function,
+		const reloc::RelocFunction&         current_function_reloc,
+		const reloc::Instruction&           instruction
+	) {
+		switch (instruction.id) {
 #define ARG_TYPE(type, name)         type
 #define ARG_NAME(type, name)         name
 #define DO_TRANSLATION(INSTR_MEMBER) DO_TRANSLATION_LAST(INSTR_MEMBER),
@@ -88,8 +93,9 @@ exec::Instruction relocInstruction(
 #undef ARG_NAME
 #undef DO_TRANSLATION
 #undef DO_TRANSLATION_LAST
+		}
+		CORE_UNREACHABLE();
 	}
-	CORE_UNREACHABLE();
 }
 
 exec::ExecFunctionCollection exec::linkFunctions(
@@ -103,7 +109,8 @@ exec::ExecFunctionCollection exec::linkFunctions(
 	// Relocate the instructions and fill the executable functions with them.
 	for (const auto& [reloc_function, func_info]:
 	     std::views::zip(reloc_functions, program.functions)) {
-		ExecFunction& current_function = exec_functions[func_info.id.asInt()];
+		ExecFunction& current_function
+			= exec_functions[exec::execFunctionIndex(func_info.id.asInt())];
 		current_function.data
 			= reloc_function.data | std::views::transform([&](const reloc::Instruction& instr) {
 				  return relocInstruction(

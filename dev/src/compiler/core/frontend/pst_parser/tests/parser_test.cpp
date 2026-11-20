@@ -1,11 +1,17 @@
-﻿#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/pst.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 
 #include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
@@ -62,6 +68,7 @@ public:
 		TESTER_ADD_TEST(testFor);
 		TESTER_ADD_TEST(testFun);
 		TESTER_ADD_TEST(testFun2);
+		TESTER_ADD_TEST(testFunType);
 		TESTER_ADD_TEST(testBlock);
 		TESTER_ADD_TEST(testActions);
 		TESTER_ADD_TEST(testActionStatements);
@@ -80,14 +87,15 @@ public:
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
 		TESTER_ADD_TEST(testOperatorFun);
+		TESTER_ADD_TEST(testMutMethod);
 		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
 
 private:
-	pst::PST<> prepare(const std::string& filename) {
-		return { fs::File(filename), pst::PSTType::Program };
+	auto prepare(const std::string& filename) {
+		return pst::ParsedPST<>::fromFile(fs::File(filename), pst::PSTType::Program);
 	}
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
@@ -96,7 +104,7 @@ private:
 			auto panicky_visitor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_visitor   = PstVisitorTester<pst::PstVisitorEmpty>();
 			for (const auto& stmt_locked:
-			     pst.getRootElement().illegalAccess().value()->getStatements()) {
+			     pst->getRootElement().illegalAccess().value()->getStatements()) {
 				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
 					[&] { stmt->acceptVisitor(panicky_visitor); }, "Stmt did not call it\'s visitor"
@@ -112,7 +120,7 @@ private:
 			auto panicky_visitor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_visitor   = PstVisitorTester<pst::PstVisitorEmpty>();
 			for (const auto& stmt_locked:
-			     pst.getRootElement().illegalAccess().value()->getStatements()) {
+			     pst->getRootElement().illegalAccess().value()->getStatements()) {
 				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
 					[&] { stmt->acceptVisitor(panicky_visitor); },
@@ -132,33 +140,33 @@ private:
 	void testJson(
 		const std::string& duckling_file, const std::string& json_file, bool no_errors = true
 	) {
-		pst::PST<> pst = prepare(duckling_file);
-		if (not pst.hasErrors()) {
+		auto pst = prepare(duckling_file);
+		if (not pst->hasErrors()) {
 			assertTrue(
-				pst::checkUniqueComponentHashs(pst.getRootElement()).isOk(),
+				pst::checkUniqueComponentHashs(pst->getRootElement()).isOk(),
 				"Element paths are not unique"
 			);
 			assertTrue(
-				pst::checkUniqueHashes(pst.getRootElement()).isOk(), "Element paths are not unique"
+				pst::checkUniqueHashes(pst->getRootElement()).isOk(), "Element paths are not unique"
 			);
 		}
 		std::stringstream ss;
-		pst.dprint(ss);
+		pst->dprint(ss);
 
 		auto             correct_content = fs::File(json_file).getContent();
 		std::string_view correct_string  = correct_content.view().stringView();
 
 		if (no_errors) {
-			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
+			// if (pst->getErrorState().fail()) pst->getErrorState().dumpLog();
 			assertTrue(
-				pst.getLogger()->good(), "there are unexpected errors in Duckling source-code"
+				pst->getLogger()->good(), "there are unexpected errors in Duckling source-code"
 			);
 		}
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		if (no_errors) {
 			assertTrue(
-				pst::testElementCloning(CRef{ &*pst.getRootElement().illegalAccess().value() })
+				pst::testElementCloning(CRef{ &*pst->getRootElement().illegalAccess().value() })
 					.isOk(),
 				"Error during cloning"
 			);
@@ -182,6 +190,8 @@ private:
 	void testPattern() { testJsonRelativePath("pattern.duck", "pattern.json"); }
 
 	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }
+
+	void testFunType() { testJsonRelativePath("fun_type.duck", "fun_type.json"); }
 
 	void testBlock() { testJsonRelativePath("block.duck", "block.json"); }
 
@@ -208,13 +218,13 @@ private:
 				for (const auto terminator: { ";", "" }) {
 					const auto code
 						= base::strConcat(action_name, " ", test_case.target, terminator);
-					auto parsed = pst::PST<>::fromContents(code, pst::PSTType::Program);
+					auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 					assertTrue(
-						parsed.getLogger()->good(), base::strConcat("Failed to parse ", code)
+						parsed->getLogger()->good(), base::strConcat("Failed to parse ", code)
 					);
 
 					auto statements
-						= parsed.getRootElement().illegalAccess().value()->getStatements();
+						= parsed->getRootElement().illegalAccess().value()->getStatements();
 					ASSERT_EQUAL(usize{ 1 }, statements.size());
 					auto stmt   = statements[0].illegalAccess().value();
 					auto action = stmt.dynamicCast<pst::Action>();
@@ -248,7 +258,7 @@ private:
 					else
 						ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Continue>(), code);
 					const auto cloning = pst::testElementCloning(CRef{
-						&*parsed.getRootElement().illegalAccess().value() });
+						&*parsed->getRootElement().illegalAccess().value() });
 					ASSERT_TRUE(cloning.isOk());
 				}
 			}
@@ -257,9 +267,9 @@ private:
 		// Other actions retain general expressions, including postfix calls and brackets.
 		for (const auto code:
 		     { "return value + 1;", "return make[T]();", "defer cleanup();", "throw error;" }) {
-			auto parsed = pst::PST<>::fromContents(code, pst::PSTType::Program);
-			ASSERT_TRUE(parsed.getLogger()->good());
-			auto action = parsed.getRootElement()
+			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+			ASSERT_TRUE(parsed->getLogger()->good());
+			auto action = parsed->getRootElement()
 			                  .illegalAccess()
 			                  .value()
 			                  ->getStatements()[0]
@@ -294,35 +304,37 @@ private:
 
 	void testOperatorFun() { testJsonRelativePath("operator_fun.duck", "operator_fun.json"); }
 
+	void testMutMethod() { testJsonRelativePath("mut_method.duck", "mut_method.json"); }
+
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");
 	}
 
 	void testListParsingErrors() {
-		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 3, "Expected 3 errors");
+		auto pst = prepare(path("snippets/lists_err.duck"));
+		assertTrue(pst->getLogger()->errorCount() == 3, "Expected 3 errors");
 	}
 
 	void testUsingErrors() {
-		pst::PST<> pst = prepare(path("snippets/using_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 2, "Expected 2 errors");
+		auto pst = prepare(path("snippets/using_err.duck"));
+		assertTrue(pst->getLogger()->errorCount() == 2, "Expected 2 errors");
 	}
 
 	void testParamListErrors() {
-		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 7, "Expected 7 errors");
+		auto pst = prepare(path("snippets/params_err.duck"));
+		assertTrue(pst->getLogger()->errorCount() == 7, "Expected 7 errors");
 	}
 
 	void testMissingSemiErr() {
-		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 3, "Expected 3 errors");
+		auto pst = prepare(path("snippets/missing_semicolon_err.duck"));
+		assertTrue(pst->getLogger()->errorCount() == 3, "Expected 3 errors");
 	}
 
 	void testFunctionParameterVisitors() {
-		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
-		assertTrue(pst.getLogger()->messageCount() == 0, "Expected 0 errors");
+		auto pst = prepare(path("snippets/function_with_parameters.duck"));
+		assertTrue(pst->getLogger()->messageCount() == 0, "Expected 0 errors");
 
-		auto fun_opt = pst.getRootElement()
+		auto fun_opt = pst->getRootElement()
 		                   .illegalAccess()
 		                   .value()
 		                   ->getStatements()[0]
@@ -362,9 +374,10 @@ private:
 	void testSimpleExpand() {
 		auto pos      = dia::StablePosition::fakePosition();
 		auto contents = "var a: T = 5;";
-		auto pst
-			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());
-		assertTrue(pst.getLogger()->messageCount() == 0, "Expected 0 errors");
+		auto pst      = pst::ParsedPST<>::fromExpand(
+            pos, contents, pst::LangParserContext::programBaseContext()
+        );
+		assertTrue(pst->getLogger()->messageCount() == 0, "Expected 0 errors");
 	}
 
 

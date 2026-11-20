@@ -1,6 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <concurrent/base/collections/hash_map.hpp>
+
+#include <base/collections/hashmap.hpp>
 
 /**
  * @brief Macro defining typical hash based cache.
@@ -30,7 +38,8 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::HashMap and returns directly constructed QResults on cache hit.
+ * It caches PResults using base::HashMap and returns directly constructed QResults on cache
+ * hit.
  * @note Should not be used in place of QUERY_AUTO_CACHE_COPY for the sake of transparency.
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
@@ -54,7 +63,7 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::StableHashMap and returns QResults constructed
+ * It caches PResults using base::HashMap and returns QResults constructed
  * from a CRef<PResult> on cache hit.
  * @note Should not be used in place of QUERY_AUTO_CACHE_CREF for the sake of transparency.
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls a constructor.
@@ -99,7 +108,7 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::StableHashMap and returns stable references to results
+ * It caches PResults using base::HashMap and returns stable references to results
  * on cache hit.
  */
 #define QUERY_AUTO_CACHE_CREF                                                              \
@@ -123,7 +132,7 @@
 
 /**
  * @brief Macro defining typical hash based cache.
- * It caches PResults using base::StableHashMap and returns QResults constructed
+ * It caches PResults using base::HashMap and returns QResults constructed
  * from a CRef<PResult> by the provided lambda function.
  *
  * @important lambda is called on both cache hit (load) and cache miss (store).

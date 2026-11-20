@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "symbol_data.hpp"
 
 #include <helios/scope_id.hpp>
@@ -9,12 +15,30 @@
 #include <helios_private/symbols/pst_symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <utility>
 
 namespace compiler::helios {
 	namespace defgen {
+		bool isComparisonMethodKind(const Method::Kind kind) {
+			switch (kind) {
+			case Method::Kind::Equal:
+			case Method::Kind::NotEqual:
+			case Method::Kind::Lesser:
+			case Method::Kind::LesserEqual:
+			case Method::Kind::Greater:
+			case Method::Kind::GreaterEqual:
+				return true;
+			case Method::Kind::DefaultDestructor:
+			case Method::Kind::LengthMethod:
+			case Method::Kind::ToString:
+				return false;
+			}
+			CORE_UNREACHABLE();
+		}
+
 		base::Bit256 Constructor::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
 				type.queryUnstablePerfectHash(), static_cast<u64>(kind)
@@ -59,12 +83,47 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
-		// Hash includes the return type, the wrapped PST element and the kind of the input, next to
-		// the counter. The mangled name (used for linker symbols) is based only on the counter.
+		tsh::SymbolType<> ReplInputWrapper::getReturnType() const {
+			variant_match(element) {
+				variant_case_novalue(Instruction) {
+					return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+				}
+				variant_case(Expression, expr) {
+					return expr.expr->expression_type.getSymbolType();
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		std::string ReplInputWrapper::getUniqueId() const {
+			if_opt_some(counter, value) return base::toString(value);
+			variant_match(element) {
+				variant_case(Instruction, instr) { return instr.stmt.toStringHex(); }
+				variant_case(Expression, expr) {
+					return base::toString(expr.expr->getID().asInt());
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 		base::Bit256 ReplInputWrapper::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(
-				return_type, counter, pst_element_hash, static_cast<u64>(type)
-			);
+			const u64 counter_value = counter.copyValueOr(0);
+			variant_match(element) {
+				variant_case(Instruction, instr) {
+					return hashing::justHash<hashing::SHA256>(
+						element.index(), counter.has_value(), counter_value, instr.stmt
+					);
+				}
+				variant_case(Expression, expr) {
+					return hashing::justHash<hashing::SHA256>(
+						element.index(),
+						counter.has_value(),
+						counter_value,
+						expr.expr->getID().asInt()
+					);
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		base::Bit256 ReplEmptyVariable::queryUnstablePerfectHash() const {
@@ -84,6 +143,10 @@ namespace compiler::helios {
 		GeneratedConstant::GeneratedConstant(ctv::CompileTimeValue value, ScopeID scope):
 			  value(std::move(value)),
 			  scope(scope) {}
+
+		base::Bit256 Module::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(module_id.queryUnstablePerfectHash());
+		}
 
 		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher;
@@ -150,6 +213,7 @@ namespace compiler::helios {
 				kind = SymbolKind::Variable;
 			}
 			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
+			variant_case_novalue(defgen::Module) { kind = SymbolKind::Module; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 

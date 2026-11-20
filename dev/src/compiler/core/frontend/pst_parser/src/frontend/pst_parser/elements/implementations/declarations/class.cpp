@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/declarations/class.hpp"
 
 #include "../../hierarchy/expressions/ternary.hpp"
@@ -21,6 +27,9 @@ namespace pst {
 
 		if (PARSE().tryEat(Keyword::Extends)) PARSE().one(&out->base);
 		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
+
+		// Fail fast-path to prevent panic in line below.
+		if (not out->name.internal()) return nullptr;
 
 		PST_NEW_CONTEXT({
 			state.setContextClassName(out->name.internal()->unwrap());

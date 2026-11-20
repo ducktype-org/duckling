@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/actions/all_actions.hpp"
 #include "../../hierarchy/expr_holders.hpp"
 #include "preamble.hpp"
@@ -66,7 +72,7 @@ namespace pst {
 			PST_RETURN out;
 		}
 
-		if (state.notEmpty() && !state[0].is(Special::Semicolon))
+		if (!state[0].is(Special::Semicolon) && state.notEmpty())
 			state.parse(out.toOpt().value()).one(&out->expr);
 
 		PST_RETURN out;

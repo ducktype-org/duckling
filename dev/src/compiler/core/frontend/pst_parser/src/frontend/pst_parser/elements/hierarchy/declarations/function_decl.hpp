@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../lists/parameter_list.hpp"
@@ -8,13 +14,14 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class FunDecl final: public Decl {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FunDecl, Decl);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FunDecl, Decl, operator_fixity);
 		CLONE_SUBELEMENTS();
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		OperatorFixity operator_fixity = OperatorFixity::None;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -30,6 +37,11 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
 			return params.give();
+		}
+
+		[[nodiscard]]
+		OperatorFixity getOperatorFixity() const {
+			return operator_fixity;
 		}
 
 		bool trailingSemicolon() override { return true; }

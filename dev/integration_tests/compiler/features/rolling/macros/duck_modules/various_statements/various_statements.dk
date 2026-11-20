@@ -4,7 +4,7 @@ expand " var a: i64 = 1; ";
 
 expand " namespace N { fun foo() -> i64 = { return 42; } } ";
 
-expand " class T { var x: i64 = 0; var y: i64 = 0; } ";
+expand " class T { x: i64 = 0; y: i64 = 0; } ";
 
 expand " const c = 100; ";
 

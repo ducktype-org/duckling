@@ -1,15 +1,27 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "status.hpp"
 #include "thread_id.hpp"
 
 #include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
 
 #include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/core/vmvalue/ivmvalueref.hpp>
+
+#include <json/optional.hpp>
+#include <json/string_id.hpp>
+
+#include <ranges>
 
 namespace vm::api {
 	namespace response {
@@ -58,7 +70,47 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ThreadIDs, thread_ids);
 		};
 
-		using Boolean = bool;
+		/**
+		 * @brief A thread the user program started and never joined.
+		 */
+		struct UnjoinedThread final {
+			/// The function the thread was started with. Empty when the thread had no context.
+			base::Optional<base::StrID> function_name;
+
+			/// The VMThread which ran the thread.
+			ThreadID thread_id;
+
+			/// The run which started it. A process may be re-run several times, and
+			/// every re-run may report its own threads.
+			usize run_number{ 1 };
+
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnjoinedThread, function_name, thread_id, run_number);
+		};
+
+		/**
+		 * @brief Information about errors found by `api::deinitAndValidate`.
+		 */
+		struct ValidationResult final {
+			/// False when a memory leak was found.
+			bool memory_valid{ true };
+
+			/// The threads the user program started and never joined.
+			std::vector<UnjoinedThread> unjoined_program_threads;
+
+			[[nodiscard]] bool valid() const {
+				return memory_valid && unjoined_program_threads.empty();
+			}
+
+			/**
+			 * @brief Human readable report of what a teardown found, for a caller which just
+			 * wants to print it.
+			 *
+			 * @return The report, empty when the program left nothing behind.
+			 */
+			[[nodiscard]] std::string toString() const;
+
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ValidationResult, memory_valid, unjoined_program_threads);
+		};
 	}
 
 	using Response = std::variant<
@@ -68,7 +120,7 @@ namespace vm::api {
 		response::Empty,
 		response::CodePosition,
 		response::VMValue,
-		response::Boolean,
+		response::ValidationResult,
 		ThreadID,
 		response::NumberOfCurrentStackFrames,
 		response::StackFrameData,

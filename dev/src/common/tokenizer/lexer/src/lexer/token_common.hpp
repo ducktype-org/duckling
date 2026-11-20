@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <lang_definitions/key_spec_op.hpp>
@@ -53,8 +59,22 @@ namespace lexer {
 		[[nodiscard]]
 		base::Optional<Operator> filterNotReserved() const;
 
+		/**
+		 * @brief Whether the operator is a general binary operator: a not reserved one or the
+		 * function type arrow `->`.
+		 */
+		[[nodiscard]]
+		bool isGenBinOp() const;
+
 		[[nodiscard]]
 		i64 getGenBinOpPrecedence() const;
+
+		/**
+		 * @brief Whether the general binary operator groups from the right, like `->` in
+		 * `i32 -> i32 -> i32`.
+		 */
+		[[nodiscard]]
+		bool isGenBinOpRightAssociative() const;
 
 		[[nodiscard]]
 		std::string str() const {

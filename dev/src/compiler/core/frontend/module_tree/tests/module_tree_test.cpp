@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -103,7 +109,7 @@ private:
 		auto        no_name_module = no_name_builder->finalize();
 		auto        no_name_id     = no_name_module->getModuleID();
 		auto        tree_str2      = printModuleTree(no_name_id);
-		std::string hash_str       = std::to_string(no_name_id.queryUnstablePerfectHash());
+		std::string hash_str       = no_name_id.queryUnstablePerfectHash().toStringHex();
 		assertTrue(
 			tree_str2.find("id:") != std::string::npos, "Output should contain 'id:' for bad name"
 		);
@@ -744,11 +750,11 @@ private:
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(mt1->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(mt1->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e4", "root" })
 		);
 #endif
@@ -764,15 +770,15 @@ private:
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(getRef(sub1)->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(getRef(sub1)->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub2" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1", "subsub" })
 		);
 #endif
@@ -794,12 +800,12 @@ private:
 
 		IF_BUILD_TYPE_DEV({
 			ASSERT_TRUE(
-				(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements
+				(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements()
 			     == std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub" })
 			);
 			ModuleTreeModifier::setParent(mt1, getRef(subsub));
 			ASSERT_TRUE(
-				(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements
+				(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements()
 			     == std::vector<std::string>{ "root_package_id11e3",
 			                                  "sub1",
 			                                  "subsub",
@@ -807,7 +813,7 @@ private:
 			                                  "sub2" })
 			);
 			ASSERT_TRUE(
-				(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements
+				(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements()
 			     == std::vector<std::string>{ "root_package_id11e4", "root" })
 			);
 		});

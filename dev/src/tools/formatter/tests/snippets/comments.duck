@@ -1,0 +1,7 @@
+# Leading file comment that explains the module.
+## Doc-style comment with a doubled prefix.
+fun main() = {
+	# Comment inside a block.
+	x = 1; # Trailing comment after a statement.
+	y = #{ inline block comment #} 2;
+}

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file count_tokens_cpp.cpp
  * @author Antek Wiśniewski
@@ -27,35 +33,39 @@
 const std::regex is_string_literal{ R"--(^.*string_literal$)--" };
 const std::regex is_preproc{ R"--(^preproc_.*$)--" };
 
-/**
- * @note Includes are hardcoded to have 3 tokens which is more aligned with c++ definitions
- * @note Strings are hardcoded to always be 1 token which is more aligned with c++ definitions
- * @note Comments are hardcoded to always be 0 tokens which is more aligned with c++ definitions
- */
-int countTokens(TSNode node) {
-	u32         count = ts_node_child_count(node);
-	std::string type{ ts_node_type(node) };
-	// std::cout << type << "\n";
-	if (ts_node_is_extra(node)) {
+namespace {
+	/**
+	 * @note Includes are hardcoded to have 3 tokens which is more aligned with c++ definitions
+	 * @note Strings are hardcoded to always be 1 token which is more aligned with c++ definitions
+	 * @note Comments are hardcoded to always be 0 tokens which is more aligned with c++ definitions
+	 */
+	int countTokens(TSNode node) {
+		u32         count = ts_node_child_count(node);
+		std::string type{ ts_node_type(node) };
 		// std::cout << type << "\n";
-		return 0;
-	} else if (count == 0 || std::regex_match(type, is_string_literal)) {
-		// std::cout << type << "\n";
-		return 1;
-	} else if ("preproc_include" == type) {
-		// std::cout << type << "\n";
-		return 3;
-	} else if (std::regex_match(type, is_preproc)) {
-		std::cerr << "Non include preprocessing directives are untested for token counts";
-		// This is an educated guess of how it would be treated
-		int res = 1;
-		for (u32 child = 0; child < count; child++) res += countTokens(ts_node_child(node, child));
-		return res;
-	} else {
-		// std::cout << type << "\n";
-		int res = 0;
-		for (u32 child = 0; child < count; child++) res += countTokens(ts_node_child(node, child));
-		return res;
+		if (ts_node_is_extra(node)) {
+			// std::cout << type << "\n";
+			return 0;
+		} else if (count == 0 || std::regex_match(type, is_string_literal)) {
+			// std::cout << type << "\n";
+			return 1;
+		} else if ("preproc_include" == type) {
+			// std::cout << type << "\n";
+			return 3;
+		} else if (std::regex_match(type, is_preproc)) {
+			std::cerr << "Non include preprocessing directives are untested for token counts";
+			// This is an educated guess of how it would be treated
+			int res = 1;
+			for (u32 child = 0; child < count; child++)
+				res += countTokens(ts_node_child(node, child));
+			return res;
+		} else {
+			// std::cout << type << "\n";
+			int res = 0;
+			for (u32 child = 0; child < count; child++)
+				res += countTokens(ts_node_child(node, child));
+			return res;
+		}
 	}
 }
 

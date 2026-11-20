@@ -1,7 +1,14 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "query_graph.hpp"
 
 #include "node_id.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bit256.hpp>
@@ -176,11 +183,10 @@ namespace query::internal {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
 		base::HashMap<NodeID, usize> node_to_index;
-		node_to_index.reserve(node_deps->size());
 
 		usize next_index = 0;
 		for (const auto& [node, _]: *node_deps) {
-			node_to_index.emplace(node, next_index++);
+			node_to_index.put(node, next_index++);
 			nodes.push_back(node);
 		}
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "valid_program.hpp"
 
 #include "errors.hpp"
@@ -57,7 +63,8 @@ const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::Valid
 void vm::code::ValidProgram::insertCode(
 	const CodeCollection& collection, api::ExecutionConfig config
 ) {
-	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
+	for (const auto& func: collection.functions)
+		function_signatures.maybePut(base::StrID(func.name), func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);

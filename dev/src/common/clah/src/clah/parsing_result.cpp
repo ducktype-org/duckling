@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file parsing_result.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
@@ -95,11 +101,9 @@ namespace clah {
 		positional_values = other.positional_values;
 		extra_values      = other.extra_values;
 		flags             = other.flags;
-		for (const auto& elem: other.short_names_to_id)
-			short_names_to_id.put(elem.first, elem.second);
-		for (const auto& elem: other.long_names_to_id)
-			long_names_to_id.put(elem.first, elem.second);
-		for (const auto& elem: other.id_to_value) id_to_value.put(elem.first, elem.second);
+		for (const auto& elem: other.short_names_to_id) short_names_to_id.put(elem.key, elem.value);
+		for (const auto& elem: other.long_names_to_id) long_names_to_id.put(elem.key, elem.value);
+		for (const auto& elem: other.id_to_value) id_to_value.put(elem.key, elem.value);
 		return *this;
 	}
 }

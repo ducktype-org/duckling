@@ -4,7 +4,6 @@
         <source media="(prefers-color-scheme: light)" srcset="images/readme_logo_dark.svg">
         <img alt="Duckling programming language" src="images/readme_logo_dark.svg" width="50%">
     </picture>
-    <!-- <p>Duckling is the in-development programming language</p> -->
 </div>
 
 -----
@@ -16,6 +15,14 @@
   &nbsp;·&nbsp;
   <a href="https://duckling.pl/get_involved/">Community</a>
 </p>
+
+-----
+
+<div align="center">
+    <picture>
+        <img alt="Co-founded by the European Union" src="https://ducktype.org/static/main/img/en/eu.png" width="60%">
+    </picture>
+</div>
 
 -----
 
@@ -58,4 +65,15 @@ You can read more about Duckling's technology and goals in the [Documentation](h
 # Documentation website
 
 User documentation of the language and related tools can be found at [https://docs.duckling.pl/](https://docs.duckling.pl/).
+
+# Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+# License
+
+Duckling is distributed under the DuckType Compiler License (Version 1.0).
+
+See [LICENSE.md](LICENSE.md) for details.
+
 

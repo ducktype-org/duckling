@@ -1,12 +1,9 @@
 add_custom_test_pack(vm)
 
-function(add_files)
-  math(EXPR indices "${ARGC} - 1")
-
-  foreach(index RANGE ${indices})
-    set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
-  endforeach()
-
+# Sets `files` in the caller's scope to the given paths, relative to the calling CMakeLists.txt.
+# The previous value of `files` is replaced.
+function(set_files)
+  list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_LIST_DIR}/" OUTPUT_VARIABLE tmp)
   set(files ${tmp} PARENT_SCOPE)
 endfunction()
 
@@ -38,15 +35,32 @@ set(vm_external_deps
     Crow::Crow JSON PkgConfig::LIBFFI
 )
 
+if(USE_REPLXX)
+    set(vm_external_deps
+        ${vm_external_deps}
+        replxx
+    )
+endif()
+
 set(vm_dependencies
     ${vm_internal_deps}
     ${vm_external_deps}
 )
 
 add_library(LibCommonVM OBJECT ${vm_common_sources})
+
+if (USE_REPLXX)
+    target_compile_definitions(LibCommonVM PUBLIC "USE_REPLXX")
+endif()
+
 make_module(LibCommonVM USES ${vm_dependencies})
 
 add_library(MainVM OBJECT ${exec_sources})
+
+if (USE_REPLXX)
+    target_compile_definitions(MainVM PUBLIC "USE_REPLXX")
+endif()
+
 make_module(MainVM USES ${vm_dependencies})
 
 if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies to allow full LTO later.
@@ -77,7 +91,7 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
     endif()
 
     # Link llvm it will be ONLY used by JitDep.
-    llvm_map_components_to_libnames(llvm_libs
+    duck_llvm_libs(llvm_libs
         Core
         ExecutionEngine
         Interpreter
@@ -231,6 +245,23 @@ endif()
 add_vm_variant(tc "USE_TAIL_CALLS")
 add_vm_variant(sc "USE_SWITCH_CASE")
 
+if (JIT_ENABLED)
+    set(opcodes_bitcode_source
+        ${CMAKE_CURRENT_LIST_DIR}/src/vm/core/jit/llvm/opcodes_bitcode_source.cpp
+    )
+    set(common_sc_bc ${CMAKE_CURRENT_BINARY_DIR}/common_sc.bc)
+
+    # ccache 4.9.1's direct mode does not hash files used by #embed, so it could return an
+    # object containing stale bytes. OBJECT_DEPENDS is a safety net for compilers whose depfile
+    # does not list the embedded bitcode.
+    set_property(SOURCE ${opcodes_bitcode_source} APPEND PROPERTY OBJECT_DEPENDS ${common_sc_bc})
+    if (USE_CCACHE)
+        set_property(TARGET JitDep APPEND PROPERTY CXX_COMPILER_LAUNCHER
+            "extra_files_to_hash=${common_sc_bc}"
+        )
+    endif()
+endif()
+
 # Default alias to "sc"
 if (JIT_ENABLED)
     add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_sc> $<TARGET_OBJECTS:JitDep>)
@@ -251,4 +282,3 @@ endif()
 add_subdirectory(playground)
 add_subdirectory(tests)
 
-duck_add_test(vm program_builders tests/program_builders_test.cpp USES LibVM)

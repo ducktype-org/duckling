@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file scope_id.hpp
  * @brief This file contains the definition of the ScopeID structure,
@@ -55,6 +61,18 @@ namespace compiler::helios {
 		friend struct ImplementationOf_QueryRootScopeOf;
 		friend struct ImplementationOf_QueryPrimaryCodeScopeFor;
 		friend struct ImplementationOf_QuerySymbolsInScope;
-		friend struct ImplementationOf_QueryLookupInScopeAndParents;
+	};
+}
+
+namespace std {
+	/**
+	 * @brief Hash template specialization so ScopeID can be used in std::unordered_set and
+	 * base::HashMap.
+	 */
+	template<>
+	struct hash<compiler::helios::ScopeID> {
+		std::size_t operator()(const compiler::helios::ScopeID& s) const noexcept {
+			return s.queryUnstablePerfectHash();
+		}
 	};
 }

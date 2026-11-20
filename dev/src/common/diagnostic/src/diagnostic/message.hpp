@@ -1,10 +1,19 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "stable_position.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic/location.hpp>
 #include <diagnostic/source_position.hpp>
+#include <filesystem/file_path.hpp>
 #include <token_source/source.hpp>
 
 #include <string>
@@ -106,7 +115,7 @@ namespace dia {
 		 * for example during the tokenization.
 		 */
 		struct FileLocation {
-			std::string                    file;
+			fs::FilePath                   file;
 			u64                            line;
 			u64                            column;
 			base::Optional<u64>            end_line{};

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/race_tester/race_tester.hpp>
 
@@ -912,6 +918,11 @@ private:
 			}
 
 			bool erase(const Key& key) override { return map.erase(key) > 0; }
+
+			// Lets the linearizer merge equal search states.
+			bool operator==(const SequentialHashMapWrapper& other) const {
+				return map == other.map;
+			}
 		};
 
 		// Run the race test multiple times for confidence

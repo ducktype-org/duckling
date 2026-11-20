@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Common types used in network communication.
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +25,16 @@ pub struct PackageWithUrl {
     pub url: InternedUrl,
 }
 
+impl PackageWithUrl {
+    /// Convert this [`PackageWithUrl`] into a [`Package`].
+    pub fn as_package(self) -> Package {
+        Package {
+            name: self.name,
+            version: self.version,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 /// This is a helper struct, used mainly for two things:
 /// 1. [`SearchResult`], so we don't copy `url`s around,
@@ -29,15 +45,6 @@ pub struct Package {
     pub name: StrId,
     /// Version of this package.
     pub version: Version,
-}
-
-impl From<PackageWithUrl> for Package {
-    fn from(value: PackageWithUrl) -> Self {
-        Self {
-            name: value.name,
-            version: value.version,
-        }
-    }
 }
 
 impl From<&registry::Manifest> for Package {
@@ -51,12 +58,15 @@ impl From<&registry::Manifest> for Package {
 }
 
 #[derive(Debug)]
-/// Response of the [`GitClient::clone_blocking`](super::git::GitClient::clone_blocking).
-pub struct GitCloneResponse {
+/// Response of the [`Fetcher::clone_from_git_to_directory`] and [`Fetcher::clone_from_git`].
+///
+/// [`Fetcher::clone_from_git_to_directory`]: super::Fetcher::clone_from_git_to_directory
+/// [`Fetcher::clone_from_git`]: super::Fetcher::clone_from_git
+pub struct ClonedPackage {
     /// Hash of the checkout'd repository.
-    pub commit_hash: StrId,
+    pub commit: StrId,
     /// Parsed package at the repository checkout'd at the
-    /// [`commit_hash`](GitCloneResponse::commit_hash).
+    /// [`commit`](ClonedPackage::commit).
     pub package: core::Package,
 }
 

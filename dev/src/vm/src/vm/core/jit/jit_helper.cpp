@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "jit_helper.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -14,15 +20,14 @@
 namespace vm::jit::helpers {
 	void trampoline(OPFUN_REF_ARGS) {
 		// Some instructions consume following ext_* slots as extra arguments. Of the instructions
-		// that can be trampolined (the non-jittable ones), only virtual_call does so, reading its
+		// that can be trampolined (the non-jittable ones), only virtualCall does so, reading its
 		// local stack distance from a following ext_imm.
 		const usize slot_count
-			= vm::getInstructionOpcode(*instr) == vm::low::MicroOpcode::virtual_call_pptr_method
-		        ? 2
-		        : 1;
+			= vm::getInstructionOpcode(*instr) == vm::low::MicroOpcode::virtualCall_pptr_method ? 2
+		                                                                                        : 1;
 		CORE_ASSERT(
 			slot_count == 1 || vm::getInstructionOpcode(instr[1]) == vm::low::MicroOpcode::ext_imm,
-			"virtual_call must be followed by an ext_imm slot"
+			"virtualCall must be followed by an ext_imm slot"
 		);
 
 		std::array<vm::MicroInstruction, 3> buffer{};
@@ -32,7 +37,25 @@ namespace vm::jit::helpers {
 		buffer.at(slot_count) = vm::makeLowInstruction(vm::low::MicroOpcode::exit, 0, 0);
 		instr += slot_count;
 
-		return runInterpreter(buffer.data(), local_stack, frame, thread);
+		// The call saves its return address in the caller frame, and that address points into
+		// `buffer`. A runtime error unwinds past this function, so the address would then point
+		// nowhere, and a stack trace could not find the call site.
+		Frame* const caller = frame;
+		try {
+			runInterpreter(buffer.data(), local_stack, frame, thread);
+		} catch (...) {
+			restoreReturnAddress(*caller, instr);
+			throw;
+		}
+	}
+
+	void restoreReturnAddress(Frame& caller, const vm::MicroInstruction* resume) {
+		// The JIT compiles the pristine copy of the bytecode, which has the same layout as the
+		// bytecode the interpreter runs.
+		const auto& func = *caller.current_function;
+		const auto* orig = func.orig_bc.data();
+		if (resume < orig || resume > orig + func.orig_bc.size()) return;
+		caller.instr = func.bc.data() + (resume - orig);
 	}
 
 	void disableEntrypointAfterFailure(

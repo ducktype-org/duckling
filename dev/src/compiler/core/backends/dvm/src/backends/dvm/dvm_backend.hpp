@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "dvm_internal_fwd.hpp"
@@ -76,9 +82,9 @@ namespace compiler::backend_vm {
 
 	private:
 		/**
-		 * We friend ReplDVMCodeBuilder, so it can access program_context directly.
+		 * We friend IncrementalDVMCodeBuilder, so it can access program_context directly.
 		 */
-		friend class ReplDVMCodeBuilder;
+		friend class IncrementalDVMCodeBuilder;
 
 		/**
 		 * A Boxed pointer to allow forward declaration in order to hide implementation details.

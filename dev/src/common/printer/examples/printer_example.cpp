@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  Example creates a `Console` and adds messages of various types and importance levels to it.
 
@@ -15,26 +21,28 @@
 */
 #include <printer/stream_printer.hpp>
 
-void testPrinter() {
-	printer::StreamPrinter::print({
-		{ "Hello, World! This is the first message.\n" },
-		{ "R", printer::Color::BrightRed },
-		{ "A", printer::Color::Yellow },
-		{ "I", printer::Color::BrightYellow },
-		{ "N", printer::Color::BrightGreen },
-		{ "B", printer::Color::BrightBlue },
-		{ "O", printer::Color::BrightCyan },
-		{ "W", printer::Color::Magenta },
-		{ "\n" },
-		{ "This message uses a default color. " },
-		{ "I can still manually change it. ", printer::Color::Green },
-		{ "But all messages that do not specify color display it.\n" },
-		{ "It's also possible now to change the " },
-		{ "BACKGROUND", printer::Color::Default, printer::Color::Yellow },
-		{ ". " },
-		{ "How cool is that ?", printer::Color::Red, printer::Color::Cyan },
-		{ "\n" },
-	});
+namespace {
+	void testPrinter() {
+		printer::StreamPrinter::print({
+			{ "Hello, World! This is the first message.\n" },
+			{ "R", printer::Color::BrightRed },
+			{ "A", printer::Color::Yellow },
+			{ "I", printer::Color::BrightYellow },
+			{ "N", printer::Color::BrightGreen },
+			{ "B", printer::Color::BrightBlue },
+			{ "O", printer::Color::BrightCyan },
+			{ "W", printer::Color::Magenta },
+			{ "\n" },
+			{ "This message uses a default color. " },
+			{ "I can still manually change it. ", printer::Color::Green },
+			{ "But all messages that do not specify color display it.\n" },
+			{ "It's also possible now to change the " },
+			{ "BACKGROUND", printer::Color::Default, printer::Color::Yellow },
+			{ ". " },
+			{ "How cool is that ?", printer::Color::Red, printer::Color::Cyan },
+			{ "\n" },
+		});
+	}
 }
 
 int main() { testPrinter(); }

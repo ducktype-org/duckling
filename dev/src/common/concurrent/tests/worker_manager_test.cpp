@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/base/run_or_timeout.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
@@ -138,6 +144,9 @@ private:
 		constexpr u64 TASK_COUNT      = 10'000;
 		constexpr u64 START           = 10'000;
 		constexpr u64 TASK_BATCH_SIZE = 5;
+		// Each case run in ~0.3 s normally, but coverage builds
+		// (atomic gcov counters) are ~10x slower, so we just give it 30s timeout.
+		constexpr usize HANG_TIMEOUT_MS = 30'000;
 		// Creates `task_count` tasks to compute Fibonacci numbers concurrently, ranged
 		// from [start, start + task_count] (modulo MOD).
 		// Complexity is hard to estimate here, but each task should take a few milliseconds.
@@ -201,7 +210,8 @@ private:
 							  << " tasks.\n";
 				}
 				fail("Timeout.");
-			}
+			},
+			HANG_TIMEOUT_MS
 		);
 
 		std::scoped_lock lock(task_mutex);

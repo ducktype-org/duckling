@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file session.hpp
  * @brief REPL (Read-Eval-Print Loop) session management for Duckling compiler.
@@ -11,9 +17,10 @@
 #include "frontend.hpp"
 #include "helpers.hpp"
 
-#include <backends/dvm/repl_lowering.hpp>
+#include <backends/dvm/incremental_dvm_code_builder.hpp>
+#include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <base/collections/optional.hpp>
@@ -296,10 +303,11 @@ namespace compiler::repl {
 		                     ///< then it is checked by the main run loop.
 		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
 		ResetState                 m_reset_state;      ///< Struct to control reset.
-		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
-		ReplFrontend m_frontend;      ///< Frontend for user interaction
-		bool         m_decorative_output;
+		u64           m_line_counter;  ///< Counter for generating unique wrapper function names
+		ReplSessionID m_session_id;    ///< Part of the names of this session's statement modules
+		vm::PID       m_dvm_pid;       ///< Process ID of the running DVM instance
+		ReplFrontend  m_frontend;      ///< Frontend for user interaction
+		bool          m_decorative_output;
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *
@@ -307,7 +315,7 @@ namespace compiler::repl {
 		 * globals, and types from previous statements to be referenced in new statements.
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
-		base::Optional<backend_vm::ReplDVMCodeBuilder> m_lowering_context;
+		base::Optional<backend_vm::IncrementalDVMCodeBuilder> m_lowering_context;
 		/**
 		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
 		 * or when resetting state of the REPL.

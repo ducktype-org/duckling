@@ -1,7 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/declarations/if.hpp"
 
-#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
-#include "../../hierarchy/not_statements/round_group_expression.hpp"   // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_any_statement.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/round_group_expression.hpp"       // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -58,6 +64,12 @@ namespace pst {
 		if (!condition_group.has_value()) return {};
 
 		return condition_group.value()->getExpr();
+	}
+
+	base::Optional<AccessLocked<CodeBlockOrStmt>> If::getElseBody() const {
+		return else_body.map([](const auto& access) -> AccessLocked<CodeBlockOrStmt> {
+			return access.give();
+		});
 	}
 
 	void If::acceptVisitor(PstVisitor& visitor) const { visitor.visitIf(*this); }

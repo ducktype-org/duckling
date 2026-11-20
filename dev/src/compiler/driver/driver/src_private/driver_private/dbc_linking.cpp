@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "dbc_linking.hpp"
 
 #include <debug_info/debug_info_io.hpp>
@@ -13,6 +19,7 @@
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/loader/loader.hpp>
 
@@ -40,29 +47,6 @@ namespace compiler::driver {
 			return func.name.str.strView();
 		});
 		base::deduplicateBy(code.object_files, [](const std::string& file) { return file; });
-	}
-
-	namespace {
-		/**
-		 * @brief The debug info file of a linked library is assumed to sit next to it, with
-		 * the DVM bytecode extension swapped for the debug info one.
-		 * @return the path, if such a file exists.
-		 */
-		base::Optional<fs::FilePath> findLinkLibraryDebugInfoPath(const std::string& link_library_path
-		) {
-			constexpr std::string_view DBC_EXTENSION = ".dbc";
-			constexpr std::string_view DI_EXTENSION  = ".di.json";
-
-			if (!link_library_path.ends_with(DBC_EXTENSION)) return {};
-
-			std::string stem = link_library_path;
-			stem.resize(stem.size() - DBC_EXTENSION.size());
-
-			fs::FilePath debug_info_path = stem + std::string(DI_EXTENSION);
-			if (!debug_info_path.isRegularFile()) return {};
-
-			return debug_info_path;
-		}
 	}
 
 	base::OkBad linkDVMPackage(
@@ -117,7 +101,9 @@ namespace compiler::driver {
 		debug_info_paths.reserve(debug_info_artifacts.size());
 		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
 		for (const auto& link_library: dvm_linking_options.link_libraries)
-			if_opt_some(findLinkLibraryDebugInfoPath(link_library.string()), debug_info_path) {
+			if_opt_some(
+				vm::api::findDebugInfoNextToBytecode(link_library.string()), debug_info_path
+			) {
 				debug_info_paths.push_back(debug_info_path);
 			}
 

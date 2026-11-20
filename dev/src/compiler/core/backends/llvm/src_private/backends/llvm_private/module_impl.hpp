@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "llvm_includes/module.hpp"
@@ -9,6 +15,8 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 #include <base/pointers/box.hpp>
+
+#include <filesystem>
 
 namespace compiler::backend_llvm {
 
@@ -23,6 +31,12 @@ namespace compiler::backend_llvm {
 		explicit ModuleImpl(Box<llvm::Module> module);
 
 		~ModuleImpl() = default;
+
+		/**
+		 * @brief Writes the module's current LLVM IR as text to output_file. Panics if the file
+		 * cannot be created.
+		 */
+		void dumpLLVMToFile(const std::filesystem::path& output_file) const;
 
 		[[nodiscard]]
 		MRef<llvm::TargetMachine> getTargetMachine() const {

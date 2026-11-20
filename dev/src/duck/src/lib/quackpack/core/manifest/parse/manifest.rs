@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Parsing of the manifest from its schema.
 use std::collections::HashMap;
 use std::path::Path;
@@ -6,27 +12,30 @@ use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::lints::LintLevel;
+use crate::quackpack::core::lints::errors::Errors;
 use crate::quackpack::core::lints::warnings::Warnings;
 use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
-    BuildOptions, Dependencies, DependencyKind, Features, Manifest, OptLevel, PackageMetadata,
-    ParseMode, Profile, Profiles, ScopeGuard, Version,
+    BuildOptions, Dependencies, DependencyKind, Features, Lints, Manifest, OptLevel,
+    PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
-    Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
-    Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
+    DuckLints as DuckLintsSchema, Lints as LintsSchema, Manifest as ManifestSchema,
+    Metadata as MetadataSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+    VenvConfig as VenvConfigSchema,
 };
 use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
-#[tracing::instrument(skip_all)]
 #[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     mode: ParseMode<'_>,
     warnings: &mut Warnings,
+    _errors: &mut Errors,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let mut scope = Scope::new();
@@ -56,6 +65,14 @@ pub(crate) fn parse(
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
+
+    let lints = if let Some(lints) = schema.lints.as_ref() {
+        let guard = scope.push("lints".to_string());
+
+        parse_lints(lints, guard)?
+    } else {
+        Lints::default()
+    };
     match mode {
         ParseMode::FrontMatter { frontmatter_path } => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
@@ -66,7 +83,7 @@ pub(crate) fn parse(
                     illegal_fields.join("`, `"),
                     frontmatter_path.display()
                 );
-                err = err.add_hint(
+                err.add_hint(
                     "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
                 );
                 qp_bail!(err);
@@ -93,6 +110,7 @@ pub(crate) fn parse(
                 profiles,
                 VenvConfig::default_for_script(ctx),
                 BuildOptions::default(),
+                lints,
             );
             Ok(manifest)
         }
@@ -109,7 +127,7 @@ pub(crate) fn parse(
             let Some(ref name) = metadata.name else {
                 qp_bail!("missing the obligatory key `metadata.name`")
             };
-            debug!(package_name = %name, package_version = %version);
+            debug!(%name, %version);
 
             {
                 let mut guard1 = scope.push("metadata".to_string());
@@ -138,8 +156,9 @@ pub(crate) fn parse(
                 description: metadata.description.as_ref().map(<&String>::into),
             };
 
-            let build_options = parse_build_options(metadata);
-
+            let mut guard = scope.push("metadata".into());
+            let build_options = parse_build_options(metadata, &mut guard)
+                .with_context(move || guard.make_context_string())?;
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -149,6 +168,7 @@ pub(crate) fn parse(
                 profiles,
                 venv,
                 build_options,
+                lints,
             ))
         }
     }
@@ -247,8 +267,96 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }
 
-/// Parse a [`BuildOptions`] from the schema.
-fn parse_build_options(input: &MetadataSchema) -> BuildOptions {
-    let links = input.links.as_ref().map(StrId::from);
-    BuildOptions { links }
+/// Parse a [`BuildOptions`] from the `metadata` part of the schema.
+fn parse_build_options(
+    input: &MetadataSchema,
+    scope: &mut ScopeGuard<'_>,
+) -> QuackResult<BuildOptions> {
+    if input.links.is_some() {
+        let guard = scope.push("links".into());
+        let mut err = qp_err!("`metadata.links` is no longer supported");
+        err.add_hint("list the library names in `metadata.external-libs` instead");
+        return Err(err).with_context(move || guard.make_context_string());
+    }
+    let guard = scope.push("external-libs".into());
+    let external_libs = parse_external_libs(input.external_libs.as_deref())
+        .with_context(move || guard.make_context_string())?;
+    let external_lib_paths = input.external_lib_paths.clone().unwrap_or_default();
+    Ok(BuildOptions {
+        external_libs,
+        external_lib_paths,
+    })
+}
+
+/// Parse the `metadata.external-libs` list, checking that every entry is a bare library name.
+fn parse_external_libs(input: Option<&[String]>) -> QuackResult<Vec<StrId>> {
+    input
+        .unwrap_or_default()
+        .iter()
+        .map(|name| {
+            validate_external_lib_name(name)?;
+            Ok(name.into())
+        })
+        .collect()
+}
+
+/// File name extensions that do not belong in an external library's name.
+const EXTERNAL_LIB_EXTENSIONS: [&str; 5] = [".a", ".so", ".dylib", ".dll", ".lib"];
+
+/// Check that `name` is a bare library name, like `sqlite3`: not empty, not a path, and without
+/// the `lib` prefix or a file extension, because those are added when the library is searched for.
+fn validate_external_lib_name(name: &str) -> QuackResult<()> {
+    let note = if name.is_empty() {
+        "the name is empty"
+    } else if name.chars().any(std::path::is_separator) {
+        "the name looks like a path"
+    } else if name.starts_with("lib") {
+        "the `lib` prefix is added when the library is searched for, so it must not be in the name"
+    } else if EXTERNAL_LIB_EXTENSIONS
+        .iter()
+        .any(|extension| name.ends_with(extension))
+        || name.contains(".so.")
+    {
+        "the file extension is added when the library is searched for, so it must not be in the name"
+    } else {
+        return Ok(());
+    };
+    let mut err = qp_err!("invalid external library name `{name}`");
+    err.add_note(note);
+    err.add_hint(
+        "use the bare library name (e.g. `sqlite3` for `libsqlite3.a`) and put its directory in `metadata.external-lib-paths`",
+    );
+    qp_bail!(err)
+}
+
+/// Parse [`LintsSchema`] from the schema.
+fn parse_lints(input: &LintsSchema, mut scope: ScopeGuard<'_>) -> QuackResult<Lints> {
+    let duck_lints = if let Some(ref duck_lints) = input.duck {
+        let guard = scope.push("duck".into());
+        parse_duck_lints(duck_lints, guard)?
+    } else {
+        HashMap::default()
+    };
+    Ok(Lints { duck_lints })
+}
+
+fn parse_duck_lints(
+    input: &DuckLintsSchema,
+    mut scope: ScopeGuard<'_>,
+) -> QuackResult<HashMap<String, LintLevel>> {
+    let overrides = input
+        .0
+        .iter()
+        .map(|(name, level)| {
+            let scope = scope.push(name.to_string());
+            let level = parse_single_lint_level(level, scope)?;
+            Ok((name.to_string(), level))
+        })
+        .collect::<QuackResult<_>>()?;
+    Ok(overrides)
+}
+
+/// Parse a single lint level from [`LintsSchema`].
+fn parse_single_lint_level(level: &str, scope: ScopeGuard<'_>) -> QuackResult<LintLevel> {
+    level.parse().with_context(|| scope.make_context_string())
 }

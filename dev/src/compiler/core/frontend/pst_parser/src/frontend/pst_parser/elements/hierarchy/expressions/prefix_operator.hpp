@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../not_statements/wrapper_elements/operator_wrapper.hpp"
@@ -21,7 +27,7 @@ namespace pst::expr {
 	public:
 		ELEMENT_CLONE_DECL(PrefixOperator);
 
-		explicit PrefixOperator(const LangParserState& state, i64 precedence):
+		explicit PrefixOperator(LangElementConstructionData state, i64 precedence):
 			  ExprElement(state, precedence) {}
 
 		~PrefixOperator() override = default;

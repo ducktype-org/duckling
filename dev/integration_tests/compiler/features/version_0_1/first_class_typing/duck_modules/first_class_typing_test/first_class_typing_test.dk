@@ -8,7 +8,7 @@ const my_i64 = i64;
 const another_i64 = i64;
 
 class A {
-	var a: i64;
+	a: i64;
 	fun foo() = {
 		print("A");
 		builtin_output_i64(a);
@@ -16,7 +16,7 @@ class A {
 }
 
 class B {
-	var b: i64 = 1;
+	b: i64 = 1;
 	fun foo() = {
 		print("B");
 		builtin_output_i64(b);
@@ -24,7 +24,7 @@ class B {
 }
 
 class C {
-	var c: i64;
+	c: i64;
 	fun foo() = {
 		print("C");
 		builtin_output_i64(c);

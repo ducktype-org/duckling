@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "preamble.hpp"
@@ -17,14 +23,14 @@ namespace pst {
 		NAMED_CHILD(iterator, IdentifierWrapper);
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrAnyStmt);
 		base::Optional<bool> is_const;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit For(const LangParserState& state): CodeDecl(state) {
+		explicit For(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::For;
 		}
 

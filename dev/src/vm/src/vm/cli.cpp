@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "cli.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -8,6 +14,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/api/data/process_info.hpp>
 #include <vm/api/data/process_options.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -39,7 +46,10 @@ int cli(
 		          // cleanly or force kill it otherwise.
 				  defer({
 					  const auto res = vm::api::deinitOrKill(pid);
-					  if (not res) std::cerr << convertError(res.error()) << '\n';
+					  if (not res)
+						  std::cerr << convertError(res.error()) << '\n';
+					  else if (res->has_value())
+						  std::cerr << res->value().toString();
 				  });
 
 				  return std::expected<void, vm::api::ApiError>{}
@@ -52,6 +62,25 @@ int cli(
 						  return vm::api::loadCode(pid, libs);
 					  })
 		              .and_then([&] { return vm::api::loadFiles(pid, files); })
+		              .and_then([&] {
+						  // A panic's stack trace prints the Duckling names of the functions, when
+			              // the compiler left debug info next to the bytecode. The names only
+			              // make the trace nicer, so a broken debug info file is ignored.
+						  vm::api::FunctionSourceInfos function_source_info;
+						  for (const auto& file: files) {
+							  if_opt_some(
+								  vm::api::findDebugInfoNextToBytecode(file.getFilePath().string()),
+								  debug_info_path
+							  ) {
+								  (void) vm::api::addFunctionSourceInfoFromFile(
+									  function_source_info, debug_info_path
+								  );
+							  }
+						  }
+						  return vm::api::setFunctionSourceInfo(
+							  pid, std::move(function_source_info)
+						  );
+					  })
 		              .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 		              .and_then([&] { return vm::api::runAwait(pid, args); })
 		              .transform([](vm::api::ExitValue vm_values) {

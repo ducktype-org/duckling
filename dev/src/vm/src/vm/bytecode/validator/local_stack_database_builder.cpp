@@ -1,4 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "local_stack_database_builder.hpp"
+
+#include <base/collections/hashmap.hpp>
 
 using ls_db_bld = vm::code::LocalStackDbBuilder;
 
@@ -150,7 +158,7 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 		for (auto& [child, next_node]: tree[node_id].children) {
 			CORE_ASSERT(!names.contains(child.name), "we should never have repeating names");
 
-			names.emplace(child.name, next_node);
+			names.put(child.name, next_node);
 
 			auto next_lifetime = self(self, next_node, names);
 

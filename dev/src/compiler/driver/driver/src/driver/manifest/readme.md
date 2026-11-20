@@ -88,11 +88,11 @@ both fields are lists, so the object form is always required.
 | field             | required | description |
 |-------------------|----------|-------------|
 | `output_file`     | yes      | Output file name. |
-| `linking_options` | no       | A string (= `additional_link_options`) **or** an object: |
+| `linking_options` | no       | A list of strings (= `additional_link_options`) **or** an object: |
 
 `linking_options` as an object:
 - `linker` (string, optional) — path to the linker.
-- `additional_link_options` (string, optional) — raw linker flags.
+- `additional_link_options` (string[], optional) — raw linker flags.
 - `link_c_standard_library` (bool, optional, defaults to `true`).
 
 > **IMPORTANT — linking against other packages.** To link against another
@@ -202,7 +202,9 @@ that links the resulting `.a` file.
       "output_file": "app",
       "linking_options": {
         "linker": "/usr/bin/ld",
-        "additional_link_options": "/abs/path/to/build/libmathlib.a",
+        "additional_link_options": [
+          "/abs/path/to/build/libmathlib.a"
+        ],
         "link_c_standard_library": true
       }
     }
@@ -219,6 +221,10 @@ When only raw linker flags are needed:
   "package": "app",
   "strategy": "native",
   "output_file": "app",
-  "linking_options": "/abs/path/to/libfoo.a /abs/path/to/libbar.a -lpthread"
+  "linking_options": [
+    "/abs/path/to/libfoo.a",
+    "/abs/path/to/libbar.a",
+    "-lpthread"
+  ]
 }
 ```

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "debug_info.hpp"
 
 #include <base/config/build_type.hpp>
@@ -39,6 +45,10 @@ namespace debug_info {
 				if (variable_meta.position)
 					variable_meta.position = resolvePosition(*variable_meta.position, resolver);
 		}
+
+		for (auto& [_, global_meta]: globals)
+			if (global_meta.position)
+				global_meta.position = resolvePosition(*global_meta.position, resolver);
 	}
 
 	void DebugInfo::mergeFrom(DebugInfo&& other) {
@@ -50,6 +60,7 @@ namespace debug_info {
 
 		for (auto& [name, metadata]: other.functions) functions.emplace(name, std::move(metadata));
 		for (auto& [name, metadata]: other.types) types.emplace(name, std::move(metadata));
+		for (auto& [name, metadata]: other.globals) globals.emplace(name, std::move(metadata));
 		auto _ = std::move(other);
 	}
 

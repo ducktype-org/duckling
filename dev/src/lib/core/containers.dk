@@ -16,11 +16,11 @@ namespace allocation {
     const LLVM_OBJECT_SIZE = builtins.size_of(T);
 
     @backend_dependent
-    fundecl alloc() -> ptr T;
+    fundecl alloc() -> ptr mut T;
 
     @dvm_only_impl
-    fun alloc() -> ptr T = {
-        return builtins.dvm_alloc:{T}();
+    fun alloc() -> ptr mut T = {
+        return builtins.dvm_alloc[T]();
     }
 
     #{
@@ -28,67 +28,67 @@ namespace allocation {
         anything useful with it, so the program stops right here instead of dereferencing it.
     #}
     @native_only_impl
-    fun alloc() -> ptr T = {
-        let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr T;
+    fun alloc() -> ptr mut T = {
+        let p = clib.malloc(LLVM_OBJECT_SIZE as u64) as ptr mut T;
         if (p as u64 == 0u64) panicking.panic();
         return p;
     }
 
     @backend_dependent
-    fundecl free(p: ptr T) -> ();
+    fundecl free(p: ptr mut T) -> ();
 
     @dvm_only_impl
-    fun free(p: ptr T) -> () = {
-        builtins.dvm_free:{T}(p);
+    fun free(p: ptr mut T) -> () = {
+        builtins.dvm_free[T](p);
     }
 
     @native_only_impl
-    fun free(p: ptr T) -> () = {
-        clib.free(p as cptr u8);
+    fun free(p: ptr mut T) -> () = {
+        clib.free(p as cptr mut u8);
     }
 
     @backend_dependent
-    fundecl many_alloc(len: i64) -> manyptr T;
+    fundecl many_alloc(len: i64) -> manyptr mut T;
 
     @dvm_only_impl
-    fun many_alloc(len: i64) -> manyptr T = {
-        return builtins.dvm_alloc_arr:{T}(len);
+    fun many_alloc(len: i64) -> manyptr mut T = {
+        return builtins.dvm_alloc_arr[T](len);
     }
 
     @native_only_impl
-    fun many_alloc(len: i64) -> manyptr T = {
-        return clib.malloc((len * LLVM_OBJECT_SIZE) as u64) as manyptr T;
+    fun many_alloc(len: i64) -> manyptr mut T = {
+        return clib.malloc((len * LLVM_OBJECT_SIZE) as u64) as manyptr mut T;
     }
 
     @backend_dependent
-    fundecl many_free(p: manyptr T) -> ();
+    fundecl many_free(p: manyptr mut T) -> ();
 
     @dvm_only_impl
-    fun many_free(p: manyptr T) -> () = {
-        builtins.dvm_free_arr:{T}(p);
+    fun many_free(p: manyptr mut T) -> () = {
+        builtins.dvm_free_arr[T](p);
     }
 
     @native_only_impl
-    fun many_free(p: manyptr T) -> () = {
-        clib.free(p as cptr u8);
+    fun many_free(p: manyptr mut T) -> () = {
+        clib.free(p as cptr mut u8);
     }
 
     @backend_dependent
-    fundecl many_realloc(p: manyptr T, new_size: i64) -> manyptr T;
+    fundecl many_realloc(p: manyptr mut T, new_size: i64) -> manyptr mut T;
 
     #{
         `dvm_realloc_arr` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
     #}
     @dvm_only_impl
-    fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
-        builtins.dvm_realloc_arr:{T}(p, new_size);
+    fun many_realloc(p: manyptr mut T, new_size: i64) -> manyptr mut T = {
+        builtins.dvm_realloc_arr[T](p, new_size);
         return p;
     }
 
     @native_only_impl
-    fun many_realloc(p: manyptr T, new_size: i64) -> manyptr T = {
-        return clib.realloc(p as cptr u8, (new_size * LLVM_OBJECT_SIZE) as u64) as manyptr T;
+    fun many_realloc(p: manyptr mut T, new_size: i64) -> manyptr mut T = {
+        return clib.realloc(p as cptr mut u8, (new_size * LLVM_OBJECT_SIZE) as u64) as manyptr mut T;
     }
 }
 
@@ -96,21 +96,21 @@ namespace allocation {
     The two halves of `box T`'s storage management, as the compiler sees them.
 #}
 template(T: type)
-fun boxAlloc(value: T) -> ptr T = {
-    let storage = allocation:{T}.alloc();
-    builtins.move_in:{T}(storage, move value);
+fun boxAlloc(value: T) -> ptr mut T = {
+    let storage = allocation[T].alloc();
+    builtins.move_in[T](storage, move value);
     return storage;
 }
 
 template(T: type)
-fun boxFree(p: ptr T) -> () = {
+fun boxFree(p: ptr mut T) -> () = {
     # Moving the pointee out and dropping the result on the floor runs `T`'s destructor.
-    builtins.move_out:{T}(p);
-    allocation:{T}.free(p);
+    builtins.move_out[T](p);
+    allocation[T].free(p);
 }
 
 class String {
-    pointer: manyptr char;
+    pointer: manyptr mut char;
     len: i64;
     cap: i64;
     offset: i64;
@@ -120,26 +120,26 @@ class String {
         The capacity is doubled instead of trimmed to `required`, which keeps a
         sequence of `append`s amortized O(1).
     #}
-    fun reserve(required: i64) -> () = {
+    mut fun reserve(required: i64) -> () = {
         if (required > cap) {
             var new_cap = cap;
             if (new_cap == 0i64) new_cap = 1i64;
             while (new_cap < required) new_cap = new_cap * 2i64;
 
-            if (cap == 0i64) pointer = allocation:{char}.many_alloc(new_cap);
-            else pointer = allocation:{char}.many_realloc(pointer, new_cap);
+            if (cap == 0i64) pointer = allocation[char].many_alloc(new_cap);
+            else pointer = allocation[char].many_realloc(pointer, new_cap);
             cap = new_cap;
         }
     }
 
-    fun append(c: char) -> ref String = {
+    mut fun append(c: char) -> ref mut String = {
         reserve(len + 1i64);
         pointer[len] = c;
         len          = len + 1i64;
         return self;
     }
 
-    fun append(other: ref String) -> ref String = {
+    mut fun append(other: ref String) -> ref mut String = {
         let other_len = other.length();
         reserve(len + other_len);
 
@@ -150,20 +150,20 @@ class String {
         return self;
     }
 
-    fun append(other: String) -> ref String = {
+    mut fun append(other: String) -> ref mut String = {
         append(&other);
         return self;
     }
 
-    fun append(other: str) -> ref String = {
+    mut fun append(other: str) -> ref mut String = {
         let other_len = other.length();
         reserve(len + other_len);
-        copyCharsAt(builtins.ptr_from_slice:{char}(other), pointer, len, other_len);
+        copyCharsAt(builtins.ptr_from_slice[char](other), pointer, len, other_len);
         len = len + other_len;
         return self;
     }
 
-    fun prepend(c: char) -> ref String = {
+    mut fun prepend(c: char) -> ref mut String = {
         reserve(len + 1i64);
 
         # Shift right back to front, so moved characters are never clobbered.
@@ -181,7 +181,7 @@ class String {
         Drops the contents but keeps the buffer, so it can be refilled without
         allocating again.
     #}
-    fun clear() -> () = {
+    mut fun clear() -> () = {
         len = 0i64;
     }
 
@@ -189,10 +189,10 @@ class String {
     fun length() -> i64 = len;
     
     fun asSlice() -> str = {
-        return builtins.slice_from_ptr_len:{char}(pointer, len);
+        return builtins.slice_from_ptr_len[char](pointer, len);
     }
 
-    fun at(i: i64) -> ref char = {
+    mut fun at(i: i64) -> ref mut char = {
         if (i < 0i64 or i >= len) panicking.panic();
         return &pointer[i];
     }
@@ -201,7 +201,54 @@ class String {
         return copy self;
     }
 
-    String.copy(other: const ref String) = {
+    #{
+        Strings are equal when they hold the same characters. This replaces the
+        generated comparison, which would compare the buffers instead.
+    #}
+    fun ==(rhs: ref String) -> bool = {
+        if (len != rhs.len) return false;
+        var i = 0i64;
+        while (i < len) {
+            if (pointer[i] != rhs.pointer[i]) return false;
+            i = i + 1i64;
+        }
+        return true;
+    }
+
+    #{
+        Orders strings lexicographically by their characters. A proper prefix
+        comes before the longer string.
+    #}
+    fun <(rhs: ref String) -> bool = {
+        var i = 0i64;
+        while (i < len and i < rhs.len) {
+            if (pointer[i] != rhs.pointer[i]) return pointer[i] < rhs.pointer[i];
+            i = i + 1i64;
+        }
+        return len < rhs.len;
+    }
+
+    #{
+        The remaining comparisons are defined in terms of `==` and `<`. The
+        generated ones would compare the buffers instead.
+    #}
+    fun !=(rhs: ref String) -> bool = {
+        return not (self == rhs);
+    }
+
+    fun <=(rhs: ref String) -> bool = {
+        return not (rhs < self);
+    }
+
+    fun >(rhs: ref String) -> bool = {
+        return rhs < self;
+    }
+
+    fun >=(rhs: ref String) -> bool = {
+        return not (self < rhs);
+    }
+
+    String.copy(other: ref String) = {
         var result = stringReserve(other.length());
         copyChars(other.pointer, result.pointer, other.length());
         result.len = other.length();
@@ -209,7 +256,7 @@ class String {
     }
 
     String.destroy() = {
-        allocation:{char}.many_free(pointer);   
+        allocation[char].many_free(pointer);   
     }
 }
 
@@ -219,7 +266,7 @@ fun stringReserve(cap: i64) -> String = {
     return result;
 }
 
-fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: i64, count: i64) -> () = {
+fun copyCharsAt(source: manyptr char, dest: manyptr mut char, dest_offset: i64, count: i64) -> () = {
     var i = 0i64;
     while (i < count) {
         dest[dest_offset + i] = source[i];
@@ -227,7 +274,7 @@ fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: i64, coun
     }
 }
 
-fun copyChars(source: manyptr char, dest: manyptr char, count: i64) -> () = {
+fun copyChars(source: manyptr char, dest: manyptr mut char, count: i64) -> () = {
     copyCharsAt(source, dest, 0i64, count);
 }
 
@@ -277,7 +324,7 @@ namespace stringification {
     fun stringifyStr(x: str) -> String = {
         let size   = x.length();
         var result = stringReserve(size);
-        copyChars(builtins.ptr_from_slice:{char}(x), result.pointer, size);
+        copyChars(builtins.ptr_from_slice[char](x), result.pointer, size);
         result.len = size;
         return result;
     }
@@ -294,7 +341,7 @@ namespace stringification {
         return stringifyStr("false");
     }
 
-    fun appendHexU64(s: ref String, value: u64) -> () = {
+    fun appendHexU64(s: ref mut String, value: u64) -> () = {
         var digits = stringReserve(16);
         var rest   = value;
 
@@ -322,12 +369,12 @@ namespace stringification {
             var result = stringifyStr("ptr(");
 
             # `dvm_ptr_parts` fails on a null pointer, which points into no block.
-            if (builtins.dvm_is_nullptr:{T}(pointer)) {
+            if (builtins.dvm_is_nullptr[T](pointer)) {
                 result.append("null)");
                 return result;
             }
 
-            let parts    = builtins.dvm_ptr_parts:{T}(pointer);
+            let parts    = builtins.dvm_ptr_parts[T](pointer);
             let block_id = parts[0i64];
             let offset   = parts[1i64];
 
@@ -344,9 +391,9 @@ namespace stringification {
             if (pointer as u64 == 0u64) return stringifyStr("ptr(null)");
             let buffer_cap = 21;
             var address    = stringReserve(buffer_cap);
-            let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;
+            let format     = builtins.ptr_from_slice[char]("%p\0") as cptr char;
             let written
-                = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
+                = clib.snprintf(address.pointer as cptr mut char, buffer_cap as u64, format, pointer as cptr u8);
             address.len = runtime.native.writtenLength(written, buffer_cap);
 
             var result = stringifyStr("ptr(");
@@ -373,12 +420,12 @@ namespace stringification {
 
         @native_only_impl
         fun stringifyCPtr(pointer: cptr T) -> String = {
-            if (pointer as u64 == 0) return stringifyStr("cptr(null)");
+            if (pointer as u64 == 0u64) return stringifyStr("cptr(null)");
             let buffer_cap = 21;
             var address    = stringReserve(buffer_cap);
-            let format     = builtins.ptr_from_slice:{char}("%p\0") as cptr char;
+            let format     = builtins.ptr_from_slice[char]("%p\0") as cptr char;
             let written
-                = clib.snprintf(address.pointer as cptr char, buffer_cap as u64, format, pointer as cptr u8);
+                = clib.snprintf(address.pointer as cptr mut char, buffer_cap as u64, format, pointer as cptr u8);
             address.len = runtime.native.writtenLength(written, buffer_cap);
 
             var result = stringifyStr("cptr(");
@@ -397,29 +444,29 @@ namespace stringification {
 
         @dvm_only_impl
         fun stringifyManyPtr(pointer: manyptr T) -> String = {
-            if (builtins.dvm_is_nullmanyptr:{T}(pointer)) return stringifyStr("ptr(null)");
-            return pointer_stringification:{T}.stringifyPtr(pointer as ptr T);
+            if (builtins.dvm_is_nullmanyptr[T](pointer)) return stringifyStr("ptr(null)");
+            return pointer_stringification[T].stringifyPtr(pointer as ptr T);
         }
 
         @native_only_impl
         fun stringifyManyPtr(pointer: manyptr T) -> String = {
-            return pointer_stringification:{T}.stringifyPtr(pointer as ptr T);
+            return pointer_stringification[T].stringifyPtr(pointer as ptr T);
         }
     }
 
     template(T: type)
     fun stringifyPtr(pointer: ptr T) -> String = {
-        return pointer_stringification:{T}.stringifyPtr(pointer);
+        return pointer_stringification[T].stringifyPtr(pointer);
     }
 
     template(T: type)
     fun stringifyCPtr(pointer: cptr T) -> String = {
-        return cptr_stringification:{T}.stringifyCPtr(pointer);
+        return cptr_stringification[T].stringifyCPtr(pointer);
     }
 
     template(T: type)
     fun stringifyManyPtr(pointer: manyptr T) -> String = {
-        return manyptr_stringification:{T}.stringifyManyPtr(pointer);
+        return manyptr_stringification[T].stringifyManyPtr(pointer);
     }
 
     # The `*_to_string` runtime builtins write via `snprintf`, which appends a terminating
@@ -452,7 +499,7 @@ namespace stringification {
         A `,` literal cannot be written inside a call argument list yet, so the separator is built
         from its character code instead.
     #}
-    fun appendSequenceSeparator(s: ref String) -> () = {
+    fun appendSequenceSeparator(s: ref mut String) -> () = {
         s.append(44u64 as char);
     }
 
@@ -479,7 +526,7 @@ namespace stringification {
         nested array that names a different type than `N` elements of `T`.
     #}
     template(A: type, N: i64)
-    fun stringifyStaticArray(arr: const ref A) -> String = {
+    fun stringifyStaticArray(arr: ref A) -> String = {
         var result = stringifyStr("[");
         var i      = 0;
         while (i < N) {
@@ -498,43 +545,91 @@ namespace stringification {
 #}
 template(T: type)
 class List {
-    pointer: manyptr T;
+    pointer: manyptr mut T;
     len: i64;
     cap: i64;
 
     #{
         Makes sure at least `required` elements fit into the buffer.
     #}
-    fun reserve(required: i64) -> () = {
+    mut fun reserve(required: i64) -> () = {
         if (required > cap) {
             var new_cap = cap;
             if (new_cap == 0i64) new_cap = 1i64;
             while (new_cap < required) new_cap = new_cap * 2i64;
 
-            if (cap == 0i64) pointer = allocation:{T}.many_alloc(new_cap);
-            else pointer = allocation:{T}.many_realloc(pointer, new_cap);
+            if (cap == 0i64) pointer = allocation[T].many_alloc(new_cap);
+            else pointer = allocation[T].many_realloc(pointer, new_cap);
             cap = new_cap;
         }
     }
 
-    fun push(value: T) -> () = {
+    mut fun push(value: T) -> () = {
         reserve(len + 1i64);
-        builtins.move_in:{T}(ptrof pointer[len], move value);
+        builtins.move_in[T](ptrof pointer[len], move value);
         len = len + 1i64;
     }
 
-    fun pop() -> T = {
+    mut fun pop() -> T = {
         if (len == 0i64) panicking.panic();
         len = len - 1i64;
-        return builtins.move_out:{T}(ptrof pointer[len]);
+        return builtins.move_out[T](ptrof pointer[len]);
     }
 
-    fun at(i: i64) -> ref T = {
+    mut fun at(i: i64) -> ref mut T = {
         if (i < 0i64 or i >= len) panicking.panic();
         return &pointer[i];
     }
 
     fun length() -> i64 = len;
+
+    #{
+        Lists are equal when they hold equal elements. This replaces the
+        generated comparison, which would compare the buffers instead.
+    #}
+    fun ==(rhs: ref listType[T]()) -> bool = {
+        if (len != rhs.len) return false;
+        var i = 0i64;
+        while (i < len) {
+            if (not (pointer[i] == rhs.pointer[i])) return false;
+            i = i + 1i64;
+        }
+        return true;
+    }
+
+    #{
+        Orders lists lexicographically by their elements. A proper prefix
+        comes before the longer list.
+    #}
+    fun <(rhs: ref listType[T]()) -> bool = {
+        var i = 0i64;
+        while (i < len and i < rhs.len) {
+            if (pointer[i] < rhs.pointer[i]) return true;
+            if (rhs.pointer[i] < pointer[i]) return false;
+            i = i + 1i64;
+        }
+        return len < rhs.len;
+    }
+
+    #{
+        The remaining comparisons are defined in terms of `==` and `<`. The
+        generated ones would compare the buffers instead.
+    #}
+    fun !=(rhs: ref listType[T]()) -> bool = {
+        return not (self == rhs);
+    }
+
+    fun <=(rhs: ref listType[T]()) -> bool = {
+        return not (rhs < self);
+    }
+
+    fun >(rhs: ref listType[T]()) -> bool = {
+        return rhs < self;
+    }
+
+    fun >=(rhs: ref listType[T]()) -> bool = {
+        return not (self < rhs);
+    }
 
     fun toString() -> String = {
         var result = stringification.stringifyStr("[");
@@ -552,11 +647,11 @@ class List {
         Drops the contents but keeps the buffer, so it can be refilled without
         allocating again.
     #}
-    fun clear() -> () = {
+    mut fun clear() -> () = {
         # Moving an element out and dropping the result on the floor runs `T`'s destructor.
         var i = 0i64;
         while (i < len) {
-            builtins.move_out:{T}(ptrof pointer[i]);
+            builtins.move_out[T](ptrof pointer[i]);
             i = i + 1i64;
         }
         len = 0i64;
@@ -566,8 +661,8 @@ class List {
         A list owns its buffer, so a copy has to allocate its own and copy the elements one by
         one with `T`'s copy constructor.
     #}
-    List.copy(other: const ref listType:{T}()) = {
-        var result: listType:{T}();
+    List.copy(other: ref listType[T]()) = {
+        var result: listType[T]();
         result.reserve(other.length());
 
         var i = 0i64;
@@ -580,13 +675,13 @@ class List {
 
     List.destroy() = {
         clear();
-        if (cap > 0i64) allocation:{T}.many_free(pointer);
+        if (cap > 0i64) allocation[T].many_free(pointer);
     }
 }
 
 #{
-    Spells out `List:{T}`, which the class body cannot name directly.
-    @TODO: #3350 Use `List:{T}` inside the class body once it resolves unambiguously.
+    Spells out `List[T]`, which the class body cannot name directly.
+    @TODO: #3350 Use `List[T]` inside the class body once it resolves unambiguously.
 #}
 template(T: type)
-fun listType() -> type = List:{T};
+fun listType() -> type = List[T];

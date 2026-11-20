@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "interface_types.hpp"
@@ -17,6 +23,8 @@
 #include <vm/core/thread/thread_state.hpp>
 
 #include <expected>
+#include <mutex>
+#include <string>
 #include <variant>
 
 namespace vm {
@@ -65,6 +73,11 @@ namespace vm {
 
 		api::ExecutionConfig execution_config;
 
+		/// Set by `api::setFunctionSourceInfo`. Read by a panicking thread, so it has its own lock
+		/// instead of the process's API lock.
+		api::FunctionSourceInfos function_source_info;
+		mutable std::mutex       function_source_info_lock;
+
 		IVMProcess(PID my_pid);
 
 		/**
@@ -94,8 +107,13 @@ namespace vm {
 		) const;
 
 		/**
-		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
-		 * threads back to `NotStarted` and clears the stop-all-threads flag.
+		 * @brief Prepares a run (or a rerun). Called when the process is terminal, joins the
+		 * leftover execution threads of the previous run, moves all threads back to `NotStarted`
+		 * and clears the stop-all-threads flag.
+		 *
+		 * @note A rerun is legal only for a process which completed and whose API threads are all
+		 * joined.
+		 *
 		 * @return Nothing when the process is ready to run. An `ApiError` when the
 		 * previous run did not complete normally (the process was stopped, killed or panicked,
 		 * which may have left the VM in an undefined state).
@@ -187,13 +205,6 @@ namespace vm {
 
 
 		/**
-		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
-		 *
-		 * @return api::Response
-		 */
-		virtual std::expected<api::Response, api::StateError> getExitCode() = 0;
-
-		/**
 		 * @brief Expects the process to be stopped and asks memory module if the memory is valid.
 		 * For more information about execution's validation,
 		 * see Memory::validateMemoryState's description.
@@ -265,22 +276,52 @@ namespace vm {
 		) = 0;
 
 		/**
-		 * @brief IDs of the threads which are currently active (started and not terminal).
+		 * @brief Frees the data of a caller-owned VMValue created by `getVMValueForType`.
 		 */
-		virtual std::vector<api::ThreadID> getAllActiveThreadIDs() = 0;
+		virtual std::expected<api::Response, api::ApiError> freeVMValue(Ref<IVMValue> vm_value) = 0;
 
 		/**
-		 * @brief True when a previous run left an `exec_thread` which was never joined.
-		 *
-		 * An `api::run()` should always be followed by a `Join`. Without it the VMThread cannot be
-		 * reused.
+		 * @brief IDs of the threads which are currently active (started and not terminal).
 		 */
+		[[nodiscard]] virtual std::vector<api::ThreadID> getAllActiveThreadIDs() const = 0;
+
 		/**
-		 * @brief The threads of the previous run whose execution threads were never joined.
+		 * @brief The threads spawned by the user via the API which started but are not in the
+		 * `Joined` state yet.
+		 *
+		 * An `api::run()`/`api::runFunction()` must always be followed by a `join()`. Until that
+		 * happens the VMThread cannot be reused and the process cannot be deinitialized.
+		 *
+		 * @note Threads the user program itself started are never returned here.
 		 *
 		 * @return The IDs of every such thread, empty when the previous run was fully joined.
 		 */
-		[[nodiscard]] virtual std::vector<api::ThreadID> unjoinedThreadIds() const = 0;
+		[[nodiscard]] virtual std::vector<api::ThreadID> unjoinedApiThreadIds() const = 0;
+
+		/**
+		 * @brief Joins the execution threads of every VMThread which finished but was never
+		 * joined, so the process may be reused or destroyed.
+		 *
+		 * Called before a re-run and before a deinit. API threads are already joined by then
+		 * (`unjoinedApiThreadIds` guards that), so in practice this joins the threads the program
+		 * started itself.
+		 *
+		 * @note Must be called with no process lock held - joining blocks until the execution
+		 * thread exits and that thread may still need those locks.
+		 *
+		 * What it finds is remembered by the process and `deinitAndValidate` reports it.
+		 * what was collected.
+		 */
+		virtual void joinFinishedThreads() = 0;
+
+		/**
+		 * @brief The run in progress, or the last one which ran.
+		 *
+		 * @note A process may be run several times, and the VMThreads are recycled between the
+		 * runs, so this is what tells apart a thread leaked by one run from a thread leaked by
+		 * another.
+		 */
+		usize run_number{ 1 };
 
 		/**
 		 * @brief Posts Stop to all threads. Non blocking.
@@ -336,6 +377,30 @@ namespace vm {
 		[[nodiscard]] PID getPID() const;
 
 		/**
+		 * @brief The Duckling source name of the function called `mangled_name` in the bytecode,
+		 * when one was set with `api::setFunctionSourceInfo`.
+		 */
+		[[nodiscard]] base::Optional<std::string> getFunctionSourceName(base::StrID mangled_name
+		) const;
+
+		/**
+		 * @brief The Duckling source line where the function called `mangled_name` is defined, when
+		 * one was set with `api::setFunctionSourceInfo`.
+		 */
+		[[nodiscard]] base::Optional<api::SourceLine> getFunctionDefinitionLine(
+			base::StrID mangled_name
+		) const;
+
+		/**
+		 * @brief The Duckling source line of the instruction at `instruction_index` (in the code
+		 * collection) of the function called `mangled_name`, when one was set with
+		 * `api::setFunctionSourceInfo`.
+		 */
+		[[nodiscard]] base::Optional<api::SourceLine> getInstructionSourceLine(
+			base::StrID mangled_name, u64 instruction_index
+		) const;
+
+		/**
 		 * @brief Creates an empty VMValue of a given type and registers it in this VMProcess.
 		 * The VMValue is owned by the VMProcess. VMValues created with this function are freed when
 		 * the process is deinitialized.
@@ -347,7 +412,7 @@ namespace vm {
 
 		/**
 		 * @brief Creates an empty VMValue of a given type and transfers ownership to the caller.
-		 * The caller is expected to free the VMValue.
+		 * The caller is expected to free the VMValue with `api::freeVMValue`.
 		 *
 		 * @param type_id ID of the type of the data stored in the new VMValue.
 		 * @return A Box referencing the newly created VMValue.

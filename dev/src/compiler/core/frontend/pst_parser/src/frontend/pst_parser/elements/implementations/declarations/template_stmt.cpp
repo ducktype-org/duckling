@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "../../hierarchy/declarations/template_stmt.hpp"
 
 #include "preamble.hpp"
@@ -16,7 +22,15 @@ namespace pst {
 		if (!assertStmtChoice<TemplateStmt>(state, state[0].is(Keyword::Template))) return nullptr;
 
 		PARSE().one(&out->template_decl);
+		auto inner_position = state.getPosition();
 		PARSE().one(&out->inner_statement);
+
+		if (!out->inner_statement.internal()) return nullptr;
+
+		if (out->inner_statement.internal()->isDeclaration() != DeclKind::Symbol) {
+			state.logInt(makeBox<TemplateNotDeclarationError>(inner_position));
+			return nullptr;
+		}
 
 		PST_RETURN out;
 	}

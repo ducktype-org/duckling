@@ -1,14 +1,23 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
-#include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
+
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <any>
+#include <tuple>
 
 using namespace compiler::tsh;
 
@@ -50,7 +59,6 @@ public:
 		TESTER_ADD_TEST(simpleMeta);
 		TESTER_ADD_TEST(simpleExpressionType);
 		TESTER_ADD_TEST(simpleValueCategory);
-		TESTER_ADD_TEST(simpleImplicitCoercibility);
 	}
 
 private:
@@ -271,7 +279,7 @@ private:
 			assertTrue(int_st.isCopyable(ctx), "Int should be copyable.");
 			assertTrue(int_st.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
 
-			const auto int_ref_st = int_st.withReferenceKind(ReferenceKind::Ref);
+			const auto int_ref_st = int_st.toRef();
 			assertFalse(
 				int_ref_st.isDefaultConstructible(ctx),
 				"Reference to Int should NOT be default constructible."
@@ -285,7 +293,7 @@ private:
 				int_ref_st.isTriviallyCopyable(ctx), "Reference to Int should be trivially copyable."
 			);
 
-			const auto int_box_st = int_st.withReferenceKind(ReferenceKind::Box);
+			const auto int_box_st = int_st.toBox();
 			assertFalse(
 				int_box_st.isDefaultConstructible(ctx),
 				"Box of Int should NOT be default constructible."
@@ -565,6 +573,31 @@ private:
 				st(tup_of_refs).isTriviallyCopyable(ctx),
 				"Tuple with reference should not be trivially copyable."
 			);
+
+			// A tuple carries information only if one of its components does.
+			assertTrue(tup_1.carriesInformation(ctx), "Tuple of ints should carry information");
+			const auto unit       = getUnitType();
+			const auto unit_tuple = ctx.query<QueryTupleType>({ { st(unit), st(unit) } });
+			assertFalse(
+				unit_tuple.carriesInformation(ctx), "Tuple of units should not carry information"
+			);
+			const auto nested_unit_tuple
+				= ctx.query<QueryTupleType>({ { st(unit_tuple), st(unit) } });
+			assertFalse(
+				nested_unit_tuple.carriesInformation(ctx),
+				"Nested tuple of units should not carry information"
+			);
+			const auto mixed_tuple = ctx.query<QueryTupleType>({ { st(unit), st(int_16) } });
+			assertTrue(
+				mixed_tuple.carriesInformation(ctx),
+				"Tuple with an int component should carry information"
+			);
+			const auto unit_ref  = SymbolType(unit, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, st(unit) } });
+			assertTrue(
+				ref_tuple.carriesInformation(ctx),
+				"Tuple with a reference component should carry information"
+			);
 		});
 	}
 
@@ -596,7 +629,7 @@ private:
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
 		const auto var_boxed = query::entryPoint<QueryVariantType>({
-			{ st(int_16), st(int_32).withReferenceKind(ReferenceKind::Box) },
+			{ st(int_16), st(int_32).toBox() },
 		});
 
 
@@ -649,7 +682,9 @@ private:
 		);
 		assertTrue(fun_1.getResultType() == st(int_32), "Result type should be as constructed.");
 		assertTrue(!fun_1.isPure(), "Purity should be as constructed.");
-		assertTrue(!fun_1.isFree(), "Freedom should be as constructed.");
+		assertTrue(
+			fun_1.getFunctionKind() == FunctionKind::Raw, "Function kind should be as constructed."
+		);
 
 		const AbstractType         type_fun = fun_1;
 		const FunctionAbstractType fun2     = type_fun;
@@ -671,10 +706,19 @@ private:
 			fun_1 != fun_different_output, "Functions of different output types should be different."
 		);
 		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
-			{ { st(int_16), st(int_32) }, st(int_32), true, true }
+			{ { st(int_16), st(int_32) }, st(int_32), true, FunctionKind::Closure }
 		);
 		assertTrue(
 			fun_1 != fun_different_flags, "Functions with different flags should be different."
+		);
+
+		const auto fun_closure = query::entryPoint<QueryFunctionType>(
+			{ { st(int_16), st(int_32) }, st(int_32), false, FunctionKind::Closure }
+		);
+		assertTrue(fun_1 != fun_closure, "Raw functions and closures should be different.");
+		assertTrue(
+			fun_closure.getFunctionKind() == FunctionKind::Closure,
+			"Function kind should be as constructed."
 		);
 
 		const AbstractType         type_fun_different_flags = fun_different_flags;
@@ -725,10 +769,12 @@ private:
 				nspace.isTriviallyDestructible(ctx),
 				"NamespaceType should be trivially destructible."
 			);
-			assertFalse(
-				module.isTriviallyDestructible(ctx),
-				"ModuleType should not be trivially destructible."
-			);
+			IF_BUILD_TYPE_DEV(
+				assertThrows<base::Panic>(
+					[&]() { std::ignore = module.isTriviallyDestructible(ctx); },
+					"Asking whether ModuleType is trivially destructible should panic."
+				);
+			)
 
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
 			assertFalse(
@@ -878,104 +924,6 @@ private:
 			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, MOVE
 		);
 		assertTrue(forced_move.mustMove(), "force_semantic with MOVE should mustMove().");
-	}
-
-	void simpleImplicitCoercibility() {
-		using enum IntegralAbstractType::Signedness;
-
-		const auto int_2 = getIntegralTypeNoContext(8U * (1 << 2), Signed);
-		const auto int_3 = getIntegralTypeNoContext(8U * (1 << 3), Signed);
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, int_3 }),
-			"Smaller int should be coercible into a bigger one."
-		);
-
-		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, int_2 }),
-			"Bigger int should not be coercible into a smaller one."
-		);
-
-		const auto u_int_2 = getIntegralTypeNoContext(8U * (1 << 2), Unsigned);
-		const auto u_int_3 = getIntegralTypeNoContext(8U * (1 << 3), Unsigned);
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_2, u_int_3 }),
-			"Smaller unsigned int should be coercible into a bigger one."
-		);
-
-		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_3, u_int_2 }),
-			"Bigger unsigned int should not be coercible into a smaller one."
-		);
-
-		{
-			assertFalse(
-				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_3, int_3 }),
-				"Unsigned int should not be coercible into a signed int of the same size (positive "
-				"values range is bigger so the coercion is lossy)."
-			);
-
-			assertFalse(
-				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_2, int_2 }),
-				"Unsigned int should not be coercible into a signed int of the same size (positive "
-				"values range is bigger so the coercion is lossy)."
-			);
-		}
-
-		{
-			assertFalse(
-				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, u_int_2 }),
-				"Signed int should not be coercible into an unsigned int of the same size "
-				"(coercion is lossy for negative values)."
-			);
-
-			assertFalse(
-				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, u_int_3 }),
-				"Signed int should not be coercible into an unsigned int of the same size "
-				"(coercion is lossy for negative values)."
-			);
-
-			assertFalse(
-				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, u_int_2 }),
-				"Signed int should not be coercible into an unsigned int of the same size "
-				"(coercion is lossy for negative values)."
-			);
-		}
-
-		const auto void_type = getVoidType();
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
-			"Void has no values, so it should be coercible to anything."
-		);
-		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, void_type }),
-			"Nothing should be coercible to Void."
-		);
-
-		const auto i2_const
-			= ExpressionType(st(int_2), ValueCategory(PrimaryCategory::Local, true, {}, {}));
-		const auto i2_mut
-			= ExpressionType(st(int_2, true), ValueCategory(PrimaryCategory::Local, true, {}, {}));
-		const auto i3_const
-			= ExpressionType(st(int_3), ValueCategory(PrimaryCategory::Local, true, {}, {}));
-
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i3_const }),
-			"Smaller int value should be coercible into a bigger one."
-		);
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_mut, i2_const }),
-			"Mutable value should be coercible to an immutable one."
-		);
-		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_mut, i3_const }),
-			"Mutable value should be coercible to a bigger, immutable one."
-		);
-		//
-		// @TODO: #1488 Deal with this conversion on integer literals
-		// assertTrue(
-		// 	!query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i2_mut }),
-		// 	"Immutable value should not be coercible to a mutable one."
-		// );
 	}
 };
 

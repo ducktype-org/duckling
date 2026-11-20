@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
@@ -8,16 +14,18 @@
 
 #include <iostream>
 
-int file_counter = 0;
-int dir_counter  = 0;
+namespace {
+	int file_counter = 0;
+	int dir_counter  = 0;
 
-// Recursively count files and directories in a ModuleTree
-void countFiles(const compiler::frontend::ModuleTree& tree) {
-	file_counter += tree.hasMainSourceFile() ? 1 : 0;
-	for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
-	for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
-		countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
-		dir_counter++;
+	// Recursively count files and directories in a ModuleTree
+	void countFiles(const compiler::frontend::ModuleTree& tree) {
+		file_counter += tree.hasMainSourceFile() ? 1 : 0;
+		for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
+		for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
+			countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
+			dir_counter++;
+		}
 	}
 }
 

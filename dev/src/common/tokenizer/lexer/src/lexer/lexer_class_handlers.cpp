@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lexer_class.hpp"
 
 #include <diagnostic/message.hpp>
@@ -200,7 +206,7 @@ namespace lexer {
 		}
 	}
 
-	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
+	void Lexer::commentHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
 		auto  source_start = currentPosition();
@@ -222,9 +228,12 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "line comment");
+		if (options.keep_comments)
+			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
+			);
 	}
 
-	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
+	void Lexer::blockCommentHandler(Tokens& output) {
 		usize               begin = where;
 		usize               end{};
 		auto                source_start = currentPosition();
@@ -247,6 +256,9 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "block comment");
+		if (options.keep_comments)
+			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
+			);
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
@@ -382,10 +394,12 @@ namespace lexer {
 			next();  // first char - digit
 			while (!isEOF()) {
 				if (!peek().isDigit()) {
-					if (!was_dot && peek().is('.')) {  // Only one dot can appear.
+					// Only one dot can appear. A dot followed by operator char starts an operator
+					// (e.g. `1..2` is a range), so it does not belong to the number.
+					if (!was_dot && peek().is('.') && !peek(1).is(Class::operator_continue)) {
 						was_dot = true;
-					} else if (!was_e
-					           && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can appear.
+					} else if (!was_e && (peek().is('e') || peek().is('E'))) {  // Only one 'e' can
+						                                                        // appear.
 						was_e   = true;
 						was_dot = true;
 						next();  // 'e'
@@ -432,7 +446,7 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
+			file->getCharRange(begin + 1, end + 1 - static_cast<usize>(closed)), source_position
 		));
 	}
 

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file helios_with_std_test.cpp
  * @brief HELIOS tests that need the standard library available (e.g. to resolve
@@ -10,7 +16,6 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -48,6 +53,7 @@
 #include <any>
 #include <array>
 #include <iostream>
+#include <regex>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -65,6 +71,7 @@ public:
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCompTimeStrings);
+		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testCompTimeOutput);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testPointers);
@@ -75,6 +82,8 @@ public:
 		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testDestructors);
+		TESTER_ADD_TEST(testOperatorsWithPrimitives);
+		TESTER_ADD_TEST(testOptionalType);
 	}
 
 protected:
@@ -84,6 +93,7 @@ protected:
 			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
 			{ fs::FilePath(path("test_modules/strings")), "strings" },
 			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" },
+			{ fs::FilePath(path("test_modules/constants")), "constants" },
 			{ fs::FilePath(path("test_modules/comp_time_output")), "comp_time_output" }
 		};
 		auto init_result
@@ -121,11 +131,7 @@ private:
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
 	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			compiler::tsh::Mutability::Mutable,
-		};
+		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
 	}
 
 	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
@@ -152,7 +158,7 @@ private:
 	/**
 	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
 	 *
-	 * `new v` becomes `boxAlloc:{T}(v) as box T`: the primitive of `core.containers` hands the
+	 * `new v` becomes `boxAlloc[T](v) as box T`: the primitive of `core.containers` hands the
 	 * storage back as a `ptr T`, and the cast is what turns it into the box.
 	 */
 	static const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr
@@ -188,7 +194,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return compiler::tsh::SymbolType<>::withDefaults(
+				return compiler::tsh::SymbolType<>::withDefaultsMut(
 					ctx.query<compiler::tsh::QueryClassType>(sym_id)
 				);
 			};
@@ -354,15 +360,18 @@ private:
 		});
 	}
 
-	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// The implicit prelude brings `core.builtins` symbols into scope of every module
 	// without an explicit import. The `builtins` module has no import statements at all, yet an
 	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
 	void testImplicitPrelude() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 		auto scope     = getModuleScope(module_id);
 
-		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-			{ scope, base::StrID("builtin_output_i64"), true }
+		auto result = query::entryPoint<compiler::helios::QueryLookupFromScope>(
+			{ .scope          = scope,
+		      .name           = base::StrID("builtin_output_i64"),
+		      .with_wildcards = true,
+		      .with_parents   = true }
 		);
 		assertFalse(
 			result->valueOrThrow().isEmpty(),
@@ -394,7 +403,7 @@ private:
 	// The `@builtin(...)` fundecls in core.builtins are templated, so their synthesized
 	// implementations are emitted once per element type they are baked for. The `builtins` module
 	// runs the alloc -> slice_from_ptr_len -> ptr_from_slice -> free chain for `str` and `i32`
-	// (and uses `ptr_from_slice:{char}` on a string literal).
+	// (and uses `ptr_from_slice[char]` on a string literal).
 	void testTemplatedBuiltinDefinitionsInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 
@@ -489,6 +498,58 @@ private:
 		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
 		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());
 		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
+	}
+
+	void testConstants() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("constants");
+		auto root_scope = getModuleScope(module);
+
+		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
+		ASSERT_EQUAL(-3, getConstValueAs<i32>("B", root_scope));
+		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
+		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
+		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
+		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
+
+		// Floating point.
+		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
+		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
+		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
+
+		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
+
+		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
+		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
+		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
+		ASSERT_EQUAL(55, getConstValueAs<i32>("FIB_ON_I32_10", root_scope));
+		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
+		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
+		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
+
+		// Meta builtins (size_of / alignment_of) called through a VM comp-time function call.
+		ASSERT_EQUAL(16, getConstValueAs<i64>("SIZE_AND_ALIGN_I64", root_scope));
+
+		ASSERT_EQUAL(7, getConstValueAs<i64>("REF_POINT_SUM", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i64>("VALUE_POINT_SUM", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("POINT_X", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i64>("POINT_FIELDS_SUM", root_scope));
+		ASSERT_EQUAL(5, getConstValueAs<i64>("TUPLE_ELEM", root_scope));
+		ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_VARIANT", root_scope));
+
+		ASSERT_EQUAL(60, getConstValueAs<i64>("REF_ARRAY_SUM", root_scope));
+		ASSERT_EQUAL(20, getConstValueAs<i64>("ARRAY_ELEM", root_scope));
+		ASSERT_EQUAL(30, getConstValueAs<i64>("ARRAY_ELEM_OF_CALL", root_scope));
 	}
 
 	/**
@@ -672,7 +733,7 @@ private:
 		};
 
 		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
-		base::Optional<CRef<pst::PST<>>> pst;
+		base::Optional<CRef<pst::ParsedPST<>>> pst;
 		query::utils::withContextDo([&](::query::Context& ctx) { pst = getFilePST(ctx, main_file); }
 		);
 		auto all_variables
@@ -906,8 +967,8 @@ private:
 
 		auto i32_type
 			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
-		auto ref_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
-		auto box_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+		auto ref_i32 = st(i32_type).toRef();
+		auto box_i32 = st(i32_type).toBox();
 
 		auto get_var_stmt = [&](usize index) -> const VariableStmt& {
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[index].get());
@@ -1003,11 +1064,11 @@ private:
 				const auto& cctor
 					= ctx.query<QueryDefaultCopyConstructor>(trivial_type)->valueOrThrow();
 
-				// `(const ref Trivial) -> Trivial`.
+				// `(ref Trivial) -> Trivial`.
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(trivial_type, param_type.getType());
 				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
 
@@ -1193,11 +1254,11 @@ private:
 
 				const auto& cctor = dump_cctor("i32 | HasBox", variant_type);
 
-				// `(const ref V) -> V`.
+				// `(ref V) -> V`.
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(variant_type, param_type.getType());
 				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
 
@@ -1230,9 +1291,8 @@ private:
 					// bound with: a mutable reference to the alternative.
 					ASSERT_TRUE(match_case.constraint_type.has_value());
 					ASSERT_EQUAL(
-						alternatives.at(i)
-							.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-							.withMutability(compiler::tsh::Mutability::Mutable),
+						alternatives.at(i).toRef().withMutability(compiler::tsh::Mutability::Mutable
+					    ),
 						match_case.constraint_type.value()
 					);
 					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
@@ -1434,10 +1494,9 @@ private:
 				// The payload is destroyed in place, so it is bound as a mutable reference.
 				ASSERT_TRUE(owning_case.constraint_type.has_value());
 				ASSERT_EQUAL(
-					variant_type.getUnderlyingTypes()
-						.at(0)
-						.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-						.withMutability(compiler::tsh::Mutability::Mutable),
+					variant_type.getUnderlyingTypes().at(0).toRef().withMutability(
+						compiler::tsh::Mutability::Mutable
+					),
 					owning_case.constraint_type.value()
 				);
 				ASSERT_TRUE(
@@ -1723,16 +1782,10 @@ private:
 			using compiler::tsh::ReferenceKind;
 			ASSERT_EQUAL(ptr_i32_st, pof_direct_type);
 			ASSERT_EQUAL(
-				st(ctx.query<compiler::tsh::QueryPointerType>(
-					{ i32_st.withReferenceKind(ReferenceKind::Box) }
-				)),
-				pof_box_type
+				st(ctx.query<compiler::tsh::QueryPointerType>({ i32_st.toBox() })), pof_box_type
 			);
 			ASSERT_EQUAL(
-				st(ctx.query<compiler::tsh::QueryPointerType>(
-					{ i32_st.withReferenceKind(ReferenceKind::Ref) }
-				)),
-				pof_ref_type
+				st(ctx.query<compiler::tsh::QueryPointerType>({ i32_st.toRef() })), pof_ref_type
 			);
 			// Indexing a `manyptr i32` gives an `i32` place, so its address is a plain `ptr i32`.
 			ASSERT_EQUAL(ptr_i32_st, pof_elem_type);
@@ -1869,6 +1922,52 @@ private:
 				box_copy->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Box
 			);
 			ASSERT_TRUE(boxAllocArg(box_copy.get()) != nullptr);
+		});
+	}
+
+	void testOperatorsWithPrimitives() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/std_operators")));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
+
+		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
+
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_TRUE(std::regex_match(
+			out_v256.str(),
+			std::regex{ R"(\(Symbol powi \((\d+)\)\)\(3 \+ 4 - 4 \* 16 / 5 % 7, 8\))" }
+		));
+	}
+
+	/**
+	 * `?T` creates the optional type, distinct from the equivalent `T | None` variant, which
+	 * exposes the optional interface.
+	 */
+	void testOptionalType() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/optional_type")));
+		const auto i64_type  = getIntegralTypeNoContext(64, Signed);
+
+		const auto optional_type = getTypeOf("OPTIONAL", root_scope);
+		const auto variant_type  = getTypeOf("VARIANT", root_scope);
+
+		ASSERT_EQUAL(optional_type.getKind(), compiler::tsh::Kind::Variant);
+		const auto optional_variant = compiler::tsh::VariantAbstractType(optional_type);
+		ASSERT_TRUE(optional_variant.representsOptionalType());
+		ASSERT_EQUAL(optional_variant.getOptionalValueType(), st(i64_type));
+
+		ASSERT_EQUAL(variant_type.getKind(), compiler::tsh::Kind::Variant);
+		ASSERT_TRUE(not compiler::tsh::VariantAbstractType(variant_type).representsOptionalType());
+		ASSERT_TRUE(optional_type != variant_type);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto& interface = optional_type.getInterface(ctx);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("value")).size(), 2);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("valueOr")).size(), 2);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("nonEmpty")).size(), 1);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("isEmpty")).size(), 1);
+			ASSERT_EQUAL(interface->getElementsWithName(base::StrID("reset")).size(), 1);
 		});
 	}
 };

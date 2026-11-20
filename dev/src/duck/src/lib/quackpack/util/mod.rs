@@ -1,8 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Various quackpack-only utilities.
+pub mod dir_iterator;
 pub mod guards;
 pub mod interned_url;
 pub mod is_local_file;
 pub mod paths;
+pub mod sqlite;
 pub mod str_id;
 pub mod to_path_buf;
 pub mod to_url;

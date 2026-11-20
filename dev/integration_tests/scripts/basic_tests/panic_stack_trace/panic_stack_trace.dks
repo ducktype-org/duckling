@@ -1,0 +1,10 @@
+fun readPastEnd(index: i64) -> i64 = {
+    var arr: i64[3];
+    return arr[index];
+}
+
+fun forward(index: i64) -> i64 = {
+    return readPastEnd(index);
+}
+
+builtin_output_i64(forward(4));

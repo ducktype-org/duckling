@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Selectors for easy searching the dependencies vector.
 
 use std::collections::HashSet;
@@ -24,7 +30,7 @@ impl<'a> Selector<'a> {
         match self {
             Self::Name(name) => dependency.name() == *name,
             Self::Alias(alias) => dependency.alias() == Some(*alias),
-            Self::EffectiveName(effective_name) => dependency.effective_name() == *effective_name,
+            Self::EffectiveName(ename) => dependency.effective_name() == *ename,
             Self::EnabledBy(features) => dependency.is_enabled_for(features),
             Self::Kind(kind) => dependency.kind() == *kind,
             Self::All(selectors) => selectors

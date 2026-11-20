@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::path::Path;
 
 use crate::quackpack::core::editable_manifest::{DependencyRemoved, EditableManifest};
@@ -7,8 +13,8 @@ use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_
 #[derive(Debug, Clone)]
 /// All options that can be passed to remove.
 pub struct RemoveOptions<'matches> {
-    /// Name of the dependency
-    pub name: &'matches str,
+    /// Effective name of the dependency
+    pub ename: &'matches str,
     /// Use a global package instead of a local one.
     pub global: bool,
     /// Kind of the dependency to remove.
@@ -17,7 +23,11 @@ pub struct RemoveOptions<'matches> {
 
 /// Logic for executing the `remove` subcommand.
 pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
-    let RemoveOptions { name, global, kind } = options;
+    let RemoveOptions {
+        ename,
+        global,
+        kind,
+    } = options;
     let pcx = if global {
         PackageLoader::global_package(ctx)?
     } else {
@@ -31,11 +41,11 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
 
     let editable_manifest = EditableManifest::new(&pcx)?;
 
-    remove_dep(&editable_manifest, name, kind, pkg_name, &pkg_root)?;
+    remove_dep(&editable_manifest, ename, kind, pkg_name, &pkg_root)?;
     editable_manifest.save()?;
 
     ctx.info(format!(
-        "successfully removed {kind} dependency `{name}` from the project `{pkg_name}` at `{}`",
+        "successfully removed {kind}dependency `{ename}` from the project `{pkg_name}` at `{}`",
         pkg_root.display(),
     ))?;
     Ok(())
@@ -44,15 +54,15 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
 /// Remove a dependency or provide a meaningful error.
 fn remove_dep(
     editable_manifest: &EditableManifest,
-    name: &str,
+    ename: &str,
     kind: DependencyKind,
     pkg_name: StrId,
     pkg_root: &Path,
 ) -> QuackResult<()> {
-    match editable_manifest.remove_dependency(name, kind)? {
+    match editable_manifest.remove_dependency(ename, kind)? {
         DependencyRemoved::Yes => Ok(()),
         DependencyRemoved::NoDependency => qp_bail!(
-            "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",
+            "there is no {kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
             pkg_root.display()
         ),
         DependencyRemoved::NoDependencyButKindExists(other_kind) => {
@@ -61,13 +71,13 @@ fn remove_dep(
                     "if you want to remove a normal dependency don't use any flags",
                 ))
             } else {
-                Err(QuackError::hint(format!(
-                    "if you want to remove a {other_kind} dependency use flag `--{other_kind}`"
-                )))
+                Err(QuackError::hint(
+                    "if you want to remove a dev dependency use flag `--dev`",
+                ))
             };
             err.with_context(|| {
                 format!(
-                    "no such {kind} dependency as `{name}` in the project `{pkg_name}` at `{}`",
+                    "there is no {kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
                     pkg_root.display()
                 )
             })

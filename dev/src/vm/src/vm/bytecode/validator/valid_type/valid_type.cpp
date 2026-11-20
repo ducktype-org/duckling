@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "valid_type.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -288,10 +295,10 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 						);
 						// Virtual methods
 						for (const auto& method: super_imd.available_methods)
-							imd.available_methods.put(method.first, method.second);
+							imd.available_methods.put(method.key, method.value);
 						// Vtable
 						for (const auto& impl: super_imd.vtable)
-							imd.vtable.put(impl.first, impl.second);
+							imd.vtable.put(impl.key, impl.value);
 					}
 
 
@@ -322,9 +329,9 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			);
 			// Virtual methods
 			for (const auto& method: interface_imd.available_methods)
-				imd.available_methods.put(method.first, method.second);
+				imd.available_methods.put(method.key, method.value);
 			// Vtable
-			for (const auto& impl: interface_imd.vtable) imd.vtable.put(impl.first, impl.second);
+			for (const auto& impl: interface_imd.vtable) imd.vtable.put(impl.key, impl.value);
 		}
 
 		// 3. Add fields from this class and build inheritance metadata for this class.
@@ -333,11 +340,9 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			fields.emplace_back(new_field.name, new_field.type);
 		// Virtual methods
 		for (const auto& new_virtual_method: new_virtual_methods)
-			imd.available_methods.insertOrAssign(
-				new_virtual_method.first, new_virtual_method.second
-			);
+			imd.available_methods.insertOrAssign(new_virtual_method.key, new_virtual_method.value);
 		// Vtable
-		for (const auto& impl: implementations) imd.vtable.insertOrAssign(impl.first, impl.second);
+		for (const auto& impl: implementations) imd.vtable.insertOrAssign(impl.key, impl.value);
 
 		inheritance_metadata = std::move(imd);
 	}
@@ -434,11 +439,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			state                          = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
-			// Function type size is known, so we don't need to do anything here.
-			this->size                  = valid_type::TypeSize::pointer();
-			this->alignment             = valid_type::TypeSize::pointer();
-			this->is_trivially_copyable = false;
-			// A code address, not a block reference.
+			// A function value is the ID of a function: 8 bytes in both pointer modes.
+			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
+			this->is_trivially_copyable  = true;
+			// A function ID, not a block reference.
 			this->holds_pointer_references = false;
 			state                          = Finalized{ .kind = finalized::Function{
 															.parameters   = std::move(function.parameters),
@@ -449,7 +453,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 				variant.alternatives.size() >= 2, "Variant must have at least 2 alternatives"
 			);
 			const auto num_alternatives = variant.alternatives.size();
-			const auto needed_bits      = static_cast<usize>(std::bit_width(num_alternatives - 1));
+			// Zero denotes no active alternative, so the largest tag is num_alternatives.
+			const auto needed_bits = static_cast<usize>(std::bit_width(num_alternatives));
 			// Add 7 so we round up to the nearest byte, because we cannot have sub-byte sizes.
 			const auto needed_bytes          = (needed_bits + 7) / 8;
 			const auto rounded_to_power_of_2 = std::bit_ceil(needed_bytes);

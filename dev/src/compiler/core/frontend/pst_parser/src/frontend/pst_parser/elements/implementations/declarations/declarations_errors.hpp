@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "declarations_errors.hpp"
@@ -5,8 +11,21 @@
 #include <diagnostic/message.hpp>
 
 namespace pst {
+	class MutFunOutsideClassError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "mut_fun_outside_class" };
+		}
+
+	public:
+		MutFunOutsideClassError(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
 	class PatternArgumentCountError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -19,7 +38,7 @@ namespace pst {
 	};
 
 	class PatternBracketError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -31,7 +50,7 @@ namespace pst {
 	};
 
 	class ForBracketError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -40,5 +59,22 @@ namespace pst {
 
 	public:
 		ForBracketError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	/**
+	 * @brief Error for a template statement followed by something that does not declare a single
+	 * named symbol, e.g. an expression statement.
+	 */
+	class TemplateNotDeclarationError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "template_not_declaration_error" };
+		}
+
+	public:
+		TemplateNotDeclarationError(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

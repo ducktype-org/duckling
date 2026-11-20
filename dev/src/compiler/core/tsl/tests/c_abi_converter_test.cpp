@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -24,7 +30,7 @@ namespace ats = abi::types;
 namespace {
 
 	SymbolType<> directOf(AbstractType abstract_type) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, Mutability::Immutable };
+		return SymbolType<>::withDefaults(abstract_type);
 	}
 
 	SymbolType<> refOf(AbstractType abstract_type) {

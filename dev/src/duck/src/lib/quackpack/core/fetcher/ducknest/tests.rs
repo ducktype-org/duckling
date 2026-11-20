@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 
 use futures::executor::block_on;
@@ -10,7 +16,7 @@ use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {
@@ -71,9 +77,10 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
-        dependencies: vec![pkg1],
+        dependencies: registry::Dependencies(vec![pkg1]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -85,9 +92,10 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
-        dependencies: vec![pkg2, pkg3],
+        dependencies: registry::Dependencies(vec![pkg2, pkg3]),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -99,9 +107,10 @@ fn create_mock_server() -> (MockServer, DuckContext) {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
-        dependencies: registry::Dependencies::new(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -163,7 +172,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
 #[test]
 fn single_metadata() {
     let (server, ctx) = create_mock_server();
-    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let http_client = Rc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
     let response = block_on(client.get_exact_metadata(types::PackageWithUrl {
         name: "foo".into(),
@@ -173,7 +182,7 @@ fn single_metadata() {
     .unwrap();
     assert_eq!(response.metadata.name, "foo");
     assert_eq!(response.metadata.version, Version::new(1, 2, 3));
-    assert_eq!(response.dependencies.len(), 2);
+    assert_eq!(response.dependencies.0.len(), 2);
 
     assert!(
         block_on(client.get_exact_metadata(types::PackageWithUrl {
@@ -188,7 +197,7 @@ fn single_metadata() {
 #[test]
 fn multi_metadata() {
     let (server, ctx) = create_mock_server();
-    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let http_client = Rc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
     let response =
         block_on(client.get_multi_metadata(&(server.base_url().parse().unwrap()), "foo".into()))
@@ -202,7 +211,7 @@ fn download_blob() {
     let (server, ctx) = create_mock_server();
     let manager = FileLockManager::new(dir.path().to_path_buf());
     let path = manager.open_exclusive("target", &ctx).unwrap();
-    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let http_client = Rc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
     block_on(client.fetch_blob(
         types::PackageWithUrl {
@@ -214,7 +223,7 @@ fn download_blob() {
     ))
     .unwrap();
     assert_eq!(
-        dir.path().join("target").read_to_string().unwrap(),
+        read_from_path_to_string(dir.path().join("target")).unwrap(),
         "foo-1.2.3"
     );
 }
@@ -222,7 +231,7 @@ fn download_blob() {
 #[test]
 fn not_found_in_response() {
     let (server, ctx) = create_mock_server();
-    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let http_client = Rc::new(AsyncHttpClient::new(&ctx));
     let client = DucknestClient::new(http_client);
     let err = block_on(client.get_exact_metadata(types::PackageWithUrl {
         name: "foo".into(),

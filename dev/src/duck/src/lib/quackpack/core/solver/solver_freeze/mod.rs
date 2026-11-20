@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 mod freeze_diagnosis;
-mod new_freeze_generation;
+mod trimming;
 
 use std::collections::{HashMap, HashSet};
 
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::{
@@ -20,9 +26,12 @@ pub struct SolverFreeze {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverPackageFreeze {
-    pub dependencies_realization: HashMap<StrId, PackageId>,
+    pub dependencies_realization: DepRealizations,
     pub features: HashSet<FeatureName>,
 }
+
+/// Mapping from effective name of dependencies to their realizations.
+pub type DepRealizations = HashMap<StrId, PackageId>;
 
 impl SolverPackageFreeze {
     pub fn new() -> Self {
@@ -59,26 +68,25 @@ pub enum MalformedFreezeError<'a> {
 }
 
 impl SolverFreeze {
-    #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze<'a>(
         root: PackageId,
         value: &'a VenvFreeze,
     ) -> Result<Self, MalformedFreezeError<'a>> {
-        debug!(?root, freeze = ?value);
+        trace!(?root, freeze = ?value);
         check_different_dependencies_identities(value)?;
-        let mut expanded_pkgs_by_name = HashMap::new();
+        let mut expanded_pkgs_by_identity: HashMap<Identity, PackageId> = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = PackageId::new(pkg_freeze.identity(), pkg_freeze.version());
-            expanded_pkgs_by_name.insert(pkg_freeze.name(), pkg);
+            expanded_pkgs_by_identity.insert(pkg.identity().into(), pkg);
         }
         let mut pkg_freezes = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let pkg = expanded_pkgs_by_name
-                .get(&pkg_freeze.name())
+            let pkg = expanded_pkgs_by_identity
+                .get(&pkg_freeze.as_identity())
                 .expect("we've just added them above");
             let mut dependencies = HashMap::new();
             for dep in pkg_freeze.dependencies() {
-                let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
+                let Some(realization) = expanded_pkgs_by_identity.get(&dep.identity()) else {
                     return Err(MalformedFreezeError::MissingPackageDependency {
                         package: pkg_freeze,
                         dep: dep.identity(),
@@ -97,7 +105,7 @@ impl SolverFreeze {
 
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
-            let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
+            let Some(realization) = expanded_pkgs_by_identity.get(&dep.identity()) else {
                 return Err(MalformedFreezeError::MissingRootDependency {
                     dep: dep.identity(),
                 });
@@ -136,18 +144,16 @@ fn check_different_dependencies_identities(
 }
 
 impl SolverFreeze {
-    #[tracing::instrument(skip_all)]
     pub fn empty_with_root(root: PackageId) -> QuackResult<Self> {
-        debug!(?root);
+        trace!(?root);
         Ok(Self {
             main_pkg: root,
             package_freezes: [(root, SolverPackageFreeze::default())].into(),
         })
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn generate_storage_freeze(&self) -> QuackResult<VenvFreeze> {
-        debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
+        trace!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let Some(root_freeze) = self.package_freezes.get(&self.main_pkg).cloned() else {
             qp_bail_internal!("no main freeze: {self:#?}")

@@ -20,7 +20,7 @@ fun printRecordClass(r: RecordClass) = {
     builtin_output_i64(r.c);
 }
 
-let record: RecordClass = RecordClass(1, 2.0 as f32, 3 as i16);
+var record: RecordClass = RecordClass(1, 2.0 as f32, 3 as i16);
 
 let big = BiggerRecordClass(1 as i8, RecordClass(2, 3.0 as f32, 4 as i16), 5 as f64);
 
@@ -33,7 +33,7 @@ class Simple {
         return exampleField;
     }
 
-    fun setField(x: i64) = {
+    mut fun setField(x: i64) = {
         exampleField = x;
     }
 }
@@ -45,7 +45,7 @@ class Wrapper {
         return inner;
     }
 
-    fun setInner(x: Simple) = {
+    mut fun setInner(x: Simple) = {
         inner = x;
     }
 
@@ -53,7 +53,7 @@ class Wrapper {
         return self.inner.getField()
     }
 
-    fun setInInner(x: i64) = {
+    mut fun setInInner(x: i64) = {
         return self.inner.setField(x);
     }
 }
@@ -62,7 +62,7 @@ class Wrapper {
 # A static field is stored once for the whole program instead of once per instance.
 
 class Counter {
-    public static count: i64 = 1;
+    public global count: i64 = 1;
     public value: i64 = 0;
 
     public fun bump() -> i64 = {
@@ -72,20 +72,20 @@ class Counter {
 }
 
 class OtherCounter {
-    public static count: i64 = 100;
+    public global count: i64 = 100;
     public value: i64 = 0;
 }
 
 class Maker {
-    public static made: i64 = 0;
+    public global made: i64 = 0;
     public value: i64 = 0;
 
-    public static fun make(v: i64) -> i64 = {
+    public global fun make(v: i64) -> i64 = {
         made = made + 1;
         return v * 2;
     }
 
-    public static fun madeSoFar() -> i64 = {
+    public global fun madeSoFar() -> i64 = {
         return made;
     }
 

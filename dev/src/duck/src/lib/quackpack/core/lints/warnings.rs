@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Various warnings created when parsing the [`manifest`].
 //!
 //! They are simple diagnostics, not associated with any lint, and are not checked when running
@@ -41,35 +47,12 @@ fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()>
 }
 
 macros::make_diagnostic! {
-    pub struct UnusedKey {
-        key: String,
-    }
-    display("the key `{}` is unused", key)
-}
-
-impl UnusedKey {
-    /// Create a new [`UnusedKey`] [`Diagnostic`] for the given key.
-    pub fn new(key: String) -> Self {
-        Self { key }
-    }
-}
-
-macros::make_diagnostic! {
     pub struct GitUrlIsPath {
-        url: String,
-        path_to_dep: String,
+        pub url: String,
+        pub path_to_dep: String,
     }
     display(
         "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
         url, path_to_dep
     )
-}
-
-impl GitUrlIsPath {
-    pub fn new(url: String, path_to_dependency: String) -> Self {
-        Self {
-            url,
-            path_to_dep: path_to_dependency,
-        }
-    }
 }

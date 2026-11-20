@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -10,6 +16,7 @@
 
 namespace compiler::helios {
 	class NoEnclosingLoopError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -25,6 +32,7 @@ namespace compiler::helios {
 	};
 
 	class NoNamedControlFlowTargetError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -43,6 +51,7 @@ namespace compiler::helios {
 	};
 
 	class NoControlFlowKindTargetError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -86,6 +95,20 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
+	/** @brief A `const` declared without a value, e.g. `const x: i64;`. */
+	class ConstWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "const_without_value" };
+		}
+
+	public:
+		ConstWithoutValueError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
 	class DuplicateVariantAlternativeError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -100,6 +123,21 @@ namespace compiler::helios {
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("duplicated_type", std::move(duplicated_type));
+		}
+	};
+
+	class CallNotCallableError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "call_not_callable" };
+		}
+
+	public:
+		CallNotCallableError(dia::StablePosition source_position, Box<InteractiveType> callee_type):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("callee_type", std::move(callee_type));
 		}
 	};
 
@@ -120,6 +158,32 @@ namespace compiler::helios {
 		}
 	};
 
+	class MissingUnaryOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "missing_unary_operator_fixity" };
+		}
+
+	public:
+		explicit MissingUnaryOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	class InvalidOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "invalid_operator_fixity" };
+		}
+
+	public:
+		explicit InvalidOperatorFixityError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
 	class ReturnWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -135,5 +199,22 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
 		}
+	};
+
+	/**
+	 * @brief Error for a statement that only makes sense inside a function body (an expression,
+	 * `return`, `if`, ...) but appears at module level.
+	 */
+	class StatementOutsideFunctionError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "statement_outside_function" };
+		}
+
+	public:
+		explicit StatementOutsideFunctionError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

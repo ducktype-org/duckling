@@ -1,0 +1,12 @@
+fun add(a: i64, b: i64) -> i64 = a + b;
+
+fun scale(t: (i64, i64, i64)) -> (i64, i64, i64) = (t._1 * 2, t._2 * 2, t._3 * 2);
+
+fun apply(f: funptr(i64, i64) -> i64, x: i64) -> i64 = f(x, x);
+
+fun main() -> i64 = {
+    let f = add;
+    let g: funptr((i64, i64, i64)) -> (i64, i64, i64) = scale;
+    let t = g((1, 2, 3));
+    return apply(f, t._1);
+}

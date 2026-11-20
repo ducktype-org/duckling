@@ -2,6 +2,7 @@ duckc_dir: "@{build_dir}/bin"
 dvm_dir: "@{duckc_dir}"
 duckc_path: "@{duckc_dir}/duckc"
 dvm_path: "@{dvm_dir}/VM"
+duckfmt_path: "@{duckc_dir}/duckfmt"
 duck_ls_path: "@{duckc_dir}/duck_ls"
 
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
@@ -61,12 +62,13 @@ warmup_std_artifacts: "rm -rf @{std_artifacts_dir} @{tmp_root}/std_warmup
 timeout_jit: 10
 # If you want to override timeout is it preferred that you set this variable
 # instead of changing the value of TimeOut directly (lazy evaluation).
-timeout_default: 4
+timeout_default: 8
 TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
 
 SubDirs:
     - dit
     - compiler
+    - tools
     - duck
     - repl
     - debug_adapter

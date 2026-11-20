@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 from pathlib import Path
 from shutil import rmtree
 
@@ -37,6 +43,7 @@ def setup_build_impl(
     embed_assets,
     build_static_icu,
     fixed_std_path,
+    link_static_zstd,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -87,6 +94,7 @@ def setup_build_impl(
         f"-D EMBED_ASSETS={'ON' if embed_assets else 'OFF'}",
         f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
         f"-D USE_FIXED_STD_PATH={'ON' if fixed_std_path else 'OFF'}",
+        f"-D LINK_STATIC_ZSTD={'ON' if link_static_zstd else 'OFF'}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")

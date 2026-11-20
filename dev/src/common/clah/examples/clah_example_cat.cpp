@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 // Prints n (n is optional) times contents of a given file(s) to stdin.
 // Usage:   cat <file> [file...]
 // Example: cat foo.txt -n 5
@@ -8,20 +14,24 @@
 
 #include <iostream>
 
-void printFile(const fs::File& file) { std::cout << file.getContent().view().stdString() << '\n'; }
+namespace {
+	void printFile(const fs::File& file) {
+		std::cout << file.getContent().view().stdString() << '\n';
+	}
 
-void catFile(const clah::ParsingResult& result) {
-	i64 times = result.getValue<i64>('n').copyValueOr(1);
-	while (times--) {
-		// Since we are using clah::FileParser, it automatically links
-		// specified input to real files!
-		auto file1 = result.getPositional<fs::File>(0);
-		printFile(file1);
+	void catFile(const clah::ParsingResult& result) {
+		i64 times = result.getValue<i64>('n').copyValueOr(1);
+		while (times--) {
+			// Since we are using clah::FileParser, it automatically links
+			// specified input to real files!
+			auto file1 = result.getPositional<fs::File>(0);
+			printFile(file1);
 
-		// Finally, iterate over 'extra' parameters and print them out as well.
-		// getExtra returns a base::Optional<T>, but we know it has a value.
-		for (usize i = 0; i < result.getExtraParameterCount(); i++)
-			printFile(*result.getExtra<fs::File>(i));
+			// Finally, iterate over 'extra' parameters and print them out as well.
+			// getExtra returns a base::Optional<T>, but we know it has a value.
+			for (usize i = 0; i < result.getExtraParameterCount(); i++)
+				printFile(*result.getExtra<fs::File>(i));
+		}
 	}
 }
 

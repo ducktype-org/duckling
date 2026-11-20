@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file message.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
@@ -9,7 +15,6 @@
 #include <base/except/exceptions.hpp>
 
 #include <printer/printer_content.hpp>
-#include <printer/stream_printer.hpp>
 #include <token_source/source.hpp>
 
 #include <algorithm>
@@ -141,21 +146,6 @@ namespace dia {
 	void SourcePosition::printPosition(printer::PrinterOStream& out) const {
 		auto [line, column] = getStartLineColumn();
 		out << std::to_string(line) << ":" << std::to_string(column);
-	}
-
-	printer::PrinterContentsSeq SourcePosition::genPrinterContents(
-		[[maybe_unused]] /* @TODO: #2657 this parameter is unused */ const printer::PrinterContentsSeq&
-			reason
-	) const {
-		printer::PrinterOStream str;
-		return str.getContents();
-	}
-
-	std::string SourcePosition::genStr(const std::string_view reason) const {
-		auto              content = genPrinterContents({ reason.data() });
-		std::stringstream res;
-		printer::StreamPrinter::printNL(content, res);
-		return res.str();
 	}
 
 	bool SourcePosition::isFileEnd() const {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <driver/repl_utils/repl_split_helpers.hpp>
 
 #include <base/types/ints.hpp>
@@ -104,7 +110,7 @@ private:
 		}
 		// multi-line class body is a single statement
 		{
-			std::string code   = "class Point {\n    var x: i32 = 0;\n    var y: i32 = 0;\n}";
+			std::string code   = "class Point {\n    x: i32 = 0;\n    y: i32 = 0;\n}";
 			auto        result = compiler::repl::splitInputIntoStatements(code);
 			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(1UL, result->size());

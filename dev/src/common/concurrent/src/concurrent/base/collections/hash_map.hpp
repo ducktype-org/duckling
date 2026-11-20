@@ -1,9 +1,15 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <concurrent/base/locks/atomic_flag_spinlock.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <atomic>
 #include <concepts>
@@ -12,8 +18,8 @@
 namespace concurrent {
 
 	/**
-	 * A sharded concurrent StableHashMap implementation.
-	 * It is implemented as a simple wrapper around base::StableHashMap.
+	 * A sharded concurrent HashMap implementation.
+	 * It is implemented as a simple wrapper around base::HashMap.
 	 * It does not forward a full interface of a hash map, in particular it does not implement
 	 * iteration.
 	 *
@@ -31,7 +37,7 @@ namespace concurrent {
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
 	class ConHashMap final {
-		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
+		using HashMapType = base::HashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
 		using KeyHash = u64;
 
@@ -387,7 +393,7 @@ namespace concurrent {
 		 * On construction it receives a shared_ptr to an WithAllShardsLock that keeps
 		 * every shard locked for as long as any live iterator references it.
 		 * Dereferencing, advancing and comparing are delegated to the underlying
-		 * StableHashMap iterators.
+		 * HashMap iterators.
 		 *
 		 * @tparam ValueT  KeyValuePair or const KeyValuePair – controls mutability.
 		 *

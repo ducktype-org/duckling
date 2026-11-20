@@ -1,0 +1,48 @@
+# Formatter (duckfmt) CLI tests
+
+compile_duckfmt: "cmake --build @{build_dir} -j -- duckfmt"
+PreNode: "@{compile_duckfmt}"
+
+Run: "@{duckfmt_path} @{run_args}"
+
+Tests:
+  format-cli:
+    Cases:
+      format-stdout:
+        # Default formatting prints normalized source (comments included) to stdout.
+        run_args: "format_unformatted.dk"
+        Output:
+          File: format_formatted.dk
+      format-check-ok:
+        # --check succeeds (exit 0) on an already-formatted file.
+        run_args: "-k format_formatted.dk"
+      format-check-fail:
+        # --check fails (exit 1) on an unformatted file.
+        run_args: "-k format_unformatted.dk"
+        ExitCode: 1
+      format-check-stdout-quiet:
+        # --check reports on stderr, so stdout stays empty for pipelines.
+        run_args: "-k format_unformatted.dk"
+        ExitCode: 1
+        Output:
+          String: ""
+      format-missing-config:
+        # A non-existent config path errors cleanly instead of crashing.
+        run_args: "-c does_not_exist.json format_unformatted.dk"
+        ExitCode: 1
+      format-bad-indent-style:
+        # A misspelled indentStyle is rejected instead of silently meaning tabs.
+        run_args: "-c bad_indent_style.json format_unformatted.dk"
+        ExitCode: 1
+  format-many-files:
+    Cases:
+      many-stdout:
+        # Several files: each output starts with a `==> <file> <==` header. Paths are absolute,
+        # so the directory is stripped before comparing.
+        Run: "@{duckfmt_path} format_unformatted.dk format_formatted.dk | sed 's#^==> .*/#==> #'"
+        Output:
+          File: format_many_files.out
+      many-check-fail:
+        # --check fails when only a later file is unformatted.
+        run_args: "-k format_formatted.dk format_unformatted.dk"
+        ExitCode: 1

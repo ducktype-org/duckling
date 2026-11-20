@@ -1,6 +1,6 @@
 fun foo(x: i32, y: i64) -> i32 = {
 	const t: U = if true then ++ x - y ++ else (x * x);
-	const z: T = x:{0}[400].z:{x};
+	const z: T = x[0][400].z[x];
 	x = y * y * y * y * y * y - z;
 	return x.y(x * y);
 }

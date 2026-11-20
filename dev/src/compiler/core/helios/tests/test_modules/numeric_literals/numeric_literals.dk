@@ -20,6 +20,16 @@ const oct: i16 = 0o17i16;
 const bin: i16 = 0b10101i16;
 const bin2: i32 = 0b10101i32;
 
+# The smallest signed and the largest unsigned values.
+const I8_MIN = -128i8;
+const I8_MIN_HEX = -0x80i8;
+const I8_MIN_BIN = -0b10000000i8;
+const I64_MIN = -9223372036854775808i64;
+const F32_NEG = -1.5f32;
+const UNTYPED_I32_MIN = -2147483648;
+const UNTYPED_I64_MIN = -9223372036854775808;
+const UNTYPED_U64_MAX = 18446744073709551615;
+
 # Test minimization.
 const NEEDS_I32 = 32767;
 const NEEDS_I64 = 21474836412;

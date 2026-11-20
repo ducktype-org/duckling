@@ -1,3 +1,11 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/core/diagnostic_state.hpp>
 #include <diagnostic/core/term_ui_view.hpp>
 #include <diagnostic/core/view_constructors.hpp>
@@ -40,15 +48,6 @@ namespace dia {
 	}
 
 	using namespace term_ui_view;
-
-	StyleType styleTypeFromString(const std::string& type) {
-		if (type == "error") return StyleType::Error;
-		if (type == "warning") return StyleType::Warning;
-		if (type == "note") return StyleType::Note;
-		if (type == "hint") return StyleType::Hint;
-		if (type == "docs") return StyleType::Docs;
-		return StyleType::Error;
-	}
 
 	class CodeSectionBuilder: public state::ComponentVisitor {
 		std::vector<CodeLine>& lines;
@@ -102,40 +101,51 @@ namespace dia {
 		void visitCodeLocationComponent(const state::CodeLocationComponent&) override {}
 	};
 
-	CodeSection buildCodeSection(
-		const state::CodeBlockComponent&                                     block,
-		const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
-		StyleType                                                            style_type
-	) {
-		CodeSection section;
-		if (block.location.has_value()) {
-			section.location = block.location.value();
-		} else {
-			section.location.file   = "";
-			section.location.line   = 0;
-			section.location.column = 0;
-		}
+	namespace {
+		CodeSection buildCodeSection(
+			const state::CodeBlockComponent&                                     block,
+			const base::HashMap<state::PointerMessageID, state::PointerMessage>& pointer_msgs,
+			StyleType                                                            style_type
+		) {
+			CodeSection section;
+			if (block.location.has_value()) {
+				section.location = block.location.value();
+			} else {
+				section.location.file   = "";
+				section.location.line   = 0;
+				section.location.column = 0;
+			}
 
-		CodeSectionBuilder builder(section.lines);
-		block.content->acceptVisitor(builder);
-		builder.flushLine();
+			CodeSectionBuilder builder(section.lines);
+			block.content->acceptVisitor(builder);
+			builder.flushLine();
 
-		// Extract pointers used in lines
-		for (const auto& line: section.lines) {
-			for (const auto& piece: line.pieces) {
-				for (auto id: piece.pointer_ids) {
-					if (pointer_msgs.contains(id) && !section.pointers.contains(id)) {
-						const auto&    msg = pointer_msgs.at(id);
-						PointerMessage ptr_msg;
-						ptr_msg.text     = msg.content;
-						ptr_msg.priority = msg.priority;
-						ptr_msg.type     = style_type;  // Inherit style from message
-						section.pointers.put(id, std::move(ptr_msg));
+			// Extract pointers used in lines
+			for (const auto& line: section.lines) {
+				for (const auto& piece: line.pieces) {
+					for (auto id: piece.pointer_ids) {
+						if (pointer_msgs.contains(id) && !section.pointers.contains(id)) {
+							const auto&    msg = pointer_msgs.at(id);
+							PointerMessage ptr_msg;
+							ptr_msg.text     = msg.content;
+							ptr_msg.priority = msg.priority;
+							ptr_msg.type     = style_type;  // Inherit style from message
+							section.pointers.put(id, std::move(ptr_msg));
+						}
 					}
 				}
 			}
+			return section;
 		}
-		return section;
+
+		StyleType styleTypeFromString(const std::string& type) {
+			if (type == "error") return StyleType::Error;
+			if (type == "warning") return StyleType::Warning;
+			if (type == "note") return StyleType::Note;
+			if (type == "hint") return StyleType::Hint;
+			if (type == "docs") return StyleType::Docs;
+			return StyleType::Error;
+		}
 	}
 
 	class MessageBuilder: public state::ComponentVisitor {

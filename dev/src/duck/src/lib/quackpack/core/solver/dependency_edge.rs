@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::HashMap;
 
 use crate::StrId;
@@ -9,7 +15,7 @@ use crate::quackpack::core::{Dependency, PackageId, Source};
 pub struct DependencyEdge {
     pub parent: PackageId,
     pub dep_identity: FullIdentity,
-    pub manifest_child_name: StrId,
+    pub dep_ename: StrId,
 }
 
 impl DependencyEdge {
@@ -25,7 +31,7 @@ impl DependencyEdge {
             .map(|child_origin| Self {
                 parent,
                 dep_identity: FullIdentity::new(manifest_dependency.name(), *child_origin),
-                manifest_child_name: manifest_dependency.effective_name(),
+                dep_ename: manifest_dependency.effective_name(),
             })
     }
 }

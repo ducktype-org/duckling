@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "../not_statements/wrapper_elements/operator_wrapper.hpp"
@@ -21,7 +27,7 @@ namespace pst::expr {
 		NAMED_CHILD(value, ExprElement);
 
 	public:
-		explicit Assignment(const LangParserState& state): ExprElement(state, 1'000) {}
+		explicit Assignment(LangElementConstructionData state): ExprElement(state, 1'000) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

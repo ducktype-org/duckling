@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 /**
  * @file debug_info_source_pos.hpp
  * @author Wojciech Rzepliński
@@ -11,12 +17,21 @@
 #include <frontend/module_tree/module_id.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
 namespace compiler::driver {
 
 	constexpr std::string_view DEBUG_INFO_STABLE_EXTENSION = ".stable.di.json";
+
+	/**
+	 * @brief Changes a PST-hash based debug info position into a file/line/column based one, using
+	 * the current locations of the PST nodes in `ctx`.
+	 */
+	[[nodiscard]] debug_info::FilePosition resolveDebugInfoPosition(
+		query::Context& ctx, const debug_info::PstHashPostion& position
+	);
 
 	/**
 	 * The key for the DebugInfoForModule query.

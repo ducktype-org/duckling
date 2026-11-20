@@ -1,5 +1,12 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -10,6 +17,12 @@
 #include <ranges>
 
 namespace vm {
+	/**
+	 * @brief The ID of the first element inserted to an ID name map, so the zero ID never refers to
+	 * an element.
+	 */
+	inline constexpr usize FIRST_OBJ_ID = 1;
+
 	namespace internal {
 
 		/**
@@ -17,6 +30,7 @@ namespace vm {
 		 * @tparam ContainerT a container type to store types in
 		 * @details We want to have two similar structures, a stable non-copyable map and an
 		 * unstable copyable map. To remove duplication we define a base for both.
+		 * IDs are consecutive and start from `FIRST_OBJ_ID`.
 		 */
 		template<class T, class ContainerT, class ObjID = u64>
 		requires(std::constructible_from<ObjID, usize> && std::constructible_from<usize, ObjID>)
@@ -29,14 +43,14 @@ namespace vm {
 			BaseObjIdNameMap& operator=(const BaseObjIdNameMap&) & = default;
 
 			constexpr ObjID insert(T&& new_value, base::StrID name) {
-				auto id = ObjID(values.size());
+				auto id = nextID();
 				values.push_back(std::move(new_value));
 				createLink(id, name);
 				return id;
 			}
 
 			constexpr ObjID insert(const T& new_value, base::StrID name) {
-				auto id = ObjID(values.size());
+				auto id = nextID();
 				values.push_back(new_value);
 				createLink(id, name);
 				return id;
@@ -44,13 +58,13 @@ namespace vm {
 
 			[[nodiscard]]
 			constexpr base::Optional<CRef<T>> atMaybe(ObjID id) const {
-				if (usize(id) >= values.size()) return {};
-				return &values[usize(id)];
+				if (!contains(id)) return {};
+				return &values[indexOf(id)];
 			}
 
 			constexpr base::Optional<Ref<T>> atMaybe(ObjID id) {
-				if (usize(id) >= values.size()) return {};
-				return &values[usize(id)];
+				if (!contains(id)) return {};
+				return &values[indexOf(id)];
 			}
 
 			[[nodiscard]]
@@ -81,9 +95,8 @@ namespace vm {
 			}
 
 			constexpr base::Optional<base::StrID> nameOf(ObjID id) const {
-				auto index = static_cast<usize>(id);
-				if (index < id_to_name.size())
-					return id_to_name[index];
+				if (contains(id))
+					return id_to_name[indexOf(id)];
 				else
 					return {};
 			}
@@ -95,7 +108,8 @@ namespace vm {
 
 			[[nodiscard]]
 			constexpr bool contains(ObjID id) const {
-				return static_cast<usize>(id) < id_to_name.size();
+				return static_cast<usize>(id) >= FIRST_OBJ_ID
+				    && static_cast<usize>(id) - FIRST_OBJ_ID < id_to_name.size();
 			}
 
 			[[nodiscard]] constexpr bool contains(base::StrID name) const {
@@ -120,19 +134,28 @@ namespace vm {
 
 			[[nodiscard]] constexpr usize size() const { return values.size(); }
 
-			constexpr T& operator[](ObjID id) { return values[static_cast<usize>(id)]; }
+			/**
+			 * @brief Returns the ID the next inserted element will get.
+			 */
+			[[nodiscard]] constexpr ObjID nextID() const {
+				return ObjID(FIRST_OBJ_ID + values.size());
+			}
 
-			constexpr const T& operator[](ObjID id) const { return values[static_cast<usize>(id)]; }
+			constexpr T& operator[](ObjID id) { return values[indexOf(id)]; }
+
+			constexpr const T& operator[](ObjID id) const { return values[indexOf(id)]; }
 
 			/**
 			 * @brief Returns ids of inserted elements.
 			 */
-			constexpr auto ids() const { return std::views::iota(size_t(0), id_to_name.size()); }
+			constexpr auto ids() const {
+				return std::views::iota(FIRST_OBJ_ID, FIRST_OBJ_ID + id_to_name.size());
+			}
 
 			std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> allData() const {
 				std::vector<std::tuple<CRef<T>, ObjID, base::StrID>> data;
 				data.reserve(size());
-				for (usize id = 0; id < size(); id++) {
+				for (usize id = FIRST_OBJ_ID; id < FIRST_OBJ_ID + size(); id++) {
 					ObjID tid = ObjID(id);
 					data.emplace_back(at(tid), tid, *nameOf(tid));
 				}
@@ -146,6 +169,10 @@ namespace vm {
 			}
 
 		private:
+			static constexpr usize indexOf(ObjID id) {
+				return static_cast<usize>(id) - FIRST_OBJ_ID;
+			}
+
 			constexpr void createLink(ObjID id, base::StrID name) {
 				id_to_name.push_back(name);
 				name_to_id.put(name, id);
@@ -178,7 +205,8 @@ namespace vm {
 		StableObjIdNameMap& operator=(const StableObjIdNameMap&) = delete;
 
 		using Base::contains, Base::begin, Base::end, Base::size, Base::insert, Base::atMaybe,
-			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData;
+			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData,
+			Base::nextID;
 	};
 
 	/**
@@ -202,6 +230,6 @@ namespace vm {
 
 		using Base::contains, Base::begin, Base::end, Base::size, Base::insert, Base::atMaybe,
 			Base::at, Base::nameOf, Base::idOf, Base::operator[], Base::ids, Base::allData,
-			Base::clear;
+			Base::clear, Base::nextID;
 	};
 }

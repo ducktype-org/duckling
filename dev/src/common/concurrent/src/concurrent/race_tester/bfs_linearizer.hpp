@@ -1,8 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include "history.hpp"
 
-#include <queue>
+#include <algorithm>
+#include <concepts>
+#include <vector>
 
 namespace concurrent::tester {
 	/**
@@ -65,6 +73,12 @@ namespace concurrent::tester {
 
 		/**
 		 * @brief Try to linearize the recorded history.
+		 *
+		 * The search goes one depth (number of linearized operations) at a time. When
+		 * `SequentialImplementation` is equality-comparable, a state equal to one already
+		 * reached at the same depth is dropped: its successors depend only on `next_ops` and
+		 * `sequential_state`, so the result is the same, but the search stays polynomial in the
+		 * number of operations instead of growing with the number of interleavings.
 		 * @return None if linearization was successful, or the index of
 		 * the first non-linearizable "return" record in the history.
 		 */
@@ -72,34 +86,36 @@ namespace concurrent::tester {
 			// Handle trivial case of empty history.
 			if (history_size == 0) return {};
 
-			std::queue<State> q{};
-			q.push(getFirstState());
+			std::vector<State> current_level{};
+			current_level.push_back(getFirstState());
 			// Tracks the earliest-ending operation which has not yet been linearized.
-			usize max_earliest_end = q.front().earliest_end;
+			usize max_earliest_end = current_level.front().earliest_end;
 
-			// BFS loop, until we linearize all operations or exhaust the queue.
-			while (max_earliest_end != -1 && not q.empty()) {
-				Ref<State> current_state = &q.front();
+			// BFS loop, until we linearize all operations or exhaust the states.
+			while (max_earliest_end != -1 && not current_level.empty()) {
+				std::vector<State> next_level{};
+				for (State& current_state: current_level) {
+					// Attempt to advance each thread.
+					for (u32 thread_id = 0; thread_id < num_threads; ++thread_id) {
+						// If the thread ran out of ops, skip it.
+						if (current_state.next_ops.at(thread_id).begin == -1) continue;
+						auto [next_state, result] = advance(&current_state, thread_id);
 
-				// Attempt to advance each thread.
-				for (u32 thread_id = 0; thread_id < num_threads; ++thread_id) {
-					// If the thread ran out of ops, skip it.
-					if (current_state->next_ops.at(thread_id).begin == -1) continue;
-					auto [next_state, result] = advance(current_state, thread_id);
+						// Check if the operation's result matches the recorded one.
+						const auto& event
+							= history->at(current_state.next_ops.at(thread_id).end).event;
+						const auto& recorded_result
+							= std::get<typename History_::Return>(event).result;
+						if (result != recorded_result)
+							continue; /* Mismatch, discard this branch. */
 
-					// Check if the operation's result matches the recorded one.
-					const auto& event
-						= history->at(current_state->next_ops.at(thread_id).end).event;
-					const auto& recorded_result = std::get<typename History_::Return>(event).result;
-					if (result != recorded_result) continue; /* Mismatch, discard this branch. */
-
-					// If the results match, update max_earliest_end and add the state to the queue.
-					max_earliest_end = std::max(max_earliest_end, next_state.earliest_end);
-					q.push(std::move(next_state));
+						// If the results match, update max_earliest_end and keep the state.
+						max_earliest_end = std::max(max_earliest_end, next_state.earliest_end);
+						if (isAlreadyReached(next_level, next_state)) continue;
+						next_level.push_back(std::move(next_state));
+					}
 				}
-
-				// Finally, remove the current state from the queue.
-				q.pop();
+				current_level = std::move(next_level);
 			}
 
 			// Return the index of the first non-linearizable return, if it exists.
@@ -145,6 +161,21 @@ namespace concurrent::tester {
 			for (u32 thread_id = 0; thread_id < num_threads; ++thread_id)
 				first_ops.push_back(nextOpForThread(thread_id, Op{ -1ULL, -1ULL }));
 			return State{ first_ops, sequential_implementation };
+		}
+
+		/**
+		 * @brief Whether `level` already holds a state equal to `state`. Always false when
+		 * `SequentialImplementation` is not equality-comparable.
+		 */
+		static bool isAlreadyReached(const std::vector<State>& level, const State& state) {
+			if constexpr (std::equality_comparable<SequentialImplementation>) {
+				return std::ranges::any_of(level, [&](const State& other) {
+					return other.next_ops == state.next_ops
+					   and other.sequential_state == state.sequential_state;
+				});
+			} else {
+				return false;
+			}
 		}
 
 		/**

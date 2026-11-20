@@ -1,12 +1,21 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <base/config/build_type.hpp>
 #include <base/types/ints.hpp>
 
 #include <hashing/add_to_hash.hpp>
+#include <hashing/component_hash.hpp>
 #include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <tester/tester.hpp>
 
 #include <array>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -149,6 +158,7 @@ public:
 		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(sha256Test);
 		TESTER_ADD_TEST(byAddressTest);
+		TESTER_ADD_TEST(componentHashTest);
 	}
 
 private:
@@ -232,6 +242,55 @@ private:
 			hasher(HashByAddress{ second }) == hasher(HashByAddress{ also_second }),
 			"the hash should depend only on the address"
 		);
+	}
+
+	void componentHashTest() {
+		const ComponentHash root(std::vector<std::string>{ "a", "b" });
+		const ComponentHash left(root, "c");
+		const ComponentHash right(root, "d");
+		ComponentHash       left_copy;
+		left_copy = left;
+		const ComponentHash deeper(left_copy, "e");
+		const ComponentHash same(left, "");
+
+		assertTrue(
+			left.hash == ComponentHash(std::vector<std::string>{ "a", "b", "c" }).hash,
+			"an extended path should hash like the path built at once"
+		);
+		assertTrue(left.hash != right.hash, "different paths should hash to different values");
+		assertTrue(same.hash == left.hash, "an empty extension should not change the hash");
+
+		IF_BUILD_TYPE_DEV({
+			assertTrue(
+				root.elements() == std::vector<std::string>{ "a", "b" },
+				"extending a path should not change the parent path"
+			);
+			assertTrue(
+				left.elements() == std::vector<std::string>{ "a", "b", "c" },
+				"the extended path should end with the new element"
+			);
+			assertTrue(
+				right.elements() == std::vector<std::string>{ "a", "b", "d" },
+				"sibling paths should keep their own last element"
+			);
+			assertTrue(
+				deeper.elements() == std::vector<std::string>{ "a", "b", "c", "e" },
+				"a path extended from a copy should keep the whole prefix"
+			);
+			assertTrue(
+				same.elements() == left.elements(), "an empty extension should not add an element"
+			);
+			assertEqual(
+				deeper.str(), std::string("a.b.c.e"), "str() should join the elements with dots"
+			);
+			assertTrue(ComponentHash().elements().empty(), "a default path should have no elements");
+			assertTrue(
+				left.last_element.value()->parent.value().get() == root.last_element.value().get()
+					&& right.last_element.value()->parent.value().get()
+						   == root.last_element.value().get(),
+				"child paths should share the parent's last element instead of copying it"
+			);
+		})
 	}
 
 	void sha256Test() {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "fast_compiler.hpp"
 
 #include "type_builder.hpp"
@@ -61,7 +67,7 @@ void fast::FastCompiler::compileNewFunctions(
 		program.functions.insert(
 			vm::fast::FunctionInfo{
 				.name        = function.name,
-				.id          = vm::fast::FunctionID(program.functions.size()),
+				.id          = program.functions.nextID(),
 				.return_size = std::ranges::fold_left(
 					function.signature.result_types | get_sizes, Bytes(0), std::plus()
 				),

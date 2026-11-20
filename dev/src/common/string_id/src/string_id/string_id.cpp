@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "string_id.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
@@ -46,24 +52,24 @@ namespace base {
 		constinit bool any_buffer_exists = false;
 
 		constinit std::mutex mutex;
-	}
 
-	/**
-	 * @brief Creates a new buffer for storing strings.
-	 * @note It is required to be called under write-lock.
-	 */
-	void newBuffer() {
-		auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
-		buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
-		size_left = DEFAULT_BUFFER_SIZE;
-		next_pos  = 0;
-	}
+		/**
+		 * @brief Creates a new buffer for storing strings.
+		 * @note It is required to be called under write-lock.
+		 */
+		void newBuffer() {
+			auto new_buffer = new byte[DEFAULT_BUFFER_SIZE];
+			buffer_list.emplace_back(new_buffer, DEFAULT_BUFFER_SIZE);
+			size_left = DEFAULT_BUFFER_SIZE;
+			next_pos  = 0;
+		}
 
-	/**
-	 * @brief Returns a view to the last buffer.
-	 * @note It is required to be called under lock.
-	 */
-	base::RawView lastBuffer() { return buffer_list.back().view(); }
+		/**
+		 * @brief Returns a view to the last buffer.
+		 * @note It is required to be called under lock.
+		 */
+		base::RawView lastBuffer() { return buffer_list.back().view(); }
+	}
 
 	/**
 	 * @brief

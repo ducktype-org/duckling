@@ -1,7 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::sync::Barrier;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use super::{registry_url_hash, setup_mock_storage};
+use super::setup_mock_storage;
 use crate::StrId;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self};
@@ -49,32 +55,21 @@ fn concurrent_delete() {
 /// 1. clean is a blocking operation,
 /// 2. cleaning an empty venv has empty result
 fn concurrent_clean() {
-    let (ctx, _home, root) = setup_mock_storage();
+    let (ctx, _home, _root) = setup_mock_storage();
     let thread_count = 4;
     let barrier = Barrier::new(thread_count);
     let empty_cleans = AtomicUsize::default();
 
-    let mut expected_packages = [
-        root.join("pkg")
-            .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
-        root.join("pkg")
-            .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
-    ];
-    expected_packages.sort();
     std::thread::scope(|s| {
         for _ in 0..thread_count {
             s.spawn(|| {
                 barrier.wait();
-                let mut result =
+                let result =
                     storage::ops::clean_storage(&ctx, ctx.default_storage_root().not_locked_path())
                         .unwrap();
-                if !result.removed_packages.is_empty() {
-                    result.removed_packages.sort();
+                if !result.removed_venvs.is_empty() {
                     assert_eq!(result.removed_venvs, ["root3".to_venv_id()]);
-                    assert_eq!(result.removed_packages, expected_packages);
                 } else {
-                    assert!(result.removed_venvs.is_empty());
-                    assert!(result.removed_packages.is_empty());
                     empty_cleans.fetch_add(1, Ordering::SeqCst);
                 }
             });

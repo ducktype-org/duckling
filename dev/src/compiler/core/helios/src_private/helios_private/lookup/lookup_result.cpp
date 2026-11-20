@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "lookup_result.hpp"
 
 #include <base/except/exceptions.hpp>
@@ -67,14 +73,16 @@ namespace compiler::helios {
 		return res;
 	}
 
-	template<typename T>
-	std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
-		std::ranges::sort(a);
-		std::ranges::sort(b);
+	namespace {
+		template<typename T>
+		std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
+			std::ranges::sort(a);
+			std::ranges::sort(b);
 
-		std::vector<T> result;
-		std::ranges::set_union(a, b, std::back_inserter(result));
-		return result;
+			std::vector<T> result;
+			std::ranges::set_union(a, b, std::back_inserter(result));
+			return result;
+		}
 	}
 
 	void LookupResult::merge(LookupResult other) {

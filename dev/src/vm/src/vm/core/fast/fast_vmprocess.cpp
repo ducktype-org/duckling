@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "fast_vmprocess.hpp"
 
 #include <vm/core/fast/program/relocator.hpp>
@@ -153,11 +159,9 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `setBreakpoint` is not implemented.");
 	}
 
-	std::expected<api::Response, api::StateError> FastVMProcess::getExitCode() {
-		return getMainVMThread().getExitValue();
+	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() {
+		return api::response::ValidationResult{};
 	}
-
-	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return true; }
 
 	std::expected<void, api::ApiError> FastVMProcess::requestPauseOfVMThread(
 		[[maybe_unused]] api::ThreadID thread_id
@@ -244,14 +248,28 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getVMValueForType` is not implemented.");
 	}
 
-	std::vector<api::ThreadID> FastVMProcess::unjoinedThreadIds() const {
+	std::expected<api::Response, api::ApiError> FastVMProcess::freeVMValue(
+		[[maybe_unused]] Ref<IVMValue> vm_value
+	) {
+		throw vm::VMNotImplemented("Method `freeVMValue` is not implemented.");
+	}
+
+	void FastVMProcess::joinFinishedThreads() {
+		// Fast mode has no `builtin_start_thread`, so every VMThread here is API owned.
+		for (auto& thread: vm_threads) (void) thread.joinExecutionThread();
+	}
+
+	std::vector<api::ThreadID> FastVMProcess::unjoinedApiThreadIds() const {
 		std::vector<api::ThreadID> ids;
-		for (const auto& thread: vm_threads)
-			if (thread.hasActiveThread()) ids.push_back(thread.getThreadID());
+		for (const auto& thread: vm_threads) {
+			const thread_state::ThreadState state = thread.getThreadState();
+			if (thread_state::hasStarted(state) && !thread_state::isJoined(state))
+				ids.push_back(thread.getThreadID());
+		}
 		return ids;
 	}
 
-	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() {
+	std::vector<api::ThreadID> FastVMProcess::getAllActiveThreadIDs() const {
 		std::vector<api::ThreadID> thread_ids;
 		for (const auto& thread: vm_threads)
 			if (thread_state::isActive(thread.getThreadState()))

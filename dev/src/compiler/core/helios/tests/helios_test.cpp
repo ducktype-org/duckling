@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -5,8 +11,6 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
-#include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
@@ -30,6 +34,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -43,6 +48,7 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
@@ -56,6 +62,8 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <cstdint>
+#include <limits>
 #include <sstream>
 
 using namespace compiler::helios::test_utils;
@@ -68,7 +76,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testConstants);
+		TESTER_ADD_TEST(testConstTernary);
 		TESTER_ADD_TEST(testMetaCompTime);
 		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
@@ -94,6 +102,7 @@ public:
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testVoidReturnType);
 		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testArrayLiterals);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testVoidReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
@@ -120,6 +129,7 @@ public:
 		TESTER_ADD_TEST(testOperatoriness);
 		TESTER_ADD_TEST(testMethodOperatorResolution);
 		TESTER_ADD_TEST(testBitwiseOperators);
+		TESTER_ADD_TEST(testGeneratedComparisons);
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
@@ -164,14 +174,10 @@ private:
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
 	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			Mutable,
-		};
+		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
 	}
 
-	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::SymbolType<> stImm(const compiler::tsh::AbstractType abstract_type) {
 		return st(abstract_type).withMutability(Immutable);
 	}
 
@@ -202,47 +208,6 @@ private:
 		return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(key);
 	}
 
-	void testConstants() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
-
-		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
-		ASSERT_EQUAL(-3, getConstValueAs<i32>("B", root_scope));
-		ASSERT_EQUAL(-1, getConstValueAs<i64>("D", root_scope));
-		ASSERT_EQUAL(6, getConstValueAs<i32>("E", root_scope));
-		ASSERT_EQUAL(27, getConstValueAs<i32>("MOD", root_scope));
-		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getConstValueAs<i32>("MAX_I32", root_scope));
-		ASSERT_EQUAL(3, getConstValueAs<i64>("H2", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("T0", root_scope));
-		ASSERT_EQUAL(2, getConstValueAs<i64>("T1", root_scope));
-		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
-		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
-
-		// Floating point.
-		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
-		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
-		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
-
-		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
-		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
-		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
-		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
-		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
-		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
-
-		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
-		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
-		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
-		ASSERT_EQUAL(55, getConstValueAs<i32>("FIB_ON_I32_10", root_scope));
-		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
-		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
-		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
-
-		// Meta builtins (size_of / alignment_of) called through a VM comp-time function call.
-		ASSERT_EQUAL(16, getConstValueAs<i64>("SIZE_AND_ALIGN_I64", root_scope));
-	}
-
 	void testMetaCompTime() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/meta_comp_time")));
 
@@ -263,20 +228,20 @@ private:
 			{
 				auto simple_ref
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_REF", root_scope);
-				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				auto expected = st(i64_type).toRef();
 				ASSERT_EQUAL(expected, simple_ref);
 			}
 			{
 				auto simple_box
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_BOX", root_scope);
-				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto expected = st(i64_type).toBox();
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
-				auto simple_const
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
-				auto expected = stConst(i64_type);
-				ASSERT_EQUAL(expected, simple_const);
+				auto simple_imm
+					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_IMM", root_scope);
+				auto expected = stImm(i64_type);
+				ASSERT_EQUAL(expected, simple_imm);
 			}
 			{
 				auto simple_variant
@@ -299,6 +264,10 @@ private:
 				ASSERT_EQUAL(cmp_1, true);
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
+				auto cmp_3 = getConstValueAs<bool>("CMP_3", root_scope);
+				ASSERT_EQUAL(cmp_3, true);
+				auto cmp_4 = getConstValueAs<bool>("CMP_4", root_scope);
+				ASSERT_EQUAL(cmp_4, true);
 			}
 		}
 
@@ -311,17 +280,17 @@ private:
 			}
 			{
 				auto b_type   = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
-				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto expected = st(i32_type).toBox();
 				ASSERT_EQUAL(expected, b_type);
 			}
 			{
 				auto c_type   = getConstValueAs<compiler::tsh::SymbolType<>>("C", root_scope);
-				auto expected = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				auto expected = st(i32_type).toRef();
 				ASSERT_EQUAL(expected, c_type);
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = stConst(i32_type);
+				auto expected = stImm(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
@@ -343,7 +312,7 @@ private:
 					= getConstValueAs<compiler::tsh::SymbolType<>>("megaGigaType", root_scope);
 
 				auto first  = st(unit_type);
-				auto second = st(i128_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto second = st(i128_type).toBox();
 				auto third  = st(i32_type);
 				auto fourth
 					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i16_type),
@@ -363,13 +332,13 @@ private:
 			}
 			{
 				auto first_type = getConstValueAs<compiler::tsh::SymbolType<>>("FIRST", root_scope);
-				auto expected   = st(i16_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+				auto expected   = st(i16_type).toBox();
 				ASSERT_EQUAL(expected, first_type);
 			}
 			{
 				auto second_type
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
-				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+				auto expected = st(i64_type).toRef();
 				ASSERT_EQUAL(expected, second_type);
 			}
 			{  // Type Comparisons
@@ -406,6 +375,113 @@ private:
 			ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_INT", root_scope));
 			ASSERT_EQUAL(-1, getConstValueAs<i64>("MATCHED_OTHER", root_scope));
 		}
+
+		// Type tuples.
+		{
+			using compiler::ctv::CompileTimeValue;
+			using compiler::tsh::Kind;
+
+			auto kind_of
+				= [](const compiler::tsh::SymbolType<>& type) { return type.getType().getKind(); };
+
+			auto tuple_type = getSymbolTypeOf("TYPE_TUPLE", root_scope);
+			ASSERT_TRUE(kind_of(tuple_type) == Kind::Tuple);
+			auto tuple_components
+				= tuple_type.getType().as<compiler::tsh::TupleAbstractType>().getComponents();
+			ASSERT_EQUAL(tuple_components.size(), 2);
+			ASSERT_TRUE(kind_of(tuple_components[0]) == Kind::Meta);
+			ASSERT_TRUE(kind_of(tuple_components[1]) == Kind::Meta);
+
+			auto tuple_value
+				= getConstValueAs<CompileTimeValue::TypeTuple>("TYPE_TUPLE", root_scope);
+			ASSERT_EQUAL(tuple_value.getElements().size(), 2);
+			ASSERT_TRUE(
+				kind_of(v_get(tuple_value.getElements()[0], compiler::tsh::SymbolType<>))
+				== Kind::Bool
+			);
+			ASSERT_TRUE(
+				kind_of(v_get(tuple_value.getElements()[1], compiler::tsh::SymbolType<>))
+				== Kind::Slice
+			);
+
+			auto value_type = getSymbolTypeOf("TYPE_TUPLE_VALUE", root_scope);
+			ASSERT_TRUE(kind_of(value_type) == Kind::Tuple);
+			auto value_components
+				= value_type.getType().as<compiler::tsh::TupleAbstractType>().getComponents();
+			ASSERT_TRUE(kind_of(value_components[0]) == Kind::Bool);
+			ASSERT_TRUE(kind_of(value_components[1]) == Kind::Slice);
+			ASSERT_TRUE(getConstValue("TYPE_TUPLE_VALUE", root_scope)
+			                .get<CompileTimeValue::VMValue>()
+			                .has_value());
+
+			auto i32_pair = st(
+				query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type), st(i32_type) } })
+			);
+			auto expected_nested
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } }));
+			ASSERT_EQUAL(
+				expected_nested,
+				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
+			);
+
+			auto single_tuple
+				= getConstValueAs<CompileTimeValue::TypeTuple>("SINGLE_TYPE_TUPLE", root_scope);
+			ASSERT_EQUAL(single_tuple.getElements().size(), 1);
+			ASSERT_EQUAL(
+				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::SymbolType<>)
+			);
+		}
+
+		// Function types.
+		{
+			using compiler::tsh::FunctionKind;
+			using compiler::tsh::QueryFunctionType;
+
+			auto i32_st      = st(i32_type);
+			auto bool_st     = st(compiler::tsh::getBoolType());
+			auto function_of = [&](std::vector<compiler::tsh::SymbolType<>> parameters,
+			                       compiler::tsh::SymbolType<>              result,
+			                       FunctionKind                             kind) {
+				return st(query::entryPoint<QueryFunctionType>(
+					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
+				));
+			};
+
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_PAIR", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
+				getConstValueAs<compiler::tsh::SymbolType<>>("CLOSURE_PAIR", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_SINGLE", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({}, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_NO_PARAMS", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_UNIT_RESULT", root_scope)
+			);
+			auto i32_pair
+				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_TUPLE_PARAM", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
+			);
+			ASSERT_EQUAL(
+				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_FROM_ALIAS", root_scope)
+			);
+		}
 	}
 
 	void testNumericLiterals() {
@@ -435,6 +511,22 @@ private:
 		ASSERT_EQUAL(21, getConstValueAs<i16>("bin", root_scope));
 
 		ASSERT_EQUAL(21, getConstValueAs<i32>("bin2", root_scope));
+
+		// The smallest signed and the largest unsigned values.
+		ASSERT_EQUAL(std::int8_t{ -128 }, getConstValueAs<std::int8_t>("I8_MIN", root_scope));
+		ASSERT_EQUAL(std::int8_t{ -128 }, getConstValueAs<std::int8_t>("I8_MIN_HEX", root_scope));
+		ASSERT_EQUAL(std::int8_t{ -128 }, getConstValueAs<std::int8_t>("I8_MIN_BIN", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i64>::min(), getConstValueAs<i64>("I64_MIN", root_scope));
+		ASSERT_EQUAL(-1.5f, getConstValueAs<f32>("F32_NEG", root_scope));
+		ASSERT_EQUAL(
+			std::numeric_limits<i32>::min(), getConstValueAs<i32>("UNTYPED_I32_MIN", root_scope)
+		);
+		ASSERT_EQUAL(
+			std::numeric_limits<i64>::min(), getConstValueAs<i64>("UNTYPED_I64_MIN", root_scope)
+		);
+		ASSERT_EQUAL(
+			std::numeric_limits<u64>::max(), getConstValueAs<u64>("UNTYPED_U64_MAX", root_scope)
+		);
 
 		// Test type deduction.
 		const auto i16_type = getIntegralTypeNoContext(16, Signed);
@@ -485,6 +577,14 @@ private:
 		verify_type_and_mutability("var", "u64", u64_type, Mutable);
 		verify_type_and_mutability("var", "f32", f32_type, Mutable);
 		verify_type_and_mutability("var", "f64", f64_type, Mutable);
+
+		// A literal without a type is the first of `i32`, `u32`, `i64` and `u64` it fits into.
+		const auto i8_type = getIntegralTypeNoContext(8, Signed);
+		ASSERT_EQUAL(i8_type, getSymbolTypeOf("I8_MIN", root_scope).getType());
+		ASSERT_EQUAL(i64_type, getSymbolTypeOf("I64_MIN", root_scope).getType());
+		ASSERT_EQUAL(i32_type, getSymbolTypeOf("UNTYPED_I32_MIN", root_scope).getType());
+		ASSERT_EQUAL(i64_type, getSymbolTypeOf("UNTYPED_I64_MIN", root_scope).getType());
+		ASSERT_EQUAL(u64_type, getSymbolTypeOf("UNTYPED_U64_MAX", root_scope).getType());
 	}
 
 	void testClassSymbolData() {
@@ -780,7 +880,7 @@ private:
 		auto f32 = st(getFloatTypeNoContext(32));
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
-			auto str = stConst(compiler::tsh::getCharSliceType(ctx));
+			auto str = st(compiler::tsh::getCharSliceType(ctx));
 
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
@@ -830,7 +930,7 @@ private:
 		const auto meta_type  = compiler::tsh::getMetaType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = stConst(int32_type);
+		const auto int32_immut_symbol_type = stImm(int32_type);
 
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
@@ -905,6 +1005,17 @@ private:
 		// expression must not be evaluated, otherwise these evaluations would fail.
 		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
+	}
+
+	/**
+	 * @brief `if const ... then ... else ...` is evaluated at compile time and only the taken
+	 * branch is compiled. The branch that is not taken may contain code that would not compile.
+	 */
+	void testConstTernary() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/const_ternary")));
+		ASSERT_EQUAL(1, getConstValueAs<i32>("CT1", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i32>("CT2", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i32>("CT3", root_scope));
 	}
 
 	/**
@@ -1254,6 +1365,14 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+		test_value("cyclic_wildcard_final", 13);
+		test_value("cyclic_wildcard_through", 11);
+
+		test_value("imported_ns_v", 500);
+		test_value("imported_inner_v", 600);
+		test_value("imported_symbol_v", 500);
+		test_value("imported_unnamed_ns_v", 500);
+		test_value("imported_wildcard_v", 600);
 	}
 
 	void testExprTree() {
@@ -1276,14 +1395,6 @@ private:
 		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
-
-		ASSERT_EQUAL(256, getConstValueAs<i32>("V256", root_scope));
-
-		auto              sym_v256 = getChain("V256", root_scope).back();
-		std::stringstream out_v256;
-		auto              tree_v256 = getExprOfConst(sym_v256);
-		tree_v256->debugPrint(out_v256);
-		ASSERT_EQUAL("3 + 4 - 4 * 16 / 5 % 7 ** 8", out_v256.str());
 
 		ASSERT_EQUAL(12, getConstValueAs<i64>("V12", root_scope));
 		auto              sym_v12  = getChain("V12", root_scope).back();
@@ -1342,10 +1453,8 @@ private:
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
 		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-		const auto int32ref_type = st(int32_type)
-		                               .withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-		                               .withMutability(Immutable);
-		const auto vref_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
+		const auto int32ref_type = st(int32_type).toRef().withMutability(Immutable);
+		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
 		// Only the type of `VBOX` is checked here. Its initializer is a `boxAlloc` call into
@@ -1353,10 +1462,8 @@ private:
 		// is covered by `helios_with_std_test`.
 		auto       sym_vbox    = getChain("VBOX", root_scope).back();
 		const auto f32_type    = getFloatTypeNoContext(32);
-		const auto f32box_type = st(f32_type)
-		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
-		                             .withMutability(Immutable);
-		const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
+		const auto f32box_type = st(f32_type).toBox().withMutability(Immutable);
+		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
 		auto              sym_vconst  = getChain("VCONST", root_scope).back();
@@ -1364,7 +1471,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = stConst(bool_type);
+		const auto const_bool_type = stImm(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -1487,7 +1594,7 @@ private:
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
 			auto i32_type              = getIntegralTypeNoContext(32, Signed);
-			auto expected_type = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
+			auto expected_type         = st(i32_type).toRef();
 			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
 		}
 		{
@@ -1944,6 +2051,29 @@ private:
 			auto static_arr_inner
 				= static_arr.getElementType().getType().as<compiler::tsh::StaticArrayAbstractType>();
 			ASSERT_EQUAL(static_arr_inner.getSize(), 2);
+		}
+	}
+
+	void testArrayLiterals() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/array_literals")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function = hout.functions.at(0);
+
+		auto& statements = function->body->statements;
+
+		using namespace compiler::helios::code;
+
+		{
+			// let magic_square = LITERAL;
+			auto& def = dynamic_cast<const VariableStmt&>(*statements.at(0));
+			auto  agg = dynamic_cast<const CreateAggregateExpr*>(def.initial_value.get());
+			// [2, 7, 6]
+			auto first_row = dynamic_cast<const CreateAggregateExpr*>(agg->values.at(0).get());
+			auto elem      = dynamic_cast<const LiteralNumericExpr*>(first_row->values.at(1).get());
+			auto inner     = elem->value.get<i32>();
+			ASSERT_TRUE(inner.has_value());
+			ASSERT_EQUAL(*inner, 7);
 		}
 	}
 
@@ -2477,6 +2607,7 @@ private:
 
 		const auto infix_free   = mangle({ .symbol_key = getChain("+*", root_scope).back() });
 		const auto prefix_free  = mangle({ .symbol_key = getChain("-*", root_scope).back() });
+		const auto suffix_free  = mangle({ .symbol_key = getChain("++", root_scope).back() });
 		const auto unicode_free = mangle({ .symbol_key = getChain("+×", root_scope).back() });
 
 		const auto foo_class = getChain("Foo", root_scope).back();
@@ -2486,7 +2617,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(2, foo_methods.size());
+		ASSERT_EQUAL(3, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -2497,9 +2628,11 @@ private:
 
 		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
 		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
+		const auto suffix_method = mangle({ .symbol_key = find_method("++") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOs4plplFiqiqE1aE", suffix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_FiqiqiqE1a1bE", unicode_free.str());
 		ASSERT_EQUAL(
 			"_Q_M18mangling_operatorsN3FooOi4plmlEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
@@ -2509,10 +2642,10 @@ private:
 			"_Q_M18mangling_operatorsN3FooOp4mimlEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
 			prefix_method.str()
 		);
-
-		// @todo: #3131 Suffix has no declaration syntax yet (see testOperatoriness)
-		// nothing to mangle here until fixity keywords exist. Once they do, add e.g.:
-		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOs4plplEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
+			suffix_method.str()
+		);
 	}
 
 	void testManglerCTV() {
@@ -2540,10 +2673,11 @@ private:
 				= NumericValue{ i64{ std::numeric_limits<int64_t>::min() } };
 			const auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
-			const auto str2 = CompileTimeValue{ CompileTimeValue::StringClassValue{
-				base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
-			const auto tuple
-				= CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+			const auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
+                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
+			const auto tuple = CompileTimeValue::TypeTuple{
+				std::vector<CompileTimeValue::TypeTuple::Element>{ UNIT, symbol_1 }
+			};
 
 			const std::vector<CompileTimeValue> ctvs
 				= { false,  true,     F_1,     D_1,       I8_N7,    U8_7,          I16_N42,
@@ -2557,10 +2691,18 @@ private:
 		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
-			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
+			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u TutNidE tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(EXPECTED, result);
+
+		const auto value_tuple = getConstValue("VALUE_TUPLE", root_scope);
+		ASSERT_TRUE(value_tuple.get<CompileTimeValue::VMValue>().has_value());
+		std::string mangled_value_tuple;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			mangled_value_tuple = compiler::helios::mangler::mangleCTV(ctx, value_tuple);
+		});
+		ASSERT_EQUAL("MTididE8_0100000002000000", mangled_value_tuple);
 	}
 
 	void testManglingOfTemplates() {
@@ -2740,9 +2882,8 @@ private:
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
-		const auto tuple_si_type = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { stConst(str_type), st(int32_type) } }
-		);
+		const auto tuple_si_type
+			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
@@ -3213,13 +3354,13 @@ private:
 				);
 			};
 
-			const auto meta_st     = stConst(compiler::tsh::getMetaType());
-			const auto unit_st     = stConst(compiler::tsh::getUnitType());
-			const auto int_st      = stConst(compiler::tsh::getIntegralType(ctx, 32, Signed));
-			const auto tuple_ii_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+			const auto meta_st     = stImm(compiler::tsh::getMetaType());
+			const auto unit_st     = stImm(compiler::tsh::getUnitType());
+			const auto int_st      = stImm(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
 				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
 			));
-			const auto tuple_tt_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+			const auto tuple_tt_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
 				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
 			));
 
@@ -3323,9 +3464,26 @@ private:
 		// @TODO: #1412 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
+		// `using M.c;` brings `c` in under its own name, so looking `c` up in the root scope
+		// has to land on the very symbol `M.c` names.
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
-		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+		ASSERT_EQUAL(nonwild_using.back(), nonwild_using_target.back());
+
+		// `using n1.*;` where `n1` is itself `using N2 as n1;`: the wildcard is followed through
+		// the alias, so what `N2` holds is visible under its own name in the root scope.
+		ASSERT_EQUAL(77, getConstValueAs<i32>("in_n2", root_scope));
+
+		// The same wildcard also carries `using a as b;` out of `N2`, and that alias points at
+		// `using x as a;`, which points at the constant itself.
+		ASSERT_EQUAL(getChain("x", root_scope).back(), getChain("b", root_scope).back());
+		ASSERT_EQUAL(1'235, getConstValueAs<i32>("b", root_scope));
+
+		ASSERT_EQUAL(10, getConstValueAs<i32>("ra_through_rb", root_scope));
+		ASSERT_EQUAL(20, getConstValueAs<i32>("rb_through_ra", root_scope));
+		ASSERT_EQUAL(21, getConstValueAs<i32>("ra_from_rb_v", root_scope));
+		ASSERT_EQUAL(12, getConstValueAs<i32>("rb_from_ra_v", root_scope));
+		ASSERT_EQUAL(31, getConstValueAs<i32>("self_using_v", root_scope));
 	}
 
 	void testBackendDependentCompTime() {
@@ -3341,7 +3499,7 @@ private:
 	void testTemplates() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/templates")));
 
-		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
+		// `Number[1i64].inner` and `Number[2i64].inner` each bake a distinct instantiation of
 		// the `Number` template namespace and evaluate the resulting constant.
 		ASSERT_EQUAL(1, getConstValueAs<i64>("one", root_scope));
 		ASSERT_EQUAL(2, getConstValueAs<i64>("two", root_scope));
@@ -3363,7 +3521,7 @@ private:
 			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
 			ASSERT_EQUAL(
 				number_signature.parameters.at(0).type,
-				stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
+				stImm(compiler::tsh::getIntegralType(ctx, 64, Signed))
 			);
 
 			// Baking the same template symbol with equal arguments must return
@@ -3398,7 +3556,7 @@ private:
 		// Just `foo` function.
 		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
 
-		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by
+		// 4 constants + 1 weak const (Number[1].inner) added to the module, because it is used by
 		// `foo`.
 		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
 	}
@@ -3423,17 +3581,28 @@ private:
 				.operatoriness
 		);
 
-		// Free operator function, 1 param: prefix (fixity keywords don't exist yet, so a
-		// single-parameter operator name is assumed prefix).
+		// Free unary operator functions use their declared fixity.
 		ASSERT_EQUAL(
 			Operatoriness::Prefix,
 			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("-*", root_scope).back())
 				->valueOrThrow()
 				.operatoriness
 		);
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("++", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("**", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
 
 		// Operator methods: 1 explicit param + implicit `self` = infix; 0 explicit params +
-		// implicit `self` = prefix.
+		// implicit `self` = unary with its declared fixity.
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
@@ -3441,7 +3610,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(2, foo_methods.size());
+		ASSERT_EQUAL(3, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -3462,8 +3631,12 @@ private:
 				->valueOrThrow()
 				.operatoriness
 		);
-
-		// @TODO: #3131 Add cases for suffix operators.
+		ASSERT_EQUAL(
+			Operatoriness::Suffix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("++"))
+				->valueOrThrow()
+				.operatoriness
+		);
 	}
 
 	void testMethodOperatorResolution() {
@@ -3477,7 +3650,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(2, foo_methods.size());
+		ASSERT_EQUAL(3, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -3487,6 +3660,7 @@ private:
 		};
 		auto infix_method_sym  = find_method("+*");
 		auto prefix_method_sym = find_method("-*");
+		auto suffix_method_sym = find_method("++");
 
 		auto get_return_call = [&](compiler::helios::SymID fn_sym) -> const CallExpr& {
 			const auto& fn_hout
@@ -3519,7 +3693,236 @@ private:
 		ASSERT_EQUAL(1, prefix_call.arguments.size());
 		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(prefix_call.arguments.at(0).get()) != nullptr);
 
-		// @TODO: #3131 Add case for suffix operator.
+		// `foo++` inside useSuffix must resolve to Foo's suffix `++` method.
+		const auto& suffix_call   = get_return_call(getChain("useSuffix", root_scope).back());
+		const auto* suffix_callee = dynamic_cast<const IdentifierExpr*>(suffix_call.callee.get());
+		ASSERT_TRUE(suffix_callee != nullptr);
+		ASSERT_EQUAL(suffix_method_sym, suffix_callee->symbol);
+		ASSERT_EQUAL(1, suffix_call.arguments.size());
+		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(suffix_call.arguments.at(0).get()) != nullptr);
+	}
+
+	void testGeneratedComparisons() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/generated_comparisons")));
+		using namespace compiler::helios::code;
+		using compiler::helios::SymID;
+		using compiler::helios::defgen::Method;
+		using Kind      = Method::Kind;
+		using OwnerKind = compiler::tsh::Kind;
+
+		const auto& body_of = [&](SymID fn_sym) -> const std::vector<Box<Stmt>>& {
+			return query::entryPoint<compiler::helios::QueryCodeOfFun>({ fn_sym })
+			    ->valueOrPanic()
+			    .body->statements;
+		};
+
+		// The value returned by the last statement of a function.
+		auto returned_value = [&](SymID fn_sym) -> const Expr* {
+			const auto* ret_stmt = dynamic_cast<const ReturnStmt*>(body_of(fn_sym).back().get());
+			ASSERT_TRUE(ret_stmt != nullptr);
+			return stripImplicitMove(ret_stmt->value.get());
+		};
+
+		// The condition of the `if` statement at @p idx of a function's body.
+		auto condition_at = [&](SymID fn_sym, usize idx) -> const Expr* {
+			const auto* if_stmt = dynamic_cast<const IfStmt*>(body_of(fn_sym).at(idx).get());
+			ASSERT_TRUE(if_stmt != nullptr);
+			return if_stmt->condition.get();
+		};
+
+		// The function called by `expr` with two arguments.
+		auto called = [&](const Expr* expr) -> SymID {
+			const auto* call = dynamic_cast<const CallExpr*>(expr);
+			ASSERT_TRUE(call != nullptr);
+			ASSERT_EQUAL(2, call->arguments.size());
+			const auto* callee = dynamic_cast<const IdentifierExpr*>(call->callee.get());
+			ASSERT_TRUE(callee != nullptr);
+			return callee->symbol;
+		};
+
+		// The operand of a `not`.
+		auto negated = [&](const Expr* expr) -> const Expr* {
+			const auto* not_expr = dynamic_cast<const UnaryOperatorExpr*>(expr);
+			ASSERT_TRUE(not_expr != nullptr);
+			ASSERT_TRUE(not_expr->operation == BuiltinUnary::BooleanNot);
+			return not_expr->expr.get();
+		};
+
+		// Fields of simple types are compared inline with a builtin operation, not by calling
+		// their comparison method.
+		auto expect_inline = [&](const Expr* expr, BuiltinBinary operation) {
+			const auto* bin_op = dynamic_cast<const BinaryOperatorExpr*>(expr);
+			ASSERT_TRUE(bin_op != nullptr);
+			ASSERT_TRUE(bin_op->operation == operation);
+		};
+
+		auto expect_generated = [&](SymID sym, Kind kind, OwnerKind owner_kind) {
+			const auto* method = std::get_if<Method>(&compiler::helios::getSymRef(sym)->other);
+			ASSERT_TRUE(method != nullptr);
+			ASSERT_TRUE(method->kind == kind);
+			ASSERT_TRUE(method->owner_type.getKind() == owner_kind);
+		};
+
+		auto expect_returns = [&](SymID fn_sym, bool value) {
+			const auto* literal = dynamic_cast<const LiteralBoolExpr*>(returned_value(fn_sym));
+			ASSERT_TRUE(literal != nullptr);
+			ASSERT_EQUAL(value, literal->value);
+		};
+
+		// A comparison in user code calls the operator method of the type, taking both operands
+		// by reference.
+		auto operator_called_from = [&](SymID fn_sym) -> SymID {
+			const auto* call = dynamic_cast<const CallExpr*>(returned_value(fn_sym));
+			ASSERT_TRUE(call != nullptr);
+			for (const auto& argument: call->arguments)
+				ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(argument.get()) != nullptr);
+			const SymID callee = called(call);
+			ASSERT_TRUE(
+				query::entryPoint<compiler::helios::QueryDeclOfFun>(callee)->valueOrThrow().operatoriness
+				== compiler::helios::HOUTFunctionDeclaration::Operatoriness::Infix
+			);
+			return callee;
+		};
+
+		// `<` on a tuple decides on the first field in which the operands differ, using `<` of
+		// the fields only: two `if`s per field, then `return false`. The integer fields are
+		// compared inline.
+		const SymID tuple_less = operator_called_from(getChain("tupleLess", root_scope).back());
+		expect_generated(tuple_less, Kind::Lesser, OwnerKind::Tuple);
+		ASSERT_EQUAL(5, body_of(tuple_less).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_inline(condition_at(tuple_less, i), BuiltinBinary::IntegerLt);
+		expect_returns(tuple_less, false);
+
+		// `==` on a class returns `false` at the first unequal field.
+		const SymID class_equal = operator_called_from(getChain("classEqual", root_scope).back());
+		expect_generated(class_equal, Kind::Equal, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(class_equal).size());
+		for (usize i = 0; i < 2; ++i)
+			expect_inline(negated(condition_at(class_equal, i)), BuiltinBinary::IntegerEq);
+		expect_returns(class_equal, true);
+
+		// `>=` is generated field by field like `<`, but using `>=` of the fields: it returns
+		// `false` when a field is not `>=` the other one, `true` when the other one is not `>=`
+		// it, and accepts equal operands.
+		const SymID class_greater_equal
+			= operator_called_from(getChain("classGreaterEqual", root_scope).back());
+		expect_generated(class_greater_equal, Kind::GreaterEqual, OwnerKind::Class);
+		ASSERT_EQUAL(5, body_of(class_greater_equal).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_inline(negated(condition_at(class_greater_equal, i)), BuiltinBinary::IntegerGteq);
+		expect_returns(class_greater_equal, true);
+
+		// A user-defined `==` replaces the generated one in the type's interface.
+		const SymID custom_equal = operator_called_from(getChain("customEqual", root_scope).back());
+		ASSERT_TRUE(
+			not std::holds_alternative<Method>(compiler::helios::getSymRef(custom_equal)->other)
+		);
+		ASSERT_EQUAL(std::string("=="), compiler::helios::name(custom_equal).str());
+
+		// But it does not affect the generated `!=`, which still compares the fields directly and
+		// returns `true` at the first unequal one.
+		const SymID custom_not_equal
+			= operator_called_from(getChain("customNotEqual", root_scope).back());
+		expect_generated(custom_not_equal, Kind::NotEqual, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(custom_not_equal).size());
+		for (usize i = 0; i < 2; ++i)
+			expect_inline(condition_at(custom_not_equal, i), BuiltinBinary::IntegerNeq);
+		expect_returns(custom_not_equal, false);
+
+		// Pointers are ordered like integers, inline.
+		const SymID pointer_tuple_less
+			= operator_called_from(getChain("pointerLess", root_scope).back());
+		expect_generated(pointer_tuple_less, Kind::Lesser, OwnerKind::Tuple);
+		ASSERT_EQUAL(5, body_of(pointer_tuple_less).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_inline(condition_at(pointer_tuple_less, i), BuiltinBinary::IntegerLt);
+		expect_returns(pointer_tuple_less, false);
+
+		// Tuples of types are compared field by field too, with the `==` of `type`.
+		const SymID types_equal = operator_called_from(getChain("typesEqual", root_scope).back());
+		expect_generated(types_equal, Kind::Equal, OwnerKind::Tuple);
+		expect_inline(negated(condition_at(types_equal, 0)), BuiltinBinary::MetaEq);
+
+		// Fields of aggregate types are compared by calling their comparison method, passing
+		// both fields by reference.
+		auto called_by_ref = [&](const Expr* expr) -> SymID {
+			const auto* call = dynamic_cast<const CallExpr*>(expr);
+			ASSERT_TRUE(call != nullptr);
+			for (const auto& argument: call->arguments)
+				ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(argument.get()) != nullptr);
+			return called(call);
+		};
+
+		const SymID segment_equal
+			= operator_called_from(getChain("segmentEqual", root_scope).back());
+		expect_generated(segment_equal, Kind::Equal, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(segment_equal).size());
+		for (usize i = 0; i < 2; ++i)
+			expect_generated(
+				called_by_ref(negated(condition_at(segment_equal, i))), Kind::Equal, OwnerKind::Class
+			);
+		expect_returns(segment_equal, true);
+
+		// Both directions of the strict comparison of each field build their own accesses.
+		const SymID segment_less = operator_called_from(getChain("segmentLess", root_scope).back());
+		expect_generated(segment_less, Kind::Lesser, OwnerKind::Class);
+		ASSERT_EQUAL(5, body_of(segment_less).size());
+		for (usize i = 0; i < 4; ++i)
+			expect_generated(
+				called_by_ref(condition_at(segment_less, i)), Kind::Lesser, OwnerKind::Class
+			);
+		expect_returns(segment_less, false);
+
+		// Fields which are not trivially copyable can be compared, and a boxed field of a simple
+		// type is dereferenced and compared inline.
+		auto expect_inline_deref = [&](const Expr* expr, BuiltinBinary operation) {
+			expect_inline(expr, operation);
+			const auto* bin_op = dynamic_cast<const BinaryOperatorExpr*>(expr);
+			ASSERT_TRUE(dynamic_cast<const DerefExpr*>(bin_op->lhs.get()) != nullptr);
+			ASSERT_TRUE(dynamic_cast<const DerefExpr*>(bin_op->rhs.get()) != nullptr);
+		};
+
+		const SymID boxed_equal = operator_called_from(getChain("boxedEqual", root_scope).back());
+		expect_generated(boxed_equal, Kind::Equal, OwnerKind::Class);
+		ASSERT_EQUAL(3, body_of(boxed_equal).size());
+		expect_inline(negated(condition_at(boxed_equal, 0)), BuiltinBinary::IntegerEq);
+		expect_inline_deref(negated(condition_at(boxed_equal, 1)), BuiltinBinary::IntegerEq);
+		expect_returns(boxed_equal, true);
+
+		const SymID boxed_less = operator_called_from(getChain("boxedLess", root_scope).back());
+		expect_generated(boxed_less, Kind::Lesser, OwnerKind::Class);
+		ASSERT_EQUAL(5, body_of(boxed_less).size());
+		expect_inline(condition_at(boxed_less, 0), BuiltinBinary::IntegerLt);
+		expect_inline(condition_at(boxed_less, 1), BuiltinBinary::IntegerLt);
+		expect_inline_deref(condition_at(boxed_less, 2), BuiltinBinary::IntegerLt);
+		expect_inline_deref(condition_at(boxed_less, 3), BuiltinBinary::IntegerLt);
+		expect_returns(boxed_less, false);
+
+		// These comparisons are only generated, not checked.
+		for (const auto* fn_name:
+		     { "floatsEqual", "floatsNotEqual", "floatsLess", "floatsGreater", "typesNotEqual" })
+			body_of(operator_called_from(getChain(fn_name, root_scope).back()));
+
+		// Values of simple types are compared with builtin operations in user code, so their
+		// generated comparison methods are only generated when queried directly.
+		using compiler::helios::defgen::ComparisonKind;
+		const std::vector<std::pair<compiler::tsh::AbstractType, ComparisonKind>> simple_comparisons{
+			{ getIntegralTypeNoContext(64, Signed), ComparisonKind::LesserEqual },
+			{ getIntegralTypeNoContext(64, Signed), ComparisonKind::GreaterEqual },
+			{ getFloatTypeNoContext(64), ComparisonKind::LesserEqual },
+			{ getFloatTypeNoContext(64), ComparisonKind::GreaterEqual },
+			{ compiler::tsh::getUnitType(), ComparisonKind::Equal },
+		};
+		for (const auto& [type, kind]: simple_comparisons) {
+			const auto sym = base::anyCast<SymID>(
+				query::utils::withContextCompute([&](query::Context& ctx) {
+					return compiler::helios::defgen::generatedComparisonSymForType(ctx, type, kind);
+				})
+			);
+			query::entryPoint<compiler::helios::defgen::QueryGeneratedComparisonMethod>(sym)
+				->valueOrPanic();
+		}
 	}
 
 	void testScopeParentsAndDepth() {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "backend_dependent.hpp"
 
 #include <helios/queries/function_queries.hpp>
@@ -10,35 +16,37 @@
 
 namespace compiler::helios {
 
-	template<typename Attr>
-	SymID searchForSymbolWithAttributeAndName(
-		query::Context& ctx, SymID scope_source_sym, base::StrID searched_name
-	) {
-		auto symbols = ctx.query<QuerySymbolsInScope>(scope(scope_source_sym))->valueOrThrow();
-		std::vector<SymID> results;
-		for (auto s: symbols)
-			if (name(s) == searched_name && hasAttribute<Attr>(s)) results.push_back(s);
-		if (results.size() > 1) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
-				"Multiple symbols with name `",
-				searched_name,
-				"` and attribute `",
-				attrNameStr(Attr{}),
-				"` found. Expected at most one."
-			)));
-			query::throwFailed();
+	namespace {
+		template<typename Attr>
+		SymID searchForSymbolWithAttributeAndName(
+			query::Context& ctx, SymID scope_source_sym, base::StrID searched_name
+		) {
+			auto symbols = ctx.query<QuerySymbolsInScope>(scope(scope_source_sym))->valueOrThrow();
+			std::vector<SymID> results;
+			for (auto s: symbols)
+				if (name(s) == searched_name && hasAttribute<Attr>(s)) results.push_back(s);
+			if (results.size() > 1) {
+				ctx.log<dia::PlaceholderError>(base::strConcat(
+					"Multiple symbols with name `",
+					searched_name,
+					"` and attribute `",
+					attrNameStr(Attr{}),
+					"` found. Expected at most one."
+				));
+				query::throwFailed();
+			}
+			if (results.empty()) {
+				ctx.log<dia::PlaceholderError>(base::strConcat(
+					"No symbol with name `",
+					searched_name,
+					"` and attribute `",
+					attrNameStr(Attr{}),
+					"` found. Expected exactly one."
+				));
+				query::throwFailed();
+			}
+			return results.at(0);
 		}
-		if (results.empty()) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
-				"No symbol with name `",
-				searched_name,
-				"` and attribute `",
-				attrNameStr(Attr{}),
-				"` found. Expected exactly one."
-			)));
-			query::throwFailed();
-		}
-		return results.at(0);
 	}
 
 	std::vector<SymID> getBackendDependentImplementations(query::Context& ctx, SymID sym_id) {

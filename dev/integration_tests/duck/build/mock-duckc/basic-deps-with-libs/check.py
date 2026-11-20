@@ -1,3 +1,9 @@
+# Copyright 2026 DuckType LLC
+#
+# This file is part of the Duckling project, licensed under the DuckType
+# Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+# of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 import sys
 from pathlib import Path
 
@@ -31,6 +37,8 @@ assert bar_deps.exists()
 
 text = bar_deps.read_text()
 
+# `found` is in foo's `external-lib-paths`, so it is passed by its path. bar's two libraries are
+# not in any search directory, so they fall back to `-l<name>` and the linker looks for them.
 expected = f"""{{
   "packages": [
     {{
@@ -64,6 +72,14 @@ text = foo_deps.read_text()
 expected = f"""{{
   "packages": [
     {{
+      "id": "{bar_name}",
+      "name": "bar",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(bar_path)}/src",
+      "dependencies": []
+    }},
+    {{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
@@ -74,14 +90,6 @@ expected = f"""{{
           "id": "{bar_name}"
         }}
       ]
-    }},
-    {{
-      "id": "{bar_name}",
-      "name": "bar",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(bar_path)}/src",
-      "dependencies": []
     }}
   ],
   "tasks": [
@@ -89,7 +97,12 @@ expected = f"""{{
       "package": "{foo_name}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}",
-      "linking_options": "{str(bar_artifacts / f"{bar_name}.a")} lib1 lib2"
+      "linking_options": [
+        "{str(bar_artifacts / f"{bar_name}.a")}",
+        "{str(foo_path / "libs" / "libfound.a")}",
+        "-lduck-not-installed-1",
+        "-lduck-not-installed-2"
+      ]
     }}
   ]
 }}"""

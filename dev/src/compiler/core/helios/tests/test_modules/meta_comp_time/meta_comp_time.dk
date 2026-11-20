@@ -1,10 +1,12 @@
 ### Tree evaluation.
 const SIMPLE_REF = ref i64;
 const SIMPLE_BOX = box i64;
-const SIMPLE_CONST = const i64;
+const SIMPLE_IMM = imm i64;
 const SIMPLE_VARIANT = i32 | f64;
 const SIMPLE_TUPLE: type = (i32, f64);
-const CMP_1 = (const i32) == createConst(i32);
+const CMP_1 = (imm i32) == createImm(i32);
+const CMP_3 = (mut (imm i32)) == i32;
+const CMP_4 = createMut(imm i32) == i32;
 const CMP_2 = i32 != i64;
 
 ### Function evaluation.
@@ -12,7 +14,8 @@ fun createUnit() -> type = ();
 fun createBox(t: type) -> type = box t;
 fun createRef(t: type) -> type = ref t;
 # @TODO: #1727 Change the following, when this gets fixed.
-fun createConst(t: type) -> type = (const t);
+fun createMut(t: type) -> type = (mut t);
+fun createImm(t: type) -> type = (imm t);
 fun createVariant(a: type, b: type, c: type, d: type) -> type = a | b | c | d;
 fun createTuple(a: type, b: type, c: type, d: type) -> type = (a, b, c, d);
 fun megaType(a: type) -> type = (createUnit(), createBox(a), i32, (i16, f16), i64 | (f64, f128));
@@ -20,7 +23,7 @@ fun megaType(a: type) -> type = (createUnit(), createBox(a), i32, (i16, f16), i6
 const A = createUnit();
 const B = createBox(i32);
 const C = createRef(i32);
-const D = createConst(i32);
+const D = createImm(i32);
 const E = createVariant(i16, i32, i64, i128);
 const F = createTuple(i16, i32, i64, i128);
 const megaGigaType = megaType(i128);
@@ -95,3 +98,27 @@ fun buildAndMatch(use_int: bool) -> i64 = {
 }
 const MATCHED_INT = buildAndMatch(true);
 const MATCHED_OTHER = buildAndMatch(false);
+
+
+### Type tuples.
+const TYPE_TUPLE = (bool, str);
+const TYPE_TUPLE_VALUE: TYPE_TUPLE = (true, "abc");
+
+fun getFromTuple(t: type) -> type = {
+    var a = (t, t);
+    return (a, a);
+}
+const NESTED_TYPE_TUPLE = getFromTuple(i32);
+const SINGLE_TYPE_TUPLE = (i32,);
+
+
+### Function types.
+const RAW_PAIR = funptr(i32, i32) -> bool;
+const CLOSURE_PAIR = (i32, i32) -> bool;
+const RAW_SINGLE = funptr i32 -> bool;
+const RAW_NO_PARAMS = funptr() -> bool;
+const RAW_UNIT_RESULT = funptr(i32) -> ();
+const RAW_TUPLE_PARAM = funptr((i32, i32)) -> bool;
+const RAW_ONE_ELEMENT_LIST = funptr(i32,) -> bool;
+const PAIR_ALIAS = (i32, i32);
+const RAW_FROM_ALIAS = funptr PAIR_ALIAS -> bool;

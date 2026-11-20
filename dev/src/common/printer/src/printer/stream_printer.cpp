@@ -1,12 +1,20 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "stream_printer.hpp"
 
 namespace printer {
-	// All background color escape codes are 10 above foregrounds colors.
-	ColorID calculateBackgroundColorID(const ColorID color_id) {
-		constexpr int8_t BACKGROUND_FONT_COLOR_OFFSET = 10;
-		return static_cast<ColorID>(
-			color_id > 0 ? color_id + BACKGROUND_FONT_COLOR_OFFSET : color_id
-		);
+	namespace {
+		// All background color escape codes are 10 above foregrounds colors.
+		ColorID calculateBackgroundColorID(const ColorID color_id) {
+			constexpr int8_t BACKGROUND_FONT_COLOR_OFFSET = 10;
+			return static_cast<ColorID>(
+				color_id > 0 ? color_id + BACKGROUND_FONT_COLOR_OFFSET : color_id
+			);
+		}
 	}
 
 	void StreamPrinter::print(const std::vector<PrinterContent>& contents, std::ostream& out) {

@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! High-level abstraction over a manifest and its inner types.
 //!
 //! The most notable members are [`Manifest`] and [`Dependency`].
@@ -6,6 +12,7 @@
 mod build_options;
 mod dependency;
 mod features;
+mod lints;
 mod metadata;
 mod parse;
 mod profiles;
@@ -15,6 +22,7 @@ mod venv_config;
 pub use build_options::BuildOptions;
 pub use dependency::*;
 pub use features::*;
+pub use lints::*;
 pub use metadata::*;
 pub use parse::*;
 pub use profiles::*;
@@ -38,6 +46,7 @@ pub struct Manifest {
     profiles: Profiles,
     venv: VenvConfig,
     build_options: BuildOptions,
+    lints: Lints,
 }
 
 impl Manifest {
@@ -52,6 +61,7 @@ impl Manifest {
         profiles: Profiles,
         venv: VenvConfig,
         build_options: BuildOptions,
+        lints: Lints,
     ) -> Self {
         Self {
             name,
@@ -62,6 +72,7 @@ impl Manifest {
             profiles,
             venv,
             build_options,
+            lints,
         }
     }
 
@@ -127,6 +138,11 @@ impl Manifest {
     pub fn build_options(&self) -> &BuildOptions {
         &self.build_options
     }
+
+    /// Get the [`Lints`] of this manifest.
+    pub fn lints(&self) -> &Lints {
+        &self.lints
+    }
 }
 
 impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
@@ -145,7 +161,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             license,
             name,
             description,
-            links,
+            external_libs,
+            external_lib_paths,
         } = metadata;
         let authors = authors.into_iter().collect();
         let metadata = PackageMetadata {
@@ -153,6 +170,7 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             license: Some(license),
             description: Some(description),
         };
+        let lints = Lints::default();
         validate_package_name(&name)
             .context("registry responded with a package with an invalid name")?;
         Ok(Manifest::new(
@@ -164,8 +182,10 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             profiles.into(),
             VenvConfig::default_for_package(ctx),
             BuildOptions {
-                links: links.map(Into::into),
+                external_libs: external_libs.into_iter().map(Into::into).collect(),
+                external_lib_paths,
             },
+            lints,
         ))
     }
 }
@@ -183,6 +203,7 @@ impl TryFrom<Manifest> for registry::Manifest {
             profiles,
             venv: _,
             build_options,
+            lints: _,
         } = value;
         let license = metadata.license.unwrap_or_default();
         let description = metadata.description.unwrap_or_default();
@@ -193,7 +214,12 @@ impl TryFrom<Manifest> for registry::Manifest {
             license,
             name: name.into(),
             description,
-            links: build_options.links.map(Into::into),
+            external_libs: build_options
+                .external_libs
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            external_lib_paths: build_options.external_lib_paths,
         };
         Ok(Self {
             metadata,

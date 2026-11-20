@@ -1,0 +1,17 @@
+# An import path may leave the module tree and continue into the namespaces of the module it
+# found, down to any symbol, with or without a new name.
+
+import provider.NS as ns;              # a namespace of another module, renamed
+import provider.NS.INNER as inner;     # a namespace nested in that one
+import provider.NS.in_ns as ns_value;  # all the way down to a constant
+import provider.NS;                    # no new name: enters as `NS`
+import provider.NS.INNER.*;            # everything the nested namespace holds
+
+fun main() -> i64 = {
+    builtin_output_i64(ns.in_ns);        # 500
+    builtin_output_i64(inner.in_inner);  # 600
+    builtin_output_i64(ns_value);        # 500
+    builtin_output_i64(NS.in_ns);        # 500
+    builtin_output_i64(in_inner);        # 600
+    return 0;
+}

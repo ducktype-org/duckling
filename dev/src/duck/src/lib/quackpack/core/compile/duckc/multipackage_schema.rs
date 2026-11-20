@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 //! Schema of the multipackage JSON sent to duckc from QuackPack
 //!
 //! There are a few nuances we have to remember about:
@@ -81,12 +87,18 @@ pub enum PackageCompilationStrategy {
     DvmExe {
         /// Path to the output file.
         output_file: PathBuf,
+        /// Bytecode libraries and shared objects to link in.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dvm_linking_options: Option<DvmLinkingOptions>,
     },
     /// Compile this task into a DVM library.
     // Serializes to "dvm_lib" (see the note on `DvmExe`).
     DvmLib {
         /// Path to the output file.
         output_file: PathBuf,
+        /// Bytecode libraries and shared objects to link in.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dvm_linking_options: Option<DvmLinkingOptions>,
     },
     /// Compile this task into a native binary.
     #[serde(rename = "native")]
@@ -111,11 +123,22 @@ pub enum PackageCompilationStrategy {
     EmitLLVMObject {},
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq, Hash)]
+/// Linking options of a DVM task.
+pub struct DvmLinkingOptions {
+    /// Absolute paths of the shared libraries to load.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shared_libraries: Option<Vec<PathBuf>>,
+    /// Absolute paths of the `.dbc` outputs of the package's dependencies.
+    #[serde(rename = "link_libraries", skip_serializing_if = "Option::is_none")]
+    pub bytecode_dependencies: Option<Vec<PathBuf>>,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 /// Possible variants of linking options passed to duckc.
 pub enum LinkerOptions {
     /// Add extra linker arguments.
-    RawLinkerArgs(String),
+    RawLinkerArgs(Vec<String>),
     Complex(ComplexLinkerOptions),
 }
 
@@ -138,7 +161,7 @@ impl<'de> de::Deserialize<'de> for LinkerOptions {
     {
         serde_untagged::UntaggedEnumVisitor::new()
             .expecting("a valid duckc linking options")
-            .string(|string| Ok(Self::RawLinkerArgs(string.to_string())))
+            .seq(|seq| seq.deserialize().map(Self::RawLinkerArgs))
             .map(|map| map.deserialize().map(Self::Complex))
             .deserialize(deserializer)
     }
@@ -151,8 +174,11 @@ pub struct ComplexLinkerOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub linker: Option<PathBuf>,
     /// Pass additional linker arguments.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub additional_linking_options: Option<String>,
+    #[serde(
+        rename = "additional_link_options",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub additional_linking_options: Option<Vec<String>>,
     #[serde(
         rename = "link_c_standard_library",
         skip_serializing_if = "Option::is_none"
@@ -267,7 +293,9 @@ mod tests {
       "strategy": "native",
       "output_file": "out.exe",
       "linking_options": {
-        "additional_linking_options": "-lfoo",
+        "additional_link_options": [
+          "-lfoo"
+        ],
         "link_c_standard_library": true
       }
     },
@@ -275,7 +303,9 @@ mod tests {
       "package": "a",
       "strategy": "native",
       "output_file": "out.exe",
-      "linking_options": "-lfoo"
+      "linking_options": [
+        "-lfoo"
+      ]
     },
     {
       "package": "a",
@@ -370,7 +400,7 @@ mod tests {
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
                         // cSpell:disable-next-line
-                        additional_linking_options: Some("-lfoo".into()),
+                        additional_linking_options: Some(vec!["-lfoo".into()]),
                         link_cstd: Some(true),
                     })),
                 },
@@ -380,7 +410,7 @@ mod tests {
                 strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("out.exe"),
                     // cSpell:disable-next-line
-                    linking_options: Some(LinkerOptions::RawLinkerArgs("-lfoo".into())),
+                    linking_options: Some(LinkerOptions::RawLinkerArgs(vec!["-lfoo".into()])),
                 },
             },
             PackageCompilationTask {
@@ -394,6 +424,7 @@ mod tests {
                 package_id: "dep-hash".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("out.dbc"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
@@ -603,14 +634,20 @@ mod tests {
       "package": "app1",
       "strategy": "native",
       "output_file": "app1",
-      "linking_options": "build/lib_a.a build/lib_c.a build/lib_b.a"
+      "linking_options": [
+        "build/lib_a.a",
+        "build/lib_c.a",
+        "build/lib_b.a"
+      ]
     },
     {
       "package": "app2",
       "strategy": "native",
       "output_file": "app2",
       "linking_options": {
-        "additional_linking_options": "build/lib_a.a",
+        "additional_link_options": [
+          "build/lib_a.a"
+        ],
         "link_c_standard_library": true
       }
     },
@@ -619,7 +656,11 @@ mod tests {
       "strategy": "native",
       "output_file": "app3",
       "linking_options": {
-        "additional_linking_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+        "additional_link_options": [
+          "build/lib_a.a",
+          "build/lib_b.a",
+          "build/lib_c.a"
+        ],
         "link_c_standard_library": true
       }
     },
@@ -628,7 +669,11 @@ mod tests {
       "strategy": "native",
       "output_file": "app3_alias",
       "linking_options": {
-        "additional_linking_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+        "additional_link_options": [
+          "build/lib_a.a",
+          "build/lib_b.a",
+          "build/lib_c.a"
+        ],
         "link_c_standard_library": true
       }
     }
@@ -769,51 +814,60 @@ mod tests {
                 package_id: "lib_a".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_a_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_b".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_b_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_c".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_c_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app1".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app1_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app2_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_alias_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app1".into(),
                 strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("app1"),
-                    linking_options: Some(LinkerOptions::RawLinkerArgs(
-                        "build/lib_a.a build/lib_c.a build/lib_b.a".into(),
-                    )),
+                    linking_options: Some(LinkerOptions::RawLinkerArgs(vec![
+                        "build/lib_a.a".into(),
+                        "build/lib_c.a".into(),
+                        "build/lib_b.a".into(),
+                    ])),
                 },
             },
             PackageCompilationTask {
@@ -822,7 +876,7 @@ mod tests {
                     output_file: PathBuf::from("app2"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
-                        additional_linking_options: Some("build/lib_a.a".into()),
+                        additional_linking_options: Some(vec!["build/lib_a.a".into()]),
                         link_cstd: Some(true),
                     })),
                 },
@@ -833,9 +887,11 @@ mod tests {
                     output_file: PathBuf::from("app3"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
-                        additional_linking_options: Some(
-                            "build/lib_a.a build/lib_b.a build/lib_c.a".into(),
-                        ),
+                        additional_linking_options: Some(vec![
+                            "build/lib_a.a".into(),
+                            "build/lib_b.a".into(),
+                            "build/lib_c.a".into(),
+                        ]),
                         link_cstd: Some(true),
                     })),
                 },
@@ -846,9 +902,11 @@ mod tests {
                     output_file: PathBuf::from("app3_alias"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
-                        additional_linking_options: Some(
-                            "build/lib_a.a build/lib_b.a build/lib_c.a".into(),
-                        ),
+                        additional_linking_options: Some(vec![
+                            "build/lib_a.a".into(),
+                            "build/lib_b.a".into(),
+                            "build/lib_c.a".into(),
+                        ]),
                         link_cstd: Some(true),
                     })),
                 },

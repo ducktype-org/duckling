@@ -75,14 +75,17 @@
             "package": "app1",
             "strategy": "native",
             "output_file": "app1.exe",
-            "linking_options": "build/lib_a.a build/lib_b.a"
+            "linking_options": [
+                "build/lib_a.a",
+                "build/lib_b.a"
+            ]
         },
         {
             "package": "app2",
             "strategy": "native",
             "output_file": "app2.exe",
             "linking_options": {
-                "additional_link_options": "build/lib_a.a",
+                "additional_link_options": ["build/lib_a.a"],
                 "link_c_standard_library": true
             }
         }

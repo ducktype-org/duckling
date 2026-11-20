@@ -1,4 +1,8 @@
-
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <system_command/system_command.hpp>
 #include <tester/tester.hpp>
@@ -12,16 +16,19 @@ public:
 
 private:
 	void exitCode() {
-		// https://en.wikipedia.org/wiki/True_and_false_(commands)
-		auto true_ec = system_command::SystemCommand("true").execute();
-		assertTrue(true_ec == 0, "true command should return 0");
-		auto false_ec = system_command::SystemCommand("false").execute(
-			system_command::SystemCommand::ExitCodeHandling::Ignore
-		);
-		assertTrue(false_ec == 1, "false command should return 1");
+		// Do NOT use `true` nor `false`: they are shell built-ins, and not executables.
+		auto true_ec = system_command::SystemCommand("/bin/ls").execute();
+		assertTrue(true_ec == 0, "/bin/ls command should return 0");
+		auto false_ec = system_command::SystemCommand("/i-really-hope-this-is-not-executable")
+		                    .execute(system_command::SystemCommand::ExitCodeHandling::Ignore);
+		assertTrue(false_ec != 0, "not-executable shouldn't return 0 command should return 1");
 
 		assertThrows<base::Panic>(
-			[&]() { system_command::SystemCommand("false").execute(); },
+			[&]() {
+				[[maybe_unused]] auto rc
+					= system_command::SystemCommand("/i-really-hope-this-is-not-executable")
+			              .execute();
+			},
 			"command should panic on non-zero exit code"
 		);
 	}

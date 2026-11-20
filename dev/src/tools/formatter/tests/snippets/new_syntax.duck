@@ -1,0 +1,48 @@
+# Syntax that landed after the formatter was first written.
+
+export fun identity(x: i64) -> i64 = x;
+
+fun classify(v: i32 | f32) -> i64 = {
+	return match (v) {
+		case x: i32 = x as i64;
+		case _: f32 = -1i64;
+	};
+}
+
+template(T: type)
+fun pick() -> i64 = {
+	if const (T == char) {
+		return 1;
+	} else if const (T == str) {
+		return 2;
+	}
+}
+
+template(a: i64)
+const GENERATED: i64 = a;
+
+fun bits(a: i64, b: i64) -> i64 = ~a | b & 3 ^ 1 << 2 >> 1;
+
+fun ptrs(x: ref i64) -> () = {
+	let p = ptrof x;
+	let c = copyof x;
+	let m = move x;
+	let r = refof x;
+}
+
+fun +*(a: i64, b: i64) -> i64 = a * b + a;
+
+fun -*(a: i64) -> i64 = a * 6;
+
+class Foo {
+	x: i64 = 0;
+
+	fun +(a: i64) -> i64 = x * a + x;
+}
+
+fun generics() -> i64 = {
+	builtin_output_i64(pick:{char}());
+	return impl.max:{i32}(1, 2);
+}
+
+fun textOperators(a: bool, b: bool) -> bool = not a and b;

@@ -1,4 +1,16 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "code_line.hpp"
+
+#include <base/collections/hashmap.hpp>
+
+#include <diagnostic/term_ui/display_width.hpp>
+
+#include <algorithm>
 
 namespace term_ui {
 
@@ -32,8 +44,8 @@ namespace term_ui {
 
 			if (piece.pointer_ids.empty()) {
 				// Print the code piece.
-				out << piece.text;
-				col += piece.text.size();
+				out << expandTabs(piece.text);
+				col += displayWidth(piece.text);
 			} else {
 				// Buffer all pointer messages.
 				for (auto pointer_message_id: piece.pointer_ids) {
@@ -48,9 +60,10 @@ namespace term_ui {
 					while (last_idx < line.pieces.size()
 					       && line.pieces[last_idx].pointer_ids.contains(pointer_message_id)) {
 						visited_pointer_messages[last_idx].insert(pointer_message_id);
-						last_col += line.pieces[last_idx].text.size();
+						last_col += displayWidth(line.pieces[last_idx].text);
 						++last_idx;
 					}
+					last_col = std::max(last_col, col + 1);
 					lowered.emplace_back(
 						ctx.at(pointer_message_id).priority,
 						col,
@@ -62,8 +75,8 @@ namespace term_ui {
 				}
 
 				// Print the code piece.
-				out << piece.text;
-				col += piece.text.size();
+				out << expandTabs(piece.text);
+				col += displayWidth(piece.text);
 			}
 		}
 		out << '\n';

@@ -1,6 +1,4 @@
-++++++++++++++++++++++++++++
-+   Debugger has started   +
-++++++++++++++++++++++++++++
+Welcome to BeRD - an interactive in-DVM debugger! (now with replxx support!)
 Usage:  [GLOBAL OPTIONS] <COMMAND> [OPTIONS]
 
 Available Commands:

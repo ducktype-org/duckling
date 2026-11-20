@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -41,13 +47,14 @@ private:
 			// these values might need to be updated.
 
 			assertTrue(
-				my_class_interface->getElements().size() == 8,
-				"There should be exactly six declared members, plus the generated constructor and "
-				"the generated parameterless constructor"
+				my_class_interface->getElements().size() == 14,
+				"There should be exactly six declared members, plus the generated constructor, "
+				"the generated parameterless constructor and the six comparison operators"
 			);
 			assertTrue(
-				my_class_interface->getElementsByName().size() == 5,
-				"There should be exactly four unique names, plus the generated destructor"
+				my_class_interface->getElementsByName().size() == 11,
+				"There should be exactly four unique names, plus the generated destructor and "
+				"the six comparison operators"
 			);
 
 			assertTrue(
@@ -93,7 +100,8 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto get_type = [&](const compiler::helios::SymID sym_id) {
-				return SymbolType<>::withDefaults(ctx.query<compiler::tsh::QueryClassType>(sym_id));
+				return SymbolType<>::withDefaultsMut(ctx.query<compiler::tsh::QueryClassType>(sym_id
+				));
 			};
 
 			auto assert_flags = [&](const SymbolType<>& type,
@@ -235,11 +243,12 @@ private:
 			ASSERT_EQUAL(1, std::ranges::distance(interface->getStaticFieldsView()));
 			ASSERT_EQUAL(5, std::ranges::distance(interface->getAnyFieldsView()));
 
-			// `getPub`, `setPub`, `insidePrivate`, the user destructor and the generated one.
-			ASSERT_EQUAL(5, std::ranges::distance(interface->getMethodsView()));
+			// `getPub`, `setPub`, `insidePrivate`, the user destructor, the generated one and the
+			// six comparison operators.
+			ASSERT_EQUAL(11, std::ranges::distance(interface->getMethodsView()));
 			// `make`, the copy constructor and the two generated constructors.
 			ASSERT_EQUAL(4, std::ranges::distance(interface->getStaticMethodsView()));
-			ASSERT_EQUAL(9, std::ranges::distance(interface->getAnyMethodsView()));
+			ASSERT_EQUAL(15, std::ranges::distance(interface->getAnyMethodsView()));
 
 			ASSERT_HAS_VALUE(interface->getSpecialElement(MemberSpecialKind::CopyConstructor));
 			ASSERT_HAS_VALUE(interface->getSpecialElement(MemberSpecialKind::UserDestructor));

@@ -1,0 +1,648 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#include <debug_info/debug_info.hpp>
+#include <debug_info/debug_info_io.hpp>
+#include <vm_tester_utils.hpp>
+
+#include <filesystem/file.hpp>
+#include <tester/tester.hpp>
+
+#include <vm/api/data/function_source_info.hpp>
+#include <vm/api/data/stack_trace.hpp>
+#include <vm/api/vm.hpp>
+#include <vm/core/safe/exceptions.hpp>
+
+#include <array>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+
+/**
+ * @brief What belongs here: every error the VM detects WHILE a single-threaded program runs. The
+ * program loads fine, then the VM stops it with a panic (or reports a leak when the process is
+ * validated). Each test checks that the right error is raised.
+ *
+ * The fixtures sit in one folder per area: `arithmetic/`, `memory/`, `pointers/`, `arrays/`,
+ * `variants/` and `inheritance/`. Errors that need several threads go to `threads/`, which has
+ * its own binary. A program the loader must reject goes to `loader/`.
+ */
+class VmRuntimeErrorsTest: public VmRuntimeTestSuite {
+#undef TESTER_CLASS
+#define TESTER_CLASS VmRuntimeErrorsTest
+
+public:
+	VM_RUNTIME_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// Arithmetic
+		TESTER_ADD_TEST(checkZeroDivision);
+		TESTER_ADD_TEST(panicPrintsStackTrace);
+		TESTER_ADD_TEST(panicStackTracePrintsSourceNames);
+		TESTER_ADD_TEST(panicStackTracePrintsSourceLines);
+		TESTER_ADD_TEST(lineOfInstructionTakesTheLastLineBefore);
+		TESTER_ADD_TEST(printStackTraceDescribesEachFrame);
+		TESTER_ADD_TEST(stackTraceRoundTripsThroughJson);
+		TESTER_ADD_TEST(debugInfoNextToBytecodeIsFoundAndRead);
+
+		// Memory
+		TESTER_ADD_TEST(localLeakTest);
+		TESTER_ADD_TEST(globalLeakTest);
+		TESTER_ADD_TEST(nestedLeaks);
+		TESTER_ADD_TEST(doubleFreeIsRefused);
+		TESTER_ADD_TEST(dynTableReAllocAfterFreeIsRefused);
+		TESTER_ADD_TEST(dynTableFreeAfterFreeIsRefused);
+		TESTER_ADD_TEST(freeingALocalIsRefused);
+		TESTER_ADD_TEST(freeingAGlobalIsRefused);
+		TESTER_ADD_TEST(freeingAVariantPayloadIsRefused);
+		TESTER_ADD_TEST(freeingAStructFieldIsRefused);
+		TESTER_ADD_TEST(readingANestedBlockAfterFreeIsRefused);
+
+		// Pointers
+		TESTER_ADD_TEST(ptrPartsTest);
+
+		// C pointers
+		TESTER_ADD_TEST(cptrNullTypedLoadFails);
+		TESTER_ADD_TEST(cptrNullRawReadFails);
+		TESTER_ADD_TEST(cptrCastOfNullPointerFails);
+
+		// Arrays
+		TESTER_ADD_TEST(dynTableTooLarge);
+		TESTER_ADD_TEST(fstToDynOutOfBounds);
+		TESTER_ADD_TEST(reallocOnFst);
+
+		// Variants
+		TESTER_ADD_TEST(simpleVariant1);
+		TESTER_ADD_TEST(simpleVariant2);
+		TESTER_ADD_TEST(nestedVariantUseAfterFree);
+
+		// Inheritance
+		TESTER_ADD_TEST(unsetVtable);
+
+		// Function values
+		TESTER_ADD_TEST(nullFunctionCallFails);
+		TESTER_ADD_TEST(unknownFunctionValueFails);
+	}
+
+private:
+	// Arithmetic
+
+	void checkZeroDivision() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("arithmetic/zero_division_i64.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("arithmetic/zero_division_i32.dbc", "", "0"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+	}
+
+	void panicPrintsStackTrace() {
+		// The panic is reported on `std::cerr` by the execution thread, which the run joins.
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		auto              run = runTestOnVmGetResult("arithmetic/zero_division_nested.dbc");
+		std::cerr.rdbuf(original_cerr);
+
+		assertExecutionPanickedWithAndKill(run, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+
+		// Most recent call first. Callers point at their call, the innermost frame has no
+		// saved position.
+		const std::string stderr_output = captured.str();
+		assertTrue(
+			stderr_output.contains("DVM stack trace (most recent call first):\n"
+		                           "  #0 divideByZero\n"
+		                           "  #1 forward at "),
+			"The innermost frames are listed first: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains("zero_division_nested.dbc:19:"),
+			"`forward` points at its call: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains("  #2 main at "), "`main` is the last frame: " + stderr_output
+		);
+		assertTrue(
+			!stderr_output.contains("#3"), "The start function is not listed: " + stderr_output
+		);
+	}
+
+	void panicStackTracePrintsSourceNames() {
+		// Debug info names two of the three functions. `main` has no entry, so it keeps its
+		// bytecode name, and so does a function whose metadata has no name.
+		const auto metadata_named = [](base::Optional<std::string> name) {
+			debug_info::FunctionMetadata metadata;
+			metadata.function_name = std::move(name);
+			return metadata;
+		};
+		debug_info::DebugInfo debug_info;
+		debug_info.functions.put("divideByZero", metadata_named("divide"));
+		debug_info.functions.put("forward", metadata_named("passOn"));
+		debug_info.functions.put("main", metadata_named(std::nullopt));
+		vm::api::FunctionSourceInfos names;
+		vm::api::addFunctionSourceInfo(names, debug_info);
+		ASSERT_EQUAL(usize{ 3 }, names.size());
+		ASSERT_TRUE(!names.at(base::StrID("main")).name.has_value());
+
+		const auto pid = spawnAndLoad("arithmetic/zero_division_nested.dbc");
+		assertSucceeded(vm::api::setFunctionSourceInfo(pid, names), "setFunctionSourceInfo");
+
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		auto              run           = runTestOnVmGetResult(pid);
+		std::cerr.rdbuf(original_cerr);
+
+		assertExecutionPanickedWithAndKill(run, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+
+		const std::string stderr_output = captured.str();
+		assertTrue(
+			stderr_output.contains("DVM stack trace (most recent call first):\n"
+		                           "  #0 divide\n"
+		                           "  #1 passOn at "),
+			"Functions with a source name are printed by it: " + stderr_output
+		);
+		assertTrue(
+			stderr_output.contains("  #2 main at "),
+			"A function without a source name keeps its bytecode name: " + stderr_output
+		);
+	}
+
+	/**
+	 * @brief A source position on one line of `file`, as debug info stores it once resolved.
+	 */
+	static debug_info::SourcePosition lineIn(const std::string& file, u64 line) {
+		return { .line_col_position = debug_info::FilePosition{ .file_path    = file,
+			                                                    .start_line   = line,
+			                                                    .start_column = 1,
+			                                                    .end_line     = line,
+			                                                    .end_column   = 2 } };
+	}
+
+	void panicStackTracePrintsSourceLines() {
+		// In `zero_division_nested.dbc` both calls are the instruction at index 3.
+		debug_info::DebugInfo debug_info;
+
+		debug_info::FunctionMetadata divide;
+		divide.function_name = "divide";
+		divide.position      = lineIn("math.dk", 1);
+		debug_info.functions.put("divideByZero", std::move(divide));
+
+		// Like the compiler emits it: the call's line sits on its argument setup (index 1), before
+		// the call itself, and the next statement (line 8) starts after it.
+		debug_info::FunctionMetadata forward;
+		forward.function_name             = "forward";
+		forward.position                  = lineIn("math.dk", 5);
+		forward.instr_offsets_to_metadata = { { 0, { lineIn("math.dk", 6) } },
+			                                  { 1, { lineIn("math.dk", 7) } },
+			                                  { 4, { lineIn("math.dk", 8) } } };
+		debug_info.functions.put("forward", std::move(forward));
+
+		debug_info::FunctionMetadata main;
+		main.function_name             = "main";
+		main.instr_offsets_to_metadata = { { 3, { lineIn("main.dk", 12) } } };
+		debug_info.functions.put("main", std::move(main));
+
+		vm::api::FunctionSourceInfos infos;
+		vm::api::addFunctionSourceInfo(infos, debug_info);
+
+		const auto pid = spawnAndLoad("arithmetic/zero_division_nested.dbc");
+		assertSucceeded(vm::api::setFunctionSourceInfo(pid, infos), "setFunctionSourceInfo");
+
+		std::stringstream captured;
+		auto*             original_cerr = std::cerr.rdbuf(captured.rdbuf());
+		auto              run           = runTestOnVmGetResult(pid);
+		std::cerr.rdbuf(original_cerr);
+
+		assertExecutionPanickedWithAndKill(run, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+
+		// The innermost frame has no saved position, so it says where its function is.
+		const std::string stderr_output = captured.str();
+		assertTrue(
+			stderr_output.contains("DVM stack trace (most recent call first):\n"
+		                           "  #0 divide (defined at math.dk:1)\n"
+		                           "  #1 forward at math.dk:7\n"
+		                           "  #2 main at main.dk:12\n"),
+			"Each frame shows its Duckling file and line: " + stderr_output
+		);
+	}
+
+	void lineOfInstructionTakesTheLastLineBefore() {
+		const auto at = [](u64 line) {
+			return vm::api::SourceLine{ .file = base::StrID("a.dk"), .line = line };
+		};
+		vm::api::FunctionSourceInfo info;
+		ASSERT_TRUE(!info.lineOfInstruction(0).has_value());
+
+		info.instruction_lines = { { 2, at(10) }, { 5, at(11) } };
+		// Before the first entry, the first line is the only one left.
+		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(0).value().line);
+		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(2).value().line);
+		// A `call` after its argument setup still belongs to the line of that setup.
+		ASSERT_EQUAL(u64{ 10 }, info.lineOfInstruction(4).value().line);
+		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(5).value().line);
+		ASSERT_EQUAL(u64{ 11 }, info.lineOfInstruction(9).value().line);
+	}
+
+	/**
+	 * @brief A stack trace with one frame of each kind, and a gap where frames were left out.
+	 */
+	static vm::api::StackTrace sampleStackTrace() {
+		using vm::api::StackFrame;
+		const auto at = [](std::string file, u64 line, base::Optional<u64> column = {}) {
+			return vm::api::SourceLocation{ .file   = std::move(file),
+				                            .line   = line,
+				                            .column = column };
+		};
+		vm::api::StackTrace trace;
+		trace.frames = {
+			StackFrame{ .depth         = 0,
+			            .function_name = base::StrID("_Q_divide"),
+			            .source_name   = "divide",
+			            .call_site     = {},
+			            .definition    = at("math.dk", 1) },
+			StackFrame{ .depth         = 1,
+			            .function_name = base::StrID("_Q_forward"),
+			            .source_name   = {},
+			            .call_site     = at("math.dbc", 19, 5),
+			            .definition    = at("math.dk", 5) },
+			StackFrame{ .depth         = 5,
+			            .function_name = base::StrID("main"),
+			            .source_name   = {},
+			            .call_site     = {},
+			            .definition    = {} },
+		};
+		return trace;
+	}
+
+	/**
+	 * @brief What `StackTrace::print` writes for `trace`.
+	 */
+	static std::string printed(const vm::api::StackTrace& trace) {
+		std::stringstream out;
+		trace.print(out);
+		return out.str();
+	}
+
+	void printStackTraceDescribesEachFrame() {
+		ASSERT_EQUAL(std::string(), printed({}));
+
+		// A source name wins over the mangled one, a call site over the definition, and the
+		// depths skipped between two frames are counted.
+		ASSERT_EQUAL(
+			std::string("DVM stack trace (most recent call first):\n"
+		                "  #0 divide (defined at math.dk:1)\n"
+		                "  #1 _Q_forward at math.dbc:19:5\n"
+		                "  ... 3 frames omitted ...\n"
+		                "  #5 main\n"),
+			printed(sampleStackTrace())
+		);
+	}
+
+	void stackTraceRoundTripsThroughJson() {
+		const auto           trace = sampleStackTrace();
+		const nlohmann::json json  = trace;
+		ASSERT_EQUAL(std::string("divide"), json["frames"][0]["source_name"].get<std::string>());
+		ASSERT_TRUE(json["frames"][0]["call_site"].is_null());
+		ASSERT_TRUE(json["frames"][1]["call_site"]["column"] == 5);
+		ASSERT_TRUE(json.get<vm::api::StackTrace>() == trace);
+	}
+
+	void debugInfoNextToBytecodeIsFoundAndRead() {
+		const auto dir = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto dbc = (dir / "program.dbc").string();
+
+		// Only a bytecode file has debug info next to it, and only when the file is there.
+		ASSERT_TRUE(!vm::api::findDebugInfoNextToBytecode((dir / "program.o").string()));
+		ASSERT_TRUE(!vm::api::findDebugInfoNextToBytecode(dbc).has_value());
+
+		debug_info::DebugInfo        debug_info;
+		debug_info::FunctionMetadata divide;
+		divide.function_name = "divide";
+		divide.position      = lineIn("math.dk", 3);
+		debug_info.functions.put("divideByZero", std::move(divide));
+		{
+			std::ofstream output(dir / "program.di.json");
+			debug_info::saveToStream(debug_info, output);
+		}
+
+		const auto found = vm::api::findDebugInfoNextToBytecode(dbc);
+		ASSERT_TRUE(found.has_value());
+		ASSERT_EQUAL((dir / "program.di.json").string(), found->getPath().string());
+
+		vm::api::FunctionSourceInfos infos;
+		ASSERT_TRUE(vm::api::addFunctionSourceInfoFromFile(infos, *found).has_value());
+		const auto& info = infos.at(base::StrID("divideByZero"));
+		ASSERT_EQUAL(std::string("divide"), info.name.value());
+		ASSERT_EQUAL(u64{ 3 }, info.definition.value().line);
+
+		// A missing or broken file is reported, and adds nothing.
+		const auto missing
+			= vm::api::addFunctionSourceInfoFromFile(infos, fs::FilePath(dir / "missing.di.json"));
+		ASSERT_TRUE(!missing.has_value());
+		assertTrue(missing.error().starts_with("Cannot open"), missing.error());
+
+		{
+			std::ofstream output(dir / "broken.di.json");
+			output << "{ not json";
+		}
+		const auto broken
+			= vm::api::addFunctionSourceInfoFromFile(infos, fs::FilePath(dir / "broken.di.json"));
+		ASSERT_TRUE(!broken.has_value());
+		assertTrue(broken.error().starts_with("Cannot read"), broken.error());
+		ASSERT_EQUAL(usize{ 1 }, infos.size());
+
+		std::filesystem::remove_all(dir);
+	}
+
+	// Memory
+
+	void localLeakTest() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("../../common/programs/local_leak.dbc"),
+			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
+		);
+	}
+
+	void globalLeakTest() {
+		// The leak is only found when the process is validated, so the run itself succeeds.
+		const auto result = runTestOnVmGetResult("../../common/programs/global_leak.dbc");
+		assertSucceeded(result.run_result, "Running global_leak.dbc");
+		const auto validation_result = vm::api::deinitAndValidate(result.pid);
+		assertSucceeded(validation_result, "Validating the process");
+		assertTrue(!validation_result->memory_valid, "The leaked global was not reported");
+	}
+
+	void nestedLeaks() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/nested_leaks.dbc"),
+			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
+		);
+	}
+
+	void doubleFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/double_free.dbc"),
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
+
+	void dynTableReAllocAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/dyn_table_realloc_after_free.dbc"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
+
+	void dynTableFreeAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/dyn_table_free_after_free.dbc"),
+			vm::exceptions::VMDoubleFreeException::ERR_MSG
+		);
+	}
+
+	void freeingALocalIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/free_local.dbc"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	void freeingAGlobalIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/free_global.dbc"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// A payload is a view into the variant, so freeing it would leave the parent holding a
+	/// deallocated child.
+	void freeingAVariantPayloadIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/free_variant_payload.dbc"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// Freeing an interior pointer would free the whole allocation behind it.
+	void freeingAStructFieldIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/free_struct_field.dbc", "0"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/free_struct_field.dbc", "1"),
+			vm::exceptions::VMInvalidFreeException::ERR_MSG
+		);
+	}
+
+	/// A freed variant must not hand out its nested block, whose pool slot is already reusable.
+	void readingANestedBlockAfterFreeIsRefused() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("memory/read_nested_after_free.dbc"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
+
+	// Pointers
+
+	// The offsets of the struct and of its second field, the two ids being equal, and then the
+	// null pointer failing to decompose the way a dereference does.
+	void ptrPartsTest() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("pointers/ptr_parts.dbc", "", "080"), "Accessing null pointer"
+		);
+	}
+
+	// C pointers
+
+	// A default-initialized cpointer is null, so a typed load must fail cleanly, not crash.
+	void cptrNullTypedLoadFails() {
+		const auto pid = spawnAndLoad(inlineDbc(
+			"null_typed_load",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    load_pany_pcptr v, p;\n"
+			"    ret;\n"
+			"}\n"
+		));
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
+	}
+
+	// The same for the raw byte copy.
+	void cptrNullRawReadFails() {
+		const auto pid = spawnAndLoad(inlineDbc(
+			"null_raw_read",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, I64Ptr;\n"
+			"    init_pany_type out, i64;\n"
+			"    init_pany_type op, ptr_i64;\n"
+			"    ref_pptr_pany op, out;\n"
+			"    read_pptr_pcptr op, c;\n"
+			"    ret;\n"
+			"}\n"
+		));
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessed null CPointer");
+	}
+
+	// A null VM pointer has no block, so there is no address to take.
+	void cptrCastOfNullPointerFails() {
+		const auto pid = spawnAndLoad(inlineDbc(
+			"cptr_cast_null",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, ptr_i64;\n"
+			"    setNull_pptr p;\n"
+			"    init_pany_type c, I64Ptr;\n"
+			"    cast_pcptr_pptr c, p;\n"
+			"    ret;\n"
+			"}\n"
+		));
+		assertExecutionPanickedWithAndKill(runTestOnVmGetResult(pid), "Accessing null pointer");
+	}
+
+	// Arrays
+
+	void dynTableTooLarge() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("arrays/too_large.dbc", "", "9223372036854775808"),
+			vm::exceptions::VMMemoryAllocationError::ERR_MSG
+		);
+	}
+
+	void fstToDynOutOfBounds() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("../../common/programs/fst_to_dyn.dbc", "1"),
+			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
+		);
+	}
+
+	void reallocOnFst() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("arrays/realloc_on_fst.dbc", ""),
+			vm::exceptions::VMDynTableReAllocTypeMismatch::ERR_MSG
+		);
+	}
+
+	// Variants
+
+	void simpleVariant1() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("../../common/programs/simple_variant.dbc", "1", "13"),
+			vm::exceptions::VMNullPointerAccessException::ERR_MSG
+		);
+	}
+
+	void simpleVariant2() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("../../common/programs/simple_variant.dbc", "2", "13"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
+
+	void nestedVariantUseAfterFree() {
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult("variants/nested_failing.dbc", "15", "15"),
+			vm::exceptions::VMUseAfterFreeException::ERR_MSG
+		);
+	}
+
+	// Inheritance
+
+	void unsetVtable() {
+		using namespace vm::exceptions;
+		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
+			{
+				"inheritance/unset_vtable.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
+			{
+				"inheritance/unset_variant_of_virtual.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
+			{
+				"inheritance/unset_table_of_virtual.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
+			{
+				"inheritance/resetting_vtable.dbc",
+				VMVtableUnset::ERR_MSG,
+			},
+		});
+
+		for (auto& [filename, error]: invalid_filename_and_error)
+			assertExecutionPanickedWithAndKill(runTestOnVmGetResult(filename, "", ""), error);
+	}
+
+	// Function values
+
+	void nullFunctionCallFails() {
+		const auto pid = spawnAndLoad(inlineDbc(
+			"null_function_call",
+			"type fun: thunk {} {}\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type f, thunk;\n"
+			"    call_pfun f;\n"
+			"    ret;\n"
+			"}\n"
+		));
+		assertExecutionPanickedWithAndKill(
+			runTestOnVmGetResult(pid), vm::exceptions::VMNullFunctionCallException::ERR_MSG
+		);
+	}
+
+	/**
+	 * @brief Loads a program with a `call_binop` function calling the function value it is given.
+	 */
+	vm::PID spawnAndLoadFunctionValueCallers() {
+		return spawnAndLoad(inlineDbc(
+			"function_value_callers",
+			"type fun: binop { i64, i64 } { i64 }\n"
+			"function call_binop { binop } -> { i64 } {\n"
+			"    init_pany_type result, i64;\n"
+			"    init_pany_type lhs, i64;\n"
+			"    init_pany_type rhs, i64;\n"
+			"    call_pfun arg0;\n"
+			"    mov_p64_p64 ret0, result;\n"
+			"    deinit;\n"
+			"    deinit;\n"
+			"    ret;\n"
+			"}\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    ret;\n"
+			"}\n"
+		));
+	}
+
+	/**
+	 * @brief Runs `call_binop` with a function value holding @p function_value and asserts the
+	 * call is refused as an invalid function value.
+	 */
+	void assertCallOfForgedBinopFails(vm::PID pid, u64 function_value, std::string_view what) {
+		auto callee = vm::api::getVMValue(pid, "binop");
+		assertSucceeded(callee, "getVMValue(binop)");
+		callee->vm_value->writeBytes<u64>(function_value);
+		assertRefusedWith<vm::api::Panicked>(
+			vm::api::runFunctionAwait(pid, "call_binop", { callee->vm_value.refMut() }),
+			what,
+			vm::exceptions::VMInvalidFunctionValueException::ERR_MSG
+		);
+		assertSucceeded(vm::api::freeVMValue(pid, callee->vm_value.refMut()), "freeVMValue");
+	}
+
+	void unknownFunctionValueFails() {
+		const auto pid = spawnAndLoadFunctionValueCallers();
+		assertCallOfForgedBinopFails(pid, 1'000'000, "a call of an unknown function ID");
+		(void) vm::api::kill(pid);
+	}
+};
+
+TESTER_COMMON_MAIN("/src/vm/tests/runtime/errors/");

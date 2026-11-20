@@ -1,3 +1,9 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #pragma once
 
 #include <base/comptime/type_traits.hpp>
@@ -242,6 +248,12 @@ namespace base {
 
 		MBox& operator=(const MBox& other) = delete;
 
+		void reset() noexcept {
+			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
+			                   // https://github.com/ducktype-org/duckling/issues/402
+			ptr = nullptr;
+		}
+
 		/**
 		 * @brief Move assignment. The object previously pointed to by the MBox is deleted.
 		 *
@@ -369,10 +381,7 @@ namespace base {
 			return Box<T, Deleter>::fromPointerWithCustomDeleter(output, std::move(deleter));
 		}
 
-		~MBox() {
-			deleter.del(ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
-			                   // https://github.com/ducktype-org/duckling/issues/402
-		}
+		~MBox() { reset(); }
 	};
 
 	// Deduction guide for constructing a MBox from a Box:

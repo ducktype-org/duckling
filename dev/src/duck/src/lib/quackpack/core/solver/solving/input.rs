@@ -1,9 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer_state::{self, GatheredInfo};
-use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::solver_freeze::{
+    DepRealizations, SolverFreeze, SolverPackageFreeze,
+};
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -34,7 +42,7 @@ pub(in crate::quackpack::core::solver) struct PreexistenceData {
     features: HashSet<FeatureName>,
     /// Dependencies of the package present in the previous freeze.
     /// This is a mapping `effective name` -> `id of realization`.
-    realized_dependencies: HashMap<StrId, PackageId>,
+    realized_dependencies: DepRealizations,
 }
 
 impl From<SolverPackageFreeze> for PreexistenceData {
@@ -49,7 +57,6 @@ impl From<SolverPackageFreeze> for PreexistenceData {
 impl SolverInput {
     /// Creates the [`SolverInput`], based on the previous freeze, its packages' manifests
     /// and information gathered in the gathering phase.
-    #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
         mut prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
@@ -141,6 +148,14 @@ impl SolverInput {
             format!("package {pkg:?} not present in packages to package data map")
         })
     }
+
+    pub fn all_versions(&self, identity: FullIdentity) -> QuackResult<&HashSet<Version>> {
+        self.versions_for_identity
+            .get(&identity)
+            .with_context_internal(|| {
+                format!("identity {identity:?} not present in identities to versions map")
+            })
+    }
 }
 
 impl PackageData {
@@ -206,7 +221,7 @@ impl From<gatherer_state::PackageData> for PackageData {
 
 #[cfg(test)]
 impl PreexistenceData {
-    pub fn new(features: HashSet<FeatureName>, depedencies: HashMap<StrId, PackageId>) -> Self {
+    pub fn new(features: HashSet<FeatureName>, depedencies: DepRealizations) -> Self {
         Self {
             features,
             realized_dependencies: depedencies,

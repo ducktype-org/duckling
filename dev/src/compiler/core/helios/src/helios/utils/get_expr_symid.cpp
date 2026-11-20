@@ -1,6 +1,13 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
 #include "get_expr_symid.hpp"
 
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 
 #include <base/collections/optional.hpp>
 
@@ -20,5 +27,11 @@ namespace compiler::helios {
 		HoutExprSymbolVisitor visitor;
 		expr->acceptVisitor(visitor);
 		return visitor.symbol;
+	}
+
+	base::Optional<SymID> getIdentifierExprFunctionID(CRef<code::Expr> expr) {
+		return getIdentifierExprSymID(expr).filter([](SymID symbol) {
+			return isFunctionLike(kind(symbol));
+		});
 	}
 }
