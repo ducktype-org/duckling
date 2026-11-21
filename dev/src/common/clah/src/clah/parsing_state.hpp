@@ -75,8 +75,7 @@ namespace clah {
 		std::string frontWord() const;
 
 		/**
-		 * @brief Checks whether there is more arguments to parse in the args string.
-		 * @return Are there any arguments to parse.
+		 * @brief Checks whether all arguments have been consumed.
 		 */
 		bool isEnd() const;
 
@@ -99,6 +98,11 @@ namespace clah {
 
 
 	private:
+		/**
+		 * @brief Checks for a character at the current position in the argument.
+		 */
+		bool hasFrontChar() const;
+
 		/**
 		 * @brief Tries to parse a name of the parameter.
 		 * @return The name and it's type: EmptyName, ShortName or LongName.

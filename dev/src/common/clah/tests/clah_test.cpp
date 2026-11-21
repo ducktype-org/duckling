@@ -4,6 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/str/str_utils.hpp>
+
 #include <clah/clah.hpp>
 #include <tester/tester.hpp>
 
@@ -18,6 +20,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(positionalTest);
+		TESTER_ADD_TEST(emptyArgumentsTest);
 		TESTER_ADD_TEST(namedTest);
 		TESTER_ADD_TEST(flagTest);
 		TESTER_ADD_TEST(multipleFlagsTest);
@@ -80,6 +83,26 @@ private:
 
 		ASSERT_EQUAL("test", res.getPositional<std::string>(0));
 		ASSERT_EQUAL(2, res.getPositional<i64>(1));
+	}
+
+	void emptyArgumentsTest() {
+		auto clah = clah::Clah("prog").add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		                                       .addLongName("value")
+		                                       .addShortDesc("A string value.")
+		                                       .build());
+		const std::string        args  = R"("" "" --value "" tail "" "")";
+		const auto               words = base::strSplit(args);
+		std::vector<const char*> argv{ "./prog" };
+		for (const auto& word: words) argv.push_back(word == "\"\"" ? "" : word.c_str());
+
+		const std::array results{ clah.parse(argv.size(), argv.data()), clah.parseArgs(args) };
+		const std::array expected_extras{ "", "", "tail", "", "" };
+		for (const auto& result: results) {
+			ASSERT_EQUAL("", result.getValue<std::string>("value").value());
+			ASSERT_EQUAL(expected_extras.size(), result.getExtraParameterCount());
+			for (usize i = 0; i < expected_extras.size(); ++i)
+				ASSERT_EQUAL(expected_extras.at(i), result.getExtra<std::string>(i).value());
+		}
 	}
 
 	void namedTest() {
