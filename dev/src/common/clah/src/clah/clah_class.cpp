@@ -209,11 +209,11 @@ namespace clah {
 			bool        is_negative_number = isNegativeNumber(token);
 
 			// Parameter
-			if (token.starts_with('-') && !is_negative_number)
+			if (token.starts_with('-') && !is_negative_number) {
 				st.parseParameter(parameters);
-			else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
-				auto subcmd = maybe_subcmd.value();
 				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
+			} else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
+				auto subcmd = maybe_subcmd.value();
 				// It's a subcommand, go down the tree.
 				st.advanceWord();
 
@@ -242,7 +242,6 @@ namespace clah {
 				}
 			}
 		}
-		if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 	}
 
 	int Clah::execute(usize argc, const char* const* argv) {
