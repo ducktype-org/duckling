@@ -53,7 +53,6 @@ namespace {
 		             .build())
 #ifdef BUILD_TYPE_DEV_DEBUG
 		    .add(clah::ParamBuilder::ofFlag()
-		             .addShortName('d')
 		             .addLongName("debug-logs")
 		             .addShortDesc("Enables DVM debug logs.")
 		             .build())
