@@ -37,6 +37,7 @@ public:
 		TESTER_ADD_TEST(globalOptionsTest);
 		TESTER_ADD_TEST(preHandlerAndHandlerExecutionOrder);
 		TESTER_ADD_TEST(requiredParameterValidation);
+		TESTER_ADD_TEST(nestedCommandValidationTest);
 		TESTER_ADD_TEST(executeReturnValueTest);
 		TESTER_ADD_TEST(executeArgsReturnValueTest);
 		TESTER_ADD_TEST(coexistingSubcommandsAndPositionals);
@@ -467,6 +468,35 @@ private:
 		ASSERT_EQUAL("login", path[1]->getName());
 		ASSERT_EQUAL("login", res.getMatchedCommand().value()->getName());
 		ASSERT_EQUAL("admin", res.getValue<std::string>("user").value());
+	}
+
+	void nestedCommandValidationTest() {
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("remote")
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		                 .addLongName("context")
+		                 .addShortDesc("Select a context.")
+		                 .required()
+		                 .build())
+				.addCustomVerification(
+					[](const clah::ParsingResult& result) -> clah::VerificationResult {
+						if (result.getValue<std::string>("context").value() != "demo")
+							return std::unexpected("Unknown context.");
+						return clah::VerificationPassed{};
+					}
+				)
+				.addSubcommand(clah::Clah("add"))
+		);
+
+		assertThrows<clah::exceptions::MissingRequiredParameter>(
+			[&]() { clah.parseArgs("remote add"); },
+			"Clah should require --context on the intermediate command."
+		);
+		assertThrows<clah::exceptions::CustomVerificationFailed>(
+			[&]() { clah.parseArgs("remote --context invalid add"); },
+			"Clah should run the intermediate command's custom verification."
+		);
+		clah.parseArgs("remote --context demo add");
 	}
 
 	void coexistingSubcommandsAndPositionals() {

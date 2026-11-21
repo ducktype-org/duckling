@@ -20,6 +20,7 @@
 
 #include <cctype>
 #include <iostream>
+#include <ranges>
 #include <string_view>
 #include <utility>
 
@@ -363,13 +364,9 @@ namespace clah {
 			}
 		};
 
-		// Validate this command params.
-		validate_parameters(command->getParameters());
-		// Validate global params. This function is invoked from the root command, thus we
-		// compare it with this.
-		if (command.get() != this) validate_parameters(getParameters());
+		const auto command_path = result.getCommandPath() | std::views::reverse;
+		for (const auto& cmd: command_path) validate_parameters(cmd->getParameters());
 
-		run_custom_verifications(*command);
-		if (command.get() != this) run_custom_verifications(*this);
+		for (const auto& cmd: command_path) run_custom_verifications(*cmd);
 	}
 }  // clah
