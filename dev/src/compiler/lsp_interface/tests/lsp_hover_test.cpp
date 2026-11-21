@@ -77,6 +77,7 @@ public:
 		TESTER_ADD_TEST(multiByteOnTheSameLineTest);
 		TESTER_ADD_TEST(closedDocumentTest);
 		TESTER_ADD_TEST(brokenFileTest);
+		TESTER_ADD_TEST(moreExpressionKindsTest);
 	}
 
 protected:
@@ -237,6 +238,49 @@ private:
 		auto                       uri = openProgram(workspace, under_test, BROKEN);
 
 		assertNoHover(under_test, uri, 1, 8);
+	}
+
+	/**
+	 * @brief Reaches into the kinds of expression `PROGRAM` does not use: match, `if` expressions,
+	 * tuples, references, casts, unary minus, comparison chains, indexing and variants.
+	 */
+	void moreExpressionKindsTest() {
+		constexpr std::string_view EXPRESSIONS_PROGRAM
+			= "fun pick(v: i64 | bool) -> i64 = match (v) {\n"            // 0
+			  "    case i : i64 = i;\n"                                   // 1
+			  "    case b : bool = if b then 1i64 else 2i64;\n"           // 2
+			  "};\n"                                                      // 3
+			  "\n"                                                        // 4
+			  "fun main() -> i64 = {\n"                                   // 5
+			  "    var n = 3i64;\n"                                       // 6
+			  "    var t = (n, 4i64);\n"                                  // 7
+			  "    var r = &n;\n"                                         // 8
+			  "    var c = n as i32;\n"                                   // 9
+			  "    var neg = -n;\n"                                       // 10
+			  "    var ok = 1i64 < n;\n"                                  // 11
+			  "    var arr: i64[2];\n"                                    // 12
+			  "    arr[0] = n;\n"                                         // 13
+			  "    var first = arr[0] + t._1;\n"                          // 14
+			  "    if (ok) return pick(n) + first + neg + (c as i64);\n"  // 15
+			  "	   return 0i64;\n"                                        // 16
+			  "}\n";                                                      // 17
+
+		duck_ls_test::VfsWorkspace workspace("lsp_hover_expressions_ws");
+		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
+		auto                       uri = openProgram(workspace, under_test, EXPRESSIONS_PROGRAM);
+
+		under_test.compiler.publishDiagnostics(uri);
+
+		assertHoverContains(under_test, uri, 1, 19, { "i" });          // match case
+		assertHoverContains(under_test, uri, 2, 23, { "b", "bool" });  // if b then …
+		assertHoverContains(under_test, uri, 7, 13, { "n" });          // (n, 4i64)
+		assertHoverContains(under_test, uri, 8, 13, { "n" });          // &n
+		assertHoverContains(under_test, uri, 9, 12, { "n" });          // n as i32
+		assertHoverContains(under_test, uri, 10, 15, { "n" });         // -n
+		assertHoverContains(under_test, uri, 11, 20, { "n" });         // 1 < n
+		assertHoverContains(under_test, uri, 13, 4, { "arr" });        // arr[0] = …
+		assertHoverContains(under_test, uri, 14, 25, { "t" });         // t._1
+		assertHoverContains(under_test, uri, 15, 24, { "n" });  // pick(n), n becomes a variant
 	}
 };
 

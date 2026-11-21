@@ -180,5 +180,4 @@ namespace duck_ls_test {
 		query::setTrackReverseGraph(true);
 		compiler::frontend::use_module_modifier_remove = true;
 	}
-
 }
