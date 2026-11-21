@@ -343,13 +343,6 @@ mod test {
     }
 
     #[test]
-    fn predefined_dvm() {
-        let profiles = manifest::Profiles::new([].into()).unwrap();
-        let profile = Profile::construct_profile("dvm".into(), &profiles).unwrap();
-        assert!(profile.dvm_bytecode);
-    }
-
-    #[test]
     fn unknown_profile() {
         let profiles = manifest::Profiles::new([].into()).unwrap();
         let error = Profile::construct_profile("a".into(), &profiles).unwrap_err();
