@@ -75,8 +75,7 @@ namespace clah {
 		std::string frontWord() const;
 
 		/**
-		 * @brief Checks whether there is more arguments to parse in the args string.
-		 * @return Are there any arguments to parse.
+		 * @brief Checks whether all arguments have been consumed.
 		 */
 		bool isEnd() const;
 
@@ -100,6 +99,11 @@ namespace clah {
 
 	private:
 		/**
+		 * @brief Checks for a character at the current position in the argument.
+		 */
+		bool hasFrontChar() const;
+
+		/**
 		 * @brief Parses a long parameter (`--name`, `--name=value`, `--name value`).
 		 * Expects the position to be right after the hyphens.
 		 * @param parameters All the available parameters.
@@ -108,8 +112,9 @@ namespace clah {
 
 		/**
 		 * @brief Parses a group of short parameters, e.g. `-abc`, expecting the position to be
-		 * right after the hyphen. Flags are read until the first value parameter, which takes the
-		 * rest of the word as its value (`-O3`, `-O=3`), or the next word if nothing is left
+		 * right after the hyphen. Flags are read until the first value parameter, which takes
+		 * the rest of the word as its value (`-O3`, `-O=3`), or the next word if nothing is
+		 * left
 		 * (`-O 3`).
 		 * @param parameters All the available parameters.
 		 */
@@ -129,7 +134,8 @@ namespace clah {
 		);
 
 		/**
-		 * @brief Parses the value or inserts a flag to the ParsingResult if no ValueParer provided.
+		 * @brief Parses the value or inserts a flag to the ParsingResult if no ValueParer
+		 * provided.
 		 * @param parameter The parameter with mathing name.
 		 * @param name The name of the parameter.
 		 */
