@@ -14,7 +14,7 @@ fun big(a: (i64, i64, i64), k: i64) -> (i64, i64, i64) = {
 
 fun inc2(x: i64) -> i64 = x + 2;
 
-fun inc(r: ref i64) = {
+fun inc(r: ref mut i64) = {
     r += 1;
 }
 

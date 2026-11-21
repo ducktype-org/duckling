@@ -315,6 +315,17 @@
     "keywords": {
       "patterns": [
         {
+          "match": "\\b(if)\\s+(const)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.duckling"
+            },
+            "2": {
+              "name": "keyword.control.duckling"
+            }
+          }
+        },
+        {
           "name": "keyword.control.duckling",
           "match": "\\b(if|then|else|while|for|loop|in|match|switch|case|with|try|catch|break|continue|redo|restart|return|defer|throw)\\b"
         },
@@ -380,7 +391,7 @@
         },
         {
           "name": "keyword.operator.word.duckling",
-          "match": "\\b(as|sizeof|mut|imm|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|refof|ptrof)\\b"
+          "match": "\\b(as|sizeof|mut|imm|ref|box|new|ptr|cptr|manyptr|funptr|slice|copy|copyof|move|refof|ptrof)\\b"
         }
       ]
     },

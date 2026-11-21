@@ -14,7 +14,7 @@ Tests:
       basic:
         Enabled: "false" # @TODO: #3505 reenable when landed
         test-cmd: duck -C root sync
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
             info: successfully synchronized venv \`root\`

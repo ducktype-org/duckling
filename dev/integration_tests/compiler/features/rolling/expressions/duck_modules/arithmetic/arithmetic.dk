@@ -41,8 +41,8 @@ fun aliasingArithmetic() -> () = {
     builtin_output_i64(a);
     builtin_output_i64(x);
 
-    let temp = 4i64;
-    var y: ref i64 = &temp;
+    var temp = 4i64;
+    var y: ref mut i64 = &temp;
 
     y = -a;
     builtin_output_i64(a);

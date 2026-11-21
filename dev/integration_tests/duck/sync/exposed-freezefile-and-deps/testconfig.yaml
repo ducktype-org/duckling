@@ -19,7 +19,7 @@ Tests:
         test-cmd: duck -C foo sync
         alias-bar: ""
         check-arg: no_alias
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`
@@ -27,7 +27,7 @@ Tests:
         test-cmd: duck -C foo sync
         alias-bar: --alias alias
         check-arg: alias
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`foo\`

@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install click and PyYAML
         run: sudo pip install click pyyaml --break-system-packages --no-input
@@ -60,13 +60,15 @@ jobs:
           mkdir -p ${{ github.workspace }}
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Update apt
-        run: sudo apt update
+        uses: ./.github/actions/apt-get/
 
       - name: Install gvc, LLVM and nlohmann_json
-        run: sudo apt -y install libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
+        uses: ./.github/actions/apt-get/
+        with:
+          packages: libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
 
       - name: Install click and PyYAML
         run: sudo pip install click pyyaml --break-system-packages --no-input
@@ -148,7 +150,7 @@ jobs:
           mkdir -p -- "$GITHUB_WORKSPACE"
           echo "Workspace cleaned."
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # we use SHA because branch names can be parsed incorrectly
       - name: Fetch PR target branch

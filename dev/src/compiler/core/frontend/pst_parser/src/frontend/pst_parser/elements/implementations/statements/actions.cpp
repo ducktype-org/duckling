@@ -45,14 +45,31 @@ namespace pst {
 		}
 		state.parse(out.toOpt().value()).eatOne();
 
-		if ((keyword == Keyword::Break || keyword == Keyword::Continue)
-		    && state.ctokens().size() >= 2 && state[0].isKeyword()
-		    && state[1].is(Special::Semicolon)) {
-			auto candidate = state[0].asKeyword();
-			if (isControlFlowTargetKeyword(candidate)) {
-				out->target_keyword = candidate;
-				state.parse(out.toOpt().value()).eatOne();
+		if (keyword == Keyword::Break || keyword == Keyword::Continue) {
+			if (state.notEmpty() && !state[0].is(Special::Semicolon)) {
+				if (state[0].isKeyword() && isControlFlowTargetKeyword(state[0].asKeyword())) {
+					out->target_keyword = state[0].asKeyword();
+					state.parse(out.toOpt().value()).eatOne();
+				} else if (state[0].isIdentifier()) {
+					// A target name is a single identifier, not something complicated.
+					state.parse(out.toOpt().value()).autoFallbackLen(u64{ 1 }).one(&out->expr);
+				} else {
+					state.logInt(makeBox<InvalidControlFlowTargetError>(state.getPosition()));
+					PST_RETURN out;
+				}
+
+				if (state.notEmpty() && !state[0].is(Special::Semicolon)) {
+					if (state[0].isBracketGroup(Token::Square)
+					    || state[0].isBracketGroup(Token::Round)) {
+						state.logInt(makeBox<ControlFlowTargetArgumentsError>(state.getPosition()));
+					} else {
+						state.logInt(
+							makeBox<UnexpectedControlFlowTargetTokensError>(state.getPosition())
+						);
+					}
+				}
 			}
+			PST_RETURN out;
 		}
 
 		if (!state[0].is(Special::Semicolon) && state.notEmpty())

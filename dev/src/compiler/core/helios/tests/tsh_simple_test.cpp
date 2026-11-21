@@ -9,11 +9,15 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
+
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <any>
+#include <tuple>
 
 using namespace compiler::tsh;
 
@@ -569,6 +573,31 @@ private:
 				st(tup_of_refs).isTriviallyCopyable(ctx),
 				"Tuple with reference should not be trivially copyable."
 			);
+
+			// A tuple carries information only if one of its components does.
+			assertTrue(tup_1.carriesInformation(ctx), "Tuple of ints should carry information");
+			const auto unit       = getUnitType();
+			const auto unit_tuple = ctx.query<QueryTupleType>({ { st(unit), st(unit) } });
+			assertFalse(
+				unit_tuple.carriesInformation(ctx), "Tuple of units should not carry information"
+			);
+			const auto nested_unit_tuple
+				= ctx.query<QueryTupleType>({ { st(unit_tuple), st(unit) } });
+			assertFalse(
+				nested_unit_tuple.carriesInformation(ctx),
+				"Nested tuple of units should not carry information"
+			);
+			const auto mixed_tuple = ctx.query<QueryTupleType>({ { st(unit), st(int_16) } });
+			assertTrue(
+				mixed_tuple.carriesInformation(ctx),
+				"Tuple with an int component should carry information"
+			);
+			const auto unit_ref  = SymbolType(unit, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, st(unit) } });
+			assertTrue(
+				ref_tuple.carriesInformation(ctx),
+				"Tuple with a reference component should carry information"
+			);
 		});
 	}
 
@@ -740,10 +769,12 @@ private:
 				nspace.isTriviallyDestructible(ctx),
 				"NamespaceType should be trivially destructible."
 			);
-			assertFalse(
-				module.isTriviallyDestructible(ctx),
-				"ModuleType should not be trivially destructible."
-			);
+			IF_BUILD_TYPE_DEV(
+				assertThrows<base::Panic>(
+					[&]() { std::ignore = module.isTriviallyDestructible(ctx); },
+					"Asking whether ModuleType is trivially destructible should panic."
+				);
+			)
 
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
 			assertFalse(

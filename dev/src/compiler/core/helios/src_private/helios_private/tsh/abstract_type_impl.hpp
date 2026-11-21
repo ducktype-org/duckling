@@ -667,6 +667,13 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isCopyable(query::Context& ctx) const override;
 		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override;
 
+		/**
+		 * @brief A tuple carries information when at least one of its components does. A
+		 * reference or a box component always does, as it is stored as a pointer. So `((), ())`
+		 * carries no information, like `()`, while `((), i32)` and `(ref (), ())` do.
+		 */
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override;
+
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
@@ -921,10 +928,10 @@ namespace compiler::tsh {
 
 		ModuleAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override {
-			// @TODO: #1275 this is a placeholder, implement proper logic
-			return false;
-		}
+		/**
+		 * @brief Panics: no one calls it currently.
+		 */
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 

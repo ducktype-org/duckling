@@ -20,13 +20,13 @@ Tests:
     Cases:
       package-name-can-contain-a-dash:
         package-name: foo-bar
-        Output:
+        Err:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`@{package-name}\`
       dependency-can-contain-a-dash:
         add-dep: 'true'
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
             info: successfully synchronized venv \`@{package-name}\`

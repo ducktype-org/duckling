@@ -13,6 +13,7 @@
 #include <diagnostic/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic/location.hpp>
 #include <diagnostic/source_position.hpp>
+#include <filesystem/file_path.hpp>
 #include <token_source/source.hpp>
 
 #include <string>
@@ -114,7 +115,7 @@ namespace dia {
 		 * for example during the tokenization.
 		 */
 		struct FileLocation {
-			std::string                    file;
+			fs::FilePath                   file;
 			u64                            line;
 			u64                            column;
 			base::Optional<u64>            end_line{};

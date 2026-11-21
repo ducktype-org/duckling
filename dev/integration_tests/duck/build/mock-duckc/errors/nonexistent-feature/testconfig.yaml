@@ -8,12 +8,10 @@ Tests:
       nonexistent-feature:
         test-cmd: duck -C foo build --features aaa
         ExitCode: 1
-        Output:
+        Err:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
-        Err:
-          String: |+
             error: failed to expand the features of the root package \`foo\`
 
               Caused by:

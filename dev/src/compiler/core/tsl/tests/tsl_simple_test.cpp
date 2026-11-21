@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(basicTypesTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(variantTagWidthTest);
+		TESTER_ADD_TEST(variantSizeIsMultipleOfAlignmentTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
@@ -331,6 +332,40 @@ private:
 					}
 					variant_default { fail("Layout of variant type should be variant-like."); }
 				}
+			}
+		});
+	}
+
+	void variantSizeIsMultipleOfAlignmentTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			// `i8 | u8[5]`: a 1-byte tag, then a 5-byte payload placed at offset 8. The 13 bytes
+			// round up to 16, so the next element of an array of these variants stays aligned.
+			const SymbolType<> i8_type = st(
+				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
+			const StaticArrayAbstractType bytes_type
+				= ctx.query<QueryStaticArrayType>({ st(getByteType()), 5 });
+			const VariantAbstractType variant_type
+				= ctx.query<QueryVariantType>({ { i8_type, st(bytes_type) } });
+			const auto layout = queryLayout(ctx, variant_type);
+
+			assertEqual(
+				layout->getAlignment(), Bytes(8), "The variant alignment comes from its size."
+			);
+			assertEqual(
+				layout->getSize(),
+				base::bytes2bits(Bytes(16)),
+				"The variant size must be a multiple of its alignment."
+			);
+			variant_match(layout->getVariant()) {
+				variant_case(VariantTypeLayout, variant_layout) {
+					assertEqual(
+						variant_layout.getDataOffset(),
+						Bytes(8),
+						"The payload offset does not change."
+					);
+				}
+				variant_default { fail("Layout of variant type should be variant-like."); }
 			}
 		});
 	}

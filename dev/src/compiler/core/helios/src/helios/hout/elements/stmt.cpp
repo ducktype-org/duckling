@@ -10,6 +10,8 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <cctype>
+
 namespace compiler::helios::code {
 #define STMT_VISITOR(type) \
 	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }
@@ -32,27 +34,17 @@ namespace compiler::helios::code {
 			out << std::string().append(indent * INDENT_SIZE, ' ');
 		}
 
-		const char* controlFlowKindName(ControlFlowKind kind) {
-			switch (kind) {
-			case ControlFlowKind::If:
-				return "if";
-			case ControlFlowKind::While:
-				return "while";
-			case ControlFlowKind::For:
-				return "for";
-			case ControlFlowKind::Block:
-				return "block";
-			}
-			return "unknown";
-		}
-
 		void printControlFlowTargetSelector(
 			std::ostream& out, const ControlFlowTargetSelector& selector
 		) {
 			if (const auto* named = std::get_if<NamedTarget>(&selector))
 				out << " " << name(named->id).strView();
-			else if (const auto* kind = std::get_if<KindTarget>(&selector))
-				out << " " << controlFlowKindName(kind->kind);
+			else if (const auto* kind = std::get_if<KindTarget>(&selector)) {
+				auto keyword = std::string(base::enumToStr(kind->kind));
+				keyword.front()
+					= static_cast<char>(std::tolower(static_cast<unsigned char>(keyword.front())));
+				out << " " << keyword;
+			}
 		}
 	}
 
@@ -205,4 +197,5 @@ namespace compiler::helios::code {
 			origin, std::move(*body.clone()), control_flow_id, control_flow_kind
 		);
 	}
+
 }

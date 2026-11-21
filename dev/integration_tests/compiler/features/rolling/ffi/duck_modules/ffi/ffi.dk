@@ -53,7 +53,7 @@ fun main() -> i64 = {
 
     # `Small` is two adjacent i32s, so indexing a `cptr` to its first field walks onto the
     # second one - the stride comes from the pointee type.
-    let sp = &s.x as cptr i32;
+    let sp = &s.x as cptr mut i32;
     builtin_output_i64(sp[1]);                                         # 2
     sp[0] = 9;
     builtin_output_i64(s.x);                                           # 9
@@ -65,7 +65,7 @@ fun main() -> i64 = {
     pad.inner.a = 5i64;
     pad.inner.b = 6i8;
     pad.tail = 77i8;
-    let pad_p = &pad as cptr Pad;
+    let pad_p = &pad as cptr mut Pad;
     builtin_output_i64((*pad_p).inner.a);                              # 5
     builtin_output_i64((*pad_p).inner.b as i64);                       # 6
     builtin_output_i64((*pad_p).tail as i64);                          # 77

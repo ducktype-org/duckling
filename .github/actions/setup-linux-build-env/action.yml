@@ -31,13 +31,13 @@ runs:
   using: composite
   steps:
     - name: Update apt
-      shell: bash
-      run: sudo apt update
+      uses: ./.github/actions/apt-get/
 
     - name: Install lcov
       if: ${{ inputs.coverage-enabled == 'true' }}
-      shell: bash
-      run: sudo apt -y install lcov
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: lcov
 
     - name: Install fastcov
       if: ${{ inputs.coverage-enabled == 'true' }}
@@ -46,45 +46,55 @@ runs:
 
     - name: Install graphviz
       if: ${{ inputs.build-deployables == 'true' }}
-      shell: bash
-      run: sudo apt -y install libgraphviz-dev
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: libgraphviz-dev
 
     - name: Install LLVM
-      shell: bash
-      run: sudo apt -y install llvm-19 llvm-19-dev
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: llvm-19 llvm-19-dev
 
     - name: Install clang
       # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
       # Must be the same version as llvm
-      shell: bash
-      run: sudo apt -y install clang-19 clang-tools-19
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: clang-19 clang-tools-19
 
     - name: Install xxd
       # Necessary to embed LLVM bitcode into duckc source files.
-      shell: bash
-      run: sudo apt -y install xxd
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: xxd
 
     - name: Install mold
       if: ${{ inputs.linker == 'mold' }}
-      shell: bash
-      run: sudo apt -y install mold
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: mold
 
     - name: Install GCC 14 and gcov-14
       if: ${{ inputs.compiler-name == 'gcc' }}
-      shell: bash
-      run: sudo apt install -y ${{ inputs.cc }} ${{ inputs.cxx }} # gcov is included in gcc package
+      # gcov is included in gcc package
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: ${{ inputs.cc }} ${{ inputs.cxx }}
 
     - name: Install Ninja
-      shell: bash
-      run: sudo apt -y install ninja-build
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: ninja-build
 
     - name: Install Valgrind
-      shell: bash
-      run: sudo apt -y install valgrind
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: valgrind
 
     - name: Install pkg-config + libffi
-      shell: bash
-      run: sudo apt -y install pkg-config libffi-dev
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: pkg-config libffi-dev
 
     - name: Install ccache
       shell: bash

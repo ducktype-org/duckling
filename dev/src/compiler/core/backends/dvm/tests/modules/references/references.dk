@@ -1,6 +1,6 @@
 import core.runtime;
 
-fun valueSwap(a: ref i32, b: ref i32) -> () = {
+fun valueSwap(a: ref mut i32, b: ref mut i32) -> () = {
     let tmp: i32 = a;
     a = b;
     b = tmp;

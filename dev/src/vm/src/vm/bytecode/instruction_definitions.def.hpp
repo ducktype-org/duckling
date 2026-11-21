@@ -372,6 +372,11 @@ DEF_INSTR(fcmpLe_p32_imm, (vm::opargs::Place32, lhs), (vm::opargs::Immediate, rh
 // sets the flag if pointer is null
 DEF_INSTR(cmpNull_pptr, (vm::opargs::PlacePtr, ptr))
 
+/// Pointer equality: `cmpEq` sets the flag if both pointers point into the same block at the same
+/// offset (or are both null), `cmpNeq` if they do not. Pointers have no order.
+DEF_INSTR(cmpEq_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(cmpNeq_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+
 // ========= VARIANT OPERATIONS ========
 
 
@@ -660,8 +665,17 @@ DEF_INSTR(cast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr
 
 DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
 
+/// Writes the native address held by a C pointer of any cpointer type into the 64-bit integer
+/// `dst`, which must be an `i64` (the analogue of a C pointer-to-integer cast).
+DEF_INSTR(cast_p64_pcptr, (vm::opargs::Place64, dst), (vm::opargs::PlaceCPtr, src))
+
 /// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
 DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
+
+/// C pointer equality: `cmpEq` sets the flag if both native addresses are equal, `cmpNeq` if they
+/// differ. Works with any two cpointer types. C pointers have no order.
+DEF_INSTR(cmpEq_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(cmpNeq_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
 
 /// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
 /// arithmetic).`

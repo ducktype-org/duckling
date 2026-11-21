@@ -6,6 +6,6 @@ Tests:
     Cases:
       init:
         test-cmd: duck init foo
-        Output:
+        Err:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"

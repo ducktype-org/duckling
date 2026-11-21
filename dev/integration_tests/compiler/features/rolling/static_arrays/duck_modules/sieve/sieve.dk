@@ -1,4 +1,4 @@
-fun init_array(arr: ref i64[100]) -> () = {
+fun init_array(arr: ref mut i64[100]) -> () = {
     var i = 0;
     while (i < arr.length()) {
         arr[i] = 1;
@@ -8,7 +8,7 @@ fun init_array(arr: ref i64[100]) -> () = {
     if (arr.length() > 1) { arr[1] = 0; }
 }
 
-fun sieve(n: i64, is_prime: ref i64[100]) -> () = {
+fun sieve(n: i64, is_prime: ref mut i64[100]) -> () = {
     var p = 2;
     while (p * p <= n) {
         if (is_prime[p] == 1) {

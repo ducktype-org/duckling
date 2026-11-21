@@ -16,6 +16,12 @@ namespace pst {
 	MBox<Fun> Fun::parse(LangParserState& state) {
 		auto out = makeBox<Fun>(state);
 
+		// `mut fun` is only valid for methods. We report it, and parse the function without
+		// `mut`, so it does not produce follow-up errors.
+		if (state[0].is(Keyword::Mut)) {
+			state.logSafeError(makeBox<MutFunOutsideClassError>(state.getPosition()));
+			state.tokens().skip();
+		}
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		PARSE().all(Keyword::Fun);

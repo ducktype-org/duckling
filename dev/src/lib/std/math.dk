@@ -96,8 +96,8 @@ namespace libm_forward {
         fundecl remainder(x: f64, y: f64) -> f64;
 
         # Computes signed remainder as well as the three last bits of the division operation
-        fundecl remquof(x: f32, y: f32, quo: cptr i32) -> f32;
-        fundecl remquo(x: f64, y: f64, quo: cptr i32) -> f64;
+        fundecl remquof(x: f32, y: f32, quo: cptr mut i32) -> f32;
+        fundecl remquo(x: f64, y: f64, quo: cptr mut i32) -> f64;
 
         # Computes fused multiply-add operation
         # (x * y) + z
@@ -292,16 +292,16 @@ namespace libm_forward {
     # Floating-point manipulation functions
     namespace floating_point_funcs { extern("C") {
         # Breaks a number into significand and a power of 2
-        fundecl frexpf(x: f32, exp: cptr i32) -> f32;
-        fundecl frexp(x: f64, exp: cptr i32) -> f64;
+        fundecl frexpf(x: f32, exp: cptr mut i32) -> f32;
+        fundecl frexp(x: f64, exp: cptr mut i32) -> f64;
 
         # Multiplies a number by 2 raised to a power
         fundecl ldexpf(x: f32, exp: i32) -> f32;
         fundecl ldexp(x: f64, exp: i32) -> f64;
 
         # Breaks a number into integer and fractional parts
-        fundecl modff(arg: f32, iptr: cptr f32) -> f32;
-        fundecl modf(arg: f64, iptr: cptr f64) -> f64;
+        fundecl modff(arg: f32, iptr: cptr mut f32) -> f32;
+        fundecl modf(arg: f64, iptr: cptr mut f64) -> f64;
 
         # Computes efficiently a number times FLT_RADIX raised to a power
         fundecl scalbnf(x: f32, exp: i32) -> f32;

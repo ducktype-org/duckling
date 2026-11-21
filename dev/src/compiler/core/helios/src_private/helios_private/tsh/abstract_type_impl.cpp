@@ -468,6 +468,14 @@ namespace compiler::tsh {
 		CORE_PANIC("Module type interface does not exist (we can add it if we find a use case).");
 	}
 
+	bool ModuleAbstractTypeImpl::isTriviallyDestructible(query::Context&) const {
+		CORE_PANIC(
+			"Asked whether a module type is trivially destructible which has no sensible value "
+			"yet. If needed, decide what to do about it: a module holds no state, so `true` is the "
+			"likely answer."
+		);
+	}
+
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// A type has only the default interface, so for example it can be compared as a field.
 		static TypeInterface empty{};
@@ -593,6 +601,13 @@ namespace compiler::tsh {
 	bool TupleAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](auto& component) {
 			return component.isTriviallyCopyable(ctx);
+		});
+	}
+
+	bool TupleAbstractTypeImpl::carriesInformation(query::Context& ctx) const {
+		return std::ranges::any_of(components, [&](const auto& component) {
+			return component.getRefKind() != ReferenceKind::Direct
+			    || component.getType().carriesInformation(ctx);
 		});
 	}
 

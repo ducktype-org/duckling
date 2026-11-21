@@ -56,6 +56,16 @@
                     "dark": "./images/file-icon.svg"
                 },
                 "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "ducklingbytecode",
+                "aliases": [
+                    "Duckling Bytecode"
+                ],
+                "extensions": [
+                    ".dbc"
+                ],
+                "configuration": "./language-configuration.json"
             }
         ],
         "grammars": [
@@ -63,6 +73,11 @@
                 "language": "duckling",
                 "scopeName": "source.duckling",
                 "path": "./syntaxes/duckling.tmLanguage.json"
+            },
+            {
+                "language": "ducklingbytecode",
+                "scopeName": "source.ducklingbytecode",
+                "path": "./syntaxes/ducklingbytecode.tmLanguage.json"
             }
         ],
         "configuration": {

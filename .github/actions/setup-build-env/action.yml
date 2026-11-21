@@ -33,9 +33,9 @@ inputs:
     required: true
   ccache-dir:
     description: >
-      Where the workflow expects the ccache directory. macOS only - there it is replaced with a
-      symlink to the machine's shared cache. On Linux the directory is carried by actions/cache
-      and this input is ignored.
+      Where the workflow expects the ccache directory. Self-hosted macOS only - there it is
+      replaced with a symlink to the machine's shared cache. On Linux the directory is carried by
+      actions/cache, and GitHub-hosted macOS runners keep no cache, so there it is ignored.
     required: false
     default: ""
 

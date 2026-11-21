@@ -9,6 +9,7 @@
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
+#include "../statements/statements_errors.hpp"
 #include "meta_errors.hpp"
 #include "preamble.hpp"
 
@@ -19,33 +20,32 @@ namespace pst {
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace internal {
-		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
-
 		/**
 		 * @brief Whether the token `fwd` tokens ahead is a keyword that always starts a statement.
 		 *
 		 * `const` right after `if` belongs to an `if const` statement or ternary, so it does not
-		 * start a new statement. Only keyword tokens count: a string literal such as `"while"`
-		 * shares its text with a keyword but never starts a statement.
+		 * start a new statement. `mut` is a prefix operator, but `mut fun` starts a method.
 		 */
 		bool isStmtStartKeyword(const TokenStream& state, i64 fwd) {
-			if (!state[fwd].isKeyword()) return false;
 			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
+			// @TODO: #4062 Remove this once we have explicit self.
+			if (state[fwd].is(Keyword::Mut) && state[fwd + 1].is(Keyword::Fun)) return true;
 			return keywordFlags(state[fwd].asKeyword())
 			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}
 
-		/** @brief Whether the token `fwd` tokens ahead is a specifier keyword, e.g. `pub`. */
-		static bool isSpecifierKeyword(const TokenStream& state, i64 fwd) {
-			return state[fwd].isKeyword()
-			    && keywordFlags(state[fwd].asKeyword())
+		static bool isStatementStartOrSpecifier(const TokenStream& state, i64 fwd) {
+			if (!state[fwd].isKeyword()) return false;
+			return isStmtStartKeyword(state, fwd)
+			    || keywordFlags(state[fwd].asKeyword())
 			           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
 		}
 
+		void makeImplicitReturn(MRef<Stmt> box) { box->makeImplicitReturn(); }
+
 		bool isStatementBegin(const tpc::TokenStream& state, i64 fwd) {
 			return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-			    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-			    || isSpecifierKeyword(state, fwd);
+			    || state[fwd - 1].is(Special::Semicolon) || isStatementStartOrSpecifier(state, fwd);
 		}
 
 		template<class T>
@@ -65,8 +65,8 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-				    || isSpecifierKeyword(state, fwd)
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || isStatementStartOrSpecifier(state, fwd)
 				    || (Conditions::isBlockGroup(state, fwd - 1)
 				        && !Conditions::isMatchBodyBlock(state, fwd - 1));
 			}
@@ -88,9 +88,7 @@ namespace pst {
 
 				if (state[fwd - 1].is(Special::Semicolon)) return true;
 
-				if (isStmtStartKeyword(state, fwd)) return true;
-
-				if (isSpecifierKeyword(state, fwd)) return true;
+				if (isStatementStartOrSpecifier(state, fwd)) return true;
 
 				// When we have two curly bracket blocks as consecutive tokens, it probably means
 				// that the user intended to write two statements
@@ -116,8 +114,8 @@ namespace pst {
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon) || isStmtStartKeyword(state, fwd)
-				    || isSpecifierKeyword(state, fwd);
+				    || state[fwd - 1].is(Special::Semicolon)
+				    || isStatementStartOrSpecifier(state, fwd);
 			}
 		};
 
@@ -132,18 +130,25 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief Number of tokens before the `fun` keyword of a function starting `at` tokens
+		 * ahead.
+		 */
+		i64 tokensBeforeFun(LangParserState& state, i64 at) {
+			return state[at].is(Keyword::Mut) && state[at + 1].is(Keyword::Fun) ? 1 : 0;
+		}
+
 		template<>
 		struct StmtFinder<Action> {
-			/**
-			 * @brief Like the general one, but `break block;` / `continue loop;` is exactly three
-			 * tokens: the target keyword is a statement start, so it would end the statement.
-			 * Tokens past the end of the stream are sentinels, so no size check is needed.
-			 */
 			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
 				if ((state[base].is(Keyword::Break) || state[base].is(Keyword::Continue))
-				    && state[base + 1].isKeyword() && state[base + 2].is(Special::Semicolon)
-				    && isControlFlowTargetKeyword(state[base + 1].asKeyword()))
-					return 3;
+				    && state[base + 1].isKeyword()
+				    && isControlFlowTargetKeyword(state[base + 1].asKeyword())) {
+					// This keyword is the target, even when its suffix is invalid. Later
+					// statement starts still delimit recovery after a missing semicolon.
+					return 2
+					     + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(base + 2);
+				}
 				return 1 + state.ctokens().countUntil<StmtClassifiers<Action>::isStmtEnd>(base + 1);
 			}
 		};
@@ -168,13 +173,28 @@ namespace pst {
 			 * @brief For function like definitions we have to consider code block vs an expression.
 			 */
 			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
-				u64 initial_length = 1 + state.ctokens().countUntil<isAssignOrEnd>(base + 1);
+				const i64 head           = 1 + tokensBeforeFun(state, base);
+				u64       initial_length = base::safeIntConv<u64>(head)
+				                   + state.ctokens().countUntil<isAssignOrEnd>(base + head);
 				if (!state[base + base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
 					return initial_length;
 				initial_length++;
 				i64 body = base + base::safeIntConv<i64>(initial_length);
 				if (Conditions::isBlockGroup(state.ctokens(), body)) return initial_length + 1;
 				return initial_length + state.ctokens().countUntil<isInnerExprEnd>(body);
+			}
+		};
+
+		/**
+		 * @brief A method can start with `mut fun`, and `fun` always starts a statement, so the
+		 * search for the end of the statement starts after both keywords.
+		 */
+		template<>
+		struct StmtFinder<Method> {
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				const i64 head = 1 + tokensBeforeFun(state, base);
+				return base::safeIntConv<u64>(head)
+				     + state.ctokens().countUntil<StmtClassifiers<Method>::isStmtEnd>(base + head);
 			}
 		};
 
@@ -196,6 +216,9 @@ namespace pst {
 				return visitor.template operator()<TemplateStmt>();
 			case Keyword::If:
 				return visitor.template operator()<If>();
+			case Keyword::Mut:
+				if (state[at + 1].is(Keyword::Fun)) return visitor.template operator()<Fun>();
+				break;
 			case Keyword::Fun:
 				return visitor.template operator()<Fun>();
 			case Keyword::FunDecl:
@@ -248,6 +271,9 @@ namespace pst {
 			switch (state[at].asKeyword()) {
 			case Keyword::Template:
 				return visitor.template operator()<TemplateStmt>();
+			case Keyword::Mut:
+				if (state[at + 1].is(Keyword::Fun)) return visitor.template operator()<Method>();
+				break;
 			case Keyword::Fun:
 				return visitor.template operator()<Method>();
 			// These are statements that are not class-specific when adding new ones be careful
@@ -268,7 +294,8 @@ namespace pst {
 
 		/**
 		 * @brief Calculates the heuristic length of any statement starting `base` tokens ahead,
-		 * including its attributes and specifiers.
+		 * including its attributes and specifiers. Only the prefix is counted when the tokens run
+		 * out before the statement itself starts.
 		 */
 		u64 findAnyStatementLength(LangParserState& state, i64 base);
 
@@ -325,6 +352,7 @@ namespace pst {
 		u64 findAnyStatementLength(LangParserState& state, i64 base) {
 			auto prefix = countPrefixTokens(state, base);
 			i64  at     = base + base::safeIntConv<i64>(prefix.length);
+			if (state[at].is(Token::Type::Sentinel)) return prefix.length;
 			auto length_of
 				= [&]<class T>() -> u64 { return StmtFinder<T>::findStatementLength(state, at); };
 
@@ -346,6 +374,9 @@ namespace pst {
 			bool could_implicitly_return
 				= !state[base::safeIntConv<i64>(length) - 1].is(Special::Semicolon)
 			   && state[base::safeIntConv<i64>(length)].is(Token::Type::Sentinel);
+			const bool is_control_flow_action
+				= std::same_as<T, Action>
+			   && (state[0].is(Keyword::Break) || state[0].is(Keyword::Continue));
 
 			fallbackLen(state, length);
 
@@ -355,8 +386,14 @@ namespace pst {
 			if (opt && opt.value()->trailingSemicolon()) {
 				if (could_implicitly_return)
 					makeImplicitReturn(out.refMut());
-				else
+				else {
+					if (is_control_flow_action && !state[0].is(Special::Semicolon)) {
+						state.logInt(
+							makeBox<MissingControlFlowTargetSemicolonError>(state.getPosition())
+						);
+					}
 					state.parse(opt.value()).one(Special::Semicolon);
+				}
 			}
 
 			exitFallback(state);

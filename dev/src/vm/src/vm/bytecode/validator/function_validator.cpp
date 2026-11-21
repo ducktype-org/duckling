@@ -790,6 +790,11 @@ class FunctionValidator {
 				Op_ptrParts_p64_p64_pptr, Op_cast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr
 			) {}
 
+			instr_case(Op_cast_p64_pcptr, instr) {
+				if (current_stack.at(instr.dst.var_name)->getName() != "i64")
+					throw ArgumentMismatchError(instruction);
+			}
+
 			instr_case(Op_add_pcptr_p64, instr) {
 				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
 					throw ArgumentMismatchError(instruction);
@@ -1191,6 +1196,9 @@ class FunctionValidator {
 			instr_case_novalue(Op_fcmpLe_p32_imm) {}
 
 			instr_case_novalue(Op_cmpNull_pptr) {}
+			instr_case_novalue(
+				Op_cmpEq_pptr_pptr, Op_cmpNeq_pptr_pptr, Op_cmpEq_pcptr_pcptr, Op_cmpNeq_pcptr_pcptr
+			) {}
 
 			instr_case_novalue(Op_fadd_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);

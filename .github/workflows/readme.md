@@ -105,6 +105,12 @@ of one per platform, and an unhandled platform fails there with a clear message.
 passes `env.PLATFORM` (the matrix's `compiler.platform`) -- compared against by value rather than
 reduced to an `IS_MACOS` boolean, so adding Windows means adding a value, not a second flag.
 
+The Linux setup actions never call `sudo apt` directly; they go through the `apt-get` action.
+apt runs as root, so when a job is cancelled the runner cannot kill it, and on a self-hosted
+runner, whose container outlives the job, a hung apt would keep the apt lock and fail every later
+job. The action time-limits each call, retries while the lock is busy, and kills apt processes
+left over from earlier jobs. New apt steps should use it too.
+
 The launchd jobs starting the mac runners must set `ProcessType: Interactive`; without it launchd
 throttles the whole job chain to utility QoS, which stretches a 10 ms sleep to ~70 ms.
 
@@ -142,10 +148,10 @@ Accessing a variable can be achieved with `${{ ... }}` - a Github workflow expre
 Github has a marketplace for actions, which are open-source programs (scripts) specifically designed to make certain tasks easier.
 Outside actions we use:
 
-* `actions/checkout@v6` - puts a repository into the runner.
+* `actions/checkout@v7` - puts a repository into the runner.
   If you want to do a checkout from a different repository in our organization (like submodule), 
   you have to pass aditional options and use a personal access token.  
-* `actions/cache/restore@v5` and `actions/cache/save@v5` - an action responsible for storing files
+* `actions/cache/restore@v6` and `actions/cache/save@v6` - an action responsible for storing files
   between workflow runs. We use it to store ccache and sccache cached build data, to speed up build
   times.
   Cache restoration can hit (by finding a matching cache), or miss.
@@ -178,7 +184,7 @@ Outside actions we use:
 * `action-pack/set-variable@v1` - action for storing a [repository variable](https://docs.github.com/en/actions/learn-github-actions/variables#creating-configuration-variables-for-a-repository), which is persistent between runs.
   In `tests.yml` we use it to store the percent coverage of main, so we can use it to compare to percent coverage in other pull requests.
 * `actions/github-script@v9` - action that allows to write GitHub api calls in JS.
-* `actions/upload-artifact@v4` - keeps quacker-bot's full output log, untruncated, for debugging a
+* `actions/upload-artifact@v7` - keeps quacker-bot's full output log, untruncated, for debugging a
   run that went wrong.
 * `cpp-linter/cpp-linter-action@v2` - the C++ linter `linting.yml` is built around.
 * `int128/hide-comment-action@v1` - hides the earlier `quacker-bot` comments on a PR against
