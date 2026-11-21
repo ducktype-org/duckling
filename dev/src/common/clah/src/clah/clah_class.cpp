@@ -57,6 +57,17 @@ namespace {
 		}
 		return true;
 	}
+
+	bool isDecimalInteger(std::string_view token) {
+		if (token.starts_with('-')) token.remove_prefix(1);
+		return !token.empty() && token.find_first_not_of("0123456789") == std::string_view::npos;
+	}
+
+	bool isIntegerRange(std::string_view token) {
+		const auto separator = token.find("..");
+		return separator != std::string_view::npos && isDecimalInteger(token.substr(0, separator))
+		    && isDecimalInteger(token.substr(separator + 2));
+	}
 }
 
 namespace clah {
@@ -207,159 +218,156 @@ namespace clah {
 		st.result.addToCommandList(this);
 
 		while (not st.isEnd()) {
-			std::string token              = st.frontWord();
-			bool        is_negative_number = isNegativeNumber(token);
+			std::string token = st.frontWord();
 
 			// Parameter
-			if (token.starts_with('-') && !is_negative_number) {
+			if (token.starts_with('-') && !isNegativeNumber(token) && !isIntegerRange(token))
 				st.parseParameter(parameters);
-				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-			} else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
-				auto subcmd = maybe_subcmd.value();
-				// It's a subcommand, go down the tree.
-				st.advanceWord();
+			if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
+		}
+		else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
+			auto subcmd = maybe_subcmd.value();
+			// It's a subcommand, go down the tree.
+			st.advanceWord();
 
-				subcmd->parse(st);
-				return;
-			} else if (not subcommands.empty()) {
-				throw exceptions::InvalidCommandName(token);
-			} else {
-				// If not found a "-" parse using default value parser.
-				// Check if value is positional or extra.
-				usize positional_count = st.result.getPositionalParameterCount();
-				if (positional_count < getPositionalParameters().size()) {
-					const auto& positional = getPositionalParameters()[positional_count];
-					st.parsePositional(positional.getValueParser());
-				} else {                    // Too many positional arguments.
-					auto parser = getDefaultValueParser();
-					if (parser == nullptr)  // Extra arguments and no default value parser.
-						throw exceptions::NoDefaultValueParser(
-							st.position_in_merged, st.merged_view
+			subcmd->parse(st);
+			return;
+		}
+		else if (not subcommands.empty()) { throw exceptions::InvalidCommandName(token); }
+		else {
+			// If not found a "-" parse using default value parser.
+			// Check if value is positional or extra.
+			usize positional_count = st.result.getPositionalParameterCount();
+			if (positional_count < getPositionalParameters().size()) {
+				const auto& positional = getPositionalParameters()[positional_count];
+				st.parsePositional(positional.getValueParser());
+			} else {                    // Too many positional arguments.
+				auto parser = getDefaultValueParser();
+				if (parser == nullptr)  // Extra arguments and no default value parser.
+					throw exceptions::NoDefaultValueParser(st.position_in_merged, st.merged_view);
+				st.parseExtra(*parser);
+			}
+		}
+	}
+}
+
+int Clah::execute(usize argc, const char* const* argv) {
+	return execute(
+		[&] { return parse(argc, argv); },
+		[&](const clah::exceptions::ClahException& e) {
+			printer::StreamPrinter::print({
+				{ "[Clah error]: ", printer::Color::Red },
+				{ e.what(), printer::Color::Default },
+				{ "\n", printer::Color::Default },
+				{ "Use \"", printer::Color::Default },
+				{ argv[0], printer::Color::Default },
+				{ " --help\" for available options.\n", printer::Color::Default },
+			});
+		}
+	);
+}
+
+int Clah::execute(const std::string& args) {
+	return execute(
+		[&] { return parseArgs(args); },
+		[](const clah::exceptions::ClahException& e) {
+			printer::StreamPrinter::print({
+				{ "[Clah error]: ", printer::Color::Red },
+				{ e.what(), printer::Color::Default },
+				{ "\n", printer::Color::Default },
+				{ "Use \"--help\" for available options.\n", printer::Color::Default },
+			});
+		}
+	);
+}
+
+int Clah::execute(
+	const std::function<ParsingResult()>&                          parse,
+	const std::function<void(const exceptions::ClahException& e)>& on_clah_exception
+) {
+	try {
+		auto parsing_result = parse();
+
+		if (pre_handler) pre_handler(parsing_result);
+
+		// Get a handler that handles the matched command.
+		const auto& maybe_command = parsing_result.getMatchedCommand();
+		if_opt_some(maybe_command, command) {
+			if (!command->getSubcommands().empty())
+				throw clah::exceptions::SubcommandNotSpecified(command->getName());
+			const auto& handler = command->getHandler();
+			if (handler)
+				return handler(parsing_result);
+			else
+				throw exceptions::NoHandlerSpecified(command->getName());
+		}
+
+		throw exceptions::ClahException("None of the commands matched!");
+	} catch (const exceptions::HelpException& e) {
+		std::cout << clah::HelpMessageGenerator::generate(*this, e.parsing_result);
+		return 0;
+	} catch (const exceptions::SuccessExitException& e) {
+		return 0;
+	} catch (const clah::exceptions::ClahException& e) {
+		on_clah_exception(e);
+		return 1;
+	}
+}
+
+void Clah::validateParsing(ParsingResult& result) const {
+	usize num_positional_args = result.getPositionalParameterCount();
+	auto  maybe_command       = result.getMatchedCommand();
+	if (!maybe_command.has_value()) throw clah::exceptions::ClahException("No command matched!");
+	auto command = maybe_command.value();
+
+	auto run_custom_verifications = [&](const Clah& clah) {
+		for (const auto& verification: clah.custom_verifications) {
+			auto verification_result = verification(result);
+			if (not verification_result.has_value())
+				throw exceptions::CustomVerificationFailed(verification_result.error());
+		}
+	};
+
+	if (num_positional_args < command->getPositionalParameters().size()) {
+		const auto& positional = command->getPositionalParameters()[num_positional_args];
+
+		throw exceptions::PositionalParameterExpected(
+			num_positional_args, positional.getValueParser().getTypeName()
+		);
+	}
+
+	auto validate_parameters = [&](const std::vector<Parameter>& params) {
+		for (auto& param: params) {
+			auto maybe_param_name = param.getParameterName();
+			if (!maybe_param_name.has_value())
+				throw clah::exceptions::ClahException("Parameter has no name!");
+
+			variant_match(param.getParameterNecessity()) {
+				variant_case(Required, _) {
+					if (!result.hasParam(param))
+						throw exceptions::MissingRequiredParameter(
+							"\"" + maybe_param_name.value() + "\""
 						);
-					st.parseExtra(*parser);
 				}
-			}
-		}
-	}
-
-	int Clah::execute(usize argc, const char* const* argv) {
-		return execute(
-			[&] { return parse(argc, argv); },
-			[&](const clah::exceptions::ClahException& e) {
-				printer::StreamPrinter::print({
-					{ "[Clah error]: ", printer::Color::Red },
-					{ e.what(), printer::Color::Default },
-					{ "\n", printer::Color::Default },
-					{ "Use \"", printer::Color::Default },
-					{ argv[0], printer::Color::Default },
-					{ " --help\" for available options.\n", printer::Color::Default },
-				});
-			}
-		);
-	}
-
-	int Clah::execute(const std::string& args) {
-		return execute(
-			[&] { return parseArgs(args); },
-			[](const clah::exceptions::ClahException& e) {
-				printer::StreamPrinter::print({
-					{ "[Clah error]: ", printer::Color::Red },
-					{ e.what(), printer::Color::Default },
-					{ "\n", printer::Color::Default },
-					{ "Use \"--help\" for available options.\n", printer::Color::Default },
-				});
-			}
-		);
-	}
-
-	int Clah::execute(
-		const std::function<ParsingResult()>&                          parse,
-		const std::function<void(const exceptions::ClahException& e)>& on_clah_exception
-	) {
-		try {
-			auto parsing_result = parse();
-
-			if (pre_handler) pre_handler(parsing_result);
-
-			// Get a handler that handles the matched command.
-			const auto& maybe_command = parsing_result.getMatchedCommand();
-			if_opt_some(maybe_command, command) {
-				if (!command->getSubcommands().empty())
-					throw clah::exceptions::SubcommandNotSpecified(command->getName());
-				const auto& handler = command->getHandler();
-				if (handler)
-					return handler(parsing_result);
-				else
-					throw exceptions::NoHandlerSpecified(command->getName());
-			}
-
-			throw exceptions::ClahException("None of the commands matched!");
-		} catch (const exceptions::HelpException& e) {
-			std::cout << clah::HelpMessageGenerator::generate(*this, e.parsing_result);
-			return 0;
-		} catch (const exceptions::SuccessExitException& e) {
-			return 0;
-		} catch (const clah::exceptions::ClahException& e) {
-			on_clah_exception(e);
-			return 1;
-		}
-	}
-
-	void Clah::validateParsing(ParsingResult& result) const {
-		usize num_positional_args = result.getPositionalParameterCount();
-		auto  maybe_command       = result.getMatchedCommand();
-		if (!maybe_command.has_value())
-			throw clah::exceptions::ClahException("No command matched!");
-		auto command = maybe_command.value();
-
-		auto run_custom_verifications = [&](const Clah& clah) {
-			for (const auto& verification: clah.custom_verifications) {
-				auto verification_result = verification(result);
-				if (not verification_result.has_value())
-					throw exceptions::CustomVerificationFailed(verification_result.error());
-			}
-		};
-
-		if (num_positional_args < command->getPositionalParameters().size()) {
-			const auto& positional = command->getPositionalParameters()[num_positional_args];
-
-			throw exceptions::PositionalParameterExpected(
-				num_positional_args, positional.getValueParser().getTypeName()
-			);
-		}
-
-		auto validate_parameters = [&](const std::vector<Parameter>& params) {
-			for (auto& param: params) {
-				auto maybe_param_name = param.getParameterName();
-				if (!maybe_param_name.has_value())
-					throw clah::exceptions::ClahException("Parameter has no name!");
-
-				variant_match(param.getParameterNecessity()) {
-					variant_case(Required, _) {
-						if (!result.hasParam(param))
-							throw exceptions::MissingRequiredParameter(
-								"\"" + maybe_param_name.value() + "\""
-							);
-					}
-					variant_case(Optional, _) { /* Nothing in this case */ }
-					variant_case(Conditional, c) {
-						if (!c.condition(result)) {
-							throw exceptions::MissingConditionalParameter(
-								maybe_param_name.value(), "reason: " + c.condition_description
-							);
-						}
+				variant_case(Optional, _) { /* Nothing in this case */ }
+				variant_case(Conditional, c) {
+					if (!c.condition(result)) {
+						throw exceptions::MissingConditionalParameter(
+							maybe_param_name.value(), "reason: " + c.condition_description
+						);
 					}
 				}
 			}
-		};
+		}
+	};
 
-		// Validate this command params.
-		validate_parameters(command->getParameters());
-		// Validate global params. This function is invoked from the root command, thus we
-		// compare it with this.
-		if (command.get() != this) validate_parameters(getParameters());
+	// Validate this command params.
+	validate_parameters(command->getParameters());
+	// Validate global params. This function is invoked from the root command, thus we
+	// compare it with this.
+	if (command.get() != this) validate_parameters(getParameters());
 
-		run_custom_verifications(*command);
-		if (command.get() != this) run_custom_verifications(*this);
-	}
+	run_custom_verifications(*command);
+	if (command.get() != this) run_custom_verifications(*this);
+}
 }  // clah
