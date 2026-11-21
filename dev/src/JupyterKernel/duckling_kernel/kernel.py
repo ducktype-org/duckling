@@ -42,8 +42,10 @@ class DucklingKernel(Kernel):
         if self._repl is not None and self._repl.alive:
             return
         self._repl = ReplProcess(repl_command())
-        # Startup output (package sync, package compile errors) is shown in the next cell.
-        self._pending_startup = list(self._repl.start())
+        startup = list(self._repl.start())
+        # Package sync chatter is hidden; startup errors are shown in the next cell.
+        if any(_is_failure(event) for event in startup):
+            self._pending_startup = startup
 
     def do_execute(
         self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
@@ -69,7 +71,7 @@ class DucklingKernel(Kernel):
         for event in _merge_streams(events):
             match event:
                 case Stream(name="stderr", text=text):
-                    failed = failed or bool(_ERROR_RE.search(_ANSI_RE.sub("", text)))
+                    failed = failed or _is_failure(event)
                     self._send_stream("stderr", text, silent)
                 case Stream(name=name, text=text):
                     self._send_stream(name, text, silent)
@@ -142,6 +144,15 @@ class DucklingKernel(Kernel):
             "evalue": evalue,
             "traceback": [],
         }
+
+
+def _is_failure(event: Event) -> bool:
+    match event:
+        case Exited():
+            return True
+        case Stream(name="stderr", text=text):
+            return bool(_ERROR_RE.search(_ANSI_RE.sub("", text)))
+    return False
 
 
 def _merge_streams(events: list[Event]) -> list[Event]:
