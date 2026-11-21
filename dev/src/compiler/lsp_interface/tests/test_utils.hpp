@@ -6,16 +6,22 @@
 
 #pragma once
 
+#include <frontend/module_tree/module_flags/module_flags.hpp>
+#include <global_state/global_logger.hpp>
 #include <lsp/io/stream.h>
 #include <lsp/types.h>
 #include <lsp/uri.h>
+#include <lsp_interface/compiler.hpp>
+#include <lsp_interface/files_cache.hpp>
 #include <lsp_interface/server_session.hpp>
 
 #include <base/pointers/ref.hpp>
 
+#include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <filesystem/vfs.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
 #include <cstring>
 #include <string>
@@ -145,4 +151,33 @@ namespace duck_ls_test {
 			return it != pushed.end() && it->second.empty();
 		}
 	};
+
+	/**
+	 * @brief A compiler wired to a collecting session, with the endpoint it never talks to.
+	 *
+	 * Everything is held together so that a test can name one object and get a working compiler.
+	 */
+	struct CompilerUnderTest final {
+		explicit CompilerUnderTest(base::Optional<base::Ref<fs::VFS>> source_vfs = {}):
+			  files(source_vfs),
+			  compiler{ &session, &files } {}
+
+		duck_ls_test::StringStream      stream{ "" };
+		lsp::ServerEndpoint             endpoint{ stream };
+		duck_ls_test::CollectingSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
+		duck_ls::FilesCache             files;
+		duck_ls::Compiler               compiler;
+	};
+
+	/**
+	 * @brief Sets the global state a `duck_ls::Compiler` needs outside a running server: a
+	 * logger, reverse dependency tracking for invalidation, and removable modules.
+	 *
+	 * Call it once, from `beforeAll`.
+	 */
+	inline void setUpCompilerGlobals() {
+		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
+		query::setTrackReverseGraph(true);
+		compiler::frontend::use_module_modifier_remove = true;
+	}
 }
