@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(executeArgsReturnValueTest);
 		TESTER_ADD_TEST(coexistingSubcommandsAndPositionals);
 		TESTER_ADD_TEST(duplicateSubcommand);
+		TESTER_ADD_TEST(parameterAliasValidationTest);
 		TESTER_ADD_TEST(conditionalParameterTest);
 		TESTER_ADD_TEST(mixedGlobalAndLocalParameters);
 		TESTER_ADD_TEST(argumentParsingTest);
@@ -458,6 +459,32 @@ private:
 						  );
 			},
 			"Clah did not find a coexisting subcommand and positional argument."
+		);
+	}
+
+	void parameterAliasValidationTest() {
+		auto flag = [](char short_name, base::RawView long_name) {
+			return clah::ParamBuilder::ofFlag()
+			    .addShortName(short_name)
+			    .addLongName(long_name)
+			    .addShortDesc("")
+			    .build();
+		};
+		auto clah = clah::Clah("prog").add(flag('n', "namespace"));
+		assertThrows<clah::exceptions::ClahException>(
+			[&]() {
+				clah.addSubcommand(
+					clah::Clah("remote").addSubcommand(clah::Clah("add").add(flag('n', "name")))
+				);
+			},
+			"Clah should reject a short alias shared by an ancestor and a descendant."
+		);
+
+		clah.addSubcommand(clah::Clah("list").add(flag('a', "app")));
+		clah.addSubcommand(clah::Clah("show").add(flag('a', "app")));
+		assertThrows<clah::exceptions::ClahException>(
+			[&]() { clah.add(flag('b', "app")); },
+			"Clah should reject a long alias already used by a subcommand."
 		);
 	}
 

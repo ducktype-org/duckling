@@ -20,12 +20,22 @@
 
 #include <cctype>
 #include <iostream>
+#include <string_view>
 #include <utility>
 
 /**
  * Basic helper functions.
  */
 namespace {
+	constexpr char             HELP_SHORT_NAME = 'h';
+	constexpr std::string_view HELP_LONG_NAME  = "help";
+
+	bool usesHelpAlias(const clah::Parameter& parameter) {
+		const auto& long_name = parameter.getLongName();
+		return parameter.getShortName() == HELP_SHORT_NAME
+		    || (long_name && long_name->stringView() == HELP_LONG_NAME);
+	}
+
 	/**
 	 * @brief Checks if a token represents a negative number.
 	 * @param token The token to check.
@@ -65,6 +75,9 @@ namespace clah {
 	}
 
 	Clah&& Clah::add(Parameter&& param) {
+		if (usesHelpAlias(param))
+			throw exceptions::ClahException("Aliases -h and --help are reserved for Clah help.");
+		checkParameterAliases(param, name);
 		parameters.push_back(std::move(param));
 		return std::move(*this);
 	}
@@ -87,8 +100,32 @@ namespace clah {
 			if (subcmd.getName() == sub_command.getName())
 				throw clah::exceptions::DuplicateSubcommand(sub_command.getName(), name);
 
+		for (const auto& parameter: parameters)
+			if (!usesHelpAlias(parameter)) sub_command.checkParameterAliases(parameter, name);
+
 		subcommands.emplace_back(std::move(sub_command));
 		return std::move(*this);
+	}
+
+	void Clah::checkParameterAliases(const Parameter& parameter, const std::string& command_name)
+		const {
+		auto reject_alias = [&](const std::string& alias) {
+			throw exceptions::ClahException(
+				"Parameter alias '" + alias + "' on command '" + command_name
+				+ "' conflicts with an alias on command '" + name + "'."
+			);
+		};
+
+		const auto& short_name = parameter.getShortName();
+		const auto& long_name  = parameter.getLongName();
+		for (const auto& existing: parameters) {
+			if (short_name && existing.getShortName() == short_name.value())
+				reject_alias(std::string("-") + short_name.value());
+			if (long_name && existing.getLongName() == long_name.value())
+				reject_alias("--" + long_name.value().stdString());
+		}
+		for (const auto& subcommand: subcommands)
+			subcommand.checkParameterAliases(parameter, command_name);
 	}
 
 	Clah&& Clah::setHandler(Handler handl) {
@@ -111,12 +148,12 @@ namespace clah {
 		return std::move(*this);
 	}
 
-	Clah&& Clah::addHelpFlag() {
-		return add(ParamBuilder::ofFlag()
-		               .addShortName('h')
-		               .addLongName("help")
-		               .addShortDesc("Display this information.")
-		               .build());
+	void Clah::addHelpFlag() {
+		parameters.push_back(ParamBuilder::ofFlag()
+		                         .addShortName(HELP_SHORT_NAME)
+		                         .addLongName(HELP_LONG_NAME.data())
+		                         .addShortDesc("Display this information.")
+		                         .build());
 	}
 
 	const std::string& Clah::getName() const { return name; }
