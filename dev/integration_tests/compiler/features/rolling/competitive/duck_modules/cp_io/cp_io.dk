@@ -1,0 +1,24 @@
+import exp.io.*;
+
+fun printBracketed(s: String) -> () = {
+    print("[");
+    print(&s);
+    print("]\n");
+}
+
+fun main() -> i64 = {
+    printBracketed(readLine());            # [first line], without the `\r`
+    print(readI64());                      # 5, from "+5"
+    print(readI64());                      # -3
+    print(readU64());                      # 12, after a blank "\r\n" line
+
+    print(formatF64(2.0f64 / 3.0f64, 3));  # 0.667
+    print("\n");
+    print(formatF64(-1.5f64, 0));          # -2
+    print("\n");
+    print(formatF64(-0.0004f64, 3));       # 0.000
+    print("\n");
+    print(formatF64(1234567.891f64, 2));   # 1234567.89
+    print("\n");
+    return 0;
+}

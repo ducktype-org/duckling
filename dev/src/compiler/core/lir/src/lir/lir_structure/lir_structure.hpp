@@ -65,7 +65,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerBitXor,
 	IntegerBitNot,
 	IntegerShl,
+	/** Logical shift right, for unsigned integers. */
 	IntegerShr,
+	/** Arithmetic shift right, for signed integers: the sign bit is copied in. */
+	IntegerSShr,
 
 	/** Floating point arithmetic. */
 	FloatAdd,

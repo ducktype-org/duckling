@@ -1,0 +1,41 @@
+import std.math as math;
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun main() -> i64 = {
+    # `..` binds looser than `+` and `-`.
+    let n = 3i64;
+    var sum = 0i64;
+    for (i in 0..n+1) sum += i;            # 0, 1, 2, 3
+    for (i in 1..n-1) sum += 100;          # 1
+    print(sum);                            # 106
+
+    # A `ref char` compares with a `char` and with another `ref char`.
+    var word = f"abca";
+    let first: char = word.at(0);
+    printBool(word.at(0) == word.at(3));   # true
+    printBool(first != word.at(1));        # true
+    printBool(word.at(1) == 'b');          # true
+
+    # A `let` argument picks the overload of its own type, not a wider one.
+    let small: i32 = -7;
+    print(small);                          # -7
+    let letter: char = 66 as char;
+    print(letter);
+    print("\n");                           # B
+    let a = 3;
+    let b = 5;
+    print(math.max(a, b));                 # 5
+
+    # A value read through a reference can be cast.
+    var numbers: List[i64];
+    numbers.push(300);
+    print(numbers.at(0) as i32);           # 300
+    print(numbers.at(0) as u8);            # 44
+    var digits = f"a7";
+    print(digits.at(1) as i64 - '0' as i64); # 7
+    return 0;
+}

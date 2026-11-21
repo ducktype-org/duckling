@@ -163,6 +163,16 @@ namespace compiler::helios {
 				    .path       = { "optional" },
 				    .namespaces = { "optional_primitives" },
 				    .element    = "reset" } },
+				{ LanguagePrimitive::List,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "List" } },
+				{ LanguagePrimitive::TemporaryRange,
+				  { .package    = "core",
+				    .path       = { "containers" },
+				    .namespaces = {},
+				    .element    = "TemporaryRange" } },
 			};
 			return paths;
 		}

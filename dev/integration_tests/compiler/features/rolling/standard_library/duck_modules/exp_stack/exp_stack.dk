@@ -1,0 +1,67 @@
+import exp.containers.*;
+
+fun printBool(b: bool) -> () = {
+    print(b);
+    print("\n");
+}
+
+fun printSeparator() -> () = {
+    print("888\n");
+}
+
+fun intsTest() -> () = {
+    var stack: Stack[i64];
+    printBool(stack.isEmpty()); # true
+
+    stack.push(1);
+    stack.push(2);
+    stack.push(3);
+    builtin_output_i64(stack.length()); # 3
+    builtin_output_i64(stack.top());    # 3
+
+    stack.top() = 30;
+    builtin_output_i64(stack.pop()); # 30
+    builtin_output_i64(stack.pop()); # 2
+
+    stack.push(4);
+    builtin_output_i64(stack.pop()); # 4
+    builtin_output_i64(stack.pop()); # 1
+    printBool(stack.isEmpty()); # true
+    printSeparator();
+}
+
+fun manyTest() -> () = {
+    var stack: Stack[i64];
+    var i = 0;
+    while (i < 100) {
+        stack.push(i);
+        i = i + 1;
+    }
+    builtin_output_i64(stack.length()); # 100
+
+    var sum = 0i64;
+    while (stack.length() > 50) sum = sum + stack.pop();
+    builtin_output_i64(sum);          # 50 + ... + 99 = 3725
+    builtin_output_i64(stack.top());  # 49
+
+    stack.clear();
+    builtin_output_i64(stack.length()); # 0
+    printSeparator();
+}
+
+fun stringsTest() -> () = {
+    var stack: Stack[String];
+    stack.push(f"duck");
+    stack.push(f"ling");
+    print(stack.pop());
+    print(stack.pop());
+    print("\n");
+    printSeparator();
+}
+
+fun main() -> i64 = {
+    intsTest();
+    manyTest();
+    stringsTest();
+    return 0;
+}

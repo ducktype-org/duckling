@@ -48,8 +48,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	OptionalValueOrRef,
 	OptionalNonEmpty,
 	OptionalIsEmpty,
-	OptionalReset
-	// List
+	OptionalReset,
+
+	// Containers used by the `for` desugaring
+	List,
+	TemporaryRange
 	// PanicOutOfBounds
 )
 
