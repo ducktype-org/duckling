@@ -1,0 +1,4 @@
+import util;
+
+fun twice(x: i64) -> i64 = x * 2;
+fun sixTimes(x: i64) -> i64 = util.triple(twice(x));

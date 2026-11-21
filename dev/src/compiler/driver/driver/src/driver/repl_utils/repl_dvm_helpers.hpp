@@ -60,10 +60,10 @@ namespace compiler::repl {
 	);
 
 	/**
-	 * @brief Compile the standard library to in-memory DVM bytecode and load it into a running
-	 * DVM process.
+	 * @brief Compile every registered package (the standard library and user packages) to
+	 * in-memory DVM bytecode and load it into a running DVM process as one batch.
 	 *
-	 * Does nothing (and succeeds) when no standard library packages are registered.
+	 * Does nothing (and succeeds) when no packages besides the REPL session are registered.
 	 *
 	 * @param ctx              Active query context for LIR compilation queries.
 	 * @param pid              Process ID of the target DVM instance.
@@ -74,7 +74,7 @@ namespace compiler::repl {
 	 *
 	 * @return Success or error message on failure.
 	 */
-	std::expected<void, std::string> preloadStandardLibrary(
+	std::expected<void, std::string> preloadPackages(
 		query::Context& ctx, vm::PID pid, backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	);
 

@@ -1,0 +1,4 @@
+{
+  "packages": [{ "id": "repl_session", "name": "repl_session", "path": "pkgs/util/src" }],
+  "session_dependencies": []
+}

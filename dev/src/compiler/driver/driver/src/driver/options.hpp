@@ -183,6 +183,12 @@ namespace compiler::driver {
 			options_types::DebugOptions     debug_options;
 			options_types::ExecutionOptions execution_options;
 			options_types::StdLibOptions    stdlib_options;
+
+			/** @brief User packages to load, including transitive dependencies. */
+			std::vector<compiler::frontend::packages::RawPackageInfo> packages_info = {};
+
+			/** @brief Packages importable from REPL cells. */
+			std::vector<compiler::frontend::packages::RawDependencyInfo> session_dependencies = {};
 		};
 
 		/**

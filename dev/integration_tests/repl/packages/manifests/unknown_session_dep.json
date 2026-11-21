@@ -1,0 +1,4 @@
+{
+  "packages": [{ "id": "util-1.0.0", "name": "util", "path": "pkgs/util/src" }],
+  "session_dependencies": [{ "id": "missing-1.0.0" }]
+}

@@ -118,6 +118,22 @@ namespace {
 	}
 
 	/**
+	 * @brief Reads and parses a JSON manifest file, logging a user error on malformed JSON.
+	 */
+	base::Optional<nlohmann::json> readManifestJson(const fs::File& manifest_file) {
+		auto                           manifest_content = manifest_file.getContent();
+		auto                           file_content     = manifest_content.view();
+		base::Optional<nlohmann::json> manifest_json;
+		try {
+			manifest_json.emplace(nlohmann::json::parse(file_content.stringView()));
+			return manifest_json;
+		} catch (const nlohmann::json::parse_error& e) {
+			CORE_USER_LOG(base::strConcat("Error: failed to parse manifest JSON: ", e.what(), "\n"));
+			return {};
+		}
+	}
+
+	/**
 	 * @brief Infer a package name from the path given to `compile_package`.
 	 *
 	 * Uses the same rule the module tree uses to name the root module: the directory name for a
@@ -1188,23 +1204,15 @@ namespace {
 						auto manifest_file = options.getPositional<fs::File>(0);
 						auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
-						auto manifest_content = manifest_file.getContent();
-						auto file_content     = manifest_content.view();
-
-						nlohmann::json manifest_json;
-						try {
-							manifest_json = nlohmann::json::parse(file_content.stringView());
-						} catch (const nlohmann::json::parse_error& e) {
-							CORE_USER_LOG(base::strConcat(
-								"Error: failed to parse manifest JSON: ", e.what(), "\n"
-							));
+						auto manifest_json = readManifestJson(manifest_file);
+						if (!manifest_json.has_value()) {
 							compiler::driver::exit();
 							return 1;
 						}
 
 						auto report   = compiler::driver::diagnostics::makeGlobalLoggerReporter();
 						auto manifest = compiler::driver::PackageCompilationManifest::fromJson(
-							manifest_json, report
+							*manifest_json, report
 						);
 
 						if (!manifest.has_value()) {
@@ -1453,15 +1461,47 @@ namespace {
 		                     .addLongName("plain-output")
 		                     .addShortDesc("Print REPL results without interactive decorations.")
 		                     .build())
+					.add(clah::ParamBuilder::ofValue(clah::FileParser::make("manifest"))
+		                     .addLongName("packages")
+		                     .addShortDesc("JSON manifest of packages importable from the session.")
+		                     .addLongDesc(
+								 "Lists the packages to load (`packages`, same entries as in "
+								 "the compile_packages manifest)\nand the ones cells can "
+								 "import (`session_dependencies`).\n"
+							 )
+		                     .optional()
+		                     .build())
 					.setHandler([](const clah::ParsingResult& options) -> int {
 						auto stdlib_opts = getStdLibOptionsFromClah(options);
+
+						compiler::driver::ReplPackagesManifest packages_manifest;
+						if_opt_some(options.getValue<fs::File>("packages"), manifest_file) {
+							auto manifest_json = readManifestJson(manifest_file);
+							if (!manifest_json.has_value()) {
+								compiler::driver::exit();
+								return 1;
+							}
+							auto report = compiler::driver::diagnostics::makeGlobalLoggerReporter();
+							auto manifest = compiler::driver::ReplPackagesManifest::fromJson(
+								*manifest_json, report
+							);
+							if (!manifest.has_value() || manifest->verify(report).isBad()) {
+								compiler::driver::exit();
+								return 1;
+							}
+							packages_manifest = std::move(*manifest);
+						}
+
 						auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = debug_options::getDebugOptionsFromClah(options),
 									   .execution_options = {
 										   .worker_count = 1,
 									   },
-									   .stdlib_options = stdlib_opts
+									   .stdlib_options = stdlib_opts,
+									   .packages_info = std::move(packages_manifest.packages),
+									   .session_dependencies
+									   = std::move(packages_manifest.session_dependencies),
 								   }
 							   );
 						if (init_result.status().isBad()) {
@@ -1487,7 +1527,7 @@ namespace {
 							compiler::repl::ReplSession session(
 								completions, bracketed, decorative_output
 							);
-							if (stdlib_opts.stdActive()) session.preloadStandardLibrary();
+							session.preloadPackages();
 
 							auto replay_count_opt = options.getValue<i64>("history-entries");
 							i64  replay_count     = replay_count_opt.copyValueOr(0);
