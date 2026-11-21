@@ -15,7 +15,7 @@ extern("C") {
 
 fun main() -> i64 = {
     builtin_output_i64(c_match(20i64));            # 21
-    builtin_output_i64(keywords::c_in(20i64));     # 40
+    builtin_output_i64(keywords.c_in(20i64));      # 40
     builtin_output_i64(match_again(1i64));         # 2
     return 0i64;
 }

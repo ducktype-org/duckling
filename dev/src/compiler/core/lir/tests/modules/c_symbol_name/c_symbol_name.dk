@@ -11,7 +11,7 @@ extern("C") {
 }
 
 fun caller() -> i64 = {
-    return c_match(1i64) + inner::c_in(2i64) + plain_c(3i64);
+    return c_match(1i64) + inner.c_in(2i64) + plain_c(3i64);
 }
 
 # The attribute only applies to extern("C"): here it is ignored and the usual name is linked.
