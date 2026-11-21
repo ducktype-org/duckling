@@ -544,6 +544,11 @@ namespace compiler::repl {
 
 		if (std::holds_alternative<ExpressionSingleStatementInfo>(stmt_info.value())) {
 			auto expr_info = std::get<ExpressionSingleStatementInfo>(stmt_info.value());
+			// Like a Rust block, `expr;` discards the value; only a bare `expr` prints it.
+			if (base::strTrim(m_session_history.back().source_code).ends_with(';')) {
+				CORE_DEV_LOG(REPL, "Processing `expr;` statement as instruction\n");
+				return handleInstruction(expr_info.expr_stmt);
+			}
 			CORE_DEV_LOG(REPL, "Processing statement as expression\n");
 			return handleExpression(expr_info.expr_stmt);
 		}

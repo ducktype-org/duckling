@@ -219,7 +219,9 @@ For each statement:
 - **Instruction:** executed for side effects via generated unit-returning wrapper.
 - **Definition:** loaded into session state without wrapper execution.
 
-Assignments are routed as instructions.
+Assignments are routed as instructions, and so is an expression followed by `;`: like in a Rust
+block, `f(x);` runs and discards the value, while a bare `f(x)` prints it. Only the latter is
+limited to the printable result types below.
 
 ### Supported Printed Result Types
 
