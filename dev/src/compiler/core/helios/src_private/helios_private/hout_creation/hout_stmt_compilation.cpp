@@ -31,6 +31,7 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
@@ -49,6 +50,7 @@
 #include <query_framework/query_errors.hpp>
 
 #include <algorithm>
+#include <ranges>
 #include <string_view>
 #include <variant>
 
@@ -89,6 +91,32 @@ namespace compiler::helios {
 		}
 	}
 
+	static bool isCallable(pst::ElementKind kind) {
+		switch (kind) {
+		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
+		case pst::ElementKind::ClassMethod:
+		case pst::ElementKind::ClassSpecial:
+		case pst::ElementKind::ClassConstructor:
+		case pst::ElementKind::ClassDestructor:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	/**
+	 * @brief Whether `element` is a block used as a value, not a block statement `{ ... };`.
+	 */
+	static bool isValueBlockExpr(query::Context& ctx, pst::Access<pst::LangElement> element) {
+		if (!element.dynamicCast<pst::expr::BlockExpr>().has_value()) return false;
+		auto holder = getPSTElementParent(ctx, element);
+		if (!holder.isLangElement()) return true;
+		auto stmt = getPSTElementParent(ctx, holder.getAsLangElement().unlock(ctx));
+		if (!stmt.isLangElement()) return true;
+		return !stmt.getAsLangElement().unlock(ctx).dynamicCast<pst::ExprStmt>().has_value();
+	}
+
 	template<std::derived_from<pst::Action> T>
 	static code::ControlFlowTargetSelector getControlFlowTarget(
 		query::Context& ctx, pst::Access<T> stmt, std::string_view action_name
@@ -115,21 +143,15 @@ namespace compiler::helios {
 
 		auto ancestor = getPSTElementParent(ctx, stmt);
 		while (ancestor.isLangElement()) {
-			auto element                   = ancestor.getAsLangElement().unlock(ctx);
-			bool crossed_callable_boundary = false;
-			switch (element->getElementKind()) {
-			case pst::ElementKind::Fun:
-			case pst::ElementKind::FunDecl:
-			case pst::ElementKind::ClassMethod:
-			case pst::ElementKind::ClassSpecial:
-			case pst::ElementKind::ClassConstructor:
-			case pst::ElementKind::ClassDestructor:
-				crossed_callable_boundary = true;
-				break;
-			default:
-				break;
+			auto element = ancestor.getAsLangElement().unlock(ctx);
+			if (isValueBlockExpr(ctx, element)) {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					base::strConcat("Leaving a block expression with `", action_name, "`."),
+					stmt->getStablePosition()
+				);
+				query::throwFailed();
 			}
-			if (crossed_callable_boundary) break;
+			if (isCallable(element->getElementKind())) break;
 			auto candidate_kind = controlFlowKind(element->getElementKind());
 			if (candidate_kind.has_value()) {
 				auto ancestor_stmt = element.template dynamicCast<pst::Stmt>().value();
@@ -181,6 +203,20 @@ namespace compiler::helios {
 	}
 
 	/**
+	 * @brief Whether `element` is inside a block expression of the callable it belongs to.
+	 */
+	static bool isInsideBlockExpr(query::Context& ctx, pst::Access<pst::LangElement> element) {
+		auto ancestor = getPSTElementParent(ctx, element);
+		while (ancestor.isLangElement()) {
+			auto parent = ancestor.getAsLangElement().unlock(ctx);
+			if (isValueBlockExpr(ctx, parent)) return true;
+			if (isCallable(parent->getElementKind())) return false;
+			ancestor = getPSTElementParent(ctx, parent);
+		}
+		return false;
+	}
+
+	/**
 	 * @brief Visitor that creates HOUT statements from PST statements.
 	 * It is used locally in processBlock.
 	 */
@@ -223,6 +259,14 @@ namespace compiler::helios {
 		}
 
 		void visitReturn(pst::Access<pst::Return> stmt) override {
+			if (isInsideBlockExpr(ctx, stmt)) {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Leaving a block expression with `return`.", stmt->getStablePosition()
+				);
+				is_failed = true;
+				return;
+			}
+
 			if (auto val = stmt->getValue()) {
 				const auto pst_expr = val.value().unlock(ctx)->getExpr();
 
@@ -689,6 +733,27 @@ namespace compiler::helios {
 	};
 
 	/**
+	 * @brief Compiles `stmt` and appends what it produced to `block`.
+	 */
+	static void appendStmt(
+		query::Context&          ctx,
+		code::CodeBlock&         block,
+		pst::Access<pst::Stmt>   stmt,
+		const tsh::SymbolType<>& return_type
+	) {
+		HoutStmtMaker stmt_maker(ctx, return_type);
+		stmt->acceptVisitor(stmt_maker);
+
+		if (stmt_maker.is_failed) query::throwFailed();
+
+		for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+			block.statements.emplace_back(std::move(prefix_stmt));
+
+		if (stmt_maker.out.has_value())
+			block.statements.emplace_back(std::move(stmt_maker.out.value()));
+	}
+
+	/**
 	 * @brief Compiles a PST code block or statement into a HOUT CodeBlock.
 	 *
 	 * Iterates all statements in the container via HoutStmtMaker and returns the
@@ -702,22 +767,44 @@ namespace compiler::helios {
 		query::Context& ctx, pst::Access<Container> container, tsh::SymbolType<> return_type
 	) {
 		code::CodeBlock block({});
-		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
-			HoutStmtMaker stmt_maker(ctx, return_type);
-			stmt->acceptVisitor(stmt_maker);
-
-			if (stmt_maker.is_failed) {
-				// @TODO: #1753 change here to grab errors from all statements.
-				query::throwFailed();
-			}
-
-			for (auto& prefix_stmt: stmt_maker.prefix_stmts)
-				block.statements.emplace_back(std::move(prefix_stmt));
-
-			if (stmt_maker.out.has_value())
-				block.statements.emplace_back(std::move(stmt_maker.out.value()));
-		}
+		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container))
+			appendStmt(ctx, block, stmt, return_type);
 		return block;
+	}
+
+	query::QResult<Box<code::Expr>> compileBlockExpr(
+		query::Context& ctx, pst::Access<pst::expr::BlockExpr> block_expr
+	) {
+		const auto origin = code::pstOrigin(block_expr);
+		const auto unit   = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+		auto contents = getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, block_expr->getBlock()));
+
+		base::Optional<pst::Access<pst::ExprStmt>> tail_stmt;
+		if (!contents.empty() && contents.back()->isImplicitReturn())
+			tail_stmt = contents.back().dynamicCast<pst::ExprStmt>();
+
+		// A `return` is refused inside a block expression, so the return type is never used.
+		code::CodeBlock body({});
+		const auto      body_size = contents.size() - (tail_stmt.has_value() ? 1 : 0);
+		for (const auto& stmt: contents | std::views::take(body_size))
+			appendStmt(ctx, body, stmt, unit);
+
+		auto block = makeBox<code::BlockStmt>(origin, std::move(body));
+		if (tail_stmt.empty())
+			return Box<code::Expr>(makeBox<code::BlockExpr>(ctx, origin, std::move(block)));
+
+		auto tail_holder = tail_stmt.value()->getExpr().unlock(ctx);
+		UNPACK_QRESULT_MOVE(
+			auto tail =, code::subExprFromPST(ctx, unlockOrFail(ctx, tail_holder->getExpr()))
+		);
+		const auto tail_type = tail->expression_type.getSymbolType();
+		UNPACK_QRESULT_MOVE(
+			tail =,
+			coercions::coerceFromBox(
+				ctx, std::move(tail), tail_type, tail_holder->getStablePosition()
+			)
+		);
+		return Box<code::Expr>(makeBox<code::BlockExpr>(origin, std::move(block), std::move(tail)));
 	}
 
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(

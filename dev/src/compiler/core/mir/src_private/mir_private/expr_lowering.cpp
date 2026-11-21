@@ -1475,12 +1475,36 @@ namespace compiler::mir {
 		}
 
 		void visitBlockExpr(const hc::BlockExpr& expr) override {
-			// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
-			// expressions.
-			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope, {});
-			valueOutput(
-				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+			if (expr.tail.empty()) {
+				auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope, {});
+				valueOutput(
+					lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+				);
+				return;
+			}
+
+			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto target_location = function.addTmp(result_type, expr_scope);
+
+			// The tail shares the scope of the block, so the locals it reads are still alive.
+			auto block_scope = function.newScope(expr_scope);
+			auto tail_end    = function.newBlock("block.expr.result");
+			tail_end->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, block_scope }
 			);
+			auto assign_hole  = tail_end->addHole();
+			auto lowered_tail = lowerExpr(*expr.tail.value(), tail_end, function, block_scope);
+			lowered_tail.storeResultInGivenPlace(
+				MIRPlace(target_location),
+				assign_hole,
+				{ flagConstruct(target_location) },
+				block_scope,
+				{ expr.getPosition() }
+			);
+
+			auto lowered_body
+				= lowerCodeBlock(expr.block->body, lowered_tail.begin, function, block_scope, {});
+			valueOutput(lowered_body.begin, target_location);
 		}
 
 
