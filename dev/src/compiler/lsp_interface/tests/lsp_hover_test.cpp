@@ -78,6 +78,8 @@ public:
 		TESTER_ADD_TEST(closedDocumentTest);
 		TESTER_ADD_TEST(brokenFileTest);
 		TESTER_ADD_TEST(moreExpressionKindsTest);
+		TESTER_ADD_TEST(literalsPointersAndTypesTest);
+		TESTER_ADD_TEST(remainingExpressionKindsTest);
 	}
 
 protected:
@@ -184,6 +186,7 @@ private:
 		assertHoverContains(under_test, uri, 13, 20, { "p", "Point" });  // (p|.x
 		assertHoverContains(under_test, uri, 13, 22, { "x", "i64" });    // p.x|
 		assertHoverContains(under_test, uri, 12, 13, { "Point" });       // P|oint(1, 2)
+		assertHoverContains(under_test, uri, 6, 16, { "i64" });          // a |+ b: just the type
 	}
 
 	void nothingToShowTest() {
@@ -257,7 +260,7 @@ private:
 			  "    var r = &n;\n"                                         // 8
 			  "    var c = n as i32;\n"                                   // 9
 			  "    var neg = -n;\n"                                       // 10
-			  "    var ok = 1i64 < n;\n"                                  // 11
+			  "    var ok = 1i64 < n < 5i64;\n"                           // 11
 			  "    var arr: i64[2];\n"                                    // 12
 			  "    arr[0] = n;\n"                                         // 13
 			  "    var first = arr[0] + t._1;\n"                          // 14
@@ -269,18 +272,80 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test, EXPRESSIONS_PROGRAM);
 
-		under_test.compiler.publishDiagnostics(uri);
-
 		assertHoverContains(under_test, uri, 1, 19, { "i" });          // match case
 		assertHoverContains(under_test, uri, 2, 23, { "b", "bool" });  // if b then …
 		assertHoverContains(under_test, uri, 7, 13, { "n" });          // (n, 4i64)
 		assertHoverContains(under_test, uri, 8, 13, { "n" });          // &n
 		assertHoverContains(under_test, uri, 9, 12, { "n" });          // n as i32
 		assertHoverContains(under_test, uri, 10, 15, { "n" });         // -n
-		assertHoverContains(under_test, uri, 11, 20, { "n" });         // 1 < n
+		assertHoverContains(under_test, uri, 11, 20, { "n" });         // 1 < n < 5
 		assertHoverContains(under_test, uri, 13, 4, { "arr" });        // arr[0] = …
 		assertHoverContains(under_test, uri, 14, 25, { "t" });         // t._1
 		assertHoverContains(under_test, uri, 15, 24, { "n" });  // pick(n), n becomes a variant
+	}
+
+	/**
+	 * @brief Reaches into literals, pointers and type expressions, which the other programs do
+	 * not use.
+	 */
+	void literalsPointersAndTypesTest() {
+		constexpr std::string_view LITERALS_PROGRAM
+			= "fun main() -> i64 = {\n"        // 0
+			  "    var n = 3i64;\n"            // 1
+			  "    var flag = true;\n"         // 2
+			  "    var text = \"duck\";\n"     // 3
+			  "    var w: i64 | bool = n;\n"   // 4
+			  "    var p = &n as ptr i64;\n"   // 5
+			  "    var v = *p;\n"              // 6
+			  "    if (flag) return n + v;\n"  // 7
+			  "    return 0i64;\n"             // 8
+			  "}\n";                           // 9
+
+		duck_ls_test::VfsWorkspace workspace("lsp_hover_literals_ws");
+		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
+		auto                       uri = openProgram(workspace, under_test, LITERALS_PROGRAM);
+
+		assertHoverContains(under_test, uri, 2, 15, { "bool" });   // true
+		assertHoverContains(under_test, uri, 3, 16, { "slice" });  // "duck"
+		assertHoverContains(under_test, uri, 4, 17, { "type" });   // i64 | bool
+		assertHoverContains(under_test, uri, 5, 13, { "n" });      // &n as ptr i64
+		assertHoverContains(under_test, uri, 6, 13, { "p" });      // *p
+	}
+
+	/**
+	 * @brief Reaches into the remaining kinds of expression: char and unit literals, array
+	 * literals, `ptrof`, function pointer and optional types, lifting to an optional and `move`.
+	 */
+	void remainingExpressionKindsTest() {
+		constexpr std::string_view REMAINING_PROGRAM
+			= "fun id(x: i64) -> i64 = x;\n"           // 0
+			  "\n"                                     // 1
+			  "fun main() -> i64 = {\n"                // 2
+			  "    var n = 3i64;\n"                    // 3
+			  "    var ch: char = 'a';\n"              // 4
+			  "    var u: () = ();\n"                  // 5
+			  "    var arr: i64[2] = [n, 4i64];\n"     // 6
+			  "    var q = ptrof n;\n"                 // 7
+			  "    var f: funptr(i64) -> i64 = id;\n"  // 8
+			  "    var o: ?i64 = n;\n"                 // 9
+			  "    var m = move n;\n"                  // 10
+			  "    return f(arr[0]);\n"                // 11
+			  "}\n";                                   // 12
+
+		duck_ls_test::VfsWorkspace workspace("lsp_hover_remaining_ws");
+		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
+		auto                       uri = openProgram(workspace, under_test, REMAINING_PROGRAM);
+
+		assertHoverContains(under_test, uri, 4, 20, { "char" });      // 'a'
+		assertHoverContains(under_test, uri, 5, 16, { "()" });        // ()
+		assertHoverContains(under_test, uri, 6, 23, { "n", "i64" });  // [n, 4i64]
+		assertHoverContains(under_test, uri, 7, 12, { "ptr" });       // ptrof n: the pointer itself
+		assertHoverContains(under_test, uri, 7, 18, { "n", "i64" });  // ptrof n
+		assertHoverContains(under_test, uri, 8, 18, { "type" });      // funptr(i64) -> i64
+		assertHoverContains(under_test, uri, 9, 11, { "type" });      // ?i64
+		assertHoverContains(under_test, uri, 9, 18, { "n", "i64" });  // n lifted to ?i64
+		assertHoverContains(under_test, uri, 10, 13, { "i64" });      // move n: the move itself0
+		assertHoverContains(under_test, uri, 10, 17, { "n", "i64" });  // move n
 	}
 };
 
