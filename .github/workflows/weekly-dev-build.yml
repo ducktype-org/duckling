@@ -203,13 +203,6 @@ jobs:
             exit 1
           fi
 
-      # packaging ships the VM as bin/VM_tc, but `duck run` (DVM profiles) starts `VM` from PATH.
-      - name: Link VM to VM_tc
-        working-directory: _packaging/output/${{ env.PACKAGE_NAME }}
-        run: |
-          test -f bin/VM_tc
-          ln -s VM_tc bin/VM
-
       - name: Disk usage
         if: always()
         run: df -h "$GITHUB_WORKSPACE"
