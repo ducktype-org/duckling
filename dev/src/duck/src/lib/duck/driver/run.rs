@@ -15,12 +15,11 @@ use super::cli;
 use super::cli_args_preprocessing::aliases_expansion::expand_aliases;
 use super::cli_args_preprocessing::typos_fixing::fix_typos;
 use super::global_options::GlobalOptions;
-use super::subcommands::exec_for;
+use super::subcommands::{self, exec_for};
 use super::subcommands::run_script::check_is_script;
 use crate::duck::driver::cli_ext::ArgMatchesExt;
 use crate::duck::driver::external_subcommands::ExternalSubcommands;
 use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
-use crate::quackpack::core::compile::duckc::Duckc;
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::command_ext::CommandExt;
 use crate::util::path_ops::{is_executable, resolve_with_tilde};
@@ -102,7 +101,7 @@ fn run_subcmd(
 ) -> QuackResult<()> {
     let Some((name, args)) = args.subcommand() else {
         // No subcommand provided, start REPL.
-        return Duckc::start_repl_with(ctx).map(|_| ());
+        return subcommands::repl::execute_default(ctx);
     };
     if let Some(exec_fn) = exec_for(name) {
         return exec_fn(ctx, args);

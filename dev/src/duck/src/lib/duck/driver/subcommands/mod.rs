@@ -17,7 +17,7 @@ mod info;
 mod init;
 mod list;
 mod remove;
-mod repl;
+pub mod repl;
 mod run;
 pub mod run_script;
 mod sync;

@@ -88,6 +88,18 @@ impl DuckcProcessBuilder {
         Ok(self)
     }
 
+    /// Set the `duckc repl --packages` manifest.
+    pub fn set_repl_packages(&mut self, path: &Path) -> &mut Self {
+        self.inner.arg("--packages").arg(path);
+        self
+    }
+
+    /// Pass extra raw arguments.
+    pub fn add_args(&mut self, args: &[String]) -> &mut Self {
+        self.inner.args(args);
+        self
+    }
+
     /// Set the number of workers to be used by duckc.
     pub fn set_workers_count(&mut self, workers: usize) -> &mut Self {
         if workers == 0 {

@@ -21,6 +21,7 @@ pub mod process_builder;
 mod version;
 
 use std::convert::Infallible;
+use std::path::Path;
 
 pub use compilation_type::CompilationType;
 use tempfile::TempDir;
@@ -54,16 +55,20 @@ impl Duckc {
         process_builder::DuckcProcessBuilder::new(self)
     }
 
-    /// A helper for starting a REPL session from [`DuckContext`].
-    pub fn start_repl_with(ctx: &DuckContext) -> QuackResult<Infallible> {
-        let this = Self::new(ctx);
-        this.start_repl()
-    }
-
-    /// Start a REPL session.
-    pub fn start_repl(&self) -> QuackResult<Infallible> {
-        self.process_builder()
-            .set_subcommand(process_builder::DuckcSubcommand::Repl)
+    /// Start a REPL session, optionally with a `--packages` manifest and extra `duckc repl`
+    /// arguments.
+    pub fn start_repl(
+        &self,
+        packages_manifest: Option<&Path>,
+        extra_args: &[String],
+    ) -> QuackResult<Infallible> {
+        let mut builder = self.process_builder();
+        builder.set_subcommand(process_builder::DuckcSubcommand::Repl);
+        if let Some(manifest) = packages_manifest {
+            builder.set_repl_packages(manifest);
+        }
+        builder
+            .add_args(extra_args)
             .execute_and_replace()
             .context("failed to start a REPL session")
     }
