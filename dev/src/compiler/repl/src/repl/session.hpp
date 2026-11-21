@@ -53,6 +53,15 @@ namespace compiler::repl {
 		~ReplSession();
 
 		/**
+		 * @brief Switches to framed I/O for programs driving the REPL (e.g. the Jupyter kernel).
+		 *
+		 * Each input is read until a ReplConfig::FRAMED_END_OF_INPUT line, so it may span lines.
+		 * ReplConfig::FRAMED_READY is printed on stdout and stderr when the session waits for
+		 * input, and expression results are printed after ReplConfig::FRAMED_RESULT.
+		 */
+		void setFramed(bool framed);
+
+		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
 		 *
 		 * Statements are executed in source order and become part of the current session state.
@@ -303,11 +312,12 @@ namespace compiler::repl {
 		                     ///< then it is checked by the main run loop.
 		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
 		ResetState                 m_reset_state;      ///< Struct to control reset.
-		u64           m_line_counter;  ///< Counter for generating unique wrapper function names
-		ReplSessionID m_session_id;    ///< Part of the names of this session's statement modules
-		vm::PID       m_dvm_pid;       ///< Process ID of the running DVM instance
-		ReplFrontend  m_frontend;      ///< Frontend for user interaction
+		u64           m_line_counter;    ///< Counter for generating unique wrapper function names
+		ReplSessionID m_session_id;      ///< Part of the names of this session's statement modules
+		vm::PID       m_dvm_pid;         ///< Process ID of the running DVM instance
+		ReplFrontend  m_frontend;        ///< Frontend for user interaction
 		bool          m_decorative_output;
+		bool          m_framed = false;  ///< See setFramed().
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *

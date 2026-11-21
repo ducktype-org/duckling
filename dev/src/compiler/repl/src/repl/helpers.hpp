@@ -26,6 +26,13 @@ namespace compiler::repl {
 		static constexpr std::string CONTINUATION = "          ";  /// Prompt for continuation lines
 		static constexpr std::string HISTORY_MULTILINE_CONTINUATION
 			= "    ";  /// Prompt for history continuation.
+
+		/// Framed mode: a line ending one input.
+		static constexpr std::string FRAMED_END_OF_INPUT = "\x1e@duck-end";
+		/// Framed mode: printed on stdout and stderr once the session waits for input.
+		static constexpr std::string FRAMED_READY = "\x1e@duck-ready";
+		/// Framed mode: prefix of the line holding an expression's result.
+		static constexpr std::string FRAMED_RESULT = "\x1e@duck-result ";
 	};
 
 	/**

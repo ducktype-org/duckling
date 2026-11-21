@@ -1461,6 +1461,14 @@ namespace {
 		                     .addLongName("plain-output")
 		                     .addShortDesc("Print REPL results without interactive decorations.")
 		                     .build())
+					.add(clah::ParamBuilder::ofFlag()
+		                     .addLongName("framed")
+		                     .addShortDesc("Framed I/O for programs driving the REPL.")
+		                     .addLongDesc("Implies --plain-output. Each input ends with a line "
+		                                  "holding \\x1e@duck-end;\n\\x1e@duck-ready is printed "
+		                                  "on stdout and stderr when waiting for input,\nand "
+		                                  "results are prefixed with \\x1e@duck-result.\n")
+		                     .build())
 					.add(clah::ParamBuilder::ofValue(clah::FileParser::make("manifest"))
 		                     .addLongName("packages")
 		                     .addShortDesc("JSON manifest of packages importable from the session.")
@@ -1512,7 +1520,8 @@ namespace {
 						if (options.isFlag("no-completions")) completions = false;
 
 						bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
-						bool decorative_output = !options.isFlag("plain-output");
+						bool framed    = options.isFlag("framed");
+						bool decorative_output = !options.isFlag("plain-output") && !framed;
 
 						// Bracketed paste emits terminal-control sequences, which would violate
 			            // plain output.
@@ -1527,6 +1536,7 @@ namespace {
 							compiler::repl::ReplSession session(
 								completions, bracketed, decorative_output
 							);
+							session.setFramed(framed);
 							session.preloadPackages();
 
 							auto replay_count_opt = options.getValue<i64>("history-entries");

@@ -29,3 +29,4 @@ SubDirs:
   - script_loading
   - variable_assignment
   - packages
+  - jupyter_kernel

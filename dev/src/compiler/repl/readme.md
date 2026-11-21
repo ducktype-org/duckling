@@ -76,6 +76,16 @@ With the minimal frontend (`-DUSE_REPLXX=OFF`), this mode reads one line at a
 time without the interactive editor. Alt+Enter multiline input and history
 navigation shortcuts are unavailable; `/commands` still shows entered commands.
 
+Framed I/O for programs driving the REPL (used by the [Jupyter kernel](../../JupyterKernel/readme.md)):
+
+```bash
+./duckc repl --framed
+```
+
+Implies `--plain-output`. Each input ends with a line holding `\x1e@duck-end` (so it may span
+lines), `\x1e@duck-ready` is printed on stdout and stderr whenever the REPL waits for input, and
+expression results are printed as `\x1e@duck-result <value>`.
+
 Make user packages importable from cells:
 
 ```bash

@@ -449,6 +449,8 @@ namespace compiler::repl {
 		initDVM();
 	}
 
+	void ReplSession::setFramed(bool framed) { m_framed = framed; }
+
 	ReplSession::~ReplSession() {
 		const auto teardown = vm::api::deinitOrKill(m_dvm_pid);
 		if (!teardown.has_value())
@@ -769,7 +771,10 @@ namespace compiler::repl {
 						if (return_type.toString() == "()") {
 							if (m_decorative_output) std::cout << "Function executed.\n";
 						} else {
-							if (m_decorative_output) std::cout << "=> ";
+							if (m_framed)
+								std::cout << ReplConfig::FRAMED_RESULT;
+							else if (m_decorative_output)
+								std::cout << "=> ";
 							std::cout << run_result.value() << "\n";
 						}
 					}
@@ -988,10 +993,35 @@ namespace compiler::repl {
 		CORE_UNREACHABLE();
 	}
 
+	namespace {
+		/**
+		 * @brief Reads one framed input: lines up to a ReplConfig::FRAMED_END_OF_INPUT line.
+		 * @return The input without the final newline; empty at end of input.
+		 */
+		std::string readFramedInput() {
+			std::string input;
+			std::string line;
+			bool        first = true;
+			while (std::getline(std::cin, line)) {
+				if (line == ReplConfig::FRAMED_END_OF_INPUT) return input;
+				if (!first) input += '\n';
+				input += line;
+				first = false;
+			}
+			return input;
+		}
+
+		void printFramedReady() {
+			std::cout << ReplConfig::FRAMED_READY << '\n' << std::flush;
+			std::cerr << ReplConfig::FRAMED_READY << '\n' << std::flush;
+		}
+	}
+
 	ReplResult ReplSession::run(bool is_reset) {
 		if (!is_reset) m_frontend.printWelcome();
 		while (!m_should_exit) {
-			std::string line = m_frontend.readLine();
+			if (m_framed) printFramedReady();
+			std::string line = m_framed ? readFramedInput() : m_frontend.readLine();
 
 			if (line.empty() && std::cin.eof()) {
 				if (m_decorative_output) std::cout << "\nGoodbye!\n";
