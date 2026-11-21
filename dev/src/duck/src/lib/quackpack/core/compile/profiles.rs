@@ -56,6 +56,16 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
             },
         ),
         (
+            "dvm".into(),
+            Profile {
+                name: "dvm".into(),
+                opt_level: OptLevel::One,
+                dvm_bytecode: true,
+                incremental: true,
+                c_std: true,
+            },
+        ),
+        (
             DEFAULT_SCRIPT_PROFILE_NAME.into(),
             Profile {
                 name: DEFAULT_SCRIPT_PROFILE_NAME.into(),
@@ -330,6 +340,13 @@ mod test {
         let profiles = manifest::Profiles::new([("default".into(), profile)].into()).unwrap();
         let profile = Profile::construct_profile("default".into(), &profiles).unwrap();
         assert_eq!(profile, Profile::default());
+    }
+
+    #[test]
+    fn predefined_dvm() {
+        let profiles = manifest::Profiles::new([].into()).unwrap();
+        let profile = Profile::construct_profile("dvm".into(), &profiles).unwrap();
+        assert!(profile.dvm_bytecode);
     }
 
     #[test]
