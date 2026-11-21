@@ -103,7 +103,7 @@ private:
 			ASSERT_EQUAL("", result.getValue<std::string>("value").value());
 			ASSERT_EQUAL(expected_extras.size(), result.getExtraParameterCount());
 			for (usize i = 0; i < expected_extras.size(); ++i)
-				ASSERT_EQUAL(expected_extras[i], result.getExtra<std::string>(i).value());
+				ASSERT_EQUAL(expected_extras.at(i), result.getExtra<std::string>(i).value());
 		}
 	}
 
