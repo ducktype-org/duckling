@@ -1539,20 +1539,41 @@ namespace compiler::helios::code {
 		  ),
 		  block(std::move(block)) {}
 
+	BlockExpr::BlockExpr(ElementOrigin origin, Box<BlockStmt> block, Box<Expr> tail):
+		  Expr(
+			  tsh::ExpressionType(
+				  tail->expression_type.getSymbolType(),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  block(std::move(block)),
+		  tail(std::move(tail)) {}
+
 	BlockExpr::BlockExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block
+		tsh::ExpressionType<>     expression_type,
+		ElementOrigin             origin,
+		Box<Stmt>                 block,
+		base::Optional<Box<Expr>> tail
 	):
 		  Expr(expression_type, origin),
-		  block(std::move(block)) {}
+		  block(std::move(block)),
+		  tail(std::move(tail)) {}
 
 	void BlockExpr::debugPrint(std::ostream& out) const {
 		out << "block(";
 		block->debugPrint(out);
+		if_opt_some(tail, tail_expr) {
+			out << ", tail: ";
+			tail_expr->debugPrint(out);
+		}
 		out << ")";
 	}
 
 	Box<Expr> BlockExpr::clone() const {
-		return makeBox<BlockExpr>(expression_type, origin, block->clone());
+		base::Optional<Box<Expr>> tail_clone;
+		if_opt_some(tail, tail_expr) { tail_clone = tail_expr->clone(); }
+		return makeBox<BlockExpr>(expression_type, origin, block->clone(), std::move(tail_clone));
 	}
 
 	bool MatchExpr::Case::shouldBindToTemporary(query::Context& ctx) const {
