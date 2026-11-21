@@ -50,6 +50,7 @@
 #include <query_framework/query_errors.hpp>
 
 #include <algorithm>
+#include <ranges>
 #include <string_view>
 #include <variant>
 
@@ -785,7 +786,8 @@ namespace compiler::helios {
 		// A `return` is refused inside a block expression, so the return type is never used.
 		code::CodeBlock body({});
 		const auto      body_size = contents.size() - (tail_stmt.has_value() ? 1 : 0);
-		for (usize i = 0; i < body_size; i++) appendStmt(ctx, body, contents[i], unit);
+		for (const auto& stmt: contents | std::views::take(body_size))
+			appendStmt(ctx, body, stmt, unit);
 
 		auto block = makeBox<code::BlockStmt>(origin, std::move(body));
 		if (tail_stmt.empty())

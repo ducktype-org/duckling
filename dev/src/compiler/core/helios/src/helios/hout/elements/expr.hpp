@@ -1070,16 +1070,17 @@ namespace compiler::helios::code {
 	 * Without a `tail` the block evaluates to a unit.
 	 */
 	struct BlockExpr final: public Expr {
-		Box<Stmt> block;
+		Box<BlockStmt> block;
 
 		/**
 		 * @brief The trailing expression `{ ...; tail }` that gives the block its value. It is
-		 * evaluated in the scope of `block`, which has to be a `BlockStmt` then.
+		 * evaluated in the scope of `block`.
 		 */
 		base::Optional<Box<Expr>> tail;
 
-		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
+		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<BlockStmt> block);
 		BlockExpr(ElementOrigin origin, Box<BlockStmt> block, Box<Expr> tail);
+		~BlockExpr() override;
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -1092,7 +1093,7 @@ namespace compiler::helios::code {
 		BlockExpr(
 			tsh::ExpressionType<>     expression_type,
 			ElementOrigin             origin,
-			Box<Stmt>                 block,
+			Box<BlockStmt>            block,
 			base::Optional<Box<Expr>> tail
 		);
 	};

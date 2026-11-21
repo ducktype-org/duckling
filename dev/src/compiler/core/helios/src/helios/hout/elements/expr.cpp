@@ -1529,7 +1529,7 @@ namespace compiler::helios::code {
 		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
 	}
 
-	BlockExpr::BlockExpr(query::Context&, ElementOrigin origin, Box<Stmt> block):
+	BlockExpr::BlockExpr(query::Context&, ElementOrigin origin, Box<BlockStmt> block):
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType()),
@@ -1553,12 +1553,14 @@ namespace compiler::helios::code {
 	BlockExpr::BlockExpr(
 		tsh::ExpressionType<>     expression_type,
 		ElementOrigin             origin,
-		Box<Stmt>                 block,
+		Box<BlockStmt>            block,
 		base::Optional<Box<Expr>> tail
 	):
 		  Expr(expression_type, origin),
 		  block(std::move(block)),
 		  tail(std::move(tail)) {}
+
+	BlockExpr::~BlockExpr() = default;
 
 	void BlockExpr::debugPrint(std::ostream& out) const {
 		out << "block(";
@@ -1573,7 +1575,15 @@ namespace compiler::helios::code {
 	Box<Expr> BlockExpr::clone() const {
 		base::Optional<Box<Expr>> tail_clone;
 		if_opt_some(tail, tail_expr) { tail_clone = tail_expr->clone(); }
-		return makeBox<BlockExpr>(expression_type, origin, block->clone(), std::move(tail_clone));
+		auto block_clone = makeBox<BlockStmt>(
+			block->origin,
+			std::move(*block->body.clone()),
+			block->control_flow_id,
+			block->control_flow_kind
+		);
+		return makeBox<BlockExpr>(
+			expression_type, origin, std::move(block_clone), std::move(tail_clone)
+		);
 	}
 
 	bool MatchExpr::Case::shouldBindToTemporary(query::Context& ctx) const {

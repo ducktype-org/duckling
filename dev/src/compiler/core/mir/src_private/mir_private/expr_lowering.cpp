@@ -1483,9 +1483,6 @@ namespace compiler::mir {
 				return;
 			}
 
-			const auto* block_stmt = dynamic_cast<const hc::BlockStmt*>(expr.block.get());
-			CORE_ASSERT(block_stmt != nullptr, "A block expression with a tail has to be a block.");
-
 			const auto result_type     = expr.expression_type.getSymbolType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
@@ -1506,7 +1503,7 @@ namespace compiler::mir {
 			);
 
 			auto lowered_body
-				= lowerCodeBlock(block_stmt->body, lowered_tail.begin, function, block_scope, {});
+				= lowerCodeBlock(expr.block->body, lowered_tail.begin, function, block_scope, {});
 			valueOutput(lowered_body.begin, target_location);
 		}
 
