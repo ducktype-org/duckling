@@ -50,9 +50,8 @@ Tests:
       double-dev-logs:
         run_args: "--dev-logs \"Query, Lexer\"  dummy"
       
-      bad-dev-logs:
+      empty-dev-logs:
         run_args: "--dev-logs \"\"  dummy "
-        ExitCode: 1
 
   compile-modules:
     PreCase: "@{copy_std_artifacts}"
