@@ -94,8 +94,9 @@ pub enum FetchResponse<T> {
 }
 
 #[derive(Debug)]
-/// A marker struct for gatherer indicating that we failed to initialize a client and gathering
-/// should fail.
+/// A marker struct indicating that we failed to initialize a client.
+// NOTE: We don't derive `Error`, nor implement `From<FetchError> for QuackError`: otherwise `?`
+// operator could coerce them back into a single `QuackError`, which we don't want.
 pub struct InitializationError(QuackError);
 
 impl From<InitializationError> for QuackError {
@@ -114,13 +115,27 @@ impl From<QuackError> for InitializationError {
 /// A generic error returned by [`Fetcher`].
 ///
 /// [`Fetcher`]: super::Fetcher
-// NOTE: We don't derive `Error`: otherwise `?` operator could coerce them back into a single
-// `QuackError`, which we don't want.
+// NOTE: We don't derive `Error`, nor implement `From<FetchError> for QuackError`: otherwise `?`
+// operator could coerce them back into a single `QuackError`, which we don't want.
 pub enum FetchError {
     /// We failed to initialize the client.
     Initialization(InitializationError),
     /// Other error has occurred.
     Other(QuackError),
+}
+
+impl FetchError {
+    /// Convert [`FetchError`] into a [`QuackError`].
+    ///
+    /// **IMPORTANT:** This method should be used with caution: [`FetchError`] has limited set of
+    /// implemented traits, so that `?` operator doesn't convert [`FetchError`] into [`QuackError`]
+    /// by mistake. You can do achieve this using this method, but be cautious.
+    pub fn into_inner(self) -> QuackError {
+        match self {
+            Self::Initialization(e) => e.into(),
+            Self::Other(e) => e,
+        }
+    }
 }
 
 impl From<InitializationError> for FetchError {

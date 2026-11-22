@@ -16,7 +16,7 @@ use tar::Archive;
 use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::fetcher::types::{FetchError, PackageWithUrl};
+use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::FullKind;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::paths::Storage;
@@ -204,8 +204,7 @@ fn fetch_git(
             &storage.pkg_dir(pkg_id),
         ) {
             Ok(_) => {}
-            Err(FetchError::Initialization(e)) => return Err(e.into()),
-            Err(FetchError::Other(e)) => return Err(e),
+            Err(e) => return Err(e.into_inner()),
         };
         mark_cloned_git_as_stored(pkg_id, storage).with_context(|| {
             format!(
@@ -249,8 +248,7 @@ async fn fetch_registry(
             .await
         {
             Ok(path) => path,
-            Err(FetchError::Initialization(e)) => return Err(e.into()),
-            Err(FetchError::Other(e)) => return Err(e),
+            Err(e) => return Err(e.into_inner()),
         };
         unpack_package_blob(pkg_id, storage, &blob_path).with_context(|| {
             format!(
