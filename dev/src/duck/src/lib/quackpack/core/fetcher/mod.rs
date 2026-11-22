@@ -19,6 +19,7 @@ use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
 
+use self::types::{FetchResult, InitializationResult};
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::types::{FetchResponse, PackageWithUrl};
 use crate::quackpack::core::{GitReference, PackageLoader};
@@ -27,7 +28,7 @@ use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::LockedFile;
 use crate::util::once_ext::OnceExt;
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_err};
 
 pub mod cache;
 pub mod downloads;
@@ -107,7 +108,7 @@ impl<'duck> Fetcher<'duck> {
     pub async fn get_package_metadata(
         &self,
         package: types::PackageWithUrl,
-    ) -> QuackResult<FetchResponse<registry::Manifest>> {
+    ) -> FetchResult<FetchResponse<registry::Manifest>> {
         if let Some(cached) = self.cache.borrow().get_manifest(package)? {
             debug!("metadata cache hit");
             return Ok(FetchResponse::Some(cached));
@@ -144,7 +145,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: InternedUrl,
         package_name: StrId,
-    ) -> QuackResult<FetchResponse<types::MultiMetadata>> {
+    ) -> FetchResult<FetchResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
             debug!("offline, using only the cached metadata");
             let package = PackageWithUrl {
@@ -193,7 +194,7 @@ impl<'duck> Fetcher<'duck> {
         url: &Url,
         reference: GitReference,
         destination_directory: &Path,
-    ) -> QuackResult<types::ClonedPackage> {
+    ) -> FetchResult<types::ClonedPackage> {
         let client = self.git_client()?;
         self.ctx.info(format!("cloning a repository at `{url}`"))?;
 
@@ -250,7 +251,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: &Url,
         reference: GitReference,
-    ) -> QuackResult<(types::ClonedPackage, TempDir)> {
+    ) -> FetchResult<(types::ClonedPackage, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
         let result = self.clone_from_git_to_directory(url, reference, dir.path())?;
         Ok((result, dir))
@@ -278,7 +279,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         package: PackageWithUrl,
         retries: u32,
-    ) -> QuackResult<PathBuf> {
+    ) -> FetchResult<PathBuf> {
         self.ctx.info(format!(
             "starting a download of `{}` version {} from `{}`",
             package.name, package.version, package.url
@@ -317,11 +318,12 @@ impl<'duck> Fetcher<'duck> {
 
         let retries_string = if retries == 1 { "retry" } else { "retries" };
 
-        qp_bail!(
+        Err(qp_err!(
             "failed to fetch a package {} {} after {retries} {retries_string}",
             package.name,
             package.version
         )
+        .into())
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -335,19 +337,22 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Get or initialize a new [`downloads::Downloads`].
-    fn downloads(&self) -> QuackResult<&downloads::Downloads> {
+    fn downloads(&self) -> InitializationResult<&downloads::Downloads> {
         self.downloads.try_init_with(|| {
             let download_cache_path = self.ctx.duck_home().downloads();
-            downloads::Downloads::new(download_cache_path)
-                .context("failed to create a downloads manager")
+            let downloads = downloads::Downloads::new(download_cache_path)
+                .context("failed to create a downloads manager")?;
+            Ok(downloads)
         })
     }
 
     /// Get or initialize a new [`locks::Locks`].
-    fn locks(&self) -> QuackResult<&locks::Locks> {
+    fn locks(&self) -> InitializationResult<&locks::Locks> {
         self.locks.try_init_with(|| {
             let locks = self.ctx.duck_home().cache().join("locks");
-            locks::Locks::new(locks).context("failed to create a fetcher locks manager")
+            let locks =
+                locks::Locks::new(locks).context("failed to create a fetcher locks manager")?;
+            Ok(locks)
         })
     }
 
@@ -359,7 +364,7 @@ impl<'duck> Fetcher<'duck> {
 
     /// Get or initialize a new [`git::GitClient`].
     /// It chooses the right client based on the user configuration.
-    fn git_client(&self) -> QuackResult<&(dyn git::GitClient + 'duck)> {
+    fn git_client(&self) -> InitializationResult<&(dyn git::GitClient + 'duck)> {
         self.git_client
             .try_init_with(|| {
                 let network_config = self.ctx.duck_cfg().network()?;

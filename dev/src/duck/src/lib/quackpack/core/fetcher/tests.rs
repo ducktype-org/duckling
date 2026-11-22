@@ -12,6 +12,7 @@ use tempfile::{TempDir, tempdir};
 
 use super::*;
 use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::types::FetchError;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::test_utils::setup_test;
 
@@ -231,6 +232,10 @@ fn without_cache_fetch_fails() {
         url: server.base_url().parse().unwrap(),
     }))
     .unwrap_err();
+    let err = match err {
+        FetchError::Initialization(_) => unreachable!(),
+        FetchError::Other(err) => err,
+    };
     assert_eq!(
         err.to_string(),
         format!(

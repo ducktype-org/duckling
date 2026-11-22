@@ -7,11 +7,11 @@
 //! Common types used in network communication.
 use serde::{Deserialize, Serialize};
 
-use crate::StrId;
 use crate::quackpack::core;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
+use crate::{QuackError, StrId};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version
@@ -92,3 +92,48 @@ pub enum FetchResponse<T> {
     /// [`Fetcher`](super::Fetcher) was created in an offline mode.
     Offline,
 }
+
+#[derive(Debug)]
+/// A marker struct for gatherer indicating that we failed to initialize a client and gathering
+/// should fail.
+pub struct InitializationError(QuackError);
+
+impl From<InitializationError> for QuackError {
+    fn from(value: InitializationError) -> Self {
+        value.0
+    }
+}
+
+impl From<QuackError> for InitializationError {
+    fn from(value: QuackError) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug)]
+/// A generic error returned by [`Fetcher`].
+///
+/// [`Fetcher`]: super::Fetcher
+// NOTE: We don't derive `Error`: otherwise `?` operator could coerce them back into a single
+// `QuackError`, which we don't want.
+pub enum FetchError {
+    /// We failed to initialize the client.
+    Initialization(InitializationError),
+    /// Other error has occurred.
+    Other(QuackError),
+}
+
+impl From<InitializationError> for FetchError {
+    fn from(value: InitializationError) -> Self {
+        Self::Initialization(value)
+    }
+}
+
+impl From<QuackError> for FetchError {
+    fn from(value: QuackError) -> Self {
+        Self::Other(value)
+    }
+}
+
+pub type FetchResult<T> = Result<T, FetchError>;
+pub type InitializationResult<T> = Result<T, InitializationError>;
