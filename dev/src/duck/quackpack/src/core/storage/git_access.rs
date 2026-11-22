@@ -7,7 +7,7 @@
 //! A storage management of gits.
 use std::path::{Path, PathBuf};
 
-use duck_core::util::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
+use crate::util::filesystem::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
 
 use super::paths::Storage;
 use crate::QuackResult;

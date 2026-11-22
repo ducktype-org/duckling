@@ -9,7 +9,7 @@ use std::io::Write;
 use std::path::Path;
 use std::rc::Rc;
 
-use duck_core::util::file_locks::LockedFile;
+use crate::util::filesystem::file_locks::LockedFile;
 use endpoints::UrlExt;
 use tracing::{debug, trace};
 use url::Url;

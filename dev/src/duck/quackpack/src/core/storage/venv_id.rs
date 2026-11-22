@@ -10,8 +10,8 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use duck_core::context::duck_home::DuckHome;
-use duck_core::util::hash::sha256_string;
+use crate::context::duck_home::DuckHome;
+use crate::util::hash::sha256_string;
 
 use crate::StrId;
 use crate::core::script::Script;

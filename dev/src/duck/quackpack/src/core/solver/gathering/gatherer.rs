@@ -15,17 +15,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
-use duck_core::util::error::{ErrorsLogger, MessageError};
-use duck_core::util::interned_url::InternedUrl;
+use crate::util::error::{ErrorsLogger, MessageError};
+use crate::util::interning::interned_url::InternedUrl;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use tempfile::TempDir;
 use tracing::{debug, trace};
 
 use crate::core::fetcher::Fetcher;
-use crate::core::fetcher::types::{
-    FetchError, FetchResponse as FetcherResponse, PackageWithUrl,
-};
+use crate::core::fetcher::types::{FetchError, FetchResponse as FetcherResponse, PackageWithUrl};
 use crate::core::full_identity::{FullIdentity, FullOrigin};
 use crate::core::solver::gathering::fetch_types::{
     FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedRequest, NotPinnedSuccess,

@@ -8,9 +8,9 @@
 
 use tracing::error;
 
-use duck_core::util::file_locks::LockedFile;
-use duck_core::util::path_ops::remove_file;
-use duck_core::util::set_once::SetOnce;
+use crate::util::filesystem::file_locks::LockedFile;
+use crate::util::filesystem::path_ops::remove_file;
+use crate::util::set_once::SetOnce;
 
 /// Remove a file on drop, if armed.
 /// That way we don't leave files with length 0 in FS in case of an error.

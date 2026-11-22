@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use duck_core::util::test_utils::setup_test;
+use crate::util::test_utils::setup_test;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};

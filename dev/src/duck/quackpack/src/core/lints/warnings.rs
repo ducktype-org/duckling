@@ -41,7 +41,7 @@ impl Warnings {
     }
 }
 
-/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](duck_core::context::terminal::Terminal).
+/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](crate::context::terminal::Terminal).
 fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()> {
     ctx.warning(warning)
 }

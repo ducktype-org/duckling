@@ -10,7 +10,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use duck_core::util::command_ext::CommandExt;
+use crate::util::command_ext::CommandExt;
 use tracing::{debug, trace, warn};
 use url::Url;
 

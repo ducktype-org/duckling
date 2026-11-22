@@ -6,10 +6,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use duck_core::util::Pluralize;
-use duck_core::util::error::ErrorsLogger;
-use duck_core::util::extend::QpExtend;
-use duck_core::util::str_id::QpJoin;
+use crate::util::Pluralize;
+use crate::util::error::ErrorsLogger;
+use crate::util::extend::QpExtend;
+use crate::util::interning::str_id::QpJoin;
 use itertools::Itertools;
 
 use crate::core::full_identity::{FullIdentity, FullOrigin};

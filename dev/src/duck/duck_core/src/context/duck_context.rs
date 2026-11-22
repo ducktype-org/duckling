@@ -12,9 +12,9 @@ use super::terminal::Verbosity;
 use crate::context::duck_cfg::DuckCfg;
 use crate::context::duck_home::DuckHome;
 use crate::context::duck_home::duck_home_path;
+use crate::context::env::Env;
 use crate::context::terminal::Terminal;
-use crate::util::env::Env;
-use crate::util::file_locks::FileLockManager;
+use crate::util::filesystem::file_locks::FileLockManager;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]

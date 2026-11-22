@@ -60,11 +60,11 @@ use std::fmt;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, Utc};
-use duck_core::util::hash;
-use duck_core::util::path_ops::{
+use crate::util::filesystem::path_ops::{
     MkdirOptions, copy_file, mkdir, read_from_path_to_string, remove_tree, touch, try_fsync_dir,
 };
+use crate::util::hash;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, trace, warn};
 

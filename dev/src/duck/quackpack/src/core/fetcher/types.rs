@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Common types used in network communication.
-use duck_core::util::interned_url::InternedUrl;
+use crate::util::interning::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize};
 
 use crate::core;

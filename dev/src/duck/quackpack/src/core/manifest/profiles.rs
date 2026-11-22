@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use duck_core::util::str_id::QpJoin;
+use crate::util::interning::str_id::QpJoin;
 
 use crate::core::compile::profiles::PREDEFINED_PROFILES;
 use crate::schemas::registry;

@@ -11,7 +11,7 @@ use std::str::FromStr;
 use console::{Term, WithoutAnsi, colors_enabled_stderr, style};
 use dialoguer::{Input, Password};
 
-use crate::context::indent::indent;
+use crate::util::indent::indent;
 use crate::{QuackResult, QuackResultContext};
 
 /// A struct which is responsible for printing.

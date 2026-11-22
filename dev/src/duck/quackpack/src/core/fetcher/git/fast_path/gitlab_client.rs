@@ -6,7 +6,7 @@
 
 use std::pin::Pin;
 
-use duck_core::util::interned_url::InternedUrl;
+use crate::util::interning::interned_url::InternedUrl;
 
 use crate::core::fetcher::git::fast_path::GitFastPathExt;
 use crate::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;

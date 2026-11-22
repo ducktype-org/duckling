@@ -6,7 +6,7 @@
 
 use std::path::Path;
 
-use duck_core::util::path_ops::{normalize, read_from_path_to_string};
+use crate::util::filesystem::path_ops::{normalize, read_from_path_to_string};
 
 use super::setup_mock_storage;
 use crate::DuckContext;

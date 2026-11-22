@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::env::home_dir;
 use std::path::PathBuf;
 
-use duck_core::util::path_ops::{normalize, touch, try_fsync_dir, write_file};
+use crate::util::filesystem::path_ops::{normalize, touch, try_fsync_dir, write_file};
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;

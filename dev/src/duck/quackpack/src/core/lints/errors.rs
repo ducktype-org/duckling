@@ -12,7 +12,7 @@
 //! [`manifest`]: crate::core::parse
 //! [`run_lint_passes`]: super::run_lint_passes
 
-use duck_core::util::Pluralize;
+use crate::util::Pluralize;
 
 use super::{Diagnostic, macros};
 use crate::{DuckContext, QuackResult, qp_bail};
@@ -48,7 +48,7 @@ impl Errors {
     }
 }
 
-/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](duck_core::context::terminal::Terminal).
+/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](crate::context::terminal::Terminal).
 fn emit_error(error: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()> {
     ctx.error(error)
 }

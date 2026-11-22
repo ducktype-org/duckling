@@ -12,7 +12,7 @@ use tracing::trace;
 use crate::context::aliases::{Alias, Aliases};
 use crate::context::duck_home::DuckHome;
 use crate::schemas::config::{NetworkConfig, SecurityConfig, StorageConfig};
-use crate::util::interned_url::InternedUrl;
+use crate::util::interning::interned_url::InternedUrl;
 use crate::util::once_ext::OnceExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};

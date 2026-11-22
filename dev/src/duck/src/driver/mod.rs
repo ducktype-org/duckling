@@ -1,0 +1,88 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+use clap::builder::ValueParser;
+use clap::{Command, ValueHint};
+
+pub mod cli_args_preprocessing;
+pub mod cli_ext;
+pub mod external_subcommands;
+pub mod global_options;
+pub mod run;
+pub mod subcommands;
+
+use crate::cli::cli_ext::{flag, optional};
+use crate::cli::styles::get_styles;
+
+/// Create main cli parser.
+fn cli() -> Command {
+    let style = *get_styles().get_literal();
+    let after_help = format!(
+        "To run a script you can also use syntax `{style}duck [OPTIONS] <path-to-script>{style:#}`"
+    );
+    Command::new("duck")
+        .arg(flag("version", "Print version and exit").short('V'))
+        .arg(
+            flag("verbose", "Use more verbose output")
+                .conflicts_with("quiet")
+                .short('v')
+                .global(true),
+        )
+        .arg(
+            flag("quiet", "Suppress all output")
+                .short('q')
+                .conflicts_with("verbose")
+                .global(true),
+        )
+        .arg(
+            optional(
+                "directory",
+                "Change to <DIRECTORY> before performing any actions",
+            )
+            .value_name("DIRECTORY")
+            .value_parser(ValueParser::path_buf())
+            .value_hint(ValueHint::DirPath)
+            .short('C'),
+        )
+        .arg(
+            optional("color", "Control the colored output")
+                .value_parser(["always", "never", "auto"])
+                .global(true),
+        )
+        .arg(flag("offline", "Don't perform any network requests").global(true))
+        .allow_external_subcommands(true)
+        .subcommands(subcommands::subcommands())
+        .styles(get_styles())
+        .after_help(after_help)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn validate_parser() {
+        cli().debug_assert();
+    }
+
+    #[test]
+    fn no_aliases_in_parser() {
+        let cli = cli();
+        assert_no_aliases_recursive(&cli);
+    }
+
+    fn assert_no_aliases_recursive(parser: &Command) {
+        if parser.get_all_aliases().next().is_some() {
+            panic!(
+                "parser for the `{}` subcommand has set aliases via clap \
+                all aliases should be set in `driver/cli_args_preprocessing/builtin.rs`",
+                parser.get_name()
+            );
+        }
+        for subcmd in parser.get_subcommands() {
+            assert_no_aliases_recursive(subcmd);
+        }
+    }
+}

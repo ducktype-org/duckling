@@ -7,8 +7,8 @@
 use std::cmp::Ordering;
 use std::path::PathBuf;
 
+use crate::util::Pluralize;
 use chrono::{DateTime, Utc};
-use duck_core::util::Pluralize;
 
 use crate::core::storage::paths::Storage;
 use crate::core::storage::venv::Venv;

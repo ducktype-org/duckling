@@ -10,5 +10,5 @@ pub mod aliases;
 pub mod duck_cfg;
 pub mod duck_context;
 pub mod duck_home;
-pub mod indent;
+pub mod env;
 pub mod terminal;

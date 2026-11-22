@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use duck_core::util::path_ops::{read_from_path_to_string, write_file};
+use crate::util::filesystem::path_ops::{read_from_path_to_string, write_file};
 use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 use tempfile::{TempDir, tempdir};
 use url::Url;

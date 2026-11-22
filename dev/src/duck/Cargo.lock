@@ -524,7 +524,6 @@ dependencies = [
 name = "duck"
 version = "0.3.0"
 dependencies = [
- "chrono",
  "clap",
  "clap_complete",
  "console",
@@ -542,13 +541,13 @@ dependencies = [
  "serde",
  "tempfile",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
 name = "duck_core"
 version = "0.3.0"
 dependencies = [
+ "chrono",
  "clap",
  "console",
  "dialoguer",
@@ -560,6 +559,7 @@ dependencies = [
  "sha2 0.11.0",
  "tempfile",
  "tracing",
+ "tracing-subscriber",
  "url",
  "windows-sys 0.61.2",
 ]

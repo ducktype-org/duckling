@@ -13,7 +13,7 @@ use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 use std::hash::Hash;
 use std::sync::Arc;
 
-use duck_core::util::hash::sha256_string;
+use crate::util::hash::sha256_string;
 use serde::{Deserialize, Serialize};
 
 use super::duckc::multipackage_schema;

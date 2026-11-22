@@ -6,7 +6,7 @@
 
 //! Buffer for emitted lints.
 
-use duck_core::util::Pluralize;
+use crate::util::Pluralize;
 
 use super::{Diagnostic, Lint, LintLevel};
 use crate::{DuckContext, QuackResult, qp_bail};
@@ -89,7 +89,7 @@ impl LintBuffer {
 }
 
 /// Emit a single [`DiagnosticWithLint`] to an appropriate
-/// [`Terminal`](duck_core::context::terminal::Terminal).
+/// [`Terminal`](crate::context::terminal::Terminal).
 ///
 /// If `is_error` is true, then the lint is treated as an error. This will use `.error()` call.
 /// Otherwise it's treated as a warning.

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use duck_core::util::Pluralize;
+use crate::util::Pluralize;
 use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;

@@ -6,8 +6,8 @@
 
 use std::collections::HashMap;
 
-use duck_core::util::file_locks::FileLockManager;
-use duck_core::util::path_ops::read_from_path_to_string;
+use crate::util::filesystem::file_locks::FileLockManager;
+use crate::util::filesystem::path_ops::read_from_path_to_string;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::tempdir;

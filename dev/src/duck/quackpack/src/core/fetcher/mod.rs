@@ -14,9 +14,9 @@ use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use duck_core::util::file_locks::LockedFile;
-use duck_core::util::interned_url::InternedUrl;
-use duck_core::util::once_ext::OnceExt;
+use crate::util::filesystem::file_locks::LockedFile;
+use crate::util::interning::interned_url::InternedUrl;
+use crate::util::once_ext::OnceExt;
 use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
@@ -55,7 +55,7 @@ pub struct Fetcher<'duck> {
     locks: OnceCell<locks::Locks>,
 }
 
-pub use duck_core::context::duck_cfg::DEFAULT_REGISTRY_URL;
+pub use crate::context::duck_cfg::DEFAULT_REGISTRY_URL;
 
 impl<'duck> Fetcher<'duck> {
     /// Create a new [`Fetcher`].

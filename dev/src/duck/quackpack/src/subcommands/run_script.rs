@@ -4,11 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::path::Path;
 
-use clap::ArgMatches;
-use duck_core::cli::cli_ext::jobs_from_matches;
 use tracing::debug;
 
 use crate::core::PackageLoader;
@@ -38,36 +36,6 @@ pub struct RunScriptOptions<'duck, 'matches> {
 }
 
 impl<'duck, 'matches> RunScriptOptions<'duck, 'matches> {
-    /// Create [`RunScriptOptions`] from a given [`Path`] and [`ArgMatches`].
-    pub fn from_path_and_matches(
-        ctx: &'duck DuckContext,
-        path: &'duck Path,
-        matches: &'matches ArgMatches,
-    ) -> QuackResult<Self> {
-        let profile = matches
-            .get_one::<String>("profile")
-            .map(String::as_str)
-            .unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME)
-            .into();
-        let args: Vec<&OsStr> = matches
-            .get_many::<OsString>("args")
-            .unwrap_or_default()
-            .map(OsString::as_os_str)
-            .collect();
-        debug!(?args);
-        Ok(Self {
-            ctx,
-            path,
-            global: matches.get_flag("global"),
-            profile,
-            overwrite: matches.get_flag("overwrite"),
-            frozen: matches.get_flag("frozen"),
-            strict_errors: matches.get_flag("external-errors"),
-            args,
-            jobs: jobs_from_matches(matches),
-        })
-    }
-
     /// Create [`RunScriptOptions`] from a given [`Path`] and a list of arguments to pass to the script.
     /// Supplies default values for other fields.
     pub fn from_path_and_args_with_defaults(

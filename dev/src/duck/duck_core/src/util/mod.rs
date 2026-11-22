@@ -4,25 +4,23 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Common quackpack and duck functions.
+//! Universal utilities of the duck tools: small, self-contained helpers with no knowledge of
+//! packages or of the CLI (errors, filesystem, interning, hashing, YAML config, English wording).
 
 use std::collections::{HashMap, HashSet};
 pub mod command_ext;
-pub mod dependency_graph;
 pub mod duckling_consts;
 pub mod edit_distance;
-pub mod env;
 pub mod error;
 pub mod extend;
 pub mod extract;
-pub mod file_locks;
+pub mod filesystem;
 pub mod hash;
 pub mod hex;
-pub mod interned_url;
+pub mod indent;
+pub mod interning;
 pub mod once_ext;
-pub mod path_ops;
 pub mod set_once;
-pub mod str_id;
 pub mod yaml_config;
 
 #[cfg(any(test, feature = "test-utils"))]

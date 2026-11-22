@@ -33,11 +33,11 @@
 
 use std::io;
 
-use duck_core::util::file_locks::{FileLockManager, LockedFile};
+use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
 
 use crate::core::storage::paths::Storage;
 use crate::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::util::dir_iterator::DirContents;
+use crate::util::filesystem::dir_iterator::DirContents;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -140,7 +140,7 @@ fn cleanup_locks_impl(
 /// leads to an ERROR_SHARING_VIOLATION error.
 #[cfg(windows)]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
-    use duck_core::util::path_ops::remove_file;
+    use crate::util::filesystem::path_ops::remove_file;
     let path = root.not_locked_path().join(name);
     match remove_file(path) {
         Ok(()) => Ok(()),
@@ -162,7 +162,7 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
 
 #[cfg(not(windows))]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
-    use duck_core::util::path_ops::remove_file;
+    use crate::util::filesystem::path_ops::remove_file;
     let guard = match root.try_open_exclusive(name) {
         Ok(guard) => guard,
         Err(e) => {

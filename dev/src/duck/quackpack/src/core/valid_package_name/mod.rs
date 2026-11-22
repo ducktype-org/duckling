@@ -8,7 +8,7 @@
 
 use thiserror::Error;
 
-use duck_core::util::duckling_consts::{DUCKLING_KEYWORDS, DUCKLING_STD_PACKAGES};
+use crate::util::duckling_consts::{DUCKLING_KEYWORDS, DUCKLING_STD_PACKAGES};
 
 #[derive(Debug, Error, Clone, Eq, PartialEq)]
 pub enum PackageNameError {

@@ -8,6 +8,8 @@
 pub mod manifest;
 pub mod registry;
 
+pub use duck_core::schemas::*;
+
 use std::hash::Hash;
 use std::marker::PhantomData;
 

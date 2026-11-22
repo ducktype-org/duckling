@@ -9,7 +9,7 @@
 //! This is the hardest (and most crucial) part of the parsing process.
 use std::path::{Path, PathBuf};
 
-use duck_core::util::path_ops::{expand_tilde, normalize};
+use crate::util::filesystem::path_ops::{expand_tilde, normalize};
 use itertools::Itertools;
 use tracing::trace;
 use url::Url;

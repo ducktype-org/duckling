@@ -17,7 +17,7 @@ use std::fmt::Display;
 use std::path::Path;
 use std::str::FromStr;
 
-use duck_core::util::interned_url::InternedUrl;
+use crate::util::interning::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize, de};
 
 use crate::core::full_identity::{FullIdentity, FullKind, FullOrigin};

@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, de};
 
-use crate::util::interned_url::InternedUrl;
+use crate::util::interning::interned_url::InternedUrl;
 use crate::{QuackError, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Deserialize, Default)]

@@ -17,10 +17,10 @@ mod tests;
 
 mod migrations;
 
+use crate::util::filesystem::path_ops::{MkdirOptions, mkdir};
+use crate::util::interning::interned_url::InternedUrl;
 use crate::util::sqlite::run_migrations;
 use crate::{QuackResult, QuackResultContext};
-use duck_core::util::interned_url::InternedUrl;
-use duck_core::util::path_ops::{MkdirOptions, mkdir};
 
 const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
 

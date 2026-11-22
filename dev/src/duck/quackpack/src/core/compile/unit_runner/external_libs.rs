@@ -275,7 +275,7 @@ pub fn resolve_external_library(name: StrId, search_dirs: &[PathBuf]) -> Externa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use duck_core::util::path_ops::touch;
+    use crate::util::filesystem::path_ops::touch;
 
     #[test]
     fn test_resolve_prefers_first_search_dir_and_static_archive() {

@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use duck_core::util::interned_url::InternedUrl;
+use crate::util::interning::interned_url::InternedUrl;
 
 use crate::StrId;
 use crate::core::full_identity::{FullIdentity, FullKind, FullOrigin};

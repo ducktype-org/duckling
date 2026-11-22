@@ -8,7 +8,7 @@
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
-use duck_core::util::path_ops::read_from_path_to_string;
+use crate::util::filesystem::path_ops::read_from_path_to_string;
 use itertools::Itertools;
 
 use crate::core::Package;

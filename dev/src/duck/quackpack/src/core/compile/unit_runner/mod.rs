@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use std::process::ExitStatus;
 use std::time::SystemTime;
 
-use duck_core::util::file_locks::LockedFile;
+use crate::util::filesystem::file_locks::LockedFile;
 use tracing::{debug, instrument, trace};
 
 use self::incremental::ExclusiveFingerprintGuard;

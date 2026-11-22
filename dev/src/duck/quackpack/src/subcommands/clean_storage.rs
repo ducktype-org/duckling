@@ -6,8 +6,8 @@
 
 use std::path::PathBuf;
 
-use duck_core::context::indent::indent;
-use duck_core::util::Pluralize;
+use crate::util::Pluralize;
+use crate::util::indent::indent;
 
 use crate::core::storage::venv_id::VenvId;
 use crate::core::storage::{self, CleanOutput, delete_venv};

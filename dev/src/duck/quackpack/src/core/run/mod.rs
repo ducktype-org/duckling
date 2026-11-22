@@ -9,7 +9,7 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::process::Command;
 
-use duck_core::util::command_ext::CommandExt;
+use crate::util::command_ext::CommandExt;
 
 use super::compile::unit_runner::CompilationOutput;
 use crate::core::compile::unit_runner::CompilationTarget;

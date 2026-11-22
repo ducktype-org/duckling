@@ -8,7 +8,7 @@
 
 use std::fmt;
 
-use duck_core::util::edit_distance::find_closest_target;
+use crate::util::edit_distance::find_closest_target;
 
 use crate::QuackResult;
 use crate::core::PackageContext;

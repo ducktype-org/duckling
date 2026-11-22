@@ -19,9 +19,9 @@ mod profiles;
 mod source;
 mod venv_config;
 
+use crate::context::duck_home::DuckHome;
 pub use build_options::BuildOptions;
 pub use dependency::*;
-use duck_core::context::duck_home::DuckHome;
 pub use features::*;
 pub use lints::*;
 pub use metadata::*;

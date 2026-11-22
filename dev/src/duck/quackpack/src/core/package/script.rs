@@ -9,7 +9,7 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use duck_core::util::path_ops::read_from_path_to_string;
+use crate::util::filesystem::path_ops::read_from_path_to_string;
 
 use crate::core::identity::{Identity, Origin};
 use crate::core::valid_package_name::{normalise_package_name, validate_package_name};

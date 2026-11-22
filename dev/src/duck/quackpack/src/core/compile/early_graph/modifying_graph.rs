@@ -8,7 +8,7 @@
 
 use std::collections::VecDeque;
 
-use duck_core::util::extend::QpExtend;
+use crate::util::extend::QpExtend;
 use tracing::{debug, instrument, trace};
 
 use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, PackagesSet, QuackResult};
