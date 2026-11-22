@@ -386,7 +386,7 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
-        let fetcher = Fetcher::new(&ctx).unwrap();
+        let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
@@ -446,7 +446,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let fetcher = Fetcher::new(&ctx).unwrap();
+        let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
@@ -514,7 +514,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let fetcher = Fetcher::new(&ctx).unwrap();
+        let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0;
@@ -599,7 +599,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let fetcher = Fetcher::new(&ctx).unwrap();
+        let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0;
@@ -671,7 +671,7 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
-        let fetcher = Fetcher::new(&ctx).unwrap();
+        let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
@@ -747,7 +747,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let fetcher = Fetcher::new(&ctx).unwrap();
+        let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0;
