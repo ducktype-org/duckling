@@ -8,10 +8,10 @@
 use duck_utils::util::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize};
 
-use crate::StrId;
 use crate::core;
 use crate::core::Version;
 use crate::schemas::registry;
+use crate::{QuackError, StrId};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version
@@ -86,9 +86,69 @@ pub struct SearchResult {
 
 #[derive(Debug)]
 /// General fetcher response.
-pub enum FetcherResponse<T> {
+pub enum FetchResponse<T> {
     /// Resource was available.
     Some(T),
     /// [`Fetcher`](super::Fetcher) was created in an offline mode.
     Offline,
 }
+
+#[derive(Debug)]
+/// A marker struct indicating that we failed to initialize a client.
+// NOTE: We don't derive `Error`, nor implement `From<FetchError> for QuackError`: otherwise `?`
+// operator could coerce them back into a single `QuackError`, which we don't want.
+pub struct InitializationError(QuackError);
+
+impl From<InitializationError> for QuackError {
+    fn from(value: InitializationError) -> Self {
+        value.0
+    }
+}
+
+impl From<QuackError> for InitializationError {
+    fn from(value: QuackError) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug)]
+/// A generic error returned by [`Fetcher`].
+///
+/// [`Fetcher`]: super::Fetcher
+// NOTE: We don't derive `Error`, nor implement `From<FetchError> for QuackError`: otherwise `?`
+// operator could coerce them back into a single `QuackError`, which we don't want.
+pub enum FetchError {
+    /// We failed to initialize the client.
+    Initialization(InitializationError),
+    /// Other error has occurred.
+    Other(QuackError),
+}
+
+impl FetchError {
+    /// Convert [`FetchError`] into a [`QuackError`].
+    ///
+    /// **IMPORTANT:** This method should be used with caution: [`FetchError`] has limited set of
+    /// implemented traits, so that `?` operator doesn't convert [`FetchError`] into [`QuackError`]
+    /// by mistake. You can do achieve this using this method, but be cautious.
+    pub fn into_inner(self) -> QuackError {
+        match self {
+            Self::Initialization(e) => e.into(),
+            Self::Other(e) => e,
+        }
+    }
+}
+
+impl From<InitializationError> for FetchError {
+    fn from(value: InitializationError) -> Self {
+        Self::Initialization(value)
+    }
+}
+
+impl From<QuackError> for FetchError {
+    fn from(value: QuackError) -> Self {
+        Self::Other(value)
+    }
+}
+
+pub type FetchResult<T> = Result<T, FetchError>;
+pub type InitializationResult<T> = Result<T, InitializationError>;

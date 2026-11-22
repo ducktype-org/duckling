@@ -5,12 +5,13 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Initialize a new project.
-use std::fmt::Display;
+use std::borrow::Cow;
 use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
+use std::{fmt, io};
 
-use duck_utils::util::path_ops::{MkdirOptions, mkdir};
+use duck_utils::util::path_ops::{MkdirOptions, mkdir, open};
 use git2::Repository;
 
 use crate::core::valid_package_name::{
@@ -40,6 +41,85 @@ pub struct InitOptions<'duck, 'matches> {
     pub full: bool,
 }
 
+impl InitOptions<'_, '_> {
+    /// Get the inferred project name.
+    fn inferred_project_name(&self) -> QuackResult<Cow<'_, str>> {
+        let name = match self.explicit_name {
+            Some(explicit) => Cow::Borrowed(explicit),
+            None => self
+                .at
+                .file_name()
+                .with_context(|| format!("path `{}` doesn't have a filename", self.at.display()))?
+                .to_string_lossy(),
+        };
+        Ok(name)
+    }
+
+    /// Get the [`MetadataConfigBuilder`] from this [`InitOptions`].
+    fn metadata_config_builder(&self) -> QuackResult<MetadataConfigBuilder<'_>> {
+        let inferred_name = self.inferred_project_name()?;
+        if self.full {
+            MetadataConfigBuilder::new_from_prompts(self.ctx, inferred_name)
+        } else {
+            Ok(MetadataConfigBuilder::default_with_name(inferred_name))
+        }
+    }
+}
+
+#[derive(Debug)]
+/// Helper struct for gathering metadata about the new project.
+struct MetadataConfigBuilder<'a> {
+    name: Cow<'a, str>,
+    version: Version,
+    author: Option<String>,
+
+    created_by_prompts: bool,
+}
+
+impl<'a> MetadataConfigBuilder<'a> {
+    /// Create a default [`MetadataConfigBuilder`] with the given name.
+    fn default_with_name(name: impl Into<Cow<'a, str>>) -> Self {
+        Self {
+            name: name.into(),
+            version: Version::new(1, 0, 0),
+            author: None,
+            created_by_prompts: false,
+        }
+    }
+
+    /// Create a [`MetadataConfigBuilder`] by prompting the user.
+    fn new_from_prompts(ctx: &DuckContext, default_name: Cow<'_, str>) -> QuackResult<Self> {
+        if ctx.verbosity().is_quiet() {
+            qp_bail!("cannot create manifest from user input on quiet verbosity");
+        }
+        let name =
+            ctx.prompt_once_with_default("Enter the project's name", default_name.into_owned())?;
+        let author = ctx.prompt_once("Enter the project's author")?;
+        let version = ctx.prompt_until_valid_with_default(
+            "Enter the version of the project",
+            Version::default(),
+        );
+        Ok(Self {
+            name: Cow::Owned(name),
+            version,
+            author: Some(author),
+            created_by_prompts: true,
+        })
+    }
+}
+
+impl fmt::Display for MetadataConfigBuilder<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "metadata:")?;
+        writeln!(f, "  name: {}", self.name)?;
+        writeln!(f, "  version: '{}'", self.version)?;
+        if let Some(ref author) = self.author {
+            writeln!(f, "  authors: ['{author}']")?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Default)]
 /// A helper for building a partial [`VenvConfig`](crate::core::manifest::VenvConfig).
 struct VenvConfigBuilder {
@@ -48,8 +128,8 @@ struct VenvConfigBuilder {
     storage: Option<PathBuf>,
 }
 
-impl Display for VenvConfigBuilder {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for VenvConfigBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "venv:")?;
 
         macro_rules! write_field {
@@ -82,21 +162,13 @@ const DEFAULT_GITIGNORE: &str = "\
 
 /// Initialize a new project with the given options.
 pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
-    let name = match opts.explicit_name {
-        Some(explicit) => explicit.to_owned(),
-        None => opts
-            .at
-            .file_name()
-            .with_context(|| format!("path `{}` doesn't have a filename", opts.at.display()))?
-            .to_string_lossy()
-            .into_owned(),
-    };
+    let config = opts.metadata_config_builder()?;
     validate_new_package_name(
         opts.ctx,
-        &name,
-        /* inferred */ opts.explicit_name.is_none(),
+        &config.name,
+        /* inferred */ has_inferred_name(&opts, &config),
     )?;
-    create_manifest_file(opts.ctx, &opts.at, &name, opts.full)?;
+    create_manifest_file(opts.ctx, &opts.at, &config)?;
     append_venv_config_to_manifest(
         &opts.at,
         opts.expose_freezefile,
@@ -111,10 +183,20 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
     }
     opts.ctx.info(format!(
         "successfully created a new project `{}` at `{}`",
-        name,
+        config.name,
         opts.at.display()
     ))?;
     Ok(())
+}
+
+/// Returns `true` if the name has been inferred from a path.
+fn has_inferred_name(opts: &InitOptions<'_, '_>, config: &MetadataConfigBuilder<'_>) -> bool {
+    if !config.created_by_prompts {
+        return opts.explicit_name.is_none();
+    }
+    // Name has been created by prompt. Check if it matches the default.
+    opts.inferred_project_name()
+        .is_ok_and(|name| name == config.name)
 }
 
 /// Validate a name of the new package.
@@ -145,21 +227,23 @@ fn validate_new_package_name(ctx: &DuckContext, name: &str, inferred: bool) -> Q
 fn create_manifest_file(
     ctx: &DuckContext,
     root_path: &Path,
-    name: &str,
-    full: bool,
+    config: &MetadataConfigBuilder<'_>,
 ) -> QuackResult<()> {
     let manifest_path = root_path.join(PackageLoader::MANIFEST_NAME);
-    let manifest_contents = if full {
-        manifest_with_user_prompts(ctx, name)?
-    } else {
-        make_default_manifest_for_name(name)
-    };
+    let manifest_contents = config.to_string();
     if let Some(parent) = manifest_path.parent() {
         mkdir(parent, MkdirOptions::WithParents)?;
     }
-    let mut manifest_file = match File::create_new(manifest_path) {
+    let opts = {
+        let mut opts = OpenOptions::new();
+        opts.write(true).create_new(true);
+        opts
+    };
+    let mut manifest_file = match open(manifest_path, &opts) {
         Err(err) => {
-            if matches!(err.kind(), ErrorKind::AlreadyExists) {
+            if let Some(io_err) = err.downcast_ref_in_chain::<io::Error>()
+                && matches!(io_err.kind(), ErrorKind::AlreadyExists)
+            {
                 qp_bail!(bail_on_overriding_project(ctx, root_path));
             } else {
                 return Err(err).context("failed to create the manifest file");
@@ -171,36 +255,6 @@ fn create_manifest_file(
         .write_all(manifest_contents.as_bytes())
         .context("failed to write to the manifest file")?;
     Ok(())
-}
-
-/// Create a default manifest.
-fn make_default_manifest_for_name(name: &str) -> String {
-    format!(
-        "\
-metadata:
-  name: {name}
-  version: '1.0.0'
-"
-    )
-}
-
-/// Create custom manifest from user prompts.
-fn manifest_with_user_prompts(ctx: &DuckContext, name: &str) -> QuackResult<String> {
-    if ctx.verbosity().is_quiet() {
-        qp_bail!("cannot create manifest from user input on quiet verbosity");
-    }
-    let name = ctx.prompt_once_with_default("Enter the project's name", name.to_owned())?;
-    let author = ctx.prompt_once("Enter the project's author")?;
-    let version =
-        ctx.prompt_until_valid_with_default("Enter the version of the project", Version::default());
-    Ok(format!(
-        "\
-metadata:
-  name: {name}
-  version: '{version}'
-  authors: ['{author}']
-"
-    ))
 }
 
 /// Error to return if a project already exists at the location.

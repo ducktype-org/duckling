@@ -19,7 +19,10 @@ pub fn get_parser() -> Command {
     subcommand("init")
         .about("Initialize a new package")
         .arg(flag("venv", "Initialize a venv instead of a package").conflicts_with("full"))
-        .arg(flag("full", "Initialize a full package, with prompts").conflicts_with("venv"))
+        .arg(
+            flag("full", "Initialize a full package, with prompts")
+                .conflicts_with_all(["venv", "name"]),
+        )
         .arg(flag("ephemeral", "Mark the new venv as ephemeral").conflicts_with("local-storage"))
         .arg(
             flag(
@@ -36,7 +39,7 @@ pub fn get_parser() -> Command {
             "git",
             "initialize a git repository in the projects root",
         ))
-        .arg(optional("name", "Override the package name"))
+        .arg(optional("name", "Override the package name").conflicts_with("full"))
         .arg(
             Arg::new("path")
                 .help("Path to the new package")

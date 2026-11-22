@@ -15,11 +15,13 @@
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <ranges>
+#include <utility>
+#include <vector>
 
 namespace compiler::mir {
-
 	/**
 	 * @brief Visitor that implements actual logic of lowering statements.
 	 * @note The result of the visitor is stored in out member.
@@ -34,18 +36,47 @@ namespace compiler::mir {
 		 */
 		ScopeRef parent_scope;
 
+		// Stack of enclosing break/continue targets, with the innermost target last.
+		// Searched in reverse to select the nearest matching construct.
+		ControlFlowTargets targets;
+
 		StmtBlockVisitor(
-			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+			BlockBuilderRef    continuation,
+			FunctionBuilder&   function,
+			ScopeRef           parent_scope,
+			ControlFlowTargets targets
 		):
 			  continuation(continuation),
 			  function(function),
-			  parent_scope(parent_scope) {}
+			  parent_scope(parent_scope),
+			  targets(std::move(targets)) {}
 
 		base::Optional<StmtLowerRes> out;
 
 		void output(const StmtLowerRes& value) {
 			CORE_ASSERT(this->out.empty(), "Output already set.");
 			this->out.emplace(value);
+		}
+
+		[[nodiscard]] const ControlFlowTarget* findTarget(
+			const hc::ControlFlowTargetSelector& selector
+		) const {
+			for (const auto& target: targets | std::views::reverse) {
+				variant_match(selector) {
+					variant_case(hc::NamedTarget, named) {
+						if (target.id.has_value() && target.id.value() == named.id) return &target;
+					}
+					variant_case(hc::KindTarget, by_kind) {
+						if (target.kind == by_kind.kind) return &target;
+					}
+					variant_case_novalue(hc::NearestLoop) {
+						if (target.kind == hc::ControlFlowKind::While
+						    || target.kind == hc::ControlFlowKind::For)
+							return &target;
+					}
+				}
+			}
+			return nullptr;
 		}
 
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
@@ -111,7 +142,19 @@ namespace compiler::mir {
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
-			auto condition_scope = function.newScope(parent_scope);
+			auto condition_scope      = function.newScope(parent_scope);
+			auto condition_block      = function.newBlock("if.cond");
+			auto get_condition_return = condition_block->addHole();
+			auto lowered_condition
+				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+
+			auto branch_targets = targets;
+			branch_targets.push_back(ControlFlowTarget{
+				.kind            = helios::code::ControlFlowKind::If,
+				.id              = stmt.control_flow_id,
+				.break_target    = continuation,
+				.continue_target = lowered_condition.begin,
+			});
 
 			// I'm not sure if we need these scopes,
 			// maybe we could just pass parent_scope as-is.
@@ -122,19 +165,16 @@ namespace compiler::mir {
 			auto else_block = function.newBlock("if.else");
 			else_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
-			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
+			auto else_body
+				= lowerCodeBlock(stmt.else_body, else_block, function, else_scope, branch_targets)
+			          .begin;
 
 			auto then_block = function.newBlock("if.then");
 			then_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
-			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
-
-			auto condition_block = function.newBlock("if.cond");
-
-			auto get_condition_return = condition_block->addHole();
-
-			auto lowered_condition
-				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+			auto then_body
+				= lowerCodeBlock(stmt.then_body, then_block, function, then_scope, branch_targets)
+			          .begin;
 
 			auto possible_condition_res = lowered_condition.getResultIfStored();
 
@@ -173,7 +213,13 @@ namespace compiler::mir {
 				{ stmt.getPosition() },
 			});
 
-			output({ lowered_condition.begin });
+			// Earlier statements may be inserted into this entry during reverse lowering.
+			// Keep it separate from the condition used by continue if.
+			auto entry_block = function.newBlock("if.entry");
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
+			);
+			output({ entry_block });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -195,8 +241,32 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
 			);
 
-			auto loop_body
-				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
+			auto continue_target = loop_continuation_block;
+			if (stmt.control_flow_kind == hc::ControlFlowKind::For) {
+				// The generated for step runs after the body, including on continue.
+				continue_target
+					= lowerStmt(
+						  *stmt.step.value(), loop_continuation_block, function, loop_scope, targets
+					)
+				          .begin;
+			}
+
+			auto body_targets = targets;
+			body_targets.push_back(ControlFlowTarget{
+				.kind            = stmt.control_flow_kind,
+				.id              = stmt.control_flow_id,
+				.break_target    = continuation,
+				.continue_target = continue_target,
+			});
+			// Statements are lowered backwards and may be inserted into their continuation
+			// block. Keep the continue target separate from that mutable continuation, or
+			// a continue would also execute statements following it in the loop body.
+			auto body_fallthrough = function.newBlock("while.body.fallthrough");
+			body_fallthrough->setTerminator(
+				{ Operation::Jump, {}, { continue_target->getID() }, {}, loop_scope }
+			);
+			StmtLowerRes loop_body
+				= lowerCodeBlock(stmt.body, body_fallthrough, function, loop_scope, body_targets);
 
 			auto entry_block = function.newBlock("while.entry");
 
@@ -236,6 +306,40 @@ namespace compiler::mir {
 			});
 
 			output({ entry_block });
+		}
+
+		void visitBreakStmt(const hc::BreakStmt& stmt) override {
+			auto target = findTarget(stmt.target_selector);
+			CORE_ASSERT(target != nullptr, "Break statement has no enclosing target.");
+
+			auto break_block = function.newBlock("break");
+			break_block->setTerminator({
+				Operation::Jump,
+				{},
+				{ target->break_target->getID() },
+				{},
+				parent_scope,
+				{},
+				{ stmt.getPosition() },
+			});
+			output({ break_block });
+		}
+
+		void visitContinueStmt(const hc::ContinueStmt& stmt) override {
+			auto target = findTarget(stmt.target_selector);
+			CORE_ASSERT(target != nullptr, "Continue statement has no enclosing target.");
+
+			auto continue_block = function.newBlock("continue");
+			continue_block->setTerminator({
+				Operation::Jump,
+				{},
+				{ target->continue_target->getID() },
+				{},
+				parent_scope,
+				{},
+				{ stmt.getPosition() },
+			});
+			output({ continue_block });
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
@@ -348,37 +452,76 @@ namespace compiler::mir {
 		}
 
 		void visitBlockStmt(const hc::BlockStmt& stmt) override {
-			auto block_scope = function.newScope(parent_scope);
+			auto block_scope  = function.newScope(parent_scope);
+			auto body_targets = targets;
+			// Create the continue target before lowering the body, so continue statements
+			// can already refer to it. Connect it to the body's beginning afterwards.
+			base::Optional<BlockBuilderRef> entry;
+			auto                            body_continuation = continuation;
+			if (stmt.control_flow_kind.has_value()) {
+				entry = function.newBlock(
+					stmt.control_flow_kind.value() == hc::ControlFlowKind::If ? "const.if.entry"
+																			  : "block.entry"
+				);
+				// Body statements are lowered into their continuation. Do not allow them to
+				// modify the destination of break from this block.
+				body_continuation = function.newBlock("block.body.fallthrough");
+				body_continuation->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, block_scope }
+				);
+				body_targets.push_back(ControlFlowTarget{
+					.kind            = stmt.control_flow_kind.value(),
+					.id              = stmt.control_flow_id,
+					.break_target    = continuation,
+					.continue_target = entry.value(),
+				});
+			}
 
-			auto block_body = lowerCodeBlock(stmt.body, continuation, function, block_scope);
-
-			output({ block_body.begin });
+			auto block_body
+				= lowerCodeBlock(stmt.body, body_continuation, function, block_scope, body_targets);
+			if (entry.has_value()) {
+				entry.value()->setTerminator(
+					{ Operation::Jump, {}, { block_body.begin->getID() }, {}, parent_scope }
+				);
+				// Keep the entry used by continue block free of instructions from the
+				// preceding statement, which will be lowered into our returned block.
+				auto outer_entry = function.newBlock("block.outer.entry");
+				outer_entry->setTerminator(
+					{ Operation::Jump, {}, { entry.value()->getID() }, {}, parent_scope }
+				);
+				output({ outer_entry });
+			} else {
+				output({ block_body.begin });
+			}
 		}
 	};
 
 	StmtLowerRes lowerStmt(
-		const hc::Stmt&  stmt,
-		BlockBuilderRef  continuation,
-		FunctionBuilder& function,
-		ScopeRef         parent_scope
+		const hc::Stmt&    stmt,
+		BlockBuilderRef    continuation,
+		FunctionBuilder&   function,
+		ScopeRef           parent_scope,
+		ControlFlowTargets targets
 	) {
-		StmtBlockVisitor visitor{ continuation, function, parent_scope };
+		StmtBlockVisitor visitor{ continuation, function, parent_scope, std::move(targets) };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
 	StmtLowerRes lowerCodeBlock(
-		const hc::CodeBlock& code_block,
-		BlockBuilderRef      continuation,
-		FunctionBuilder&     function,
-		ScopeRef             parent_scope
+		const hc::CodeBlock&      code_block,
+		BlockBuilderRef           continuation,
+		FunctionBuilder&          function,
+		ScopeRef                  parent_scope,
+		const ControlFlowTargets& targets
 	) {
 		StmtLowerRes last_result{ continuation };
 
 		for (auto& stmt: code_block.statements | std::views::reverse) {
-			last_result  = lowerStmt(*stmt, continuation, function, parent_scope);
+			last_result  = lowerStmt(*stmt, continuation, function, parent_scope, targets);
 			continuation = last_result.begin;
 		}
+
 		return last_result;
 	}
 }

@@ -13,6 +13,7 @@ use tempfile::{TempDir, tempdir};
 
 use super::*;
 use crate::core::Version;
+use crate::core::fetcher::types::FetchError;
 use crate::util::to_url::ToUrl;
 
 #[test]
@@ -197,16 +198,16 @@ fn create_mock_server() -> MockServer {
 fn all_metadata_adds_to_cache() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let response = block_on(
         fetcher.get_package_all_metadata(server.base_url().to_url().unwrap().into(), "foo".into()),
     )
     .unwrap();
-    let FetcherResponse::Some(response) = response else {
+    let FetchResponse::Some(response) = response else {
         panic!("Offline response with offline flag not present");
     };
     assert_eq!(response.packages_metadata.len(), 2);
-    let FetcherResponse::Some(fetched_from_cache) =
+    let FetchResponse::Some(fetched_from_cache) =
         block_on(fetcher.get_package_metadata(types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 5),
@@ -224,13 +225,17 @@ fn all_metadata_adds_to_cache() {
 fn without_cache_fetch_fails() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let err = block_on(fetcher.get_package_metadata(types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 5),
         url: server.base_url().parse().unwrap(),
     }))
     .unwrap_err();
+    let err = match err {
+        FetchError::Initialization(_) => unreachable!(),
+        FetchError::Other(err) => err,
+    };
     assert_eq!(
         err.to_string(),
         format!(

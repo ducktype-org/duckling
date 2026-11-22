@@ -45,7 +45,7 @@ impl GraphVisitor for IdOrder {
 fn lowers_early_graph() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
 
     let packages = load_packages(
         &storage,
@@ -151,7 +151,7 @@ fn lowers_early_graph() {
 fn lowers_early_graph_with_cycle() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
 
     let packages = load_packages(
         &storage,
@@ -261,7 +261,7 @@ fn lowers_early_graph_with_cycle() {
 fn basic_visitor_order() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
 
     let packages = load_packages(
         &storage,
