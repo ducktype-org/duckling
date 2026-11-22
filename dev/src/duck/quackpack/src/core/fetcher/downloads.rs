@@ -10,7 +10,7 @@
 
 use std::path::PathBuf;
 
-use duck_utils::util::file_locks::{FileLockManager, LockedFile};
+use duck_core::util::file_locks::{FileLockManager, LockedFile};
 use tracing::{debug, trace};
 
 use super::types;

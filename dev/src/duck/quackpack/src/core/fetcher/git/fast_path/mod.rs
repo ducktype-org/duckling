@@ -10,7 +10,7 @@
 use std::pin::Pin;
 use std::rc::Rc;
 
-use duck_utils::util::interned_url::InternedUrl;
+use duck_core::util::interned_url::InternedUrl;
 
 use crate::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
 use crate::core::fetcher::git::fast_path::github_client::GithubClient;

@@ -8,8 +8,8 @@
 use std::fmt;
 use std::path::Path;
 
-use duck_utils::util::hash::short_hash_string;
-use duck_utils::util::interned_url::InternedUrl;
+use duck_core::util::hash::short_hash_string;
+use duck_core::util::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize};
 use url::Url;
 

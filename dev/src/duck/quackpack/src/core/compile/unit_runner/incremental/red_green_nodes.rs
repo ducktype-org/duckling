@@ -33,8 +33,8 @@ use std::ops::AddAssign;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use duck_utils::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
-use duck_utils::util::path_ops::{change_time, modification_time};
+use duck_core::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
+use duck_core::util::path_ops::{change_time, modification_time};
 
 use crate::QuackResult;
 use crate::core::AnyPackage;

@@ -5,8 +5,8 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
-use duck_utils::cli::cli_ext::{flag, optional, subcommand};
-use duck_utils::util::error::HintMessage;
+use duck_core::cli::cli_ext::{flag, optional, subcommand};
+use duck_core::util::error::HintMessage;
 use quackpack::core::{AllowGlobalPackage, PackageLoader};
 use quackpack::subcommands::list::{ListOptions, VenvOrderings, list};
 

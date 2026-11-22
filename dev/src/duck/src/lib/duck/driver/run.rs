@@ -9,9 +9,9 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use clap::ArgMatches;
-use duck_utils::cli::cli_ext::ArgMatchesExt;
-use duck_utils::util::command_ext::CommandExt;
-use duck_utils::util::path_ops::{is_executable, resolve_with_tilde};
+use duck_core::cli::cli_ext::ArgMatchesExt;
+use duck_core::util::command_ext::CommandExt;
+use duck_core::util::path_ops::{is_executable, resolve_with_tilde};
 use quackpack::core::compile::duckc::Duckc;
 use quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use tracing::{debug, trace};

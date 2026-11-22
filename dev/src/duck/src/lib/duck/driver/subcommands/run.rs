@@ -7,7 +7,7 @@
 use std::ffi::{OsStr, OsString};
 
 use clap::{Arg, ArgMatches, Command, value_parser};
-use duck_utils::cli::cli_ext::{
+use duck_core::cli::cli_ext::{
     CommandExt, flag, jobs_from_matches, multi, profile_from_matches, subcommand,
 };
 use quackpack::core::{AllowGlobalPackage, PackageLoader};

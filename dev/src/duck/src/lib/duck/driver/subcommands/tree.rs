@@ -7,7 +7,7 @@
 use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{Arg, ArgMatches, Command};
 
-use duck_utils::cli::cli_ext::{flag, subcommand};
+use duck_core::cli::cli_ext::{flag, subcommand};
 
 /// Creates parser for the `tree` subcommand.
 pub fn get_parser() -> Command {

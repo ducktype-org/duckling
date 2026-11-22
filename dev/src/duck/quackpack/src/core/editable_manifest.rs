@@ -10,7 +10,7 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use duck_utils::util::path_ops::write_file;
+use duck_core::util::path_ops::write_file;
 use yaml_edit::{Mapping, YamlFile, YamlNode};
 
 use crate::core::lints::errors::Errors;

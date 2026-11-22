@@ -8,9 +8,9 @@ use std::backtrace::Backtrace;
 use std::error::Error;
 
 use chrono::Local;
-use duck_utils::context::indent::indent;
-use duck_utils::context::terminal::Terminal;
-use duck_utils::util::error::{ErrorExt, ErrorType, InternalError};
+use duck_core::context::indent::indent;
+use duck_core::context::terminal::Terminal;
+use duck_core::util::error::{ErrorExt, ErrorType, InternalError};
 use tracing::{info, trace};
 
 use crate::{DuckContext, QuackError};

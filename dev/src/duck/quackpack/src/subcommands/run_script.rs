@@ -8,7 +8,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use clap::ArgMatches;
-use duck_utils::cli::cli_ext::jobs_from_matches;
+use duck_core::cli::cli_ext::jobs_from_matches;
 use tracing::debug;
 
 use crate::core::PackageLoader;

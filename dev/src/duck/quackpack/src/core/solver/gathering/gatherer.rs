@@ -15,8 +15,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
-use duck_utils::util::error::{ErrorsLogger, MessageError};
-use duck_utils::util::interned_url::InternedUrl;
+use duck_core::util::error::{ErrorsLogger, MessageError};
+use duck_core::util::interned_url::InternedUrl;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use tempfile::TempDir;

@@ -22,7 +22,7 @@
 
 use std::path::PathBuf;
 
-use duck_utils::util::file_locks::FileLockManager;
+use duck_core::util::file_locks::FileLockManager;
 
 use super::{ArtifactsLayout, DependencyLayout, ProfileLayout};
 use crate::core::compile::profiles::Profile;

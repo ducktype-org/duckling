@@ -8,7 +8,7 @@
 use std::ffi::OsString;
 
 use clap::ArgMatches;
-use duck_utils::util::edit_distance::find_all_closest_targets;
+use duck_core::util::edit_distance::find_all_closest_targets;
 use itertools::Itertools;
 use tracing::{debug, trace};
 
@@ -138,8 +138,8 @@ mod tests {
     use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use duck_utils::util::path_ops::write_file;
-    use duck_utils::util::test_utils::setup_test;
+    use duck_core::util::path_ops::write_file;
+    use duck_core::util::test_utils::setup_test;
 
     fn setup_duck_home_with_a_given_max_fix_distance(dist: u64) -> (DuckContext, TempDir) {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without

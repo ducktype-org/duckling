@@ -8,8 +8,8 @@ use std::path::PathBuf;
 
 use clap::builder::ValueParser;
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use duck_utils::cli::cli_ext::{flag, optional, subcommand};
-use duck_utils::util::path_ops::resolve_with_tilde;
+use duck_core::cli::cli_ext::{flag, optional, subcommand};
+use duck_core::util::path_ops::resolve_with_tilde;
 use quackpack::subcommands::init::{InitOptions, init};
 
 use crate::{DuckContext, QuackResult};

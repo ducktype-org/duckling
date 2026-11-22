@@ -13,8 +13,8 @@ pub mod global_options;
 pub mod run;
 pub mod subcommands;
 
-use duck_utils::cli::cli_ext::{flag, optional};
-use duck_utils::cli::styles::get_styles;
+use duck_core::cli::cli_ext::{flag, optional};
+use duck_core::cli::styles::get_styles;
 
 /// Create main cli parser.
 fn cli() -> Command {

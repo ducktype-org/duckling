@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 
 use clap::builder::ValueParser;
 use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
-use duck_utils::cli::cli_ext::{CommandExt, flag, subcommand};
-use duck_utils::util::duckling_consts::DUCKLING_SCRIPT_EXT;
-use duck_utils::util::path_ops::resolve_with_tilde;
+use duck_core::cli::cli_ext::{CommandExt, flag, subcommand};
+use duck_core::util::duckling_consts::DUCKLING_SCRIPT_EXT;
+use duck_core::util::path_ops::resolve_with_tilde;
 use quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};

@@ -8,7 +8,7 @@ use std::path::Path;
 use std::str::FromStr;
 
 use clap::{Arg, ArgGroup, ArgMatches, Command, ValueHint};
-use duck_utils::cli::cli_ext::{flag, multi, optional, subcommand};
+use duck_core::cli::cli_ext::{flag, multi, optional, subcommand};
 use quackpack::core::{DependencyKind, Version};
 use quackpack::subcommands::add::{
     AddOptions, DependencySpecification, NameSpecification, SourceSpecification, add,

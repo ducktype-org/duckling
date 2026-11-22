@@ -9,7 +9,7 @@ base64 = { workspace = true }
 chrono = { workspace = true }
 clap = { workspace = true }
 curl = { workspace = true }
-duck_utils = { workspace = true }
+duck_core = { workspace = true }
 flate2 = { workspace = true }
 futures = { workspace = true }
 git2 = { workspace = true }
@@ -37,7 +37,7 @@ url = { workspace = true }
 yaml-edit = { workspace = true }
 
 [dev-dependencies]
-duck_utils = { workspace = true, features = ["test-utils"] }
+duck_core = { workspace = true, features = ["test-utils"] }
 httpmock = { workspace = true }
 
 [features]

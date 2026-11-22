@@ -8,7 +8,7 @@ use std::io::{self, Write};
 
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 use clap_complete::{Generator, Shell, generate};
-use duck_utils::cli::cli_ext::subcommand;
+use duck_core::cli::cli_ext::subcommand;
 
 use crate::duck::driver::cli;
 use crate::{DuckContext, QuackResult, qp_bail_internal};

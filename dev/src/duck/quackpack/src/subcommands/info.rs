@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use duck_utils::util::error::{HintMessage, MessageError};
+use duck_core::util::error::{HintMessage, MessageError};
 
 use crate::core::PackageContext;
 use crate::core::storage::venv_id::ToVenvId;

@@ -11,7 +11,7 @@ use std::path::Path;
 use std::process::{Command, ExitStatus, Output};
 use std::{fmt, io};
 
-use duck_utils::util::command_ext::CommandExt;
+use duck_core::util::command_ext::CommandExt;
 use tracing::{debug, trace, warn};
 
 use super::Duckc;

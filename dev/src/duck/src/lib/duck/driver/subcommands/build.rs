@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
-use duck_utils::cli::cli_ext::{
+use duck_core::cli::cli_ext::{
     CommandExt, flag, jobs_from_matches, multi, profile_from_matches, subcommand,
 };
 use quackpack::core::{AllowGlobalPackage, PackageLoader};

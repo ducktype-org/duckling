@@ -10,9 +10,9 @@ use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use duck_utils::context::duck_home::DuckHome;
-use duck_utils::package_root::find_package_root;
-use duck_utils::util::path_ops::resolve;
+use duck_core::context::duck_home::DuckHome;
+use duck_core::package_root::find_package_root;
+use duck_core::util::path_ops::resolve;
 
 use crate::core::PackageContext;
 use crate::core::script::{PackageScript, Script};
@@ -67,7 +67,7 @@ impl PackageNotFound {
 impl std::error::Error for PackageNotFound {}
 
 impl PackageLoader {
-    pub const MANIFEST_NAME: &str = duck_utils::package_root::MANIFEST_NAME;
+    pub const MANIFEST_NAME: &str = duck_core::package_root::MANIFEST_NAME;
     pub const FREEZE_NAME: &str = "quackfreeze.json";
 
     /// Get the global package.
@@ -231,7 +231,7 @@ mod tests {
 
     use crate::DuckContext;
     use crate::core::PackageLoader;
-    use duck_utils::util::path_ops::{MkdirOptions, mkdir, normalize, touch, write_file};
+    use duck_core::util::path_ops::{MkdirOptions, mkdir, normalize, touch, write_file};
 
     const BASIC_MANIFEST: &str = r"
 metadata:

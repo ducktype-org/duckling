@@ -10,9 +10,9 @@ use std::io;
 use std::path::PathBuf;
 
 use chrono::Utc;
-use duck_utils::util::Pluralize;
-use duck_utils::util::error::MessageError;
-use duck_utils::util::path_ops::{read_from_path_to_string, write_file};
+use duck_core::util::Pluralize;
+use duck_core::util::error::MessageError;
+use duck_core::util::path_ops::{read_from_path_to_string, write_file};
 use futures::executor::block_on;
 use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
 use tracing::debug;

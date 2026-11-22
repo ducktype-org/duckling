@@ -34,8 +34,8 @@
 
 use std::path::{Path, PathBuf};
 
-use duck_utils::util::file_locks::{FileLockManager, LockedFile};
-use duck_utils::util::path_ops::{remove_tree, touch};
+use duck_core::util::file_locks::{FileLockManager, LockedFile};
+use duck_core::util::path_ops::{remove_tree, touch};
 
 use crate::core::PackageId;
 use crate::core::full_identity::FullKind;

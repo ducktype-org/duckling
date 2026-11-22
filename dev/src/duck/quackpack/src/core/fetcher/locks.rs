@@ -8,7 +8,7 @@
 //!
 //! Each package is locked by `locks/<host>-<hash>/<name>-<version>.lock`.
 
-use duck_utils::util::file_locks::{FileLockManager, LockedFile};
+use duck_core::util::file_locks::{FileLockManager, LockedFile};
 use tracing::trace;
 
 use super::types;

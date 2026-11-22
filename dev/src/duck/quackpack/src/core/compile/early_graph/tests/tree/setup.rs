@@ -6,8 +6,8 @@
 
 use std::path::Path;
 
-use duck_utils::util::path_ops::{touch, try_fsync_dir, write_file};
-use duck_utils::util::test_utils::setup_test;
+use duck_core::util::path_ops::{touch, try_fsync_dir, write_file};
+use duck_core::util::test_utils::setup_test;
 use tempfile::TempDir;
 
 use crate::DuckContext;

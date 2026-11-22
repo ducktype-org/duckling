@@ -7,9 +7,9 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use duck_utils::util::interned_url::InternedUrl;
-use duck_utils::util::path_ops::{touch, try_fsync_dir, write_file};
-use duck_utils::util::test_utils::setup_test;
+use duck_core::util::interned_url::InternedUrl;
+use duck_core::util::path_ops::{touch, try_fsync_dir, write_file};
+use duck_core::util::test_utils::setup_test;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};

@@ -7,7 +7,7 @@
 //! A context of a package  parsed from the disk.
 use std::path::{Path, PathBuf};
 
-use duck_utils::context::duck_home::DuckHome;
+use duck_core::context::duck_home::DuckHome;
 
 use super::script::Script;
 use crate::core::full_identity::{FullIdentity, FullOrigin};

@@ -21,7 +21,7 @@ mod venv_config;
 
 pub use build_options::BuildOptions;
 pub use dependency::*;
-use duck_utils::context::duck_home::DuckHome;
+use duck_core::context::duck_home::DuckHome;
 pub use features::*;
 pub use lints::*;
 pub use metadata::*;

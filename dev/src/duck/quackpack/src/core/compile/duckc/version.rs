@@ -8,8 +8,8 @@
 
 use std::sync::OnceLock;
 
-use duck_utils::util::hash::sha256_string;
-use duck_utils::util::once_ext::OnceExt;
+use duck_core::util::hash::sha256_string;
+use duck_core::util::once_ext::OnceExt;
 use tracing::debug;
 
 use super::Duckc;

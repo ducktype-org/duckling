@@ -27,8 +27,8 @@ use std::cell::RefCell;
 use std::debug_assert;
 use std::path::{Path, PathBuf};
 
-use duck_utils::util::error::ErrorsLogger;
-use duck_utils::util::path_ops::{normalize, resolve, resolve_both_and_get_relative};
+use duck_core::util::error::ErrorsLogger;
+use duck_core::util::path_ops::{normalize, resolve, resolve_both_and_get_relative};
 use futures::executor::block_on;
 
 use crate::core::fetcher::Fetcher;

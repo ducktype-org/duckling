@@ -529,7 +529,7 @@ dependencies = [
  "clap_complete",
  "console",
  "curl",
- "duck_utils",
+ "duck_core",
  "git2",
  "itertools 0.15.0",
  "libgit2-sys",
@@ -546,7 +546,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "duck_utils"
+name = "duck_core"
 version = "0.3.0"
 dependencies = [
  "clap",
@@ -1548,7 +1548,7 @@ dependencies = [
  "chrono",
  "clap",
  "curl",
- "duck_utils",
+ "duck_core",
  "flate2",
  "futures",
  "git2",

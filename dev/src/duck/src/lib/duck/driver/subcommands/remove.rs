@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{Arg, ArgMatches, Command};
-use duck_utils::cli::cli_ext::{flag, subcommand};
+use duck_core::cli::cli_ext::{flag, subcommand};
 use quackpack::core::DependencyKind;
 use quackpack::subcommands::remove::{RemoveOptions, remove};
 

@@ -10,7 +10,7 @@
 //!   [`core`](quackpack::core) ([`solver`](quackpack::core::solver),
 //!   [`fetcher`](quackpack::core::fetcher), [`storage`](quackpack::core::storage),
 //!   [`compile`](quackpack::core::compile)),
-//! - [`duck_utils`]: what all duck tools share — [`DuckContext`], [`QuackError`], CLI helpers.
+//! - [`duck_core`]: what all duck tools share — [`DuckContext`], [`QuackError`], CLI helpers.
 //!
 //! Notable module: [`duck::driver`][], the handling of the CLI driver.
 //!
@@ -18,8 +18,8 @@
 pub mod duck;
 
 pub use duck::main;
-pub use duck_utils::util::str_id::*;
-pub use duck_utils::{
+pub use duck_core::util::str_id::*;
+pub use duck_core::{
     DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
     qp_internal,
 };

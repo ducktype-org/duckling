@@ -7,7 +7,7 @@
 use std::ffi::OsString;
 
 use clap::ArgMatches;
-use duck_utils::context::aliases::Alias;
+use duck_core::context::aliases::Alias;
 use itertools::chain;
 use tracing::{debug, trace};
 

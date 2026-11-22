@@ -11,7 +11,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::{fmt, io};
 
-use duck_utils::util::path_ops::{MkdirOptions, mkdir, open};
+use duck_core::util::path_ops::{MkdirOptions, mkdir, open};
 use git2::Repository;
 
 use crate::core::valid_package_name::{

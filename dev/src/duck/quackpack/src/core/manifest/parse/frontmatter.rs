@@ -30,7 +30,7 @@
 use std::path::Path;
 use std::sync::LazyLock;
 
-use duck_utils::util::path_ops::read_from_path_to_string;
+use duck_core::util::path_ops::read_from_path_to_string;
 use regex::{Captures, Regex};
 use tracing::{debug, trace};
 

@@ -165,7 +165,7 @@ mod test {
     use crate::core::{PackageId, Source, Version, parse_manifest};
     use crate::util::to_url::ToUrl;
     use crate::{DuckContext, StrId};
-    use duck_utils::util::path_ops::{touch, try_fsync_dir, write_file};
+    use duck_core::util::path_ops::{touch, try_fsync_dir, write_file};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

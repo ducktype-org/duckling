@@ -28,19 +28,19 @@ The code is a Cargo workspace of three crates (this directory is its root):
 │   └── lib/duck/<duck files>
 ├── quackpack    <`quackpack`: the package manager>
 │   └── src/<quackpack files>
-└── duck_utils   <`duck_utils`: what every duck tool shares>
+└── duck_core   <`duck_core`: what every duck tool shares>
     └── src/<shared files>
 ```
-Dependencies go one way only: `duck` → `quackpack` → `duck_utils`.
+Dependencies go one way only: `duck` → `quackpack` → `duck_core`.
 `duck` calls into quackpack from its subcommands, and quackpack needs `DuckContext`, `QuackError` and the other shared types.
-Keeping those shared types in `duck_utils` is what breaks the dependency cycle between duck and quackpack.
+Keeping those shared types in `duck_core` is what breaks the dependency cycle between duck and quackpack.
 
-`duck_utils` holds what gives every tool the same UX and behaviour: `QuackError` and `QuackResult`, `DuckContext` (terminal, user configuration, duck home), shared `clap` helpers and styles, and locating a package root (`package_root`).
+`duck_core` holds what gives every tool the same UX and behaviour: `QuackError` and `QuackResult`, `DuckContext` (terminal, user configuration, duck home), shared `clap` helpers and styles, and locating a package root (`package_root`).
 It does __not__ parse manifests: that is quackpack's job.
-So an ecosystem tool (e.g. a formatter) depends on `duck_utils` only, and does not link in the solver, the fetcher or git.
+So an ecosystem tool (e.g. a formatter) depends on `duck_core` only, and does not link in the solver, the fetcher or git.
 
 Some functions only exist to mock the internal state in unit tests (e.g. `DuckContext::default`).
-They live behind `#[cfg(any(test, feature = "test-utils"))]` in `duck_utils`: `#[cfg(test)]` alone is not visible to other crates, so `quackpack` and `duck` enable the `test-utils` feature in their `[dev-dependencies]`.
+They live behind `#[cfg(any(test, feature = "test-utils"))]` in `duck_core`: `#[cfg(test)]` alone is not visible to other crates, so `quackpack` and `duck` enable the `test-utils` feature in their `[dev-dependencies]`.
 The binary stays a thin wrapper around `duck::main`, so all of duck can be unit tested as a library.
 
 `cargo build`, `cargo test` and `cargo clippy` run from this directory cover the whole workspace (`default-members`).

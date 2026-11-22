@@ -35,7 +35,7 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
-use duck_utils::util::error::ErrorsLogger;
+use duck_core::util::error::ErrorsLogger;
 use tracing::{debug, trace};
 
 use crate::core::fetcher::Fetcher;
@@ -344,7 +344,7 @@ mod test {
     use crate::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::util::to_url::ToUrl;
     use crate::{DuckContext, StrId};
-    use duck_utils::util::path_ops::{touch, try_fsync_dir, write_file};
+    use duck_core::util::path_ops::{touch, try_fsync_dir, write_file};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

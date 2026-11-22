@@ -36,8 +36,8 @@ use std::convert::Infallible;
 use std::ops::ControlFlow;
 use std::path::PathBuf;
 
-use duck_utils::util::file_locks::FileLockManager;
-use duck_utils::util::hash::Sha256Hasher;
+use duck_core::util::file_locks::FileLockManager;
+use duck_core::util::hash::Sha256Hasher;
 
 use super::{ArtifactsLayout, DependencyLayout, ProfileLayout};
 use crate::core::compile::profiles::Profile;

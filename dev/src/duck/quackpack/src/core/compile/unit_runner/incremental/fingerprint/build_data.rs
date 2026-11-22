@@ -9,8 +9,8 @@ use std::io::Write;
 use std::path::Path;
 use std::time::SystemTime;
 
-use duck_utils::util::hash::sha256_string;
-use duck_utils::util::path_ops::{read_from_path, touch};
+use duck_core::util::hash::sha256_string;
+use duck_core::util::path_ops::{read_from_path, touch};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 

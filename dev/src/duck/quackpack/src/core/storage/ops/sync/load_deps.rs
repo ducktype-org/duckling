@@ -9,10 +9,10 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use duck_utils::util::Pluralize;
-use duck_utils::util::error::ErrorsLogger;
-use duck_utils::util::interned_url::InternedUrl;
-use duck_utils::util::path_ops::try_fsync_dir;
+use duck_core::util::Pluralize;
+use duck_core::util::error::ErrorsLogger;
+use duck_core::util::interned_url::InternedUrl;
+use duck_core::util::path_ops::try_fsync_dir;
 use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::{StreamExt, stream};

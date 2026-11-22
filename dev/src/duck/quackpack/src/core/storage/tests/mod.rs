@@ -10,8 +10,8 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use chrono::Utc;
-use duck_utils::util::path_ops::touch;
-use duck_utils::util::test_utils::setup_test;
+use duck_core::util::path_ops::touch;
+use duck_core::util::test_utils::setup_test;
 use tempfile::TempDir;
 
 use crate::DuckContext;

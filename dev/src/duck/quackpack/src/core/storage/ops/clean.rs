@@ -11,8 +11,8 @@ use std::path::Path;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use duck_utils::util::error::ErrorsLogger;
-use duck_utils::util::path_ops::{remove_file, remove_tree};
+use duck_core::util::error::ErrorsLogger;
+use duck_core::util::path_ops::{remove_file, remove_tree};
 use storage::paths::Storage;
 use storage::{locks, paths};
 use tracing::{debug, trace, warn};
