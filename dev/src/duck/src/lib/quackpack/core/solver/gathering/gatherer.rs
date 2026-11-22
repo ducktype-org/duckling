@@ -21,7 +21,7 @@ use tempfile::TempDir;
 use tracing::{debug, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
+use crate::quackpack::core::fetcher::types::{FetchResponse as FetcherResponse, PackageWithUrl};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedRequest, NotPinnedSuccess,

@@ -202,11 +202,11 @@ fn all_metadata_adds_to_cache() {
         fetcher.get_package_all_metadata(server.base_url().to_url().unwrap().into(), "foo".into()),
     )
     .unwrap();
-    let FetcherResponse::Some(response) = response else {
+    let FetchResponse::Some(response) = response else {
         panic!("Offline response with offline flag not present");
     };
     assert_eq!(response.packages_metadata.len(), 2);
-    let FetcherResponse::Some(fetched_from_cache) =
+    let FetchResponse::Some(fetched_from_cache) =
         block_on(fetcher.get_package_metadata(types::PackageWithUrl {
             name: "foo".into(),
             version: Version::new(1, 2, 5),

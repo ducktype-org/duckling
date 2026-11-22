@@ -86,7 +86,7 @@ pub struct SearchResult {
 
 #[derive(Debug)]
 /// General fetcher response.
-pub enum FetcherResponse<T> {
+pub enum FetchResponse<T> {
     /// Resource was available.
     Some(T),
     /// [`Fetcher`](super::Fetcher) was created in an offline mode.
