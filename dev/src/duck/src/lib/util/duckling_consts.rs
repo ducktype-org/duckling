@@ -81,7 +81,6 @@ pub const DUCKLING_KEYWORDS: &[&str] = &[
     "public",
     "redo",
     "ref",
-    "refof",
     "restart",
     "return",
     "self",

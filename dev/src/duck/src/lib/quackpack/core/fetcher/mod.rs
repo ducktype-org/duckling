@@ -19,15 +19,16 @@ use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
 
+use self::types::{FetchResult, InitializationResult};
 use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
-use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
+use crate::quackpack::core::fetcher::types::{FetchResponse, PackageWithUrl};
 use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::guards;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::LockedFile;
 use crate::util::once_ext::OnceExt;
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_err};
 
 pub mod cache;
 pub mod downloads;
@@ -50,14 +51,7 @@ pub struct Fetcher<'duck> {
     http_client: OnceCell<Rc<AsyncHttpClient<'duck>>>,
     git_client: OnceCell<Box<dyn git::GitClient + 'duck>>,
     git_fastpath_client: OnceCell<git::fast_path::GitFastPathClient<'duck>>,
-    /// SQL cache is not lazily initialized, as failures leave `OnceCell` initialized, which makes
-    /// every call to [`get_package_metadata`]/[`get_package_all_metadata`]:
-    /// * try to initialize SQL cache (again),
-    /// * fail.
-    ///
-    /// [`get_package_metadata`]: Self::get_package_metadata
-    /// [`get_package_all_metadata`]: Self::get_package_all_metadata
-    cache: RefCell<cache::ManifestCache>,
+    cache: OnceCell<RefCell<cache::ManifestCache>>,
     downloads: OnceCell<downloads::Downloads>,
     locks: OnceCell<locks::Locks>,
 }
@@ -77,27 +71,17 @@ pub static DEFAULT_REGISTRY_URL: LazyLock<InternedUrl> = LazyLock::new(|| {
 
 impl<'duck> Fetcher<'duck> {
     /// Create a new [`Fetcher`].
-    pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let metadata_path = ctx.duck_home().get_metadata_db_path();
-        let cache_location = if cfg!(test) {
-            // For tests, we want to use in-memory database.
-            cache::CacheLocation::Memory
-        } else {
-            cache::CacheLocation::Path(metadata_path.as_path())
-        };
-        let cache = cache::ManifestCache::new(cache_location)
-            .context("failed to create an SQLite3 cache client")?;
-
-        Ok(Self {
+    pub fn new(ctx: &'duck DuckContext) -> Self {
+        Self {
             ctx,
             http_client: OnceCell::new(),
             ducknest_client: OnceCell::new(),
             git_client: OnceCell::new(),
             git_fastpath_client: OnceCell::new(),
-            cache: RefCell::new(cache),
+            cache: OnceCell::new(),
             downloads: OnceCell::new(),
             locks: OnceCell::new(),
-        })
+        }
     }
 
     /// Retrieve metadata for `package` from a given Ducknest instance.
@@ -107,14 +91,14 @@ impl<'duck> Fetcher<'duck> {
     pub async fn get_package_metadata(
         &self,
         package: types::PackageWithUrl,
-    ) -> QuackResult<FetcherResponse<registry::Manifest>> {
-        if let Some(cached) = self.cache.borrow().get_manifest(package)? {
+    ) -> FetchResult<FetchResponse<registry::Manifest>> {
+        if let Some(cached) = self.cache()?.borrow().get_manifest(package)? {
             debug!("metadata cache hit");
-            return Ok(FetcherResponse::Some(cached));
+            return Ok(FetchResponse::Some(cached));
         }
         debug!("metadata cache miss");
         if self.ctx.is_offline() {
-            return Ok(FetcherResponse::Offline);
+            return Ok(FetchResponse::Offline);
         }
         let result = self
             .ducknest_client()
@@ -126,10 +110,10 @@ impl<'duck> Fetcher<'duck> {
                     package.name, package.version
                 )
             })?;
-        self.cache
+        self.cache()?
             .borrow_mut()
             .add_or_replace_manifest(package, result.clone())?;
-        Ok(FetcherResponse::Some(result))
+        Ok(FetchResponse::Some(result))
     }
 
     /// Retrieve metadata for all versions of a `package_name` from a given Ducknest instance at
@@ -144,7 +128,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: InternedUrl,
         package_name: StrId,
-    ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
+    ) -> FetchResult<FetchResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
             debug!("offline, using only the cached metadata");
             let package = PackageWithUrl {
@@ -152,8 +136,8 @@ impl<'duck> Fetcher<'duck> {
                 version: 1.into(),
                 url,
             };
-            let cached = self.cache.borrow().get_all_manifests(package)?;
-            return Ok(FetcherResponse::Some(types::MultiMetadata {
+            let cached = self.cache()?.borrow().get_all_manifests(package)?;
+            return Ok(FetchResponse::Some(types::MultiMetadata {
                 packages_metadata: cached,
             }));
         }
@@ -162,10 +146,10 @@ impl<'duck> Fetcher<'duck> {
             .get_multi_metadata(&url, package_name)
             .await
             .with_context(|| format!("failed to get the multimetadata of `{}`", package_name))?;
-        self.cache
+        self.cache()?
             .borrow_mut()
             .add_or_replace_multiple_manifests(url, result.packages_metadata.clone())?;
-        Ok(FetcherResponse::Some(result))
+        Ok(FetchResponse::Some(result))
     }
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
@@ -193,7 +177,7 @@ impl<'duck> Fetcher<'duck> {
         url: &Url,
         reference: GitReference,
         destination_directory: &Path,
-    ) -> QuackResult<types::ClonedPackage> {
+    ) -> FetchResult<types::ClonedPackage> {
         let client = self.git_client()?;
         self.ctx.info(format!("cloning a repository at `{url}`"))?;
 
@@ -250,7 +234,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         url: &Url,
         reference: GitReference,
-    ) -> QuackResult<(types::ClonedPackage, TempDir)> {
+    ) -> FetchResult<(types::ClonedPackage, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
         let result = self.clone_from_git_to_directory(url, reference, dir.path())?;
         Ok((result, dir))
@@ -278,7 +262,7 @@ impl<'duck> Fetcher<'duck> {
         &self,
         package: PackageWithUrl,
         retries: u32,
-    ) -> QuackResult<PathBuf> {
+    ) -> FetchResult<PathBuf> {
         self.ctx.info(format!(
             "starting a download of `{}` version {} from `{}`",
             package.name, package.version, package.url
@@ -317,11 +301,12 @@ impl<'duck> Fetcher<'duck> {
 
         let retries_string = if retries == 1 { "retry" } else { "retries" };
 
-        qp_bail!(
+        Err(qp_err!(
             "failed to fetch a package {} {} after {retries} {retries_string}",
             package.name,
             package.version
         )
+        .into())
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -335,19 +320,22 @@ impl<'duck> Fetcher<'duck> {
     }
 
     /// Get or initialize a new [`downloads::Downloads`].
-    fn downloads(&self) -> QuackResult<&downloads::Downloads> {
+    fn downloads(&self) -> InitializationResult<&downloads::Downloads> {
         self.downloads.try_init_with(|| {
             let download_cache_path = self.ctx.duck_home().downloads();
-            downloads::Downloads::new(download_cache_path)
-                .context("failed to create a downloads manager")
+            let downloads = downloads::Downloads::new(download_cache_path)
+                .context("failed to create a downloads manager")?;
+            Ok(downloads)
         })
     }
 
     /// Get or initialize a new [`locks::Locks`].
-    fn locks(&self) -> QuackResult<&locks::Locks> {
+    fn locks(&self) -> InitializationResult<&locks::Locks> {
         self.locks.try_init_with(|| {
             let locks = self.ctx.duck_home().cache().join("locks");
-            locks::Locks::new(locks).context("failed to create a fetcher locks manager")
+            let locks =
+                locks::Locks::new(locks).context("failed to create a fetcher locks manager")?;
+            Ok(locks)
         })
     }
 
@@ -359,7 +347,7 @@ impl<'duck> Fetcher<'duck> {
 
     /// Get or initialize a new [`git::GitClient`].
     /// It chooses the right client based on the user configuration.
-    fn git_client(&self) -> QuackResult<&(dyn git::GitClient + 'duck)> {
+    fn git_client(&self) -> InitializationResult<&(dyn git::GitClient + 'duck)> {
         self.git_client
             .try_init_with(|| {
                 let network_config = self.ctx.duck_cfg().network()?;
@@ -380,6 +368,22 @@ impl<'duck> Fetcher<'duck> {
     fn git_fastpath_client(&self) -> &git::fast_path::GitFastPathClient<'duck> {
         self.git_fastpath_client
             .get_or_init(|| git::fast_path::GitFastPathClient::new(self.http_client().clone()))
+    }
+
+    /// Get or initialize a new [`cache::ManifestCache`].
+    fn cache(&self) -> InitializationResult<&RefCell<cache::ManifestCache>> {
+        self.cache.try_init_with(|| {
+            let metadata_path = self.ctx.duck_home().get_metadata_db_path();
+            let cache_location = if cfg!(test) {
+                // For tests, we want to use in-memory database.
+                cache::CacheLocation::Memory
+            } else {
+                cache::CacheLocation::Path(metadata_path.as_path())
+            };
+            let cache = cache::ManifestCache::new(cache_location)
+                .context("failed to create an SQLite3 cache client")?;
+            Ok(RefCell::new(cache))
+        })
     }
 }
 

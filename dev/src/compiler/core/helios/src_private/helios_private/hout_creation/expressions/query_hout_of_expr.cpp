@@ -677,13 +677,15 @@ namespace compiler::helios::code {
 				);
 			}
 
-			// A block only stands for a statement. It still gets into an expression when the
-			// `;` after it is missing, e.g. `{ ... } f(x);` parses as the operator `f` applied to
-			// the block and `(x)`.
+			/**
+			 * @brief Block expressions (`{ ... }` used as a value) are not supported yet. A block
+			 * also ends up here when the `;` after a block statement is missing, e.g.
+			 * `{ ... } f(x);` parses as the operator `f` applied to the block and `(x)`.
+			 */
 			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> block) override {
-				ctx.log<dia::PlaceholderError>(
-					"A block `{ ... }` cannot be used as a value. As a statement it currently "
-					"needs a `;` after its `}`.",
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Using a block `{ ... }` as a value. A block statement currently needs a `;` "
+					"after its `}`.",
 					block->getStablePosition()
 				);
 			}

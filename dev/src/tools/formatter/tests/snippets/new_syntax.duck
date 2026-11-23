@@ -27,7 +27,6 @@ fun ptrs(x: ref i64) -> () = {
 	let p = ptrof x;
 	let c = copyof x;
 	let m = move x;
-	let r = refof x;
 }
 
 fun +*(a: i64, b: i64) -> i64 = a * b + a;
