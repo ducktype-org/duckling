@@ -36,7 +36,7 @@ namespace formatter {
 	bool isBracketGroup(const Token& t) { return isType(t, Type::BracketGroup); }
 
 	bool isLineComment(const Token& t) {
-		return isComment(t) && sv(t).starts_with("#") && !sv(t).starts_with("#{");
+		return isComment(t) && t.getCommentKind() == Token::CommentKind::Line;
 	}
 
 	bool isSkippable(const Token& t) { return isType(t, Type::Empty) || isType(t, Type::Sentinel); }

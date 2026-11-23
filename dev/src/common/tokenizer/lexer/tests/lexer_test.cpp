@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 class SimpleLexerTest: public tester::TestSuite {
@@ -37,6 +38,7 @@ public:
 		TESTER_ADD_TEST(testLiteralTextIsNotKeyword);
 		TESTER_ADD_TEST(testDescribeSentinelsDoNotLeakInternalNames);
 		TESTER_ADD_TEST(testNumberFollowedByRange);
+		TESTER_ADD_TEST(testRetainedCommentKinds);
 	}
 
 	~SimpleLexerTest() override = default;
@@ -253,6 +255,26 @@ private:
 		ASSERT_TRUE(tokens.at(1).isOperatorSymbol());
 		ASSERT_TRUE(tokens.at(1).asNamedOperator() == lang_def::NamedOperator::Range);
 		ASSERT_TRUE(tokens.at(2).isNumLiteralGroup());
+	}
+
+	void testRetainedCommentKinds() {
+		using Token                    = lexer::Token;
+		const std::string_view comment = "#{ #other} block #}";
+		auto source = tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(
+			base::strConcat("#line\n", comment, "after\n#{block#}")
+		));
+		ASSERT_TRUE(source->tokenize({ .keep_comments = true }));
+		const auto& tokens = source->getTokenData().tokens;
+		ASSERT_EQUAL(tokens.size(), 4);
+		ASSERT_TRUE(tokens.at(0).getCommentKind() == Token::CommentKind::Line);
+		ASSERT_TRUE(tokens.at(1).isComment());
+		ASSERT_TRUE(tokens.at(1).getCommentKind() == Token::CommentKind::Block);
+		ASSERT_EQUAL(tokens.at(1).getStrValue(), comment);
+		ASSERT_EQUAL(tokens.at(1).getPosition().getStart(), 6);
+		ASSERT_EQUAL(tokens.at(1).getPosition().getEnd(), 6 + comment.size() - 1);
+		ASSERT_EQUAL(tokens.at(2).getStrValue(), "after");
+		ASSERT_EQUAL(tokens.at(2).getPosition().getStart(), 6 + comment.size());
+		ASSERT_TRUE(tokens.at(3).getCommentKind() == Token::CommentKind::Block);
 	}
 
 	void testSourcePosition() {

@@ -229,8 +229,9 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "line comment");
 		if (options.keep_comments)
-			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
-			);
+			output.push_back(Token::makeComment(
+				file->getCharRange(begin, end + 1), source_position, Token::CommentKind::Line
+			));
 	}
 
 	void Lexer::blockCommentHandler(Tokens& output) {
@@ -257,8 +258,9 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "block comment");
 		if (options.keep_comments)
-			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
-			);
+			output.push_back(Token::makeComment(
+				file->getCharRange(begin, end + 1), source_position, Token::CommentKind::Block
+			));
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
