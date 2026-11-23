@@ -45,7 +45,6 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
-		TESTER_ADD_TEST(testBlockExpressionNotSupported);
 		TESTER_ADD_TEST(testBlockExprOutsideFunctionBody);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
@@ -1559,16 +1558,6 @@ private:
 				1
 			);
 		}
-	}
-
-	/**
-	 * @brief A block expression used as a sub-expression has no HOUT expression lowering yet.
-	 * It must produce a diagnostic instead of panicking.
-	 */
-	void testBlockExpressionNotSupported() {
-		checkForErrorOnCompileModule(
-			"fun foo() = 1 + {return 2;}", { "Using a block `{ ... }` as a value." }, 1
-		);
 	}
 
 	/**

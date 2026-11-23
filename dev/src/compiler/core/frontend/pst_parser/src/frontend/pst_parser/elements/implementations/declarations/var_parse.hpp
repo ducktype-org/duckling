@@ -9,7 +9,6 @@
 #include "preamble.hpp"
 
 #include <diagnostic/message.hpp>
-#include <diagnostic/placeholder.hpp>
 
 namespace pst {
 
@@ -51,17 +50,7 @@ namespace pst {
 
 		if (state[0].is(lang_def::NamedOperator::Assign)) {
 			PARSE().eatOne();
-
-			// A block expression initializer is not implemented yet; report it directly instead of
-			// letting the expression parser cascade into "empty expression" recovery errors.
-			if (state[0].isBracketGroup(lexer::Token::Curly)) {
-				state.logInt(makeBox<dia::NotYetImplementedCodeError>(
-					"Block expressions are not yet supported.", state.getPosition()
-				));
-				PARSE().eatOne();
-			} else {
-				PARSE().one(&out->value);
-			}
+			PARSE().one(&out->value);
 
 			has_value = true;
 		}
