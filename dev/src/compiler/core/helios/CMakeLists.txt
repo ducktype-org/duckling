@@ -46,6 +46,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/templates/templates.cpp
 	src/helios/utils/main_return_type.cpp
 
+	src/helios/errors/block_expr_not_allowed.cpp
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
 	src/helios/queries/queries.cpp
