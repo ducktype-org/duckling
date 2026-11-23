@@ -1220,6 +1220,19 @@ namespace compiler::helios::code {
 		}
 
 		/**
+		 * @brief Returns the operator of the current element if it is an access other than `.`,
+		 * like the `.?` of `x.?y` or the `::` of `x::y`.
+		 * The parser accepts them like `.`, but only `.` is compiled for now.
+		 */
+		base::Optional<lexer::Operator> currentUnsupportedAccessOp() {
+			if (not isCurrentElement<pst::expr::AccessExpr>()) return {};
+			auto access = currentElem().value().dynamicCast<pst::expr::AccessExpr>().value();
+			auto op     = access->getType().unlock(query_ctx)->unwrap();
+			if (op.asNamed() == lang_def::NamedOperator::Period) return {};
+			return op;
+		}
+
+		/**
 		 * @brief Checks if the next element is a round call, like the `()` of `foo[i64]()`.
 		 */
 		bool isNextRoundCall() {
@@ -1406,6 +1419,16 @@ namespace compiler::helios::code {
 					const bool with_call = isNextRoundCall();
 					error                = stepTemplateBake(with_call);
 					this->index += with_call ? 2 : 1;
+				} else if (auto op = currentUnsupportedAccessOp(); op.has_value()) {
+					query_ctx.log<dia::NotYetImplementedCodeError>(
+						base::strConcat(
+							"The `",
+							op.value().value.strView(),
+							"` access operator is not supported yet."
+						),
+						currentElem().value()->getStablePosition()
+					);
+					return query::Failed();
 				} else if (isCurrentElement<pst::expr::AccessExpr>() && isNextRoundCall()) {
 					error = step<pst::expr::AccessExpr, pst::expr::Call>();
 					this->index += 2;  // skip next element, because it is handled

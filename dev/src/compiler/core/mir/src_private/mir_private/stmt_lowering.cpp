@@ -10,18 +10,44 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_lowering/errors.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <diagnostic/stable_position.hpp>
+#include <query_framework/query_errors.hpp>
+
 #include <ranges>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace compiler::mir {
+	static std::string_view controlFlowKeyword(hc::ControlFlowKind kind) {
+		switch (kind) {
+		case hc::ControlFlowKind::If:
+			return "if";
+		case hc::ControlFlowKind::While:
+			return "while";
+		case hc::ControlFlowKind::For:
+			return "for";
+		case hc::ControlFlowKind::Block:
+			return "block";
+		case hc::ControlFlowKind::COUNT:
+			CORE_UNREACHABLE();
+		}
+		CORE_UNREACHABLE();
+	}
+
+	static bool returnTypeMatches(const tsh::SymbolType<>& given, const tsh::SymbolType<>& expected) {
+		return given.getType() == expected.getType() && given.getRefKind() == expected.getRefKind();
+	}
+
 	/**
 	 * @brief Visitor that implements actual logic of lowering statements.
 	 * @note The result of the visitor is stored in out member.
@@ -64,7 +90,8 @@ namespace compiler::mir {
 			for (const auto& target: targets | std::views::reverse) {
 				variant_match(selector) {
 					variant_case(hc::NamedTarget, named) {
-						if (target.id.has_value() && target.id.value() == named.id) return &target;
+						if (target.id.has_value() && helios::name(target.id.value()) == named.name)
+							return &target;
 					}
 					variant_case(hc::KindTarget, by_kind) {
 						if (target.kind == by_kind.kind) return &target;
@@ -79,14 +106,54 @@ namespace compiler::mir {
 			return nullptr;
 		}
 
+		[[noreturn]] void failMissingTarget(
+			const hc::ControlFlowTargetSelector&       selector,
+			const base::Optional<dia::StablePosition>& position,
+			std::string_view                           action
+		) const {
+			if (position.has_value()) {
+				auto& ctx = function.getContext();
+				variant_match(selector) {
+					variant_case_novalue(hc::NearestLoop) {
+						ctx.log<NoEnclosingLoopError>(position.value(), action);
+					}
+					variant_case(hc::NamedTarget, named) {
+						ctx.log<NoNamedControlFlowTargetError>(
+							position.value(), action, named.name.strView()
+						);
+					}
+					variant_case(hc::KindTarget, by_kind) {
+						ctx.log<NoControlFlowKindTargetError>(
+							position.value(), action, controlFlowKeyword(by_kind.kind)
+						);
+					}
+				}
+			}
+			query::throwFailed();
+		}
+
+		[[noreturn]] void failReturnType(
+			const base::Optional<dia::StablePosition>& position, const std::string& given_type
+		) const {
+			if (position.has_value())
+				function.getContext().log<ReturnTypeMismatchError>(
+					position.value(), given_type, function.getResultType().toString()
+				);
+			query::throwFailed();
+		}
+
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
+			const auto value_type = stmt.value->expression_type.getSymbolType();
+			if (!returnTypeMatches(value_type, function.getResultType()))
+				failReturnType(stmt.getPosition(), value_type.toString());
+
 			auto return_block = function.newBlock("return");
 			auto return_scope = function.newScope(parent_scope);
 
 			auto retrieve_value = return_block->addHole();
 
 			// lower expr:
-			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope);
+			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope, targets);
 
 			auto possible_result = expr_res.getResultIfStored();
 
@@ -125,6 +192,10 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
+			const auto unit = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+			if (!returnTypeMatches(unit, function.getResultType()))
+				failReturnType(stmt.getPosition(), "()");
+
 			auto return_block = function.newBlock("return.void");
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator(
@@ -135,7 +206,7 @@ namespace compiler::mir {
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
 			auto expr_scope  = function.newScope(parent_scope);
-			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
+			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope, targets);
 
 			std::ignore = expr_result.getResult(function);
 			output({ expr_result.begin });
@@ -146,7 +217,7 @@ namespace compiler::mir {
 			auto condition_block      = function.newBlock("if.cond");
 			auto get_condition_return = condition_block->addHole();
 			auto lowered_condition
-				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+				= lowerExpr(*stmt.condition, condition_block, function, condition_scope, targets);
 
 			auto branch_targets = targets;
 			branch_targets.push_back(ControlFlowTarget{
@@ -230,7 +301,7 @@ namespace compiler::mir {
 			auto get_condition_return = condition_continuation_block->addHole();
 
 			auto expr_result = lowerExpr(
-				*stmt.condition, condition_continuation_block, function, condition_scope
+				*stmt.condition, condition_continuation_block, function, condition_scope, targets
 			);
 
 			auto loop_scope = function.newScope(parent_scope);
@@ -310,7 +381,8 @@ namespace compiler::mir {
 
 		void visitBreakStmt(const hc::BreakStmt& stmt) override {
 			auto target = findTarget(stmt.target_selector);
-			CORE_ASSERT(target != nullptr, "Break statement has no enclosing target.");
+			if (target == nullptr)
+				failMissingTarget(stmt.target_selector, stmt.getPosition(), "break");
 
 			auto break_block = function.newBlock("break");
 			break_block->setTerminator({
@@ -327,7 +399,8 @@ namespace compiler::mir {
 
 		void visitContinueStmt(const hc::ContinueStmt& stmt) override {
 			auto target = findTarget(stmt.target_selector);
-			CORE_ASSERT(target != nullptr, "Continue statement has no enclosing target.");
+			if (target == nullptr)
+				failMissingTarget(stmt.target_selector, stmt.getPosition(), "continue");
 
 			auto continue_block = function.newBlock("continue");
 			continue_block->setTerminator({
@@ -358,7 +431,7 @@ namespace compiler::mir {
 			auto local_construction_hole = continuation->addHole();
 			auto assignment_scope        = function.newScope(parent_scope);
 			auto expr_result
-				= lowerExpr(*stmt.initial_value, continuation, function, assignment_scope);
+				= lowerExpr(*stmt.initial_value, continuation, function, assignment_scope, targets);
 
 			expr_result.storeResultInGivenPlace(
 				MIRPlace(local),
@@ -391,10 +464,11 @@ namespace compiler::mir {
 			if (destructor_in_between) second_hole = continuation->addHole();
 
 			auto right_result
-				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
+				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope, targets);
 
-			auto left_result
-				= lowerExpr(*stmt.location_expr, right_result.begin, function, assignment_scope);
+			auto left_result = lowerExpr(
+				*stmt.location_expr, right_result.begin, function, assignment_scope, targets
+			);
 
 			auto left_val = left_result.getResult(function);
 

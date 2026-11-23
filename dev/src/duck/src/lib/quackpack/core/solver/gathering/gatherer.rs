@@ -21,7 +21,9 @@ use tempfile::TempDir;
 use tracing::{debug, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
+use crate::quackpack::core::fetcher::types::{
+    FetchError, FetchResponse as FetcherResponse, PackageWithUrl,
+};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedRequest, NotPinnedSuccess,
@@ -214,14 +216,13 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 match not_pinned_request.id.source.kind() {
                     SourceKind::Registry => {
                         let url = not_pinned_request.id.source.url();
-                        Ok(self
-                            .fetch_registry_not_pinned(
-                                &not_pinned_request,
-                                url,
-                                not_pinned_request.id.name,
-                                errors,
-                            )
-                            .await)
+                        self.fetch_registry_not_pinned(
+                            &not_pinned_request,
+                            url,
+                            not_pinned_request.id.name,
+                            errors,
+                        )
+                        .await
                     }
                     SourceKind::Git(git_ref) => {
                         let url = not_pinned_request.id.source.url();
@@ -258,7 +259,8 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         };
         let fetcher_response = match self.fetcher.get_package_metadata(pkg_to_fetch).await {
             Ok(response) => response,
-            Err(e) => {
+            Err(FetchError::Initialization(e)) => return Err(e.into()),
+            Err(FetchError::Other(e)) => {
                 errors.borrow_mut().log(e);
                 return Ok(FetchResponse::failed_pinned(request.id, request.version));
             }
@@ -299,17 +301,18 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         url: InternedUrl,
         real_name: StrId,
         errors: &RefCell<ErrorsLogger>,
-    ) -> FetchResponse {
+    ) -> QuackResult<FetchResponse> {
         trace!("fetching all versions of `{real_name}` from the registry");
         let fetcher_response = match self.fetcher.get_package_all_metadata(url, real_name).await {
             Ok(response) => response,
-            Err(e) => {
+            Err(FetchError::Initialization(e)) => return Err(e.into()),
+            Err(FetchError::Other(e)) => {
                 errors.borrow_mut().log(e);
-                return FetchResponse::failed_not_pinned(request.id);
+                return Ok(FetchResponse::failed_not_pinned(request.id));
             }
         };
         let FetcherResponse::Some(fetcher_response) = fetcher_response else {
-            return FetchResponse::failed_not_pinned(request.id);
+            return Ok(FetchResponse::failed_not_pinned(request.id));
         };
         let answer_identity = FullIdentity::new(real_name, FullOrigin::for_registry(url));
         let mut fetch_response = NotPinnedSuccess {
@@ -341,9 +344,11 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         if fetch_response.fetched_manifests.is_empty() {
             let err = qp_err!("no packages found satisfying the request for {real_name}");
             errors.borrow_mut().log(err);
-            return FetchResponse::failed_not_pinned(request.id);
+            return Ok(FetchResponse::failed_not_pinned(request.id));
         }
-        FetchResponse::Success(FetchSuccess::NotPinned(fetch_response))
+        Ok(FetchResponse::Success(FetchSuccess::NotPinned(
+            fetch_response,
+        )))
     }
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
@@ -369,7 +374,8 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
         let (cloned_pkg, path_where_cloned) = match self.fetcher.clone_from_git(&url, reference) {
             Ok(response) => response,
-            Err(e) => {
+            Err(FetchError::Initialization(e)) => return Err(e.into()),
+            Err(FetchError::Other(e)) => {
                 errors.borrow_mut().log(e);
                 return Ok(FetchResponse::failed_not_pinned(request.id));
             }
