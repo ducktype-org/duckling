@@ -22,7 +22,7 @@ use crate::quackpack::core::storage::paths::Storage;
 fn collects_packages() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
 
     let packages = load_packages(
         &storage,
@@ -71,7 +71,7 @@ fn collects_packages() {
 fn collects_packages_cycle() {
     let (ctx, root) = setup_mock_storage();
     let storage = Storage::new(root.path().join("storage"));
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
 
     let packages = load_packages(
         &storage,
