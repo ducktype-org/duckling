@@ -166,7 +166,7 @@ impl ExternalLibrary {
 
 /// Directories searched after a package's own `external-lib-paths`.
 #[cfg(target_os = "linux")]
-const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[
+pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[
     "/usr/local/lib",
     "/usr/lib",
     "/lib",
@@ -183,10 +183,10 @@ const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[
 ];
 /// Directories searched after a package's own `external-lib-paths`.
 #[cfg(target_os = "macos")]
-const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &["/usr/local/lib", "/opt/homebrew/lib", "/usr/lib"];
+pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &["/usr/local/lib", "/opt/homebrew/lib", "/usr/lib"];
 /// Directories searched after a package's own `external-lib-paths`.
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[];
+pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[];
 
 /// The directories searched for the external libraries of `unit`, in order: the package's
 /// `external-lib-paths` (relative ones joined to the package's root), then

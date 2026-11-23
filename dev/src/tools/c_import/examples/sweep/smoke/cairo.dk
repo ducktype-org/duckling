@@ -1,0 +1,20 @@
+import core.builtins.*;
+import cairo.*;
+
+fun main() -> i64 = {
+    let surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 4i32, 4i32);
+    let cr = cairo_create(surface);
+    cairo_set_source_rgb(cr, 1.0, 0.0, 0.0);
+    cairo_paint(cr);
+    cairo_surface_flush(surface);
+    if (cairo_image_surface_get_stride(surface) < 16i32) { return 1i64; }
+    let pixels = cairo_image_surface_get_data(surface);
+    # Opaque red, ARGB32 in native (little-endian) byte order: B, G, R, A.
+    if (pixels[0] != 0u8) { return 2i64; }
+    if (pixels[1] != 0u8) { return 3i64; }
+    if (pixels[2] != 255u8) { return 4i64; }
+    if (pixels[3] != 255u8) { return 5i64; }
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    return 0i64;
+}

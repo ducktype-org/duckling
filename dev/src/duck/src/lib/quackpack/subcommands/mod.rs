@@ -15,3 +15,4 @@ pub mod remove;
 pub mod run;
 pub mod run_script;
 pub mod sync;
+pub mod c_package;

@@ -1,0 +1,15 @@
+import core.builtins.*;
+import sodium.*;
+
+fun main() -> i64 = {
+    if (sodium_init() < 0i32) { return 1i64; }
+    var digest: u8[32];
+    let input = ptr_from_slice[char]("abc\0") as cptr u8;
+    if (crypto_hash_sha256(&digest as cptr u8, input, 3u64) != 0i32) { return 2i64; }
+    # SHA-256("abc") = ba7816bf ... f20015ad
+    if (digest[0] != 0xbau8) { return 3i64; }
+    if (digest[1] != 0x78u8) { return 4i64; }
+    if (digest[30] != 0x15u8) { return 5i64; }
+    if (digest[31] != 0xadu8) { return 6i64; }
+    return 0i64;
+}

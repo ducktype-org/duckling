@@ -1,0 +1,24 @@
+# name | pkg-config | headers | include globs (space-separated; `-` for none)
+zlib     | zlib        | zlib.h                               | -
+curl     | libcurl     | curl/curl.h                          | curl_* CURL*
+sqlite3  | sqlite3     | sqlite3.h                            | sqlite3* SQLITE_*
+png      | libpng16    | png.h                                | png_* PNG_*
+crypto   | libcrypto   | openssl/evp.h openssl/sha.h          | EVP_* SHA* OPENSSL_*
+freetype | freetype2   | ft2build.h freetype/freetype.h       | FT_* ft_*
+cairo    | cairo       | cairo/cairo.h                        | cairo_* CAIRO_*
+glfw     | glfw3       | GLFW/glfw3.h                         | glfw* GLFW_*
+uv       | libuv       | uv.h                                 | uv_* UV_*
+jansson  | jansson     | jansson.h                            | json_* JSON_* jansson_*
+xml2     | libxml-2.0  | libxml/parser.h                      | xml* XML_*
+lua      | lua         | lua.h lauxlib.h lualib.h             | lua* LUA*
+ncurses  | ncursesw    | curses.h                             | -
+zstd     | libzstd     | zstd.h                               | ZSTD_*
+lz4      | liblz4      | lz4.h                                | LZ4_*
+sdl2     | sdl2        | SDL.h                                | SDL_*
+git2     | libgit2     | git2.h                               | git_* GIT_*
+sodium   | libsodium   | sodium.h                             | crypto_* sodium_* randombytes_*
+gmp      | gmp         | gmp.h                                | __gmp* mp_* GMP_*
+yaml     | yaml-0.1    | yaml.h                               | yaml_* YAML_*
+expat    | expat       | expat.h                              | XML_*
+raylib   | raylib      | raylib.h                             | -
+sdl3     | sdl3        | SDL3/SDL.h                           | SDL_* SDLK_*

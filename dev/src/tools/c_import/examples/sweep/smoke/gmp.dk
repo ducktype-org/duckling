@@ -1,0 +1,13 @@
+import core.builtins.*;
+import gmp.*;
+
+fun main() -> i64 = {
+    var n: __mpz_struct;
+    let p = &n as cptr __mpz_struct;
+    __gmpz_init(p);
+    __gmpz_fac_ui(p, 20u64);
+    if (__gmpz_get_ui(p) != 2432902008176640000u64) { return 1i64; }
+    if (__gmpz_cmp_ui(p, 2432902008176639999u64) <= 0i32) { return 2i64; }
+    __gmpz_clear(p);
+    return 0i64;
+}

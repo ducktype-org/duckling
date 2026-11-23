@@ -1,0 +1,11 @@
+import core.builtins.*;
+import m.*;
+
+fun main() -> i64 = {
+    if (sqrt(16.0) != 4.0) { return 1i64; }
+    # `cbrt` is not correctly rounded, so only closeness is checked.
+    let root = cbrt(27.0);
+    if (root < 2.999999) { return 2i64; }
+    if (root > 3.000001) { return 3i64; }
+    return 0i64;
+}

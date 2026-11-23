@@ -1,0 +1,15 @@
+import core.builtins.*;
+import jansson.*;
+
+fun main() -> i64 = {
+    var null_ptr: cptr u8;
+    let text = ptr_from_slice[char]("{\"answer\": 42, \"list\": [1, 2, 3]}\0") as cptr char;
+    let root = json_loads(text, 0u64, null_ptr as cptr json_error_t);
+    let answer = json_object_get(root, ptr_from_slice[char]("answer\0") as cptr char);
+    if (json_integer_value(answer) != 42i64) { return 1i64; }
+    let list = json_object_get(root, ptr_from_slice[char]("list\0") as cptr char);
+    if (json_array_size(list) != 3u64) { return 2i64; }
+    if (json_integer_value(json_array_get(list, 2u64)) != 3i64) { return 3i64; }
+    json_delete(root);
+    return 0i64;
+}
