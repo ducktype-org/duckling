@@ -12,9 +12,13 @@ params:
     description: "The code snippet where the error occurred."
   code_location:
     description: "The location of the code snippet."
+  closing_delimiter:
+    description: "The expected closing delimiter for the block comment."
 
 header_message:
-  - "Unclosed block comment starting here."
+  - "Unclosed block comment starting here. Expected closing delimiter `"
+  - param: "closing_delimiter"
+  - "`."
 
 description:
   - codeblock:

@@ -5,12 +5,16 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <diagnostic/core/diagnostic_arguments.hpp>
+#include <diagnostic/core/diagnostic_state.hpp>
+#include <diagnostic/core/template_evaluation.hpp>
+#include <diagnostic/core/view_constructors.hpp>
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
 
 #include <array>
 #include <sstream>
+#include <string_view>
 #include <utility>
 
 class LexerErrorTests: public tester::TestSuite {
@@ -110,6 +114,34 @@ class LexerErrorTests: public tester::TestSuite {
 		for (auto e: examples) assertTrue((*e)(), e->message());
 	}
 
+	void testUnclosedCommentClosingDelimiter() {
+		const std::array<std::pair<std::string_view, std::string_view>, 5> cases = { {
+			{ "#{", "#}" },
+			{ "#tag{#}", "#tag}" },
+			{ "#Tag{#tag}", "#Tag}" },
+			{ "#zażółć{#}", "#zażółć}" },
+			{ "#a\u0301{#á}", "#a\u0301}" },
+		} };
+		for (const auto& [code, closing_delimiter]: cases) {
+			auto source
+				= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(code));
+			ASSERT_TRUE(!source->tokenize());
+			std::vector<CRef<dia::dia_args::Diagnostic>> diagnostics;
+			source->getIntLogger()->collectDiagnostics(diagnostics);
+			ASSERT_EQUAL(diagnostics.size(), 1);
+			auto       diagnostic = dia::evaluateDiagnostic(*diagnostics.front());
+			const auto header     = dia::constructTextView(diagnostic.messages[0].header.ref());
+			ASSERT_EQUAL(
+				header,
+				base::strConcat(
+					"Unclosed block comment starting here. Expected closing delimiter `",
+					closing_delimiter,
+					"`."
+				)
+			);
+		}
+	}
+
 	void testUnclosedNamedCommentPosition() {
 		auto source = tokenizer::makeTokenSource(
 			fs::FileManager::createRandomVirtualFile("\n  #tag{comment #other}")
@@ -133,6 +165,7 @@ class LexerErrorTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(exampleTests);
+		TESTER_ADD_TEST(testUnclosedCommentClosingDelimiter);
 		TESTER_ADD_TEST(testUnclosedNamedCommentPosition);
 	}
 

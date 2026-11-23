@@ -35,7 +35,11 @@ namespace lexer {
 		}
 
 	public:
-		UnclosedCommentError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		UnclosedCommentError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			auto closing_delimiter   = pos.content();
+			closing_delimiter.back() = '}';
+			addArgument<dia::TextArgument>("closing_delimiter", std::move(closing_delimiter));
+		}
 	};
 
 	class UnclosedStringEolError final: public dia::MessageWithCodeFragmentAndCause {
