@@ -10,11 +10,11 @@
 
 use std::path::PathBuf;
 
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
 use tracing::{debug, trace};
 
 use super::types;
 use crate::core::short_name_for_host;
+use crate::util::filesystem::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult};
 
 #[derive(Debug)]

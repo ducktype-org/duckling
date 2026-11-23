@@ -10,12 +10,11 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::duck_context::duck_home::DuckHome;
-use crate::util::hash::sha256_string;
-
 use crate::StrId;
 use crate::core::script::Script;
 use crate::core::{AnyPackage, Manifest, Package, PackageContext};
+use crate::duck_context::DuckHome;
+use crate::util::hash::sha256_string;
 
 /// A unique venv's identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

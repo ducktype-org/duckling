@@ -10,12 +10,12 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use crate::util::command_ext::CommandExt;
 use tracing::{debug, trace, warn};
 use url::Url;
 
 use super::{GitClient, GitRepository, GitSubmoduleOptions, can_shallow_clone};
 use crate::core::GitReference;
+use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug)]

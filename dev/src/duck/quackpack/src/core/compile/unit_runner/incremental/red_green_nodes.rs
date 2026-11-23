@@ -33,9 +33,6 @@ use std::ops::AddAssign;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
-use crate::util::filesystem::path_ops::{change_time, modification_time};
-
 use crate::QuackResult;
 use crate::core::AnyPackage;
 use crate::core::compile::BuildContext;
@@ -47,7 +44,8 @@ use crate::core::compile::unit::graph::{
 use crate::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
 use crate::core::compile::unit_runner::outputs::unit_output;
 use crate::core::script::Script;
-use crate::util::filesystem::dir_iterator::create_dir_iterator;
+use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
+use crate::util::filesystem::{change_time, create_dir_iterator, modification_time};
 
 impl UnitGraphNode {
     /// Main logic for checking whether a [`UnitGraphNode`] is green or red.

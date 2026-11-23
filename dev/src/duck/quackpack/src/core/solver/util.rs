@@ -163,7 +163,7 @@ mod test {
     use crate::core::full_identity::{FullIdentity, FullOrigin};
     use crate::core::solver::util::get_possible_realizations;
     use crate::core::{PackageId, Source, Version, parse_manifest};
-    use crate::util::filesystem::path_ops::{touch, try_fsync_dir, write_file};
+    use crate::util::filesystem::{touch, try_fsync_dir, write_file};
     use crate::util::to_url::ToUrl;
     use crate::{DuckContext, StrId};
 

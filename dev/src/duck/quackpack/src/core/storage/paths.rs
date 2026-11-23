@@ -34,13 +34,12 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
-use crate::util::filesystem::path_ops::{remove_tree, touch};
-
 use crate::core::PackageId;
 use crate::core::full_identity::FullKind;
 use crate::core::storage::venv_id::VenvId;
-use crate::util::filesystem::dir_iterator::{DirContents, create_dir_iterator};
+use crate::util::filesystem::{
+    DirContents, FileLockManager, LockedFile, create_dir_iterator, remove_tree, touch,
+};
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";

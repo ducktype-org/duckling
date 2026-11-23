@@ -18,7 +18,7 @@ use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_intern
 
 mod de;
 
-impl DescriptionWithAnArticle for Value {
+impl DescriptionWithAnArticle<YamlConfig> for Value {
     fn desc_with_article(&self) -> &'static str {
         match self {
             Self::Null => "a null",

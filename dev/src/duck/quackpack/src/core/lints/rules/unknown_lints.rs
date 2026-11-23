@@ -8,12 +8,11 @@
 
 use std::fmt;
 
-use crate::util::edit_distance::find_closest_target;
-
 use crate::QuackResult;
 use crate::core::PackageContext;
 use crate::core::lints::buffer::LintBuffer;
 use crate::core::lints::{Diagnostic, Lint, LintLevel, PASSES};
+use crate::util::edit_distance::find_closest_target;
 
 pub const LINT: Lint = Lint {
     name: "unknown_lints",

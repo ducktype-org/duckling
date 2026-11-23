@@ -7,12 +7,12 @@
 use std::cmp::Ordering;
 use std::path::PathBuf;
 
-use crate::util::Pluralize;
 use chrono::{DateTime, Utc};
 
 use crate::core::storage::paths::Storage;
 use crate::core::storage::venv::Venv;
 use crate::core::storage::{display_venv_info, list_venvs};
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the list operation.

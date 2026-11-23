@@ -15,7 +15,6 @@ use std::path::PathBuf;
 use std::process::ExitStatus;
 use std::time::SystemTime;
 
-use crate::util::filesystem::file_locks::LockedFile;
 use tracing::{debug, instrument, trace};
 
 use self::incremental::ExclusiveFingerprintGuard;
@@ -32,6 +31,7 @@ use crate::core::compile::unit_runner::incremental::{BuildData, IncrementalData}
 use crate::core::compile::unit_task_generator::UnitTaskGenerator;
 use crate::core::compile::unit_task_generator::default::DefaultTaskGenerator;
 use crate::core::compile::unit_task_generator::dvm::DvmTaskGenerator;
+use crate::util::filesystem::LockedFile;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 pub mod external_libs;

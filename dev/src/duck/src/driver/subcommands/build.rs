@@ -4,13 +4,13 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::cli::cli_ext::{flag, multi, subcommand};
-use crate::driver::cli_ext::{CommandExt, jobs_from_matches, profile_from_matches};
 use clap::{ArgMatches, Command};
 use quackpack::core::{AllowGlobalPackage, PackageLoader};
 use quackpack::subcommands::build::{BuildOptions, compile};
 
 use super::features_from_matches;
+use crate::cli::{flag, multi, subcommand};
+use crate::driver::cli_ext::{CommandExt, jobs_from_matches, profile_from_matches};
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `build` subcommand.

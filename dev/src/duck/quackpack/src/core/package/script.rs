@@ -9,12 +9,11 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use crate::util::filesystem::path_ops::read_from_path_to_string;
-
 use crate::core::identity::{Identity, Origin};
 use crate::core::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::core::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
 use crate::schemas::manifest::Manifest as ManifestSchema;
+use crate::util::filesystem::read_from_path_to_string;
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]

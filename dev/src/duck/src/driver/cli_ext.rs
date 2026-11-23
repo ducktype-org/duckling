@@ -4,15 +4,14 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! `clap` helpers specific to the `duck` CLI: its shared flags (`--profile`, `--release`, `-j`)
-//! and safe access to the parsed matches.
+//! [`clap`] helpers specific to the `duck` CLI
 use std::any::Any;
 
 use clap::{Arg, ArgMatches, Command, value_parser};
 use tracing::warn;
 
 use crate::StrId;
-use crate::cli::cli_ext::{flag, optional};
+use crate::cli::{flag, optional};
 
 const DEFAULT_PROFILE: &str = "dev";
 

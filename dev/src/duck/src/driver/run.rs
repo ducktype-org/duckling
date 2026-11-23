@@ -8,9 +8,6 @@ use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
-use crate::driver::cli_ext::ArgMatchesExt;
-use crate::util::command_ext::CommandExt;
-use crate::util::filesystem::path_ops::{is_executable, resolve_with_tilde};
 use clap::ArgMatches;
 use quackpack::core::compile::duckc::Duckc;
 use quackpack::subcommands::run_script::{RunScriptOptions, run_script};
@@ -22,8 +19,11 @@ use super::cli_args_preprocessing::typos_fixing::fix_typos;
 use super::global_options::GlobalOptions;
 use super::subcommands::exec_for;
 use super::subcommands::run_script::check_is_script;
+use crate::driver::cli_ext::ArgMatchesExt;
 use crate::driver::external_subcommands::ExternalSubcommands;
 use crate::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
+use crate::util::command_ext::CommandExt;
+use crate::util::filesystem::{is_executable, resolve_with_tilde};
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 /// Run the duck with the given [`DuckContext`].

@@ -8,12 +8,12 @@
 
 use std::collections::VecDeque;
 
-use crate::util::extend::QpExtend;
 use tracing::{debug, instrument, trace};
 
 use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, PackagesSet, QuackResult};
 use crate::core::FeatureName;
 use crate::core::compile::missing_depenendcy_in_manifest;
+use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
     /// Same as [`EarlyGraph::remove_disabled_dependencies`].

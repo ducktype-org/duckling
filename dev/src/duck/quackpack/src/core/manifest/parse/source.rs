@@ -9,7 +9,6 @@
 //! This is the hardest (and most crucial) part of the parsing process.
 use std::path::{Path, PathBuf};
 
-use crate::util::filesystem::path_ops::{expand_tilde, normalize};
 use itertools::Itertools;
 use tracing::trace;
 use url::Url;
@@ -20,6 +19,7 @@ use crate::core::{GitReference, Source};
 use crate::schemas::manifest::{
     Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
 };
+use crate::util::filesystem::{expand_tilde, normalize};
 use crate::util::to_url::ToUrl;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 

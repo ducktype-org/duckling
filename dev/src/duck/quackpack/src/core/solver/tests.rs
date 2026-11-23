@@ -7,9 +7,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::util::filesystem::path_ops::{touch, try_fsync_dir, write_file};
-use crate::util::interning::interned_url::InternedUrl;
-use crate::util::test_utils::setup_test;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
@@ -24,6 +21,9 @@ use crate::core::solver::solver_mode::SolverMode;
 use crate::core::storage::freeze::{DepIdWithAlias, FreezePackage, RootPackage, VenvFreeze};
 use crate::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::schemas::registry;
+use crate::util::filesystem::{touch, try_fsync_dir, write_file};
+use crate::util::interning::InternedUrl;
+use crate::util::test_utils::setup_test;
 use crate::util::to_url::ToUrl;
 
 struct MockGitAccess();

@@ -7,7 +7,7 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
+use duck_core::util::filesystem::{FileLockManager, LockedFile};
 
 use super::unit_runner::incremental::FingerprintManager;
 use crate::core::compile::profiles::Profile;

@@ -6,12 +6,12 @@
 
 use std::path::PathBuf;
 
-use crate::cli::cli_ext::{flag, optional, subcommand};
-use crate::util::filesystem::path_ops::resolve_with_tilde;
 use clap::builder::ValueParser;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use quackpack::subcommands::init::{InitOptions, init};
 
+use crate::cli::{flag, optional, subcommand};
+use crate::util::filesystem::resolve_with_tilde;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `init` subcommand.

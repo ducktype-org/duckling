@@ -8,8 +8,7 @@
 
 use tracing::error;
 
-use crate::util::filesystem::file_locks::LockedFile;
-use crate::util::filesystem::path_ops::remove_file;
+use crate::util::filesystem::{LockedFile, remove_file};
 use crate::util::set_once::SetOnce;
 
 /// Remove a file on drop, if armed.

@@ -9,8 +9,6 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::util::filesystem::path_ops::touch;
-use crate::util::test_utils::setup_test;
 use chrono::Utc;
 use tempfile::TempDir;
 
@@ -24,6 +22,8 @@ use crate::core::storage::venv_id::ToVenvId;
 use crate::core::{PackageContext, PackageId, PackageLoader, Version, fetcher};
 use crate::subcommands::init;
 use crate::subcommands::init::InitOptions;
+use crate::util::filesystem::touch;
+use crate::util::test_utils::setup_test;
 
 mod basic;
 mod concurrent;

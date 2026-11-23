@@ -4,11 +4,10 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::util::error::{HintMessage, MessageError};
-
 use crate::core::PackageContext;
 use crate::core::storage::venv_id::ToVenvId;
 use crate::core::storage::{display_venv_info, venv_info};
+use crate::error::{HintMessage, MessageError};
 use crate::{QuackResult, QuackResultContext, qp_err};
 
 /// Logic for executing the `info` subcommand.

@@ -8,13 +8,13 @@
 use std::fmt;
 use std::path::Path;
 
-use crate::util::hash::short_hash_string;
-use crate::util::interning::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::core::full_identity::{FullKind, FullOrigin};
 use crate::schemas::registry;
+use crate::util::hash::short_hash_string;
+use crate::util::interning::InternedUrl;
 use crate::util::is_local_file::IsLocalFile;
 use crate::util::to_url::ToUrl;
 use crate::{QuackError, QuackResult, StrId, qp_bail};

@@ -5,13 +5,12 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Common types used in network communication.
-use crate::util::interning::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize};
 
-use crate::core;
 use crate::core::Version;
 use crate::schemas::registry;
-use crate::{QuackError, StrId};
+use crate::util::interning::InternedUrl;
+use crate::{QuackError, StrId, core};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version

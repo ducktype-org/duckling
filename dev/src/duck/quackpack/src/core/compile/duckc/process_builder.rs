@@ -11,12 +11,12 @@ use std::path::Path;
 use std::process::{Command, ExitStatus, Output};
 use std::{fmt, io};
 
-use crate::util::command_ext::CommandExt;
 use tracing::{debug, trace, warn};
 
 use super::Duckc;
 use crate::core::Package;
 use crate::core::compile::profiles::OptLevel;
+use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal};
 
 #[non_exhaustive]

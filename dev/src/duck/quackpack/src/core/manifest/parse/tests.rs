@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::env::home_dir;
 use std::path::PathBuf;
 
-use crate::util::filesystem::path_ops::{normalize, touch, try_fsync_dir, write_file};
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
@@ -16,6 +15,7 @@ use crate::core::lints::{Lint, LintLevel};
 use crate::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::core::script::Script;
 use crate::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
+use crate::util::filesystem::{normalize, touch, try_fsync_dir, write_file};
 use crate::util::to_path_buf::ToPathBuf;
 use crate::util::to_url::ToUrl;
 use crate::{DuckContext, StrId};

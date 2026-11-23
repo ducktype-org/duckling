@@ -6,8 +6,6 @@
 
 use std::collections::HashMap;
 
-use crate::util::filesystem::file_locks::FileLockManager;
-use crate::util::filesystem::path_ops::read_from_path_to_string;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::tempdir;
@@ -17,6 +15,7 @@ use crate::DuckContext;
 use crate::core::Version;
 use crate::core::fetcher::types;
 use crate::schemas::registry;
+use crate::util::filesystem::{FileLockManager, read_from_path_to_string};
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {

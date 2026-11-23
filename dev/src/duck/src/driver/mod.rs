@@ -14,8 +14,8 @@ pub mod global_options;
 pub mod run;
 pub mod subcommands;
 
-use crate::cli::cli_ext::{flag, optional};
 use crate::cli::styles::get_styles;
+use crate::cli::{flag, optional};
 
 /// Create main cli parser.
 fn cli() -> Command {

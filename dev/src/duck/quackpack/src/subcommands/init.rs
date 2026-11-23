@@ -11,13 +11,13 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::{fmt, io};
 
-use crate::util::filesystem::path_ops::{MkdirOptions, mkdir, open};
 use git2::Repository;
 
 use crate::core::valid_package_name::{
     is_duckling_keyword, is_duckling_std_name, validate_package_name,
 };
 use crate::core::{PackageLoader, Version};
+use crate::util::filesystem::{MkdirOptions, mkdir, open};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.

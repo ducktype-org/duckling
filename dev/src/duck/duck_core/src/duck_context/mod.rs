@@ -7,14 +7,19 @@
 //! [`DuckContext`](duck_context::DuckContext) and everything it owns: the terminal, the user
 //! configuration and the duck home layout.
 
-use std::{env::{current_dir, home_dir}, path::{Path, PathBuf}, str::FromStr};
+use std::env::{current_dir, home_dir};
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
-pub use duck_cfg::DuckCfg;
+pub use aliases::Alias;
+pub use duck_cfg::{DEFAULT_REGISTRY_URL, DuckCfg};
 pub use duck_home::DuckHome;
 pub use env::Env;
 pub use terminal::{Terminal, Verbosity};
 
-use crate::{QuackResult, QuackResultContext, duck_context::duck_home::duck_home_path, util::filesystem::FileLockManager};
+use crate::duck_context::duck_home::duck_home_path;
+use crate::util::filesystem::FileLockManager;
+use crate::{QuackResult, QuackResultContext};
 
 mod aliases;
 mod duck_cfg;

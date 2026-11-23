@@ -17,11 +17,11 @@ use std::fmt::Display;
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::util::interning::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize, de};
 
 use crate::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::core::{Source, SourceKind};
+use crate::util::interning::InternedUrl;
 use crate::util::is_local_file::IsLocalFile;
 use crate::util::to_url::ToUrl;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};

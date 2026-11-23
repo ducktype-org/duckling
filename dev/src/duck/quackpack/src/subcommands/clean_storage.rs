@@ -6,11 +6,10 @@
 
 use std::path::PathBuf;
 
-use crate::util::Pluralize;
-use crate::util::indent::indent;
-
 use crate::core::storage::venv_id::VenvId;
 use crate::core::storage::{self, CleanOutput, delete_venv};
+use crate::util::Pluralize;
+use crate::util::indent::indent;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the clean-storage operation.

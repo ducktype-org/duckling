@@ -7,16 +7,16 @@
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
-use crate::cli::cli_ext::{flag, subcommand};
-use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
-use crate::util::filesystem::path_ops::resolve_with_tilde;
 use clap::builder::ValueParser;
 use clap::{Arg, ArgMatches, Command, ValueHint, value_parser};
 use quackpack::core::compile::profiles::DEFAULT_SCRIPT_PROFILE_NAME;
 use quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use tracing::debug;
 
+use crate::cli::{flag, subcommand};
 use crate::driver::cli_ext::{CommandExt, jobs_from_matches};
+use crate::util::duckling_consts::DUCKLING_SCRIPT_EXT;
+use crate::util::filesystem::resolve_with_tilde;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
 /// Creates parser for the `run_script` subcommand.

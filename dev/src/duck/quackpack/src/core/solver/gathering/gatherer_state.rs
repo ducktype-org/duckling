@@ -6,10 +6,6 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::util::Pluralize;
-use crate::util::error::ErrorsLogger;
-use crate::util::extend::QpExtend;
-use crate::util::interning::str_id::QpJoin;
 use itertools::Itertools;
 
 use crate::core::full_identity::{FullIdentity, FullOrigin};
@@ -20,6 +16,10 @@ use crate::core::solver::gathering::fetch_types::{
 };
 use crate::core::version::CompatibilityCheck;
 use crate::core::{FeatureName, Manifest, PackageId, Selector, Source, Version};
+use crate::error::ErrorsLogger;
+use crate::util::Pluralize;
+use crate::util::extend::QpExtend;
+use crate::util::interning::QpJoin;
 use crate::util::with_version::WithVersion;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err};
 

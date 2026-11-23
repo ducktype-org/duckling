@@ -8,11 +8,11 @@
 //!
 //! Each package is locked by `locks/<host>-<hash>/<name>-<version>.lock`.
 
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
 use tracing::trace;
 
 use super::types;
 use crate::core::short_name_for_host;
+use crate::util::filesystem::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]

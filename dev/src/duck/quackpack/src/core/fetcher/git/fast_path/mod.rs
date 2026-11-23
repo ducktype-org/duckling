@@ -10,14 +10,13 @@
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::util::interning::interned_url::InternedUrl;
-
 use crate::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
 use crate::core::fetcher::git::fast_path::github_client::GithubClient;
 use crate::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
 use crate::core::fetcher::git::fast_path::gitlab_client::GitlabClient;
 use crate::core::fetcher::http_async::AsyncHttpClient;
 use crate::core::{GitReference, Manifest};
+use crate::util::interning::InternedUrl;
 use crate::{QuackResult, StrId};
 
 mod github_api_client;

@@ -7,13 +7,13 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::cli::cli_ext::{flag, multi, optional, subcommand};
 use clap::{Arg, ArgGroup, ArgMatches, Command, ValueHint};
 use quackpack::core::{DependencyKind, Version};
 use quackpack::subcommands::add::{
     AddOptions, DependencySpecification, NameSpecification, SourceSpecification, add,
 };
 
+use crate::cli::{flag, multi, optional, subcommand};
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `add` subcommand.

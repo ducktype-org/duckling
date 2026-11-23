@@ -6,10 +6,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::util::interning::str_id::QpJoin;
-
 use crate::core::compile::profiles::PREDEFINED_PROFILES;
 use crate::schemas::registry;
+use crate::util::interning::QpJoin;
 use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]

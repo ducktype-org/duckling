@@ -6,8 +6,6 @@
 
 use std::path::Path;
 
-use crate::util::filesystem::path_ops::{normalize, read_from_path_to_string};
-
 use super::setup_mock_storage;
 use crate::DuckContext;
 use crate::core::full_identity::{FullIdentity, FullOrigin};
@@ -21,6 +19,7 @@ use crate::core::storage::venv::Venv;
 use crate::core::storage::venv_id::ToVenvId;
 use crate::core::storage::{self, StorageSyncOptions, SyncOutput, ops};
 use crate::core::{PackageLoader, Version, fetcher};
+use crate::util::filesystem::{normalize, read_from_path_to_string};
 
 #[track_caller]
 #[inline(always)]

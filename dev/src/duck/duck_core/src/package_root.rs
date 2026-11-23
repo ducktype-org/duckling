@@ -35,9 +35,8 @@ pub fn find_package_root(start: &Path) -> Option<PathBuf> {
 mod tests {
     use tempfile::tempdir;
 
+    use super::*;
     use crate::util::filesystem::{MkdirOptions, mkdir, touch};
-
-use super::*;
 
     #[test]
     fn finds_manifest_in_start_dir() {

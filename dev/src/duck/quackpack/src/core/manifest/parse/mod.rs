@@ -8,13 +8,13 @@
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
-use crate::util::filesystem::path_ops::read_from_path_to_string;
 use itertools::Itertools;
 
 use crate::core::Package;
 use crate::core::lints::errors::{Errors, UnusedKey};
 use crate::core::lints::warnings::Warnings;
 use crate::schemas::manifest::Manifest as ManifestSchema;
+use crate::util::filesystem::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 mod dependency;

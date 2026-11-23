@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::util::Pluralize;
 use tracing::debug;
 
 use super::source::resolve_path_maybe_relative_to_dir;
@@ -27,6 +26,7 @@ use crate::schemas::manifest::{
     Metadata as MetadataSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
     VenvConfig as VenvConfigSchema,
 };
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].

@@ -8,11 +8,10 @@
 pub mod manifest;
 pub mod registry;
 
-pub use duck_core::schemas::*;
-
 use std::hash::Hash;
 use std::marker::PhantomData;
 
+pub use duck_core::schemas::*;
 use serde::ser::SerializeMap;
 use serde::{de, ser};
 

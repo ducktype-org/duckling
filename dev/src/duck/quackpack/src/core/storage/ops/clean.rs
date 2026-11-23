@@ -10,8 +10,6 @@ use std::fs::DirEntry;
 use std::path::Path;
 use std::time::Duration;
 
-use crate::util::error::ErrorsLogger;
-use crate::util::filesystem::path_ops::{remove_file, remove_tree};
 use chrono::{DateTime, Utc};
 use storage::paths::Storage;
 use storage::{locks, paths};
@@ -20,6 +18,8 @@ use tracing::{debug, trace, warn};
 use crate::core::storage::venv::Venv;
 use crate::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::core::{PackageId, storage};
+use crate::error::ErrorsLogger;
+use crate::util::filesystem::{remove_file, remove_tree};
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 #[derive(Debug)]

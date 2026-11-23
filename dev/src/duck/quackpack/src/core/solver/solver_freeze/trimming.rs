@@ -6,11 +6,11 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::util::extend::QpExtend;
 use tracing::trace;
 
 use crate::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::core::{FeatureName, Manifest, PackageId, Selector};
+use crate::util::extend::QpExtend;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 impl SolverFreeze {
@@ -155,7 +155,7 @@ mod test {
     use crate::core::full_identity::{FullIdentity, FullOrigin};
     use crate::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::core::{FeatureName, PackageId, Version, parse_manifest};
-    use crate::util::filesystem::path_ops::{touch, try_fsync_dir, write_file};
+    use crate::util::filesystem::{touch, try_fsync_dir, write_file};
     use crate::util::to_url::ToUrl;
     use crate::{DuckContext, StrId};
 

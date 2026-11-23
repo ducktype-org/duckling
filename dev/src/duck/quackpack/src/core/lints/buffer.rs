@@ -6,9 +6,8 @@
 
 //! Buffer for emitted lints.
 
-use crate::util::Pluralize;
-
 use super::{Diagnostic, Lint, LintLevel};
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]

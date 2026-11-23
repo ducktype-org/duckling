@@ -5,7 +5,6 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 use clap::{ArgMatches, Command};
-
 use quackpack::core::Package;
 
 use crate::{DuckContext, QuackResult, StrId};

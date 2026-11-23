@@ -9,10 +9,6 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use crate::util::Pluralize;
-use crate::util::error::ErrorsLogger;
-use crate::util::filesystem::path_ops::try_fsync_dir;
-use crate::util::interning::interned_url::InternedUrl;
 use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::{StreamExt, stream};
@@ -25,6 +21,10 @@ use crate::core::full_identity::FullKind;
 use crate::core::identity::Identity;
 use crate::core::storage::paths::Storage;
 use crate::core::{AnyPackage, GitReference, PackageId, PackageLoader};
+use crate::error::ErrorsLogger;
+use crate::util::Pluralize;
+use crate::util::filesystem::try_fsync_dir;
+use crate::util::interning::InternedUrl;
 use crate::util::to_path_buf::ToPathBuf;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
 

@@ -27,8 +27,6 @@ use std::cell::RefCell;
 use std::debug_assert;
 use std::path::{Path, PathBuf};
 
-use crate::util::error::ErrorsLogger;
-use crate::util::filesystem::path_ops::{normalize, resolve, resolve_both_and_get_relative};
 use futures::executor::block_on;
 
 use crate::core::fetcher::Fetcher;
@@ -40,9 +38,11 @@ use crate::core::solver::gathering::gatherer::Gatherer;
 use crate::core::storage::git_access::StorageGitAccess;
 use crate::core::storage::paths::Storage;
 use crate::core::{GitReference, PackageContext, Source, SourceKind, Version};
+use crate::error::ErrorsLogger;
 use crate::schemas::manifest::{
     Dependency, DependencyFeature, DependencySource as SourceSchema, DetailedSource, OredSemver,
 };
+use crate::util::filesystem::{normalize, resolve, resolve_both_and_get_relative};
 use crate::util::to_path_buf::ToPathBuf;
 use crate::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};

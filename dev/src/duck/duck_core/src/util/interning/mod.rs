@@ -10,4 +10,4 @@ mod interned_url;
 mod str_id;
 
 pub use interned_url::InternedUrl;
-pub use str_id::{StrId, QpJoin};
+pub use str_id::{QpJoin, StrId};

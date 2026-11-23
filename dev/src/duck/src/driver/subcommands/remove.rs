@@ -4,11 +4,11 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::cli::cli_ext::{flag, subcommand};
 use clap::{Arg, ArgMatches, Command};
 use quackpack::core::DependencyKind;
 use quackpack::subcommands::remove::{RemoveOptions, remove};
 
+use crate::cli::{flag, subcommand};
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `remove` subcommand.

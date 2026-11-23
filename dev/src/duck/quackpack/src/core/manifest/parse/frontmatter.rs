@@ -30,7 +30,6 @@
 use std::path::Path;
 use std::sync::LazyLock;
 
-use crate::util::filesystem::path_ops::read_from_path_to_string;
 use regex::{Captures, Regex};
 use tracing::{debug, trace};
 
@@ -41,6 +40,7 @@ use crate::core::lints::warnings::Warnings;
 use crate::core::manifest::parse::manifest::parse;
 use crate::core::script::FrontMatter;
 use crate::schemas::manifest::Manifest as ManifestSchema;
+use crate::util::filesystem::read_from_path_to_string;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =

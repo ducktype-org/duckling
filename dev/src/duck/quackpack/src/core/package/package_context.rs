@@ -7,8 +7,6 @@
 //! A context of a package  parsed from the disk.
 use std::path::{Path, PathBuf};
 
-use crate::duck_context::duck_home::DuckHome;
-
 use super::script::Script;
 use crate::core::full_identity::{FullIdentity, FullOrigin};
 use crate::core::lints::errors::Errors;
@@ -16,6 +14,7 @@ use crate::core::lints::warnings::Warnings;
 use crate::core::package_loader::PackageLoader;
 use crate::core::script::StandaloneScript;
 use crate::core::{self, AnyPackage, PackageId};
+use crate::duck_context::DuckHome;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]

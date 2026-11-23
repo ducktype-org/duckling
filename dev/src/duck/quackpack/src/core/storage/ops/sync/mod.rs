@@ -9,9 +9,6 @@
 use std::io;
 use std::path::PathBuf;
 
-use crate::util::Pluralize;
-use crate::util::error::MessageError;
-use crate::util::filesystem::path_ops::{read_from_path_to_string, write_file};
 use chrono::Utc;
 use futures::executor::block_on;
 use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
@@ -32,6 +29,9 @@ use crate::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::core::{
     AnyPackage, Package, PackageContext, PackageId, PackageLoader, VenvConfig, storage,
 };
+use crate::error::MessageError;
+use crate::util::Pluralize;
+use crate::util::filesystem::{read_from_path_to_string, write_file};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 pub mod load_deps;

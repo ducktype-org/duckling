@@ -13,8 +13,7 @@
 
 use std::path::PathBuf;
 
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
-
+use crate::util::filesystem::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult};
 
 const LOCK_NAME: &str = ".lock";

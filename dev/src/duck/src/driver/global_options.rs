@@ -6,10 +6,10 @@
 
 use std::str::FromStr;
 
-use crate::duck_context::terminal::Verbosity;
-use crate::driver::cli_ext::ArgMatchesExt;
 use clap::ArgMatches;
 
+use crate::driver::cli_ext::ArgMatchesExt;
+use crate::duck_context::Verbosity;
 use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
 /// Struct containing all global duck options, adjustable from cli.

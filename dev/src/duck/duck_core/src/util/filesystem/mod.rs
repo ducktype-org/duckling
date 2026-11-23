@@ -9,6 +9,6 @@ mod dir_iterator;
 mod file_locks;
 mod path_ops;
 
+pub use dir_iterator::{DirContents, create_dir_iterator};
 pub use file_locks::{FileLockManager, LockedFile};
 pub use path_ops::*;
-pub use dir_iterator::{create_dir_iterator, DirContents};

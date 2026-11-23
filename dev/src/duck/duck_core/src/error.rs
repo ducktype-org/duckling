@@ -316,7 +316,7 @@ macro_rules! qp_internal {
         $crate::QuackError::from($err)
     };
     ($fmt:expr, $($args:tt)*) => {
-         $crate::QuackError::from($crate::util::error::InternalError::new(format!($fmt, $($args)*)))
+         $crate::QuackError::from($crate::error::InternalError::new(format!($fmt, $($args)*)))
     };
 }
 

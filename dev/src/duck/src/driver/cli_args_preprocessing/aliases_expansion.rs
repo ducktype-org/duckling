@@ -6,7 +6,6 @@
 
 use std::ffi::OsString;
 
-use crate::duck_context::aliases::Alias;
 use clap::ArgMatches;
 use itertools::chain;
 use tracing::{debug, trace};
@@ -15,7 +14,7 @@ use crate::driver::cli;
 use crate::driver::cli_args_preprocessing::builtin::{
     get_builtin_alias_expansion, is_builtin_subcommand,
 };
-
+use crate::duck_context::Alias;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 /// Recursively replace current subcommand with an expanded user alias.

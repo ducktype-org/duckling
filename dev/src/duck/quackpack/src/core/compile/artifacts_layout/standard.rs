@@ -22,11 +22,10 @@
 
 use std::path::PathBuf;
 
-use crate::util::filesystem::file_locks::FileLockManager;
-
 use super::{ArtifactsLayout, DependencyLayout, ProfileLayout};
 use crate::core::compile::profiles::Profile;
 use crate::core::compile::unit::graph::{GraphNodeId, UnitGraph};
+use crate::util::filesystem::FileLockManager;
 use crate::{QuackResult, qp_bail_internal};
 
 #[derive(Clone, Debug)]

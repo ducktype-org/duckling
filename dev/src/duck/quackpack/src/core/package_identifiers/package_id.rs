@@ -6,12 +6,11 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::util::interning::interned_url::InternedUrl;
-
 use crate::StrId;
 use crate::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::core::identity::Identity;
 use crate::core::short_name_for_host;
+use crate::util::interning::InternedUrl;
 use crate::util::with_version::WithVersion;
 
 /// Unique identifier of a package, used throughout the whole project.

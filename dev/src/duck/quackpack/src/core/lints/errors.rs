@@ -12,9 +12,8 @@
 //! [`manifest`]: crate::core::parse
 //! [`run_lint_passes`]: super::run_lint_passes
 
-use crate::util::Pluralize;
-
 use super::{Diagnostic, macros};
+use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug, Default)]

@@ -6,8 +6,6 @@
 
 use std::path::Path;
 
-use crate::util::filesystem::path_ops::{touch, try_fsync_dir, write_file};
-use crate::util::test_utils::setup_test;
 use tempfile::TempDir;
 
 use crate::DuckContext;
@@ -16,6 +14,8 @@ use crate::core::full_identity::{FullIdentity, FullOrigin};
 use crate::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::core::storage::paths;
 use crate::core::{PackageId, PackageLoader, Version, fetcher};
+use crate::util::filesystem::{touch, try_fsync_dir, write_file};
+use crate::util::test_utils::setup_test;
 
 pub fn setup_mock_storage() -> (DuckContext, TempDir) {
     let setup = || {

@@ -6,10 +6,10 @@
 
 use std::io::{self, Write};
 
-use crate::cli::cli_ext::subcommand;
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
 use clap_complete::{Generator, Shell, generate};
 
+use crate::cli::subcommand;
 use crate::driver::cli;
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 

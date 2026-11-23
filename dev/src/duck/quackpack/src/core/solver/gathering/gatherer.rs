@@ -15,8 +15,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
-use crate::util::error::{ErrorsLogger, MessageError};
-use crate::util::interning::interned_url::InternedUrl;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use tempfile::TempDir;
@@ -35,6 +33,8 @@ use crate::core::solver::solver_mode::SolverMode;
 use crate::core::{
     FeatureName, GitReference, Manifest, PackageId, PackageLoader, Source, SourceKind,
 };
+use crate::error::{ErrorsLogger, MessageError};
+use crate::util::interning::InternedUrl;
 use crate::util::to_path_buf::ToPathBuf;
 use crate::util::to_url::ToUrl;
 use crate::{

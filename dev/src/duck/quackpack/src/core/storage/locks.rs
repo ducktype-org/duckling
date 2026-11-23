@@ -33,11 +33,9 @@
 
 use std::io;
 
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
-
 use crate::core::storage::paths::Storage;
 use crate::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::util::filesystem::dir_iterator::DirContents;
+use crate::util::filesystem::{DirContents, FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -162,7 +160,7 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
 
 #[cfg(not(windows))]
 fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
-    use crate::util::filesystem::path_ops::remove_file;
+    use crate::util::filesystem::remove_file;
     let guard = match root.try_open_exclusive(name) {
         Ok(guard) => guard,
         Err(e) => {

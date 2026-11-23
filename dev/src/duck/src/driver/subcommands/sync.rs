@@ -4,10 +4,10 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::cli::cli_ext::{flag, subcommand};
 use clap::{ArgMatches, Command};
 use quackpack::subcommands::sync::{SyncOptions, sync};
 
+use crate::cli::{flag, subcommand};
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `sync` subcommand.

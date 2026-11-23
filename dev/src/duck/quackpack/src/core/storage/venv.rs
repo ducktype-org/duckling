@@ -60,10 +60,6 @@ use std::fmt;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::util::filesystem::path_ops::{
-    MkdirOptions, copy_file, mkdir, read_from_path_to_string, remove_tree, touch, try_fsync_dir,
-};
-use crate::util::hash;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, trace, warn};
@@ -71,6 +67,10 @@ use tracing::{debug, trace, warn};
 use crate::core::storage::freeze::{self, VenvFreeze};
 use crate::core::storage::paths::Storage;
 use crate::core::storage::venv_id::VenvId;
+use crate::util::filesystem::{
+    MkdirOptions, copy_file, mkdir, read_from_path_to_string, remove_tree, touch, try_fsync_dir,
+};
+use crate::util::hash;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]

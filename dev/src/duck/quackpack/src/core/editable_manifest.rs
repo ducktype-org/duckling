@@ -10,13 +10,14 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use crate::util::filesystem::path_ops::write_file;
 use yaml_edit::{Mapping, YamlFile, YamlNode};
 
 use crate::core::lints::errors::Errors;
 use crate::core::lints::warnings::Warnings;
 use crate::core::{DependencyKind, Package, PackageContext, ParseMode, manifest, parse_schema};
 use crate::schemas::manifest::Dependency;
+use crate::util::DescriptionWithAnArticle;
+use crate::util::filesystem::write_file;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Desired order of the top-level keys in a manifest.
@@ -29,7 +30,7 @@ const TOPLEVEL_KEYS_ORDER: [&str; 6] = [
     "venv",
 ];
 
-impl DescriptionWithAnArticle for YamlNode {
+impl<'a> DescriptionWithAnArticle<EditableManifest<'a>> for YamlNode {
     fn desc_with_article(&self) -> &'static str {
         match self {
             Self::Scalar(..) => "a value",
@@ -238,7 +239,7 @@ impl<'duck> EditableManifest<'duck> {
                 "in the manifest at `{}`, `{}` should be a mapping, not {}",
                 self.manifest_path().display(),
                 kind.key_in_manifest(),
-                yaml_node_desc_with_article(&mapping),
+                mapping.desc_with_article(),
             )
         };
         Ok(mapping)

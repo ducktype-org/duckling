@@ -4,10 +4,10 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::cli::cli_ext::subcommand;
 use clap::{ArgMatches, Command};
 use quackpack::core::compile::duckc::Duckc;
 
+use crate::cli::subcommand;
 use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `repl` subcommand.

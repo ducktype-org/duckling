@@ -6,13 +6,12 @@
 
 use std::pin::Pin;
 
-use crate::util::interning::interned_url::InternedUrl;
-
 use crate::core::fetcher::git::fast_path::GitFastPathExt;
 use crate::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
 use crate::core::lints::errors::Errors;
 use crate::core::lints::warnings::Warnings;
 use crate::core::{GitReference, Manifest, PackageLoader, ParseMode, manifest, parse_schema};
+use crate::util::interning::InternedUrl;
 use crate::{QuackResult, StrId};
 
 /// Client serving a git fast-path for Gitlab repositories.

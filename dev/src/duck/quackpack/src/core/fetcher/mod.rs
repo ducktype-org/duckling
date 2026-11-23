@@ -14,9 +14,6 @@ use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use crate::util::filesystem::file_locks::LockedFile;
-use crate::util::interning::interned_url::InternedUrl;
-use crate::util::once_ext::OnceExt;
 use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
@@ -26,7 +23,10 @@ use crate::core::fetcher::http_async::AsyncHttpClient;
 use crate::core::fetcher::types::{FetchResponse, PackageWithUrl};
 use crate::core::{GitReference, PackageLoader};
 use crate::schemas::registry;
+use crate::util::filesystem::LockedFile;
 use crate::util::guards;
+use crate::util::interning::InternedUrl;
+use crate::util::once_ext::OnceExt;
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_err};
 
 pub mod cache;
@@ -55,7 +55,7 @@ pub struct Fetcher<'duck> {
     locks: OnceCell<locks::Locks>,
 }
 
-pub use crate::duck_context::duck_cfg::DEFAULT_REGISTRY_URL;
+pub use crate::duck_context::DEFAULT_REGISTRY_URL;
 
 impl<'duck> Fetcher<'duck> {
     /// Create a new [`Fetcher`].

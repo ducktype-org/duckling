@@ -7,12 +7,11 @@
 //! A storage management of gits.
 use std::path::{Path, PathBuf};
 
-use crate::util::filesystem::path_ops::{MkdirOptions, mkdir, move_tree, remove_tree};
-
 use super::paths::Storage;
 use crate::QuackResult;
 use crate::core::PackageId;
 use crate::core::solver::git_access::GitAccess;
+use crate::util::filesystem::{MkdirOptions, mkdir, move_tree, remove_tree};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {

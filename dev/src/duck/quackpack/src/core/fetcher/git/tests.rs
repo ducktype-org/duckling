@@ -4,7 +4,6 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use crate::util::filesystem::path_ops::{read_from_path_to_string, write_file};
 use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 use tempfile::{TempDir, tempdir};
 use url::Url;
@@ -13,6 +12,7 @@ use super::GitClient;
 use crate::DuckContext;
 use crate::core::fetcher::git::git2::Git2Client;
 use crate::core::{GitReference, PackageLoader};
+use crate::util::filesystem::{read_from_path_to_string, write_file};
 
 fn generate_local_git_repo() -> TempDir {
     let tmpdir = tempdir().unwrap();

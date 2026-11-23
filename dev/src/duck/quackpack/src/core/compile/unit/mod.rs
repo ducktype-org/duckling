@@ -13,7 +13,6 @@ use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::util::hash::sha256_string;
 use serde::{Deserialize, Serialize};
 
 use super::duckc::multipackage_schema;
@@ -22,6 +21,7 @@ use crate::core::compile::unit::graph::UnitGraph;
 use crate::core::compile::unit_runner::CompilationTarget;
 use crate::core::identity::Identity;
 use crate::core::{AnyPackage, FeatureName};
+use crate::util::hash::sha256_string;
 use crate::{QuackResult, StrId, qp_bail_internal};
 
 pub mod graph;

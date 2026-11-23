@@ -18,12 +18,12 @@
 use std::fmt::Display;
 use std::path::Path;
 
-use crate::util::interning::interned_url::InternedUrl;
 use serde::{Deserialize, Serialize, de};
 
 use crate::core::fetcher::Fetcher;
 use crate::core::identity::{Identity, Kind, Origin};
 use crate::core::{GitReference, Source, SourceKind};
+use crate::util::interning::InternedUrl;
 use crate::util::is_local_file::IsLocalFile;
 use crate::util::to_path_buf::ToPathBuf;
 use crate::util::to_url::ToUrl;

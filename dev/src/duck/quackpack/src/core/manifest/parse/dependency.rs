@@ -5,7 +5,6 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Parsing of the {dev-,}dependencies fields in a manifest.
-use crate::QuackResultContext;
 use tracing::trace;
 
 use super::{ParseMode, ScopeGuard, source};
@@ -17,7 +16,7 @@ use crate::schemas::manifest::{
     Dependencies as DependenciesSchema, Dependency as DependencySchema,
     DependencyCondition as ConditionSchema, DependencyFeature as FeatureSchema, DependencySource,
 };
-use crate::{DuckContext, QuackResult, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 /// Parse [`Dependency`]ies from the [`DependenciesSchema`], and append them into a vector.
 ///

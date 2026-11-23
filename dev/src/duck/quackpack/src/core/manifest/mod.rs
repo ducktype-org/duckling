@@ -19,7 +19,6 @@ mod profiles;
 mod source;
 mod venv_config;
 
-use crate::duck_context::duck_home::DuckHome;
 pub use build_options::BuildOptions;
 pub use dependency::*;
 pub use features::*;
@@ -32,6 +31,7 @@ pub use venv_config::*;
 
 use super::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::core::Version;
+use crate::duck_context::DuckHome;
 use crate::schemas::registry;
 use crate::{DuckContext, QuackError, QuackResultContext, StrId};
 

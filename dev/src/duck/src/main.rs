@@ -4,13 +4,35 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+//! The CLI driver behind the `duck` binary: argument parsing and subcommand dispatch. The work
+//! itself lives in two other crates of this workspace:
+//! - [`quackpack`]: the package manager, with its [`subcommands`](quackpack::subcommands) and
+//!   [`core`](quackpack::core) ([`solver`](quackpack::core::solver),
+//!   [`fetcher`](quackpack::core::fetcher), [`storage`](quackpack::core::storage),
+//!   [`compile`](quackpack::core::compile)),
+//! - [`duck_core`]: what all duck tools share — [`DuckContext`], [`QuackError`], CLI helpers. It is
+//!   re-exported here, so `crate::` paths reach it too.
+//!
+//! Notable module: [`driver`], the handling of the CLI driver.
+//!
+//! More information can be found in [`readme.md`]s.
+pub mod driver;
+pub mod version;
+
+pub use duck_core::*;
 use tracing::trace;
 
 /// The entry point of the duck binary: the common duck tool entry point, driving [`duck::run`].
 fn main() {
-    duck_core::entry::main(true, duck::run)
+    duck_core::pipeline::main(log_curl, run)
 }
 
 fn log_curl() {
     trace!("linked against `{:#?}`", curl::Version::get());
+}
+
+/// Run `duck` with the given context: parse the command line and execute the subcommand.
+pub fn run(ctx: &mut DuckContext) -> QuackResult<()> {
+    tracing::trace!("linked against `{:#?}`", curl::Version::get());
+    driver::run::run(ctx)
 }

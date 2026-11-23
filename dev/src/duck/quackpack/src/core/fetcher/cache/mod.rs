@@ -17,8 +17,8 @@ mod tests;
 
 mod migrations;
 
-use crate::util::filesystem::path_ops::{MkdirOptions, mkdir};
-use crate::util::interning::interned_url::InternedUrl;
+use crate::util::filesystem::{MkdirOptions, mkdir};
+use crate::util::interning::InternedUrl;
 use crate::util::sqlite::run_migrations;
 use crate::{QuackResult, QuackResultContext};
 

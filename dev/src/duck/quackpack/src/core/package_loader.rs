@@ -10,15 +10,14 @@ use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use crate::duck_context::duck_home::DuckHome;
-use crate::package_root::find_package_root;
-use crate::util::filesystem::path_ops::resolve;
-
 use crate::core::PackageContext;
 use crate::core::script::{PackageScript, Script};
 use crate::core::storage::paths::Storage;
 use crate::core::storage::venv::Venv;
 use crate::core::storage::venv_id::VenvId;
+use crate::duck_context::DuckHome;
+use crate::package_root::find_package_root;
+use crate::util::filesystem::resolve;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -231,7 +230,7 @@ mod tests {
 
     use crate::DuckContext;
     use crate::core::PackageLoader;
-    use crate::util::filesystem::path_ops::{MkdirOptions, mkdir, normalize, touch, write_file};
+    use crate::util::filesystem::{MkdirOptions, mkdir, normalize, touch, write_file};
 
     const BASIC_MANIFEST: &str = r"
 metadata:

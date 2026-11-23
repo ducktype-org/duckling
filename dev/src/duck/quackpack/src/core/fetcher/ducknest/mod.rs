@@ -9,7 +9,6 @@ use std::io::Write;
 use std::path::Path;
 use std::rc::Rc;
 
-use crate::util::filesystem::file_locks::LockedFile;
 use endpoints::UrlExt;
 use tracing::{debug, trace};
 use url::Url;
@@ -19,6 +18,7 @@ use super::types;
 use super::util::http::Request;
 use super::util::http::traits_extensions::ResponseExt;
 use crate::schemas::registry;
+use crate::util::filesystem::LockedFile;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 mod endpoints;
