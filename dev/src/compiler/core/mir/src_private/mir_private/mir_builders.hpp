@@ -239,6 +239,9 @@ namespace compiler::mir {
 		[[nodiscard]]
 		query::Context& getContext();
 
+		[[nodiscard]]
+		tsh::SymbolType<> getResultType() const;
+
 		/**
 		 * This is needed only for some assertins.
 		 */

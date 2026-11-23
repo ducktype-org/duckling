@@ -1,7 +1,7 @@
 namespace Deep {
-    fun bump(v: i32) = {
-        return v;
-    }
+	fun bump(v: i32) = {
+		return v;
+	}
 }
 
 # NYI in current DVM backend path: class layout lowering.
@@ -11,19 +11,19 @@ namespace Deep {
 #}
 
 fun nasty_value() = {
-    var i: i32 = 0;
-    var acc: i32 = 0;
+	var i: i32 = 0;
+	var acc: i32 = 0;
 
-    while (i < 3) {
-        acc = acc + i;
-        i = i + 1;
-    }
+	while (i < 3) {
+		acc = acc + i;
+		i = i + 1;
+	}
 
-    if (true) {
-        return Deep.bump(acc);
-    }
+	if (true) {
+		return Deep.bump(acc);
+	}
 
-    return 0;
+	return 0;
 }
 
 builtin_output_i64(nasty_value());

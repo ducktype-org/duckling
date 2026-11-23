@@ -17,6 +17,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/visitors/pst_visitor.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -469,6 +470,7 @@ namespace compiler::helios {
 								  ctx, value.value().unlock(ctx)->getExpr(), param_type
 							)
 						          .valueOrThrow();
+						refuseBlockExpr(ctx, *initial_value, "a default argument");
 
 						parameters.emplace_back(
 							param_name,
@@ -678,6 +680,7 @@ namespace compiler::helios {
                                             ctx, expr_holder.unlock(ctx)->getExpr(), field_type
                             )
 						                    .valueOrThrow();
+							refuseBlockExpr(ctx, *expr, "a field initializer");
 							return expr;
 						}
 					);

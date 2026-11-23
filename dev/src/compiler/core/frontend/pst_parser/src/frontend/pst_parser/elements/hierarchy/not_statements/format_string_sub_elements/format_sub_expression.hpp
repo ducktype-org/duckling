@@ -17,11 +17,11 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(expr, UniversalAllowBlockExprHolder);
+		NAMED_CHILD(expr, UniversalExprHolder);
 
 	public:
 		[[nodiscard]]
-		AccessLocked<UniversalAllowBlockExprHolder> getExpr() const {
+		AccessLocked<UniversalExprHolder> getExpr() const {
 			return expr.give();
 		}
 

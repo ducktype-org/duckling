@@ -21,7 +21,7 @@ namespace pst {
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(param, Param);
-		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		NAMED_CHILD_OPT(ret, CommaNoBlockExprHolder);
 		NAMED_CHILD(body, CodeBlockOrExpr);
 
 	protected:

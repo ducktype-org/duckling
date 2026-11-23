@@ -151,12 +151,12 @@ private:
 		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
 		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
 		ASSERT_EQUAL(first_start_line, 5);
-		ASSERT_EQUAL(first_start_col, 5);
+		ASSERT_EQUAL(first_start_col, 2);
 		ASSERT_EQUAL(first_end_line, 5);
-		ASSERT_EQUAL(first_end_col, 21);
+		ASSERT_EQUAL(first_end_col, 18);
 
-		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
-		ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
+		ASSERT_POSITION(second_pos, 7, 15, 7, 21);
+		ASSERT_POSITION(fourth_pos, 7, 2, 7, 27);
 
 		// Test local variable metadata
 		bool found_y = false;
@@ -170,7 +170,7 @@ private:
 
 				// Verify source position matches variable declaration on line 7
 				ASSERT_POSITION(
-					local.metadata.position.value().getActiveSourcePositionIllegalAccess(), 7, 5, 7, 30
+					local.metadata.position.value().getActiveSourcePositionIllegalAccess(), 7, 2, 7, 27
 				);
 			}
 		}

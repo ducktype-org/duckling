@@ -182,10 +182,8 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, false> bad_stmt_choice{ "block {}" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>           simple_expr{ "x + y" };
-	Example<pst::ExprHolder, true, pst::UniversalAllowBlockExprHolder> block_expr{
-		"x + {return 2 * x;}"
-	};
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_expr{ "x + y" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  block_expr{ "x + {return 2 * x;}" };
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  unit_expr{ "()" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
@@ -296,6 +294,21 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true> simple_stmt{ "x = a + b;" };
 	Example<pst::Stmt, true> simple_stmt_implicit_return{ "x = a + b" };
 	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
+
+	Example<pst::Stmt, true>          return_block_value{ "return { foo(); x };" };
+	Example<pst::Stmt, true>          return_block_value_implicit{ "return {1}" };
+	Example<pst::Stmt, true>          let_block_value{ "let x = { foo(); 5 } + 1;" };
+	Example<pst::Stmt, true>          var_block_value{ "var x: i32 = {1};" };
+	Example<pst::Stmt, true>          const_block_value{ "const x = {1};" };
+	Example<pst::Stmt, false>         return_assignment{ "return a = 1;" };
+	Example<pst::Stmt, false>         let_two_blocks{ "let x = {1} {2};" };
+	ClassStmtExample<pst::Stmt, true> field_block_value{ "x: i32 = {1};" };
+	Example<pst::Stmt, true>          call_arg_block_value{ "foo({ bar(); 1 }, 2);" };
+	Example<pst::Stmt, true>          array_item_block_value{ "x = [{1}, 2];" };
+	Example<pst::Stmt, true>          match_value_block{ "x = match ({ y }) { case _ = 1; };" };
+	Example<pst::Stmt, true>          for_iterable_block{ "for (i in { xs }) {}" };
+	Example<pst::Stmt, true>          param_default_block{ "fun f(a: i64 = {1}) = {}" };
+	Example<pst::Stmt, false>         fun_missing_assign{ "fun f() -> i64 { return 1; }" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 	Example<pst::TopLevel, true> template_expr_fun_then_stmt{
@@ -481,9 +494,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::UniversalExprHolder, true>  prefix_named{ "ref const T.Y" };
 	Example<pst::UniversalExprHolder, false> bad_operators{ "++ ++ ++ ++" };
 
-	Example<pst::UniversalAllowBlockExprHolder, true> simple_block_expr{
-		"x::size() + {return 2;}"
-	};
+	Example<pst::UniversalExprHolder, true> simple_block_expr{ "x::size() + {return 2;}" };
 
 	Example<pst::UniversalExprHolder, true> simple_round_expr{ "x.?y + (x, y)" };
 
