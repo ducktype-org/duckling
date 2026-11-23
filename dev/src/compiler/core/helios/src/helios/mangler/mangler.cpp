@@ -402,7 +402,7 @@ namespace compiler::helios::mangler {
 				const auto val = ancestor.template dynamicCast<ElemT>().value();
 
 				if constexpr (std::same_as<ElemT, pst::Fun>) {
-					auto sym = ctx.template query<QuerySymbolOfSTMT>({ val }).valueOrPanic();
+					auto sym = ctx.template query<QuerySymbolFromPST>({ val }).valueOrPanic();
 					ret += unscopedName(ctx, sym);
 
 					ret += func(ctx, sym);
@@ -430,7 +430,10 @@ namespace compiler::helios::mangler {
 				auto ancestor_opt = [&]() {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(
-							PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+							PstImplementedSemantics,
+							PatternSemantics,
+							ClassMemberSemantics,
+							BuiltinSemantics
 						) {
 							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
 							return getPSTElementParent(ctx, ancestor);
@@ -632,7 +635,10 @@ namespace compiler::helios::mangler {
 				case SymbolKind::FunctionDeclaration: {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(
-							PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+							PstImplementedSemantics,
+							PatternSemantics,
+							ClassMemberSemantics,
+							BuiltinSemantics
 						) {
 							// If the symbol originates from the PST (including builtins), use its path.
 							return path(ctx, symbol_id) + func(ctx, symbol_id);
