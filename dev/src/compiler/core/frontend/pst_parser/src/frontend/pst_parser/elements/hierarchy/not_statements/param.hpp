@@ -18,7 +18,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
-		NAMED_CHILD(type, UniversalExprHolder);
+		NAMED_CHILD(type, UniversalNoBlockExprHolder);
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:

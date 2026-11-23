@@ -43,10 +43,14 @@ namespace compiler::backend_vm::internal {
 				variant_match(target_layout->getVariant()) {
 					variant_case_novalue(tsl::IntegralTypeLayout) {
 						// ================== Int -> Int ==================
-						if (source_layout->getSize() < target_layout->getSize()) {
+						// Compare the sizes of the VM places, not of the layouts: a 1-bit `bool`
+						// is stored in a whole byte, so `bool` -> `u8` is a plain move.
+						const Bytes source_size = base::bits2bytesRoundUp(source_layout->getSize());
+						const Bytes target_size = base::bits2bytesRoundUp(target_layout->getSize());
+						if (source_size < target_size) {
 							// Extend
 							return src_signed ? OpKind::sext : OpKind::zext;
-						} else if (source_layout->getSize() > target_layout->getSize()) {
+						} else if (source_size > target_size) {
 							// Truncate
 							return OpKind::trunc;
 						} else {
