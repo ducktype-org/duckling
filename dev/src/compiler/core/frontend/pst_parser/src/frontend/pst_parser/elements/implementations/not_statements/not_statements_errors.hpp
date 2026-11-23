@@ -159,6 +159,7 @@ namespace pst {
 	 * @brief Error for a `()` or `[]` operator declared outside of a class.
 	 */
 	class BracketOperatorOutsideClassError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -178,6 +179,7 @@ namespace pst {
 	 * `fun [i: i64]()`.
 	 */
 	class BracketOperatorNameNotEmptyError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",

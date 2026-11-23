@@ -132,6 +132,7 @@ namespace compiler::helios {
 	 * value, which becomes their `self`.
 	 */
 	class StaticBracketOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",

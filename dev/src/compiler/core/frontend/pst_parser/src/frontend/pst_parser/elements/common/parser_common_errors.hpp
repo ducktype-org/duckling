@@ -37,6 +37,7 @@ namespace pst::error {
 	 * @brief Error for a `prefix` or `suffix` specifier before a `()` or `[]` operator.
 	 */
 	class BracketOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
