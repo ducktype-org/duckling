@@ -61,6 +61,10 @@ Tests:
       two-modules:
         run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O 0 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
         ExitCode: 0
+      two-modules-attached-optimization-level:
+        # A short option takes the rest of its word as the value, like `gcc -O3`.
+        run_args: "compile_modules ./duck_modules/two_modules/a.dk ./duck_modules/two_modules/b.dk -O3 --no-incremental -a @{case_build} --custom-std-artifacts-path @{case_std_artifacts}"
+        ExitCode: 0
       two-modules-no-link:
         Run: >-
           @{duckc_path} compile_modules ./duck_modules/two_modules/b.dk ./duck_modules/two_modules/a.dk

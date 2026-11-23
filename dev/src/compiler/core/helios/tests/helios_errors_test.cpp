@@ -73,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testUnsupportedAccessErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
@@ -3002,6 +3003,23 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testUnsupportedAccessErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		// `.?` and `::` parse like `.`, but only `.` is compiled for now.
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N.?a;",
+			{ "Feature not implemented", "The `.?` access operator is not supported yet." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
+			{ "Feature not implemented", "The `::` access operator is not supported yet." },
+			1
+		);
 	}
 
 	void testWildcardNamesInSelectorPaths() {
