@@ -35,7 +35,7 @@ namespace compiler::repl {
 			"fundecl", "global", "hides", "if", "imm", "implements", "import", "in", "lambda", "let", "loop",
 			"match", "move", "mut", "namespace", "not", "or", "pattern", "private",
 			"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
-			"refof", "ptrof", "restart", "return", "set", "sizeof", "str", "switch",
+			"ptrof", "restart", "return", "set", "sizeof", "str", "switch",
 			"then", "this", "throw", "true", "try", "type", "using", "var",
 			"vec", "while", "with", "xor"
 		};
