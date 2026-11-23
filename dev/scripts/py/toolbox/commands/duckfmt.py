@@ -4,8 +4,6 @@
 # Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-from copy import copy
-
 from click import command, option
 
 from .helpers import (
@@ -50,10 +48,3 @@ def duckfmt(*args, **kwargs):
     """
     if not duckfmt_impl(*args, **kwargs):
         exit_with_error("Duckling formatting check failed.")
-
-
-# `duckling-formatter` is the former name of `duckfmt`. It stays as a hidden alias, so scripts and
-# workflows that still call the old name keep working.
-duckling_formatter = copy(duckfmt)
-duckling_formatter.name = "duckling-formatter"
-duckling_formatter.hidden = True

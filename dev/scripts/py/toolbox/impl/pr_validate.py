@@ -59,6 +59,11 @@ def pr_validate_impl(
     if not license_checker_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("License header check has failed")
 
+    # Duckling formatting. Build it first so the check is fast.
+    bash_command(f"cmake --build {build_dir} --target duckfmt -- -j {thread_count}")
+    if not duckfmt_impl(build_dir=build_dir, auto_fix=auto_fix, no_fix=no_fix):
+        exit_with_error("Duckling formatting check has failed")
+
     # Run formatting checker
     _, clang_format_failed = cpp_linter_impl(
         clang_tidy_path=None,
@@ -81,12 +86,6 @@ def pr_validate_impl(
         f"cmake --build {build_dir} -- -j {thread_count} all build_all_tests build_all_playgrounds"
     )
     log_good("Everything has been built successfully")
-
-    # Duckling formatting, here because it needs the duckfmt that was just built
-    if not duckfmt_impl(build_dir=build_dir, auto_fix=auto_fix, no_fix=no_fix):
-        exit_with_error(
-            "Duckling formatting check failed. Please run `./scripts/formatting/format_repo_duckling.sh`."
-        )
 
     # test
     test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
