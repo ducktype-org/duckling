@@ -12,7 +12,5 @@ pub mod to_path_buf;
 pub mod to_url;
 pub mod with_version;
 
-pub use duck_core::util::*;
-
 /// A common message which should be passed to `.expect()`s.
 pub const PANIC_MESSAGE: &str = "a thread panic'd, which should not have happened";

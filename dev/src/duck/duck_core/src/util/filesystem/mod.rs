@@ -5,6 +5,10 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Filesystem helpers: path operations with readable errors, file locks and directory listing.
-pub mod dir_iterator;
-pub mod file_locks;
-pub mod path_ops;
+mod dir_iterator;
+mod file_locks;
+mod path_ops;
+
+pub use file_locks::{FileLockManager, LockedFile};
+pub use path_ops::*;
+pub use dir_iterator::{create_dir_iterator, DirContents};

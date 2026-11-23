@@ -10,6 +10,4 @@ pub mod schemas;
 pub mod subcommands;
 pub mod util;
 
-// Re-exported, so QuackPack code and its users share the one error/result/context of the duck
-// tools, and reach the shared modules through `crate::` paths.
 pub use duck_core::*;

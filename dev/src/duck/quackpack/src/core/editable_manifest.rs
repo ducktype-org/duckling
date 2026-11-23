@@ -29,14 +29,15 @@ const TOPLEVEL_KEYS_ORDER: [&str; 6] = [
     "venv",
 ];
 
-/// Describe the kind of `node`, with an article (e.g. "a table").
-fn yaml_node_desc_with_article(node: &YamlNode) -> &'static str {
-    match node {
-        YamlNode::Scalar(..) => "a value",
-        YamlNode::Sequence(..) => "an array",
-        YamlNode::Mapping(..) => "a table",
-        YamlNode::TaggedNode(..) => "a tagged value",
-        YamlNode::Alias(..) => "an alias",
+impl DescriptionWithAnArticle for YamlNode {
+    fn desc_with_article(&self) -> &'static str {
+        match self {
+            Self::Scalar(..) => "a value",
+            Self::Sequence(..) => "an array",
+            Self::Mapping(..) => "a table",
+            Self::TaggedNode(..) => "a tagged value",
+            Self::Alias(..) => "an alias",
+        }
     }
 }
 

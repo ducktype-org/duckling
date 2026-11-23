@@ -288,7 +288,7 @@ macro_rules! qp_err {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::new($crate::util::error::MessageError::new(static_msg))
+            $crate::QuackError::new($crate::error::MessageError::new(static_msg))
         } else {
             $crate::QuackError::message(format!($msg))
         }
@@ -307,9 +307,9 @@ macro_rules! qp_internal {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::from($crate::util::error::InternalError::new(static_msg))
+            $crate::QuackError::from($crate::error::InternalError::new(static_msg))
         } else {
-            $crate::QuackError::from($crate::util::error::InternalError::new(format!($msg)))
+            $crate::QuackError::from($crate::error::InternalError::new(format!($msg)))
         }
     }};
     ($err:expr $(,)?) => {

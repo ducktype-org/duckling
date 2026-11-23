@@ -10,7 +10,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use crate::context::duck_home::DuckHome;
+use crate::duck_context::duck_home::DuckHome;
 use crate::util::hash::sha256_string;
 
 use crate::StrId;

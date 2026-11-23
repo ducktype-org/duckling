@@ -12,8 +12,8 @@ use std::error::Error;
 use chrono::Local;
 use tracing::info;
 
-use crate::context::terminal::Terminal;
-use crate::util::error::{ErrorExt, ErrorType, InternalError};
+use crate::duck_context::Terminal;
+use crate::error::{ErrorExt, ErrorType, InternalError};
 use crate::util::indent::indent;
 use crate::{DuckContext, QuackError, QuackResult};
 
@@ -22,7 +22,8 @@ use crate::{DuckContext, QuackError, QuackResult};
 ///
 /// An error, from the context creation or from `run`, is printed and the process exits with
 /// [`QuackError::exit_code`]. Returns normally only when `run` succeeds.
-pub fn main(run: impl FnOnce(&mut DuckContext) -> QuackResult<()>) {
+pub fn main(pre: impl FnOnce(), run: impl FnOnce(&mut DuckContext) -> QuackResult<()>) {
+    pre();
     setup_logger();
     let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,

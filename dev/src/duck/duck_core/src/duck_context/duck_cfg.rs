@@ -9,10 +9,10 @@ use std::time::Duration;
 
 use tracing::trace;
 
-use crate::context::aliases::{Alias, Aliases};
-use crate::context::duck_home::DuckHome;
+use crate::duck_context::aliases::{Alias, Aliases};
+use crate::duck_context::duck_home::DuckHome;
 use crate::schemas::config::{NetworkConfig, SecurityConfig, StorageConfig};
-use crate::util::interning::interned_url::InternedUrl;
+use crate::util::interning::InternedUrl;
 use crate::util::once_ext::OnceExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
@@ -26,12 +26,9 @@ pub struct DuckCfg {
     storage: OnceLock<StorageConfig>,
 }
 
-// @TODO: #3318 Use `from_hours(24)`, after bumping rust's version in CI to 1.91.0.
 /// URL of the default Ducknest instance.
 /// It should be used only by [`DuckCfg::registry_url`] or tests (as it's the case during writing
 /// this comment; we don't (yet) have any fast paths for the _real_ default registry).
-///
-/// [`DuckCfg::registry_url`]: DuckCfg::registry_url
 pub static DEFAULT_REGISTRY_URL: LazyLock<InternedUrl> = LazyLock::new(|| {
     InternedUrl::new(
         "http://localhost:9001"
@@ -40,6 +37,7 @@ pub static DEFAULT_REGISTRY_URL: LazyLock<InternedUrl> = LazyLock::new(|| {
     )
 });
 
+// @TODO: #3318 Use `from_hours(24)`, after bumping rust's version in CI to 1.91.0.
 /// The default lifetime of a temporary venv in a storage.
 const DEFAULT_STORAGE_LIFETIME: Duration = Duration::from_secs(24 * 60 * 60);
 
@@ -143,13 +141,13 @@ impl DuckCfg {
     }
 }
 
-#[cfg(any(test, feature = "test-utils"))]
 mod test_utils {
     use std::collections::HashMap;
 
     use super::DuckCfg;
 
     impl DuckCfg {
+        /// Note: should only be used inside tests.
         pub fn set_aliases(&mut self, new_val: HashMap<String, String>) {
             let val: serde_yaml_ng::Mapping = new_val
                 .into_iter()

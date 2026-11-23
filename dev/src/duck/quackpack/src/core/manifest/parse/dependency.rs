@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Parsing of the {dev-,}dependencies fields in a manifest.
-use crate::util::error::QuackResultContext;
+use crate::QuackResultContext;
 use tracing::trace;
 
 use super::{ParseMode, ScopeGuard, source};

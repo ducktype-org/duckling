@@ -6,7 +6,7 @@
 
 use std::ffi::OsString;
 
-use crate::context::aliases::Alias;
+use crate::duck_context::aliases::Alias;
 use clap::ArgMatches;
 use itertools::chain;
 use tracing::{debug, trace};

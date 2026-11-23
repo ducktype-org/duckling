@@ -83,8 +83,6 @@ serde = { workspace = true }
 tempfile = { workspace = true }
 tracing = { workspace = true }
 
-[dev-dependencies]
-duck_core = { workspace = true, features = ["test-utils"] }
 
 [features]
 # Hack around https://github.com/scipopt/scip-sys/issues/39

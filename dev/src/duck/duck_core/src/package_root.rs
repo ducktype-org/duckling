@@ -33,16 +33,16 @@ pub fn find_package_root(start: &Path) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{File, create_dir_all};
-
     use tempfile::tempdir;
 
-    use super::*;
+    use crate::util::filesystem::{MkdirOptions, mkdir, touch};
+
+use super::*;
 
     #[test]
     fn finds_manifest_in_start_dir() {
         let dir = tempdir().unwrap();
-        File::create(dir.path().join(MANIFEST_NAME)).unwrap();
+        touch(dir.path().join(MANIFEST_NAME)).unwrap();
         assert_eq!(
             find_package_root(dir.path()),
             Some(dir.path().to_path_buf())
@@ -54,9 +54,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let inner_pkg = dir.path().join("outer").join("inner");
         let nested = inner_pkg.join("src").join("module");
-        create_dir_all(&nested).unwrap();
-        File::create(dir.path().join("outer").join(MANIFEST_NAME)).unwrap();
-        File::create(inner_pkg.join(MANIFEST_NAME)).unwrap();
+        mkdir(&nested, MkdirOptions::WithParents).unwrap();
+        touch(dir.path().join("outer").join(MANIFEST_NAME)).unwrap();
+        touch(inner_pkg.join(MANIFEST_NAME)).unwrap();
         assert_eq!(find_package_root(&nested), Some(inner_pkg));
     }
 
@@ -64,7 +64,7 @@ mod tests {
     fn ignores_directory_named_like_manifest() {
         let dir = tempdir().unwrap();
         let nested = dir.path().join("a");
-        create_dir_all(nested.join(MANIFEST_NAME)).unwrap();
+        mkdir(nested.join(MANIFEST_NAME), MkdirOptions::WithParents).unwrap();
         assert_eq!(find_package_root(&nested), None);
     }
 }

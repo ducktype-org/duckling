@@ -7,24 +7,25 @@
 //! The base shared by `duck`, QuackPack and the other tools of the duck ecosystem.
 //!
 //! It holds what gives every tool the same UX and behaviour, and nothing that is specific to
-//! package management:
-//! - [`util`]: universal utilities, usable by any tool without pulling in anything else — errors
-//!   ([`QuackError`]), filesystem helpers, interning ([`StrId`]), hashing, YAML config, wording,
-//! - [`context`]: [`DuckContext`], with the terminal, the environment, the user configuration and
+//! package management://! - [`cli`]: shared [`clap`] helpers and styles,
+//! - [`duck_context`]: [`DuckContext`], with the terminal, the environment, the user configuration and
 //!   the duck home,
-//! - [`cli`]: shared `clap` helpers and styles,
-//! - [`entry`]: the common entry point of a duck tool (logger setup, error printing, exit code),
-//! - [`package_root`]: locating a package root, without parsing its manifest.
+//! - [`package_root`]: locating a package root, without parsing its manifest
+//! - [`pipeline`]: the common pipeline of a duck tool (logger setup, error printing, exit code),
+//! - [`util`]: universal utilities for example filesystem helpers, interning ([`StrId`]), hashing, YAML config, wording,
+//! - [`schemas`]: the schema of [`DuckCfg`](duck_context::DuckCfg).
+
 pub mod cli;
-pub mod context;
-pub mod entry;
+pub mod duck_context;
+pub mod error;
 pub mod package_root;
+pub mod pipeline;
 pub mod schemas;
 pub mod util;
 
-pub use context::duck_context::DuckContext;
-pub use util::error::{QuackError, QuackResultContext};
-pub use util::interning::str_id::*;
+pub use duck_context::DuckContext;
+pub use error::{QuackError, QuackResultContext};
+pub use util::interning::StrId;
 
 /// A common [`Result`] type used widely throughout the project.
 pub type QuackResult<T> = Result<T, QuackError>;

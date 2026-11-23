@@ -6,7 +6,7 @@
 
 use std::str::FromStr;
 
-use crate::context::terminal::Verbosity;
+use crate::duck_context::terminal::Verbosity;
 use crate::driver::cli_ext::ArgMatchesExt;
 use clap::ArgMatches;
 

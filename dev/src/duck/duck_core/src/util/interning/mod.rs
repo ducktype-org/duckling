@@ -6,5 +6,8 @@
 
 //! Interned values, cheap to copy and compare: [`StrId`](str_id::StrId) and
 //! [`InternedUrl`](interned_url::InternedUrl).
-pub mod interned_url;
-pub mod str_id;
+mod interned_url;
+mod str_id;
+
+pub use interned_url::InternedUrl;
+pub use str_id::{StrId, QpJoin};

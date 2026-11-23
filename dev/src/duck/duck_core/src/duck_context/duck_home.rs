@@ -22,10 +22,9 @@ use std::{fmt, io};
 
 use tracing::{debug, error};
 
-use crate::context::env::Env;
+use crate::duck_context::env::Env;
 use crate::package_root::MANIFEST_NAME;
-use crate::util::filesystem::file_locks::{FileLockManager, LockedFile};
-use crate::util::filesystem::path_ops::{expand_tilde_with, normalize};
+use crate::util::filesystem::{FileLockManager, LockedFile, expand_tilde_with, normalize};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 const DUCK_HOME_ENV: &str = "DUCK_HOME";

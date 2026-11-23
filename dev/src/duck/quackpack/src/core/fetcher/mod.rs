@@ -55,7 +55,7 @@ pub struct Fetcher<'duck> {
     locks: OnceCell<locks::Locks>,
 }
 
-pub use crate::context::duck_cfg::DEFAULT_REGISTRY_URL;
+pub use crate::duck_context::duck_cfg::DEFAULT_REGISTRY_URL;
 
 impl<'duck> Fetcher<'duck> {
     /// Create a new [`Fetcher`].

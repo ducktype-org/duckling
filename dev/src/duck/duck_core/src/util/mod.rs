@@ -4,14 +4,16 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Universal utilities of the duck tools: small, self-contained helpers with no knowledge of
-//! packages or of the CLI (errors, filesystem, interning, hashing, YAML config, English wording).
+//! Multiple different miscellaneous utilities used throughout the project.
+//! Most important submodules are:
+//! - [`filesystem`]: operations on files, directories and paths; custom filelocks; custom iterators over directory contents
+//! - [`interning`]: interning string and URLs
+//! - [`yaml_config`]: abstraction over a configuration file with deserialization from YAML
 
 use std::collections::{HashMap, HashSet};
 pub mod command_ext;
 pub mod duckling_consts;
 pub mod edit_distance;
-pub mod error;
 pub mod extend;
 pub mod extract;
 pub mod filesystem;
@@ -23,7 +25,6 @@ pub mod once_ext;
 pub mod set_once;
 pub mod yaml_config;
 
-#[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils;
 
 /// English localization helper trait.

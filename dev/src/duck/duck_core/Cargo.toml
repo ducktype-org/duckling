@@ -24,7 +24,3 @@ windows-sys = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-
-[features]
-# Test-only helpers (e.g. `DuckContext::default`), for the unit tests of the crates using this one.
-test-utils = []

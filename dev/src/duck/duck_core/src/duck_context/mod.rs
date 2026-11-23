@@ -4,18 +4,23 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-use std::env::{current_dir, home_dir};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
+//! [`DuckContext`](duck_context::DuckContext) and everything it owns: the terminal, the user
+//! configuration and the duck home layout.
 
-use super::terminal::Verbosity;
-use crate::context::duck_cfg::DuckCfg;
-use crate::context::duck_home::DuckHome;
-use crate::context::duck_home::duck_home_path;
-use crate::context::env::Env;
-use crate::context::terminal::Terminal;
-use crate::util::filesystem::file_locks::FileLockManager;
-use crate::{QuackResult, QuackResultContext};
+use std::{env::{current_dir, home_dir}, path::{Path, PathBuf}, str::FromStr};
+
+pub use duck_cfg::DuckCfg;
+pub use duck_home::DuckHome;
+pub use env::Env;
+pub use terminal::{Terminal, Verbosity};
+
+use crate::{QuackResult, QuackResultContext, duck_context::duck_home::duck_home_path, util::filesystem::FileLockManager};
+
+mod aliases;
+mod duck_cfg;
+mod duck_home;
+mod env;
+mod terminal;
 
 #[derive(Debug)]
 pub struct DuckContext {
@@ -79,7 +84,8 @@ impl DuckContext {
         &self.duck_cfg
     }
 
-    #[cfg(any(test, feature = "test-utils"))]
+    /// Get mutable access to the [`DuckCfg`].
+    /// Note: should only be used inside tests.
     pub fn duck_cfg_mut(&mut self) -> &mut DuckCfg {
         &mut self.duck_cfg
     }
@@ -191,10 +197,10 @@ impl DuckContext {
     }
 }
 
-#[cfg(any(test, feature = "test-utils"))]
 impl Default for DuckContext {
+    /// Note: should only be used inside tests.
     fn default() -> Self {
-        use crate::context::terminal::Verbosity;
+        use crate::duck_context::terminal::Verbosity;
 
         let env = Default::default();
         let user_home = home_dir().unwrap();

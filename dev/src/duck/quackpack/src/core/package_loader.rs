@@ -10,7 +10,7 @@ use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use crate::context::duck_home::DuckHome;
+use crate::duck_context::duck_home::DuckHome;
 use crate::package_root::find_package_root;
 use crate::util::filesystem::path_ops::resolve;
 
