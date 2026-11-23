@@ -198,11 +198,14 @@ fn fetch_git(
     };
     let was_present = storage.is_package_stored(pkg_id);
     if !was_present {
-        fetcher.clone_from_git_to_directory(
+        match fetcher.clone_from_git_to_directory(
             &pkg_id.url(),
             GitReference::Rev(commit),
             &storage.pkg_dir(pkg_id),
-        )?;
+        ) {
+            Ok(_) => {}
+            Err(e) => return Err(e.into_inner()),
+        };
         mark_cloned_git_as_stored(pkg_id, storage).with_context(|| {
             format!(
                 "failed to store a cloned repository of a package `{}`",
@@ -240,9 +243,13 @@ async fn fetch_registry(
             version: pkg_id.version(),
             url,
         };
-        let blob_path = fetcher
+        let blob_path = match fetcher
             .fetch_package_blob_with_retries(fetcher_package, MAX_BLOB_RETRY_COUNT)
-            .await?;
+            .await
+        {
+            Ok(path) => path,
+            Err(e) => return Err(e.into_inner()),
+        };
         unpack_package_blob(pkg_id, storage, &blob_path).with_context(|| {
             format!(
                 "failed to unpack a compressed source code `{}` of a package `{}`",

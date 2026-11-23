@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
@@ -33,6 +34,7 @@
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -47,6 +49,8 @@
 #include <query_framework/query_errors.hpp>
 
 #include <algorithm>
+#include <string_view>
+#include <variant>
 
 namespace compiler::helios {
 
@@ -57,6 +61,124 @@ namespace compiler::helios {
 	static code::CodeBlock processBlock(
 		query::Context& ctx, pst::Access<Container> container, tsh::SymbolType<> return_type
 	);
+
+	template<std::derived_from<pst::Stmt> T>
+	static base::Optional<SymID> getControlFlowID(query::Context& ctx, pst::Access<T> stmt) {
+		if (!stmt->getDeclSymbolIdentifier().has_value()) return {};
+
+		return ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
+	}
+
+	using ParsedControlFlowTarget
+		= std::variant<code::NearestLoop, base::StrID, code::ControlFlowKind>;
+
+	template<class Kind>
+	requires(std::same_as<Kind, pst::ElementKind> || std::same_as<Kind, lang_def::Keyword>)
+	static base::Optional<code::ControlFlowKind> controlFlowKind(Kind kind) {
+		switch (kind) {
+		case Kind::If:
+			return code::ControlFlowKind::If;
+		case Kind::While:
+			return code::ControlFlowKind::While;
+		case Kind::For:
+			return code::ControlFlowKind::For;
+		case Kind::Block:
+			return code::ControlFlowKind::Block;
+		default:
+			return {};
+		}
+	}
+
+	template<std::derived_from<pst::Action> T>
+	static code::ControlFlowTargetSelector getControlFlowTarget(
+		query::Context& ctx, pst::Access<T> stmt, std::string_view action_name
+	) {
+		ParsedControlFlowTarget requested_target = code::NearestLoop{};
+		auto                    target_position  = stmt->getStablePosition();
+		auto                    target_holder    = stmt->getValue();
+		auto                    target_keyword   = stmt->getTargetKeyword();
+		CORE_ASSERT(
+			!target_holder.has_value() || !target_keyword.has_value(),
+			"Control-flow target cannot be both a keyword and an expression."
+		);
+		if (target_keyword.has_value()) {
+			auto kind = controlFlowKind(target_keyword.value());
+			CORE_ASSERT(kind.has_value(), "Invalid parsed control-flow target keyword.");
+			requested_target = kind.value();
+		} else if (target_holder.has_value()) {
+			auto target_expr = target_holder.value().unlock(ctx)->getExpr().unlock(ctx);
+			target_position  = target_expr->getStablePosition();
+			auto identifier  = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>();
+			CORE_ASSERT(identifier.has_value(), "Parsed control-flow target must be a bare name.");
+			requested_target = identifier.value()->getName().unlock(ctx)->unwrap();
+		}
+
+		auto ancestor = getPSTElementParent(ctx, stmt);
+		while (ancestor.isLangElement()) {
+			auto element                   = ancestor.getAsLangElement().unlock(ctx);
+			bool crossed_callable_boundary = false;
+			switch (element->getElementKind()) {
+			case pst::ElementKind::Fun:
+			case pst::ElementKind::FunDecl:
+			case pst::ElementKind::ClassMethod:
+			case pst::ElementKind::ClassSpecial:
+			case pst::ElementKind::ClassConstructor:
+			case pst::ElementKind::ClassDestructor:
+				crossed_callable_boundary = true;
+				break;
+			default:
+				break;
+			}
+			if (crossed_callable_boundary) break;
+			auto candidate_kind = controlFlowKind(element->getElementKind());
+			if (candidate_kind.has_value()) {
+				auto ancestor_stmt = element.template dynamicCast<pst::Stmt>().value();
+				variant_match(requested_target) {
+					variant_case(base::StrID, target_name) {
+						auto identifier = ancestor_stmt->getDeclSymbolIdentifier();
+						if (identifier.has_value()
+						    && identifier.value().unlock(ctx)->unwrap() == target_name) {
+							auto id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
+							CORE_ASSERT(
+								kind(id) == SymbolKind::NamedCodeElement,
+								"Expected a NamedCodeElement symbol."
+							);
+							return code::NamedTarget{ id };
+						}
+					}
+					variant_case(code::ControlFlowKind, target_kind) {
+						if (candidate_kind.value() == target_kind)
+							return code::KindTarget{ target_kind };
+					}
+					variant_case_novalue(code::NearestLoop) {
+						if (candidate_kind == code::ControlFlowKind::While
+						    || candidate_kind == code::ControlFlowKind::For)
+							return code::NearestLoop{};
+					}
+				}
+			}
+			ancestor = getPSTElementParent(ctx, element);
+		}
+
+		variant_match(requested_target) {
+			variant_case_novalue(code::NearestLoop) {
+				ctx.log<NoEnclosingLoopError>(target_position, action_name);
+			}
+			variant_case(base::StrID, target_name) {
+				ctx.log<NoNamedControlFlowTargetError>(
+					target_position, action_name, target_name.strView()
+				);
+			}
+			variant_case_novalue(code::ControlFlowKind) {
+				ctx.log<NoControlFlowKindTargetError>(
+					target_position,
+					action_name,
+					lang_def::keywordToStr(target_keyword.value()).strView()
+				);
+			}
+		}
+		query::throwFailed();
+	}
 
 	/**
 	 * @brief Visitor that creates HOUT statements from PST statements.
@@ -289,7 +411,9 @@ namespace compiler::helios {
 			if (taken.valueOrThrow()) {
 				output(code::BlockStmt(
 					code::pstOrigin(stmt),
-					processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type)
+					processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type),
+					getControlFlowID(ctx, stmt),
+					code::ControlFlowKind::If
 				));
 				return;
 			}
@@ -298,7 +422,9 @@ namespace compiler::helios {
 				opt_some(else_body) {
 					output(code::BlockStmt(
 						code::pstOrigin(stmt),
-						processBlock(ctx, unlockOrFail(ctx, else_body), return_type)
+						processBlock(ctx, unlockOrFail(ctx, else_body), return_type),
+						getControlFlowID(ctx, stmt),
+						code::ControlFlowKind::If
 					));
 				}
 				opt_none {
@@ -327,6 +453,7 @@ namespace compiler::helios {
 			)
 			                     .valueOrThrow();
 
+			auto control_flow_id = getControlFlowID(ctx, stmt);
 			auto then_body = processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type);
 
 			match_optional(stmt->getElseBody()) {
@@ -335,12 +462,16 @@ namespace compiler::helios {
 						code::pstOrigin(stmt),
 						std::move(condition),
 						std::move(then_body),
-						processBlock(ctx, unlockOrFail(ctx, else_body), return_type)
+						processBlock(ctx, unlockOrFail(ctx, else_body), return_type),
+						control_flow_id
 					));
 				}
 				opt_none {
 					output(code::IfStmt(
-						code::pstOrigin(stmt), std::move(condition), std::move(then_body)
+						code::pstOrigin(stmt),
+						std::move(condition),
+						std::move(then_body),
+						control_flow_id
 					));
 				}
 			}
@@ -348,6 +479,7 @@ namespace compiler::helios {
 
 		void visitWhile(pst::Access<pst::While> stmt) override {
 			auto bool_type        = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
+			auto control_flow_id  = getControlFlowID(ctx, stmt);
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
 				is_failed = true;
@@ -361,7 +493,9 @@ namespace compiler::helios {
 
 			auto body = processBlock(ctx, unlockOrFail(ctx, stmt->getBody()), return_type);
 
-			output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body)));
+			output(code::WhileStmt(
+				code::pstOrigin(stmt), std::move(condition), std::move(body), control_flow_id
+			));
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -406,9 +540,15 @@ namespace compiler::helios {
 		}
 
 		void visitBlock(pst::Access<pst::Block> stmt) override {
+			auto control_flow_id = getControlFlowID(ctx, stmt);
 			auto block_body
 				= processBlock(ctx, unlockOrFail(ctx, stmt->getCodeBlock()), return_type);
-			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+			output(code::BlockStmt(
+				code::pstOrigin(stmt),
+				std::move(block_body),
+				control_flow_id,
+				code::ControlFlowKind::Block
+			));
 		}
 
 		void visitConst(pst::Access<pst::Const>) override {
@@ -417,17 +557,13 @@ namespace compiler::helios {
 		}
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
-			ctx.log<dia::NotYetImplementedCodeError>(
-				"`continue` statements are not supported yet.", stmt->getStablePosition()
-			);
-			is_failed = true;
+			auto target = getControlFlowTarget(ctx, stmt, "continue");
+			output(code::ContinueStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
-			ctx.log<dia::NotYetImplementedCodeError>(
-				"`break` statements are not supported yet.", stmt->getStablePosition()
-			);
-			is_failed = true;
+			auto target = getControlFlowTarget(ctx, stmt, "break");
+			output(code::BreakStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitRedo(pst::Access<pst::Redo> stmt) override {
@@ -462,6 +598,7 @@ namespace compiler::helios {
 			auto result = desugaring::desugarFor(
 				ctx,
 				stmt,
+				getControlFlowID(ctx, stmt),
 				[&](pst::AccessLocked<pst::CodeBlockOrStmt> body_pst) -> code::CodeBlock {
 					return processBlock(ctx, unlockOrFail(ctx, body_pst), return_type);
 				}

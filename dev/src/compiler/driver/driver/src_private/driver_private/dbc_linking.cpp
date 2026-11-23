@@ -23,6 +23,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/loader/loader.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <ranges>
 #include <string_view>
@@ -137,15 +138,12 @@ namespace compiler::driver {
 			if (merged_debug_info.has_value()) {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
 
-				auto output_file_stem = output_file.file.stem();
-				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
-				if (output_file_stem.ends_with(".dbc"))
-					output_file_stem.resize(output_file_stem.size() - 4);
-
-
-				auto di_output = output_file.parent->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
-				);
+				// Keep the directory part of the artifact name: the output may be an absolute path
+				// outside the artifact collection, and the VM looks for the debug info next to it.
+				auto di_name
+					= std::filesystem::path(output_file.name.str()).replace_extension(".di.json");
+				auto di_output
+					= output_file.parent->fileArtifactAtOrNew(base::StrID(di_name.string().c_str()));
 				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!di_out.is_open())
 					CORE_PANIC("Failed to open DVM package debug info output file for writing");
