@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Formats Duckling sources (.dk) in place with duckfmt.
+# Formats Duckling sources (.dk, .dks) in place with duckfmt.
+# The files listed in scripts/formatting/duckfmt_excluded.txt are left alone.
 #
 # Usage: format_repo_duckling.sh [--all] [--no-untracked] [--check] [duckfmt-binary]
 #   The options and the binary can be given in any order.
@@ -59,13 +60,17 @@ if [[ ! -x $duckfmt ]] && ! command -v "$duckfmt" > /dev/null; then
 fi
 
 # Gather the Duckling files. A failed listing must not read as "nothing to format"
-listing=$(python3 toolbox.py list-files "${scope[@]}" "${untracked[@]}" --filter-deleted --extensions .dk) || exit 1
+listing=$(python3 toolbox.py list-files "${scope[@]}" "${untracked[@]}" --filter-deleted --extensions .dk --extensions .dks) || exit 1
+
+# Files left unformatted on purpose: one path relative to dev/ per line, `#` starts a comment
+excluded=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^$/d' scripts/formatting/duckfmt_excluded.txt)
 
 # One element per file, so a path with spaces and an empty listing both behave.
 # A read loop rather than `readarray`: the latter is a bash 4 builtin, and macOS ships bash 3.2.
 files=()
 while IFS= read -r file; do
     [[ -n $file ]] || continue
+    grep -Fxq -- "$file" <<< "$excluded" && continue
     files+=("$file")
 done <<< "$listing"
 
@@ -74,8 +79,8 @@ if [[ ${#files[@]} -eq 0 ]]; then
     exit 0
 fi
 
-# duckfmt takes a single file, so run it once per file and remember any failure.
-# It prints the reason on stderr itself. It exits with 1 when --check finds an unformatted
+# One duckfmt run per file, so each exit code tells what went wrong with that file.
+# duckfmt prints the reason on stderr itself. It exits with 1 when --check finds an unformatted
 # file and with 2 when it cannot format the file at all (a lexer error, for example).
 unformatted=0
 failed=0

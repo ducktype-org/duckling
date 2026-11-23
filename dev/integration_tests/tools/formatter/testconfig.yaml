@@ -33,7 +33,11 @@ Tests:
       format-bad-indent-style:
         # A misspelled indentStyle is rejected instead of silently meaning tabs.
         run_args: "-c bad_indent_style.json format_unformatted.dk"
-        ExitCode: 1
+        ExitCode: 2
+      format-check-lexer-error:
+        # A file that does not tokenize is an error (exit 2), not "not formatted" (exit 1).
+        run_args: "-k format_lexer_error.dk"
+        ExitCode: 2
   format-many-files:
     Cases:
       many-stdout:

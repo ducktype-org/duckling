@@ -5,6 +5,7 @@
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 import os
+import pathlib
 import shlex
 import shutil
 import subprocess
@@ -18,7 +19,14 @@ from .helpers import (
 )
 from .list_files import list_files_impl
 
-DUCKLING_EXTENSIONS = [".dk"]
+DUCKLING_EXTENSIONS = [".dk", ".dks"]
+
+# The dev/ directory, that the paths in `EXCLUDED_FILES_LIST` are relative to
+_DEV_DIR = pathlib.Path(__file__).resolve().parents[4]
+
+# Files that are left unformatted on purpose, one path relative to dev/ per line.
+# `scripts/formatting/format_repo_duckling.sh` reads the same list.
+EXCLUDED_FILES_LIST = _DEV_DIR / "scripts" / "formatting" / "duckfmt_excluded.txt"
 
 # Exit codes of `duckfmt -k`, any other one means duckfmt failed on the file
 _DUCKFMT_OK = 0
@@ -37,6 +45,18 @@ def _resolve_duckfmt(build_dir: str, duckfmt_path: str | None) -> str | None:
     return shutil.which(candidate)
 
 
+def _read_excluded_files() -> set[str]:
+    """
+    The absolute paths listed in `EXCLUDED_FILES_LIST`, skipping blank lines and
+    `#` comments.
+    """
+    if not EXCLUDED_FILES_LIST.is_file():
+        return set()
+    with open(EXCLUDED_FILES_LIST, encoding="UTF-8") as excluded_list:
+        lines = (line.split("#", 1)[0].strip() for line in excluded_list)
+        return {os.path.normpath(_DEV_DIR / line) for line in lines if line}
+
+
 def _check_file(duckfmt: str, file: str) -> bool | None:
     """
     True when the file is formatted, False when it is not, None when duckfmt failed on it.
@@ -53,7 +73,7 @@ def _format_in_place(duckfmt: str, file: str) -> None:
     subprocess.run([duckfmt, file, "-i"])
 
 
-def duckling_formatter_impl(
+def duckfmt_impl(
     all: bool = False,
     branch: str = "origin/main",
     no_merge_base: bool = False,
@@ -94,6 +114,8 @@ def duckling_formatter_impl(
         include_untracked=True,
         filter_deleted=True,
     )
+    excluded = _read_excluded_files()
+    files = [f for f in files if os.path.abspath(f) not in excluded]
     if not files:
         log_info("No Duckling files to check. Nothing to check.")
         return True

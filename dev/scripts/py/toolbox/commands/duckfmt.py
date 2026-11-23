@@ -14,11 +14,11 @@ from .helpers import (
     no_fix,
     no_merge_base,
 )
-from ..impl.duckling_formatter import duckling_formatter_impl
+from ..impl.duckfmt import duckfmt_impl
 from ..impl.helpers import exit_with_error
 
 
-@command("duckling-formatter")
+@command("duckfmt")
 @all_flag(
     help="Check all Duckling files, not just the ones that are modified",
 )
@@ -39,11 +39,12 @@ from ..impl.helpers import exit_with_error
 )
 @auto_fix()
 @no_fix()
-def duckling_formatter(*args, **kwargs):
-    """Check that Duckling sources (.dk) are formatted with duckfmt.
+def duckfmt(*args, **kwargs):
+    """Check that Duckling sources (.dk, .dks) are formatted with duckfmt.
 
     By default only the files changed against the branch (plus untracked ones) are
-    checked; use --all for the whole repository.
+    checked; use --all for the whole repository. The files listed in
+    scripts/formatting/duckfmt_excluded.txt are never checked.
     """
-    if not duckling_formatter_impl(*args, **kwargs):
+    if not duckfmt_impl(*args, **kwargs):
         exit_with_error("Duckling formatting check failed.")
