@@ -4,10 +4,11 @@
 #
 # Usage: sweep.sh <duckling-build-dir> <work-dir> [<name>...]
 #
-# `duck` is taken from $DUCK or PATH. Prints one line per library and a summary table.
+# `duckbind` comes from the build directory, `duck` from $DUCK or PATH. Prints one line per
+# library and a summary table.
 set -uo pipefail
 
-[ $# -ge 2 ] || { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+[ $# -ge 2 ] || { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 SWEEP_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="$(cd "$1" && pwd)"
 if [ -x "$BIN_DIR/bin/duckc" ]; then BIN_DIR="$BIN_DIR/bin"; fi
@@ -35,13 +36,10 @@ while IFS='|' read -r name pkg headers includes; do
 	version="$(pkg-config --modversion "$pkg")"
 	dir="$WORK/$name"
 	rm -rf "$dir" "$WORK/$name-app"
-	args=(c-package new "$dir" --pkg-config "$pkg")
-	for header in $headers; do args+=(--header "$header"); done
-	if [ "$includes" != "-" ]; then
-		for glob in $includes; do args+=(--include "$glob"); done
-	fi
+	args=(new "$dir" --pkg-config "$pkg" --header "${headers// /,}" --duck "$DUCK")
+	if [ "$includes" != "-" ]; then args+=(--include "${includes// /,}"); fi
 	log="$WORK/$name.log"
-	if ! "$DUCK" "${args[@]}" > "$log" 2>&1; then
+	if ! duckbind "${args[@]}" > "$log" 2>&1; then
 		printf '%-9s %-12s %-10s  see %s\n' "$name" "$version" FAILED "$log"
 		status=1
 		continue

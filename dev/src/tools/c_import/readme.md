@@ -1,11 +1,12 @@
-# `duck c-package` and `duck_c_import`
+# `duckbind`
 
-`duck c-package` generates a Duckling package that binds a C library. The package can be
-committed and published like any other. `duck_c_import` is the libclang-based translator behind
-it.
+`duckbind` generates a Duckling package that binds a C library, from its headers, with libclang.
+Like Rust's bindgen and sdl3-sys-gen, it is a standalone tool rather than part of duck: a
+maintainer runs it and publishes the package, which can be committed like any other. Later, a
+package's build script will be able to run it while the package builds (#4202).
 
 ```bash
-duck c-package new sdl3 --pkg-config sdl3 --header SDL3/SDL.h --include 'SDL_*'
+duckbind new sdl3 --pkg-config sdl3 --header SDL3/SDL.h --include 'SDL_*'
 duck -C app add --local ../sdl3 sdl3
 ```
 
@@ -18,7 +19,7 @@ import sdl3.*;
 The tool brings a C library into Duckling as a package that other projects depend on. The
 package holds no paths from the machine it was made on:
 
-- The recipe (`c-package.yaml`) holds header names, pkg-config package names and paths relative
+- The recipe (`duckbind.yaml`) holds header names, pkg-config package names and paths relative
   to the package.
 - The manifest names the libraries (`metadata.external-libs`) without locating them. duck finds
   their files when the package is built, on the machine that builds it.
@@ -30,12 +31,13 @@ package could build on the generated one.
 ## Where a package works
 
 The bindings are made for one target and one version of the library, both named in their banner
-(`from uv.h (libuv 1.53.0)`, `Target: x86_64-pc-linux-gnu.`). The target is the one the system C
-compiler builds for (`gcc -dumpmachine`); record layouts, the width of `long` and the signedness of
-`char` come from it. A package works on another machine when:
+(`from uv.h (libuv 1.53.0)`, `Target: x86_64-unknown-linux-gnu.`). The target is the one the
+system C compiler builds for (`gcc -dumpmachine`), recorded without its vendor, which does not
+change the ABI. Record layouts, the width of `long` and the signedness of `char` come from it. A
+package works on another machine when:
 
 - **The architecture and OS are the same.** Bindings for several targets in one package need
-  target conditions in Duckling (#4142).
+  target conditions in Duckling (#4142), and then a merge of per-target runs (#4201).
 - **The library has the same name.** `external-libs` holds the name found where the package was
   generated, and distributions differ: Arch's `lua` is `lua5.4` on Debian, Ubuntu and Alpine.
 - **The library is at least as new as the headers.** An older one links, but structs and constants
@@ -50,21 +52,25 @@ and curl on Ubuntu, whose `libcurl.a` was picked. musl's libc types have other n
 but the same sizes for these libraries; nothing guarantees that in general.
 
 Finding the library on the consumer's machine, checking its version and target, and building it
-from source belong to build scripts, which the generator will write once they exist (#4200).
+from source belong to build scripts, which duckbind will write once they exist (#4200). Generating
+the bindings while the package builds, so they always match the installed headers, is #4202.
 
 ## Commands
 
 ```bash
-duck c-package new <path> --header <h>... [--pkg-config <pkg>]... [--cflag <flag>]...
-                          [--library <lib>]... [--include <glob>]... [--exclude <glob>]...
-                          [--name <name>] [--no-verify]
-duck c-package regen [<path>] [--no-verify]
-duck c-package check [<path>]
+duckbind new <path> --header <h,...> [--pkg-config <pkg,...>] [--cflag=<flag,...>]
+                    [--library=<lib,...>] [--include <glob,...>] [--exclude <glob,...>]
+                    [--name <name>] [--no-verify] [--duck <duck>]
+duckbind regen [<path>] [--no-verify] [--duck <duck>]
+duckbind check [<path>]
+duckbind bindings <duckbind.yaml> --out <dir> [--name <name>]
 ```
 
-- `--header` takes a path, or a name found on the include path (`SDL3/SDL.h`).
-  Repeat it for a library with several headers (`--header lua.h --header lauxlib.h --header
-  lualib.h`). They are read as one translation unit into one module, and what each header
+Lists are comma-separated. Write a value that starts with `-` after `=` (`--library=-lm`,
+`--cflag=-DFOO,-Iinclude`).
+
+- `--header` takes a path, or a name found on the include path (`SDL3/SDL.h`). Several headers
+  (`--header lua.h,lauxlib.h,lualib.h`) are read as one translation unit into one module, and what each header
   includes is translated too, within its scope:
   - a path claims its whole directory;
   - a name with a directory (`SDL3/SDL.h`) claims that directory, so an umbrella header brings
@@ -84,17 +90,19 @@ duck c-package check [<path>]
 - Paths given to `new` are relative to the current directory; the recipe stores them relative to
   the package.
 - Unless `--no-verify` is given, the package is checked after it is written. A throwaway program
-  depending on it is built and run. It compares `size_of`/`alignment_of` of every class with what
+  depending on it is built and run with `duck` (from `PATH`, or `--duck`). It compares `size_of`/`alignment_of` of every class with what
   clang reported, so a layout mistake fails generation instead of corrupting memory at run time.
 - `check` regenerates into a temporary directory and fails when the bindings or the library keys
   of the manifest differ from what the recipe gives, without changing anything. It compares text,
   so on a machine with another version of the library it reports a difference.
+- `bindings` writes only the modules of `src/generated/` for a recipe, with no manifest, no
+  `src.dk` and no check, and needs no duck. It is the step a build script will run (#4202).
 
 The generated package:
 
 ```
 sdl3/
-  c-package.yaml         the recipe; edit it, then run `regen`
+  duckbind.yaml          the recipe; edit it, then run `regen`
   quackconfig.yaml       an ordinary manifest; `regen` rewrites only the library keys
   src/
     src.dk               re-exports the bindings; written once, then yours
@@ -104,13 +112,13 @@ sdl3/
 ```
 
 ```yaml
-# c-package.yaml
+# duckbind.yaml
 headers:
-- SDL3/SDL.h
+  - "SDL3/SDL.h"
 pkg-config:
-- sdl3
+  - "sdl3"
 include:
-- SDL_*
+  - "SDL_*"
 ```
 
 ```yaml
@@ -210,19 +218,20 @@ Other gaps have workarounds rather than being skipped:
 
 duck resolves `metadata.external-libs` when the package is built (#3954) and links them on the
 native backend. The DVM does not load `external-libs` yet (#4144), so a package that links a library
-builds on the native backend only for now, and generation checks it there. On macOS, `c-package`
+builds on the native backend only for now, and generation checks it there. On macOS, duckbind
 passes the SDK (`xcrun --show-sdk-path`) to libclang as `-isysroot`.
 
 ## How it works
 
 ```
-duck c-package (Rust, src/duck/src/lib/quackpack/subcommands/c_package)
-  c-package.yaml -> pkg-config, library names -> request.json
-    -> duck_c_import (C++, this directory) -> *.dk + report.json
-  -> src/generated/, quackconfig.yaml, src.dk -> verification program
+duckbind.yaml -> resolve (pkg-config, library names and directories)
+  -> generate: tu_reader -> lower -> emit -> bindings + layout check
+  -> src/generated/, quackconfig.yaml, src.dk -> verification program (duck run)
 ```
 
-`duck_c_import <request.json> [<report.json>]` runs as a pipeline over plain data models:
+`commands` drives the steps; `recipe`, `resolve`, `package` (the manifest, edited as text so the
+user's comments survive) and `verify` hold them. Generation itself is a pipeline over plain data
+models:
 
 1. `tu_reader` (the only libclang user, `src_private/`) parses one synthesized translation unit that
    includes every requested header. It returns a `CModel` (`c_model.hpp`) with clang's exact sizes,
@@ -237,15 +246,16 @@ duck c-package (Rust, src/duck/src/lib/quackpack/subcommands/c_package)
 3. `emit` writes the module text and the layout check, which only the verification program uses.
 
 `lower` and `emit` never touch clang, so `tests/c_import_lower_test.cpp` tests them on hand-built
-models. Everything that depends on the machine (libclang, system headers and libraries) is tested
-in `integration_tests/duck/c-package/`:
+models, and `tests/c_import_package_test.cpp` tests the recipe, library resolution and manifest
+edits. Everything that depends on the machine (libclang, system headers and libraries) is tested
+in `integration_tests/tools/duckbind/`:
 
 - the bindings generated from `tests/headers/sdl_like.h`, a fixture shaped like SDL3's API, are
   compared against `expected_bindings.txt`;
 - that package, with the header and library vendored inside it, is verified, run, published
   through git and used from another directory, and holds no absolute path;
 - `math.h` and `-lm` are found by bare names, and zlib through pkg-config;
-- regeneration and `check` are tested, and so is bad input;
+- regeneration, `check` and `bindings` are tested, and so is bad input;
 - SDL3 itself, when pkg-config finds it.
 
 `examples/sdl3_demo.sh` builds and runs an SDL3 program (`--window` for a real window).

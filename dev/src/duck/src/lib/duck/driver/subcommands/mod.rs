@@ -10,7 +10,6 @@ use crate::{DuckContext, QuackResult};
 
 mod add;
 mod build;
-mod c_package;
 mod clean_storage;
 #[cfg(feature = "shell-completion")]
 mod generate;
@@ -39,7 +38,6 @@ pub fn subcommands() -> Vec<Command> {
         list::get_parser(),
         info::get_parser(),
         clean_storage::get_parser(),
-        c_package::get_parser(),
     ]
 }
 
@@ -64,7 +62,6 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "run" => run::execute,
         "run-script" => run_script::execute,
         "sync" => sync::execute,
-        "c-package" => c_package::execute,
         _ => return None,
     };
     Some(f)

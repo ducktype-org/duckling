@@ -1,4 +1,4 @@
-# libclang (the stable C API), used by duck_c_import. It is looked up next to the LLVM already
+# libclang (the stable C API), used by duckbind. It is looked up next to the LLVM already
 # found, rather than through ClangConfig.cmake, which on Debian-style installs references files
 # from packages that may not be installed.
 find_library(DUCK_LIBCLANG_LIBRARY

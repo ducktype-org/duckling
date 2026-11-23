@@ -23,7 +23,7 @@ namespace c_import {
 
 	namespace {
 
-		constexpr std::string_view UNSAVED_FILE = "__duck_c_import.c";
+		constexpr std::string_view UNSAVED_FILE = "__duckbind.c";
 		constexpr std::string_view MACRO_PREFIX = "__duck_m_";
 		constexpr std::string_view CHAR_PROBE   = "__duck_char_probe";
 

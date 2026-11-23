@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Generates SDL3 bindings with `duck c-package`, then builds and runs a small SDL3 program with
+# Generates SDL3 bindings with `duckbind`, then builds and runs a small SDL3 program with
 # them on the native backend (and on the DVM once it loads `external-libs`, #4144).
 #
 # Usage: sdl3_demo.sh <duckling-build-dir> [--window] [--backend native|dvm|both] [--work <dir>]
 #
-#   <duckling-build-dir>  build directory (or its `bin`), holding duckc, VM and duck_c_import
+#   <duckling-build-dir>  build directory (or its `bin`), holding duckc, VM and duckbind
 #   --window              open a real window (bouncing square; Escape or closing it quits)
 #                         instead of the headless check
 #   --backend             which backend to run on (default: native)
@@ -12,7 +12,7 @@
 #                         temporary directory)
 #
 # `duck` is taken from $DUCK, then the repository this script is in (src/duck/target), then the
-# build directory, then PATH; it has to know `c-package`. Needs SDL3 visible to pkg-config.
+# build directory, then PATH. Needs SDL3 visible to pkg-config.
 set -euo pipefail
 
 usage() {
@@ -41,27 +41,27 @@ while [ $# -gt 0 ]; do
 done
 
 export PATH="$BIN_DIR:$PATH"
-for tool in duckc VM duck_c_import; do
+for tool in duckc VM duckbind; do
 	if ! command -v "$tool" >/dev/null; then
 		echo "error: \`$tool\` is not in $BIN_DIR" >&2
 		exit 1
 	fi
 done
-supports_c_package() { [ -x "$1" ] && "$1" c-package --help >/dev/null 2>&1; }
+is_duck() { [ -x "$1" ] && "$1" --version >/dev/null 2>&1; }
 if [ -z "${DUCK:-}" ]; then
 	for candidate in \
 		"$SCRIPT_DIR/../../../duck/target/release/duck" \
 		"$SCRIPT_DIR/../../../duck/target/debug/duck" \
 		"$BIN_DIR/duck" \
 		"$(command -v duck || true)"; do
-		if supports_c_package "$candidate"; then
+		if is_duck "$candidate"; then
 			DUCK="$candidate"
 			break
 		fi
 	done
 fi
-if [ -z "${DUCK:-}" ] || ! supports_c_package "$DUCK"; then
-	echo "error: no \`duck\` with \`c-package\` found; build it with \`cargo build --release\` in src/duck, or set DUCK" >&2
+if [ -z "${DUCK:-}" ] || ! is_duck "$DUCK"; then
+	echo "error: no \`duck\` found; build it with \`cargo build --release\` in src/duck, or set DUCK" >&2
 	exit 1
 fi
 echo "using $DUCK"
@@ -78,7 +78,7 @@ echo "working in $WORK (SDL3 $(pkg-config --modversion sdl3))"
 
 # 1. The bindings: a package local to this machine.
 rm -rf sdl3 demo
-"$DUCK" c-package new sdl3 --pkg-config sdl3 --header SDL3/SDL.h --include 'SDL_*' --include 'SDLK_*'
+duckbind new sdl3 --pkg-config sdl3 --header SDL3/SDL.h --include 'SDL_*,SDLK_*' --duck "$DUCK"
 
 # 2. A program using them.
 "$DUCK" init demo >/dev/null
