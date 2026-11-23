@@ -113,7 +113,7 @@ jobs:
           version: ${{ env.TIDY_VERSION }}
           lines-changed-only: true
           database: "dev/build"
-          ignore: "**/*.c|dev/src/tools/c_import/tests/headers"
+          ignore: "**/*.c|dev/integration_tests/tools/duckbind"
           extra-args: "-Wno-unknown-warning-option"
 
           # Note that tidy-checks: '', means it uses .clang-tidy file

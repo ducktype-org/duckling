@@ -6,6 +6,10 @@ clang's. For the libraries with a program in `smoke/`, it then builds that progr
 package and runs it; each program checks a known result (a hash, a compression round trip, an
 SQL query) and exits with a distinct code per check.
 
+CI does not run the sweep. It is the check of duckbind against real headers, so run it after
+changing how headers are read, lowered or emitted. `smoke/zlib.dk` is also run by the integration
+test `tools/duckbind` (`zlib/round-trip`).
+
 ```bash
 DUCK=path/to/duck ./sweep.sh <duckling-build-dir> <work-dir> [<library>...]
 ```

@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Generates SDL3 bindings with `duckbind`, then builds and runs a small SDL3 program with
-# them on the native backend (and on the DVM once it loads `external-libs`, #4144).
+# them on the native backend (the DVM does not load `external-libs` yet, #4144).
 #
-# Usage: sdl3_demo.sh <duckling-build-dir> [--window] [--backend native|dvm|both] [--work <dir>]
+# Usage: sdl3_demo.sh <duckling-build-dir> [--window] [--work <dir>]
 #
-#   <duckling-build-dir>  build directory (or its `bin`), holding duckc, VM and duckbind
+#   <duckling-build-dir>  build directory (or its `bin`), holding duckc and duckbind
 #   --window              open a real window (bouncing square; Escape or closing it quits)
 #                         instead of the headless check
-#   --backend             which backend to run on (default: native)
 #   --work                where to put the generated package and the program (default: a new
 #                         temporary directory)
 #
@@ -16,7 +15,7 @@
 set -euo pipefail
 
 usage() {
-	sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+	sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
 	exit 2
 }
 
@@ -27,12 +26,10 @@ BIN_DIR="$(cd "$1" && pwd)"
 if [ -x "$BIN_DIR/bin/duckc" ]; then BIN_DIR="$BIN_DIR/bin"; fi
 shift
 WINDOW=0
-BACKEND=native
 WORK=""
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--window) WINDOW=1 ;;
-		--backend) BACKEND="$2"; shift ;;
 		--work) WORK="$2"; shift ;;
 		-h|--help) usage ;;
 		*) echo "unknown argument: $1" >&2; usage ;;
@@ -41,7 +38,7 @@ while [ $# -gt 0 ]; do
 done
 
 export PATH="$BIN_DIR:$PATH"
-for tool in duckc VM duckbind; do
+for tool in duckc duckbind; do
 	if ! command -v "$tool" >/dev/null; then
 		echo "error: \`$tool\` is not in $BIN_DIR" >&2
 		exit 1
@@ -83,7 +80,6 @@ duckbind new sdl3 --pkg-config sdl3 --header SDL3/SDL.h --include 'SDL_*,SDLK_*'
 # 2. A program using them.
 "$DUCK" init demo >/dev/null
 "$DUCK" -C demo add --local ../sdl3 sdl3 >/dev/null
-printf 'profiles:\n  dvm:\n    dvm-bytecode: true\n' >> demo/quackconfig.yaml
 
 if [ "$WINDOW" = 1 ]; then
 cat > demo/src/src.dk <<'EOF'
@@ -224,22 +220,4 @@ export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-offscreen}"
 fi
 
 # 3. Run it.
-status=0
-run() {
-	local name="$1" profile="$2"
-	echo "== $name"
-	if "$DUCK" -C demo run --profile="$profile"; then
-		echo "== $name: ok"
-	else
-		local code=$?
-		echo "== $name: failed with exit code $code" >&2
-		status=1
-	fi
-}
-case "$BACKEND" in
-	native) run native dev ;;
-	dvm) run DVM dvm ;;
-	both) run native dev; run DVM dvm ;;
-	*) echo "unknown backend: $BACKEND" >&2; exit 2 ;;
-esac
-exit "$status"
+"$DUCK" -C demo run

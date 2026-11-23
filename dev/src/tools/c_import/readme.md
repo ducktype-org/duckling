@@ -46,10 +46,10 @@ signedness of `char` come from it. A package works on another machine when:
 - **A shared library is found.** duck links `lib<name>.a` before `lib<name>.so` (#4140), and a
   static library's own dependencies are not linked.
 
-Packages for the 22 libraries of the sweep installed on an Arch Linux (glibc) machine were used
-unchanged on Ubuntu 24.04, Ubuntu 26.04 and Alpine 3.24 (musl), wherever the library was installed
-there too. All of them built and ran except lua, for its library name, and curl on Ubuntu, whose
-`libcurl.a` was picked. musl's libc types have other names than glibc's but the same sizes for
+Packages for the 22 libraries of the library sweep (`examples/sweep/`) installed on an Arch Linux
+(glibc) machine were used unchanged on Ubuntu 24.04, Ubuntu 26.04 and Alpine 3.24 (musl), wherever
+the library was installed there too. All of them built and ran except lua, for its library name,
+and curl on Ubuntu, whose `libcurl.a` was picked. musl's libc types have other names than glibc's but the same sizes for
 these libraries; nothing guarantees that in general.
 
 Finding the library on the consumer's machine, checking its version and target, and building it
@@ -251,8 +251,8 @@ models, and `tests/c_import_package_test.cpp` tests the recipe, library resoluti
 edits. Everything that depends on the machine (libclang, system headers and libraries) is tested
 in `integration_tests/tools/duckbind/`:
 
-- the bindings generated from `tests/headers/sdl_like.h`, a fixture shaped like SDL3's API, are
-  compared against `expected_bindings.txt`;
+- the bindings generated from `sdl_like.h` (with `sdl_like.c`, next to the tests), a fixture
+  shaped like SDL3's API, are compared against `expected_bindings.txt`;
 - that package, with the header and library vendored inside it, is verified, run, published
   through git and used from another directory, and holds no absolute path;
 - zlib is found through pkg-config; finding `math.h` and `-lm` by bare names is tested too, but
@@ -261,6 +261,11 @@ in `integration_tests/tools/duckbind/`:
 - SDL3 itself, when pkg-config finds it.
 
 `examples/sdl3_demo.sh` builds and runs an SDL3 program (`--window` for a real window).
+
+`examples/sweep/` generates a package for each of 23 widely used libraries that pkg-config finds,
+and runs a smoke program against 10 of them. CI does not run it. Run it after changing how headers
+are read, lowered or emitted (`tu_reader`, `lower`, `emit`): real headers have shapes the fixture
+does not.
 
 libclang is a required build dependency, found next to the LLVM the build uses
 (`dependencies/Clang.cmake`).
