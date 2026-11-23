@@ -12,6 +12,7 @@
 #include <tester/tester.hpp>
 
 #include <algorithm>
+#include <format>
 #include <string>
 
 using namespace c_import;
@@ -25,6 +26,8 @@ namespace {
 	CTypeRef cU32() { return makeType(CScalar{ .kind = ScalarKind::UnsignedInt, .bits = 32 }); }
 
 	CTypeRef cF32() { return makeType(CScalar{ .kind = ScalarKind::Float, .bits = 32 }); }
+
+	CTypeRef cF64() { return makeType(CScalar{ .kind = ScalarKind::Float, .bits = 64 }); }
 
 	CTypeRef ptr(CTypeRef pointee) { return makeType(CPointer{ std::move(pointee) }); }
 
@@ -88,6 +91,7 @@ public:
 		TESTER_ADD_TEST(incompleteRecordIsOpaque);
 		TESTER_ADD_TEST(completeRecordBehindPointerKeepsLayout);
 		TESTER_ADD_TEST(blobWithFloatByValueIsSkipped);
+		TESTER_ADD_TEST(largerFloatBlobByValueIsSkippedOnAArch64);
 		TESTER_ADD_TEST(unlinkableFunctionsAreSkipped);
 		TESTER_ADD_TEST(recordNameClashingWithFunctionIsRenamed);
 		TESTER_ADD_TEST(filtersSelectDeclarations);
@@ -260,6 +264,27 @@ private:
 			isSkipped(module, "take"), "a small blob with a float member is not passed by value"
 		);
 		assertTrue(named(module.fundecls, "take_ptr") != nullptr, "a pointer to it is fine");
+	}
+
+	void largerFloatBlobByValueIsSkippedOnAArch64() {
+		CModel model;
+		auto   u   = record("U", { field("a", cF64(), 0, 8), field("b", cF64(), 0, 8) }, 24, 8);
+		u.is_union = true;
+		model.records.push_back(u);
+		model.functions.push_back(
+			function("take", makeType(CVoid{}), { { .name = "u", .type = rec(0) } })
+		);
+		model.target_triple = "x86_64-pc-linux-gnu";
+		assertTrue(
+			!isSkipped(lower(model, {}), "take"), "on x86-64 a 24-byte record goes in memory"
+		);
+		for (const auto* triple: { "aarch64-unknown-linux-gnu", "arm64-apple-macosx" }) {
+			model.target_triple = triple;
+			assertTrue(
+				isSkipped(lower(model, {}), "take"),
+				std::format("on {} up to 32 bytes of floats go in registers", triple)
+			);
+		}
 	}
 
 	void unlinkableFunctionsAreSkipped() {

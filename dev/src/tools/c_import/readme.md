@@ -20,7 +20,8 @@ The tool brings a C library into Duckling as a package that other projects depen
 package holds no paths from the machine it was made on:
 
 - The recipe (`duckbind.yaml`) holds header names, pkg-config package names and paths relative
-  to the package.
+  to the package. An absolute path outside the package is kept as given, so it only works where
+  that path exists.
 - The manifest names the libraries (`metadata.external-libs`) without locating them. duck finds
   their files when the package is built, on the machine that builds it.
 - The verification program, whose sizes are specific to the target, is not part of the package.
@@ -89,7 +90,7 @@ Lists are comma-separated. Write a value that starts with `-` after `=` (`--libr
 - `--include` and `--exclude` are name globs. Without `--include`, every declaration of the
   requested headers is translated.
 - Paths given to `new` are relative to the current directory; the recipe stores them relative to
-  the package.
+  the package, except absolute paths outside it.
 - Unless `--no-verify` is given, the package is checked after it is written. A throwaway program
   depending on it is built and run with `duck` (from `PATH`, or `--duck`). It compares `size_of`/`alignment_of` of every class with what
   clang reported, so a layout mistake fails generation instead of corrupting memory at run time.
@@ -169,8 +170,8 @@ through generated functions:
   bitfields.
 
 A blob is classified as integers when it is passed by value. That matches C unless the record is
-16 bytes or smaller and holds a floating-point member, so functions taking or returning such a
-record by value are skipped.
+16 bytes or smaller (32 on AArch64) and holds a floating-point member, so functions taking or
+returning such a record by value are skipped.
 
 ### Macros
 
@@ -248,7 +249,8 @@ models:
 
 `lower` and `emit` never touch clang, so `tests/c_import_lower_test.cpp` tests them on hand-built
 models, and `tests/c_import_package_test.cpp` tests the recipe, library resolution and manifest
-edits. Everything that depends on the machine (libclang, system headers and libraries) is tested
+edits. `tests/c_import_commands_test.cpp` runs `new`, `regen`, `check` and `bindings` on the
+fixture header below, with a script standing in for `duck`. Packages consumed by duck are tested
 in `integration_tests/tools/duckbind/`:
 
 - the bindings generated from `sdl_like.h` (with `sdl_like.c`, next to the tests), a fixture

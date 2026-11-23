@@ -22,3 +22,4 @@ target_link_libraries(duckbind CImport Clah Base Init)
 
 duck_add_test(tools c_import_lower tests/c_import_lower_test.cpp USES CImport)
 duck_add_test(tools c_import_package tests/c_import_package_test.cpp USES CImport)
+duck_add_test(tools c_import_commands tests/c_import_commands_test.cpp USES CImport OSUtils)

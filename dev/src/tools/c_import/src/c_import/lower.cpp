@@ -9,6 +9,7 @@
 #include "identifiers.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <charconv>
 #include <cmath>
 #include <expected>
@@ -28,6 +29,10 @@ namespace c_import {
 		};
 
 		using TextOrReason = std::expected<std::string, std::string>;
+
+		bool isAArch64(std::string_view triple) {
+			return triple.starts_with("aarch64") || triple.starts_with("arm64");
+		}
 
 		constexpr std::string_view BITFIELD_ISSUE = "#3647";
 		constexpr std::string_view VARIADIC_ISSUE = "#3271";
@@ -392,7 +397,7 @@ namespace c_import {
 				return std::unexpected("unknown scalar");
 			}
 
-			std::expected<std::string, std::string> scalarText(CScalar scalar) const {
+			[[nodiscard]] std::expected<std::string, std::string> scalarText(CScalar scalar) const {
 				return scalarText(scalar, model.char_is_signed);
 			}
 
@@ -523,8 +528,10 @@ namespace c_import {
 					if (!text) return text;
 					// A blob is only its storage, so it is classified as integers: that matches the C
 					// record when it is passed in memory anyway, or holds no floating-point member.
-					const auto& record = model.records[ref->index];
-					if (containsBlob(type) && record.size <= 16 && containsFloat(type))
+					// AArch64 passes up to four floating-point members (32 bytes) in registers.
+					const auto& record  = model.records[ref->index];
+					const auto  in_regs = isAArch64(model.target_triple) ? 32U : 16U;
+					if (containsBlob(type) && record.size <= in_regs && containsFloat(type))
 						return std::unexpected(std::format(
 							"passes `{}` by value, whose ABI class a layout blob cannot reproduce "
 							"({})",

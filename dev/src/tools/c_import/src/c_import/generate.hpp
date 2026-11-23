@@ -49,7 +49,8 @@ namespace c_import {
 
 	/**
 	 * @brief `triple` without its vendor (`x86_64-pc-linux-gnu` and `x86_64-linux-gnu` both become
-	 * `x86_64-unknown-linux-gnu`), which does not change the ABI. Apple's is kept.
+	 * `x86_64-unknown-linux-gnu`) and OS version (`arm64-apple-macosx16.0.0` becomes
+	 * `arm64-apple-macosx`), which do not change the ABI. Apple's vendor is kept.
 	 */
 	std::string abiTriple(std::string_view triple);
 

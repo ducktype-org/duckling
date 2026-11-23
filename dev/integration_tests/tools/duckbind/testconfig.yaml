@@ -142,7 +142,8 @@ Tests:
       keeps-manifest-edits:
         before-cmd: >-
           @{generate} --no-verify
-          && sed -i 's/^metadata:$/# my comment\nmetadata:\n  description: my bindings/' sl/quackconfig.yaml
+          && awk '/^metadata:$/ { print "# my comment"; print; print "  description: my bindings"; next } 1'
+          sl/quackconfig.yaml > manifest && mv manifest sl/quackconfig.yaml
         test-cmd: >-
           duckbind regen sl --no-verify
           && grep -qx '# my comment' sl/quackconfig.yaml

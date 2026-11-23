@@ -8,6 +8,7 @@
 
 #include "emit.hpp"
 
+#include <cctype>
 #include <format>
 #include <ranges>
 #include <vector>
@@ -20,6 +21,11 @@ namespace c_import {
 			parts.emplace_back(part.begin(), part.end());
 		if (parts.size() == 3 && parts[1] != "apple") parts.insert(parts.begin() + 1, "unknown");
 		if (parts.size() == 4 && parts[1] != "apple") parts[1] = "unknown";
+		if (parts.size() >= 3)
+			while (!parts[2].empty()
+			       && (std::isdigit(static_cast<unsigned char>(parts[2].back())) != 0
+			           || parts[2].back() == '.'))
+				parts[2].remove_suffix(1);
 		std::string result;
 		for (auto part: parts) result += std::format("{}{}", result.empty() ? "" : "-", part);
 		return result;

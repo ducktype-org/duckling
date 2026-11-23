@@ -47,7 +47,8 @@ namespace c_import {
 
 	/**
 	 * @brief Rewrites the paths given on the command line, relative to `cwd`, as paths relative to
-	 * the package's `root`. Header names that are not files (`SDL3/SDL.h`) and `-l` flags are kept.
+	 * the package's `root`. Header names that are not files (`SDL3/SDL.h`), `-l` flags and absolute
+	 * paths outside `root` are kept.
 	 */
 	void relativize(
 		Recipe& recipe, const std::filesystem::path& cwd, const std::filesystem::path& root

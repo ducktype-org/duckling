@@ -98,15 +98,30 @@ private:
 		TempDir     dir;
 		const auto& cwd = dir.path();
 		assertTrue(writeFile(cwd / "vendor" / "foo.h", "").has_value(), "header written");
+		const auto outside = (cwd / "sdk" / "zlib.h").string();
+		const auto inside  = (cwd / "pkg" / "include" / "bar.h").string();
+		assertTrue(writeFile(outside, "").has_value(), "outside header written");
+		assertTrue(writeFile(inside, "").has_value(), "inside header written");
 		Recipe recipe;
-		recipe.headers   = { "vendor/foo.h", "zlib.h" };
-		recipe.cflags    = { "-Ivendor", "-DFOO" };
-		recipe.libraries = { "-Lbuild", "-lfoo", "build/libbar.a" };
+		recipe.headers   = { "vendor/foo.h", "zlib.h", outside, inside };
+		recipe.cflags    = { "-Ivendor", "-DFOO", "-I/opt/include", "-I" + (cwd / "pkg").string() };
+		recipe.libraries = { "-Lbuild",
+			                 "-lfoo",
+			                 "build/libbar.a",
+			                 "-L/usr/lib",
+			                 "-L" + (cwd / "pkg" / "libs").string() };
 		relativize(recipe, cwd, cwd / "pkg");
-		assertTrue(recipe.headers == Strings{ "../vendor/foo.h", "zlib.h" }, "headers");
-		assertTrue(recipe.cflags == Strings{ "-I../vendor", "-DFOO" }, "cflags");
 		assertTrue(
-			recipe.libraries == Strings{ "-L../build", "-lfoo", "../build/libbar.a" }, "libraries"
+			recipe.headers == Strings{ "../vendor/foo.h", "zlib.h", outside, "include/bar.h" },
+			"headers: absolute ones outside the package are kept"
+		);
+		assertTrue(
+			recipe.cflags == Strings{ "-I../vendor", "-DFOO", "-I/opt/include", "-I." }, "cflags"
+		);
+		assertTrue(
+			recipe.libraries
+				== Strings{ "-L../build", "-lfoo", "../build/libbar.a", "-L/usr/lib", "-Llibs" },
+			"libraries"
 		);
 	}
 
@@ -231,7 +246,12 @@ private:
 			std::string{ "x86_64-unknown-linux-musl" }, abiTriple("x86_64-alpine-linux-musl"), "musl"
 		);
 		assertEqual(
-			std::string{ "arm64-apple-macosx15.0.0" }, abiTriple("arm64-apple-macosx15.0.0"), "apple"
+			std::string{ "arm64-apple-macosx" }, abiTriple("arm64-apple-macosx16.0.0"), "apple"
+		);
+		assertEqual(
+			std::string{ "x86_64-unknown-linux-gnux32" },
+			abiTriple("x86_64-pc-linux-gnux32"),
+			"the environment keeps its digits"
 		);
 	}
 };

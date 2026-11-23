@@ -23,6 +23,17 @@ namespace c_import {
 			  "# Edit it and run `duckbind regen` to update them. Paths are relative to this "
 			  "file.\n";
 
+		/// `path`, relative to `cwd`, made relative to `root`; an absolute path outside it is kept.
+		std::string packagePath(
+			const std::string&           path,
+			const std::filesystem::path& cwd,
+			const std::filesystem::path& root
+		) {
+			auto       relative = relativePath(cwd / path, root);
+			const bool outside  = relative == ".." || relative.starts_with("../");
+			return outside && std::filesystem::path{ path }.is_absolute() ? path : relative;
+		}
+
 		/// The recipe's keys, in the order they are written.
 		std::array<std::pair<std::string_view, std::vector<std::string> Recipe::*>, 6> keys() {
 			return { {
@@ -81,14 +92,14 @@ namespace c_import {
 		std::error_code ec;
 		for (auto& header: recipe.headers)
 			if (std::filesystem::is_regular_file(cwd / header, ec))
-				header = relativePath(cwd / header, root);
+				header = packagePath(header, cwd, root);
 		for (auto& flag: recipe.cflags)
-			if (flag.starts_with("-I")) flag = "-I" + relativePath(cwd / flag.substr(2), root);
+			if (flag.starts_with("-I")) flag = "-I" + packagePath(flag.substr(2), cwd, root);
 		for (auto& library: recipe.libraries)
 			if (library.starts_with("-L"))
-				library = "-L" + relativePath(cwd / library.substr(2), root);
+				library = "-L" + packagePath(library.substr(2), cwd, root);
 			else if (!library.starts_with('-'))
-				library = relativePath(cwd / library, root);
+				library = packagePath(library, cwd, root);
 	}
 
 	std::string relativePath(const std::filesystem::path& path, const std::filesystem::path& base) {
