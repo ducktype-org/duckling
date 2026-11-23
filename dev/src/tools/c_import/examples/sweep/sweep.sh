@@ -28,11 +28,17 @@ while IFS='|' read -r name pkg headers includes; do
 	name="$(trim "$name")"
 	case "$name" in ''|'#'*) continue ;; esac
 	[ "$ONLY" = "  " ] || [[ "$ONLY" == *" $name "* ]] || continue
-	pkg="$(trim "$pkg")"; headers="$(trim "$headers")"; includes="$(trim "$includes")"
-	if ! pkg-config --exists "$pkg"; then
+	headers="$(trim "$headers")"; includes="$(trim "$includes")"
+	# Distributions name some packages differently; the first one found is used.
+	found=""
+	for candidate in $pkg; do
+		if pkg-config --exists "$candidate"; then found="$candidate"; break; fi
+	done
+	if [ -z "$found" ]; then
 		printf '%-9s %-12s %-10s\n' "$name" - missing
 		continue
 	fi
+	pkg="$found"
 	version="$(pkg-config --modversion "$pkg")"
 	dir="$WORK/$name"
 	rm -rf "$dir" "$WORK/$name-app"

@@ -1,4 +1,4 @@
-# name | pkg-config | headers | include globs (space-separated; `-` for none)
+# name | pkg-config names (first found used) | headers | include globs (space-separated; `-`: none)
 zlib     | zlib        | zlib.h                               | -
 curl     | libcurl     | curl/curl.h                          | curl_* CURL*
 sqlite3  | sqlite3     | sqlite3.h                            | sqlite3* SQLITE_*
@@ -10,7 +10,7 @@ glfw     | glfw3       | GLFW/glfw3.h                         | glfw* GLFW_*
 uv       | libuv       | uv.h                                 | uv_* UV_*
 jansson  | jansson     | jansson.h                            | json_* JSON_* jansson_*
 xml2     | libxml-2.0  | libxml/parser.h                      | xml* XML_*
-lua      | lua         | lua.h lauxlib.h lualib.h             | lua* LUA*
+lua      | lua lua5.4  | lua.h lauxlib.h lualib.h             | lua* LUA*
 ncurses  | ncursesw    | curses.h                             | -
 zstd     | libzstd     | zstd.h                               | ZSTD_*
 lz4      | liblz4      | lz4.h                                | LZ4_*
