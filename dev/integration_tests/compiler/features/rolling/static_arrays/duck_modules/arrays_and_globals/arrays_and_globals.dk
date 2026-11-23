@@ -5,15 +5,15 @@ const MY_TYPE = i32[2];
 var GLOBAL_STRUCT_ARR: MY_TYPE;
 
 fun main() -> i64 = {
-    GLOBAL_ARR[0] = 100i64;
-    GLOBAL_ARR[4] = 500i64;
-    builtin_output_i64(GLOBAL_ARR[0]); # 100
-    builtin_output_i64(GLOBAL_ARR[4]); # 500
+	GLOBAL_ARR[0] = 100i64;
+	GLOBAL_ARR[4] = 500i64;
+	builtin_output_i64(GLOBAL_ARR[0]); # 100
+	builtin_output_i64(GLOBAL_ARR[4]); # 500
 
-    GLOBAL_STRUCT_ARR[0] = 10;
-    GLOBAL_STRUCT_ARR[1] = 20;
-    builtin_output_i64(GLOBAL_STRUCT_ARR[0]); # 10
-    builtin_output_i64(GLOBAL_STRUCT_ARR[1]); # 20
+	GLOBAL_STRUCT_ARR[0] = 10;
+	GLOBAL_STRUCT_ARR[1] = 20;
+	builtin_output_i64(GLOBAL_STRUCT_ARR[0]); # 10
+	builtin_output_i64(GLOBAL_STRUCT_ARR[1]); # 20
 
-    return 0;
+	return 0;
 }

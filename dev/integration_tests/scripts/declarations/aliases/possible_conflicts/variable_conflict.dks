@@ -1,4 +1,6 @@
-class Test {test: i64 = 21;}
+class Test {
+	test: i64 = 21;
+}
 var t = Test();
 using t.test as x;
 x = 42;
