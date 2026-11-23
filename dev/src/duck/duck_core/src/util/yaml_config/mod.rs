@@ -12,31 +12,29 @@ use serde::Deserialize;
 use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 use tracing::{debug, trace};
 
-use super::DescriptionWithAnArticle;
 use crate::util::filesystem::read_from_path_to_string;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
 
-impl DescriptionWithAnArticle<YamlConfig> for Value {
-    fn desc_with_article(&self) -> &'static str {
-        match self {
-            Self::Null => "a null",
-            Self::Bool(..) => "a boolean",
-            Self::Number(n) => {
-                if n.is_f64() {
-                    "a float"
-                } else if n.is_u64() {
-                    "a positive integer"
-                } else {
-                    "an integer"
-                }
+/// Describe [`Value`] with a correct article.
+fn desc_with_article(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "a null",
+        Value::Bool(..) => "a boolean",
+        Value::Number(n) => {
+            if n.is_f64() {
+                "a float"
+            } else if n.is_u64() {
+                "a positive integer"
+            } else {
+                "an integer"
             }
-            Self::String(..) => "a string",
-            Self::Sequence(..) => "an array",
-            Self::Mapping(..) => "a table",
-            Self::Tagged(..) => "a tagged value",
         }
+        Value::String(..) => "a string",
+        Value::Sequence(..) => "an array",
+        Value::Mapping(..) => "a table",
+        Value::Tagged(..) => "a tagged value",
     }
 }
 
@@ -59,7 +57,7 @@ macro_rules! delegate_getter {
                 None => Err(qp_err!("{}", self.make_location_error())).context(format!(
                     "the key `{key}` expects {}, not {}",
                     $human_type,
-                    value.desc_with_article()
+                    desc_with_article(value)
                 )),
             }
         }
@@ -180,7 +178,7 @@ impl YamlConfig {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",
                     parts[0..=i].join("."),
-                    next.desc_with_article(),
+                    desc_with_article(next),
                 )
             };
             current = next;
@@ -216,7 +214,7 @@ impl YamlConfig {
                 .entry(part.into())
                 .or_insert_with(|| Value::Mapping(Default::default()));
 
-            let next_type = next.desc_with_article();
+            let next_type = desc_with_article(next);
             let Some(next) = next.as_mapping_mut() else {
                 qp_bail!(
                     "in the chain `{}` expected a table, not {}",

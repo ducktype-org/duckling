@@ -140,20 +140,3 @@ impl DuckCfg {
         DEFAULT_NUMBER_OF_OPEN_CONNECTIONS
     }
 }
-
-mod test_utils {
-    use std::collections::HashMap;
-
-    use super::DuckCfg;
-
-    impl DuckCfg {
-        /// Note: should only be used inside tests.
-        pub fn set_aliases(&mut self, new_val: HashMap<String, String>) {
-            let val: serde_yaml_ng::Mapping = new_val
-                .into_iter()
-                .map(|(k, v)| (k.into(), v.into()))
-                .collect();
-            self.inner.set_table("aliases", val).expect("test");
-        }
-    }
-}

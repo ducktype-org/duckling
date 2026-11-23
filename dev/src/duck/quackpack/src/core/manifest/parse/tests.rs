@@ -8,9 +8,11 @@ use std::collections::HashMap;
 use std::env::home_dir;
 use std::path::PathBuf;
 
+use duck_core::util::test_utils::duck_context_for_tests;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
+use crate::StrId;
 use crate::core::lints::{Lint, LintLevel};
 use crate::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::core::script::Script;
@@ -18,7 +20,6 @@ use crate::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter}
 use crate::util::filesystem::{normalize, touch, try_fsync_dir, write_file};
 use crate::util::to_path_buf::ToPathBuf;
 use crate::util::to_url::ToUrl;
-use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
@@ -71,7 +72,7 @@ metadata:
   version: '0.1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.name(), "xd");
@@ -99,7 +100,7 @@ dependencies:
     version: '0.1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -125,7 +126,7 @@ dependencies:
     version: '0.1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
@@ -151,7 +152,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
@@ -177,7 +178,7 @@ dependencies:
     version: '-1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -201,7 +202,7 @@ dependencies:
     version: 0.1 or 2 # Here it's not needed, because `or` makes it implicitly a string...
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
 
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
@@ -230,7 +231,7 @@ dependencies:
       git-url: https://google.com
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
@@ -258,7 +259,7 @@ dependencies:
       tag: xd
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -288,7 +289,7 @@ dependencies:
       registry-url: https://google.com
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -319,7 +320,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -345,7 +346,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -368,7 +369,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -391,7 +392,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -453,7 +454,7 @@ dependencies:
       git-url: https://google.com
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 11);
@@ -584,7 +585,7 @@ dependencies:
       branch: branch
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -612,7 +613,7 @@ features:
   a: []
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 1);
@@ -640,7 +641,7 @@ features:
   d: []
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 4);
@@ -705,7 +706,7 @@ dependencies:
     features: [a, b]
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     let dep = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
@@ -744,7 +745,7 @@ dependencies:
       - c
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     let dep = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
@@ -784,7 +785,7 @@ dependencies:
         c:
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -809,7 +810,7 @@ dependencies:
       - {}
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -838,7 +839,7 @@ dependencies:
 "#,
         root_dir.path().display()
     ));
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
 
     // Unfortunately, `C:\xd` is a valid URL, so on Windows `parse_manifest returns `Ok`.
     if cfg!(windows) {
@@ -880,7 +881,7 @@ dependencies:
 "#,
         root_dir.path().display()
     ));
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
 
     assert!(parse_manifest(&manifest_path, &ctx).is_ok());
 }
@@ -901,7 +902,7 @@ dependencies:
     version: ['0.10', 0.10]
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -928,7 +929,7 @@ dependencies:
     version: 0.10
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -950,7 +951,7 @@ metadata:
   version: '0.10'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert_eq!(summary.version(), Version::new(0, 10, 0));
@@ -972,7 +973,7 @@ profiles:
     inherits: prof1
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     let profiles = summary.profiles();
@@ -1016,7 +1017,7 @@ profiles:
     opt-level: x
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1047,7 +1048,7 @@ dev-dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1076,7 +1077,7 @@ dev-dependencies:
       name: a
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1103,7 +1104,7 @@ dependencies:
       tag: tag
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1132,7 +1133,7 @@ dependencies:
       commit: commit
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1161,7 +1162,7 @@ dependencies:
       commit: commit
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1191,7 +1192,7 @@ dependencies:
       commit: commit
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1213,7 +1214,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let frontmatter = parse_frontmatter(&frontmatter_path, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
@@ -1230,7 +1231,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1273,7 +1274,7 @@ dependencies:
         "#,
     )
     .unwrap();
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let frontmatter = parse_frontmatter(&importing, &ctx).unwrap().0;
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
@@ -1287,7 +1288,7 @@ fn fails_frontmatter_import_not_existing() {
 import: y
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     let no_file_err = std::io::Error::from_raw_os_error(libc::ENOENT);
     assert_eq!(
@@ -1319,7 +1320,7 @@ import: y
 </frontmatter>
         "#;
     write_file(&script, contents).unwrap();
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     // Check that we don't find a frontmatter...
     assert!(!Script::has_frontmatter(&script).unwrap());
     assert!(capture_frontmatter(contents).unwrap().is_none());
@@ -1342,7 +1343,7 @@ import: y
         "#,
     )
     .unwrap();
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_frontmatter(&script, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1362,7 +1363,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1393,7 +1394,7 @@ venv:
   ephemeral: true
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     assert!(summary.venv().ephemeral());
@@ -1416,7 +1417,7 @@ venv:
   storage-path: /storage
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
     #[cfg(windows)]
@@ -1438,7 +1439,7 @@ venv:
   storage-path: ~/storage
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let summary = manifest.manifest();
 
@@ -1449,7 +1450,7 @@ venv:
 #[test]
 fn empty_frontmatter_works() {
     let (_dir, frontmatter_path) = prepare_frontmatter("");
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let _ = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
 }
 
@@ -1462,7 +1463,7 @@ metadata:
   version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1486,7 +1487,7 @@ metadata:
   version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1510,7 +1511,7 @@ metadata:
   version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1534,7 +1535,7 @@ metadata:
   version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1562,7 +1563,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1590,7 +1591,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1618,7 +1619,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1646,7 +1647,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1676,7 +1677,7 @@ dependencies:
       name: '!foo'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1706,7 +1707,7 @@ dependencies:
       name: '!foo'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1736,7 +1737,7 @@ dependencies:
       name: foo
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1767,7 +1768,7 @@ dependencies:
       path: ../a
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let package = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let deps = package.manifest().dependencies();
     assert_eq!(deps.all_dependencies().len(), 2);
@@ -1791,7 +1792,7 @@ lints:
     c: allow
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let a_lint = Lint {
         name: "a",
         description: "",
@@ -1849,7 +1850,7 @@ lints:
     a: invalid
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
 
     assert_eq!(
@@ -1875,7 +1876,7 @@ metadata:
   external-lib-paths: [libs, /opt/foo/lib]
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let build_options = manifest.manifest().build_options();
     assert_eq!(
@@ -1901,7 +1902,7 @@ metadata:
   version: '1'
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
     let build_options = manifest.manifest().build_options();
     assert!(build_options.external_libs.is_empty());
@@ -1918,7 +1919,7 @@ metadata:
   links: sqlite3
 "#,
     );
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1944,7 +1945,7 @@ metadata:
   external-libs: ['{name}']
 "#
     ));
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -2021,7 +2022,7 @@ dependencies:
 "#,
     );
 
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
 
     assert_eq!(
@@ -2051,7 +2052,7 @@ dependencies:
 "#,
     );
 
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
 
     assert_eq!(

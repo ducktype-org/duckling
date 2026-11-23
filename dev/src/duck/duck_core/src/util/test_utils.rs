@@ -6,6 +6,9 @@
 
 use std::sync::{LazyLock, Mutex};
 
+use crate::DuckContext;
+use crate::duck_context::Verbosity;
+
 static TESTS_SETUP_LOCK: LazyLock<Mutex<()>> = LazyLock::new(Mutex::default);
 
 /// A wrapper for setting up tests which modify shared resources (e.g. environmental variables).
@@ -17,4 +20,12 @@ where
     // we should not care about mutex poisoning.
     let _guard = TESTS_SETUP_LOCK.lock();
     setup()
+}
+
+/// Creates [`DuckContext`] to be used for tests.
+/// Panics when [`DuckContext::new`] returns an error.
+pub fn duck_context_for_tests() -> DuckContext {
+    let mut ctx = DuckContext::new().unwrap();
+    ctx.term_mut().set_verbosity(Verbosity::Quiet);
+    ctx
 }

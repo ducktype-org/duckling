@@ -27,13 +27,6 @@ pub mod yaml_config;
 
 pub mod test_utils;
 
-/// English localization helper trait for describing elements of config files.
-/// `T` is added so that this trait can be implemented outside of `duck_core` for foreign types.
-pub trait DescriptionWithAnArticle<T> {
-    /// Return a valid description with an appropriate article.
-    fn desc_with_article(&self) -> &'static str;
-}
-
 /// English pluralization helper trait.
 pub trait Pluralize {
     /// Determine whether `self` is plural or singular.

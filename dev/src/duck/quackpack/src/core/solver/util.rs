@@ -158,14 +158,15 @@ mod test {
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
 
+    use duck_core::util::test_utils::duck_context_for_tests;
     use tempfile::{TempDir, tempdir};
 
+    use crate::StrId;
     use crate::core::full_identity::{FullIdentity, FullOrigin};
     use crate::core::solver::util::get_possible_realizations;
     use crate::core::{PackageId, Source, Version, parse_manifest};
     use crate::util::filesystem::{touch, try_fsync_dir, write_file};
     use crate::util::to_url::ToUrl;
-    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
@@ -190,7 +191,7 @@ dependencies:
     pinned: true
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest
@@ -234,7 +235,7 @@ dependencies:
     version: 1.0.3
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let pkg = parse_manifest(&manifest_path, &ctx).unwrap().0;
         let manifest = pkg.manifest();
         let dependency = manifest

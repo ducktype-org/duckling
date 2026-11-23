@@ -335,16 +335,17 @@ mod test {
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
 
+    use duck_core::util::test_utils::duck_context_for_tests;
     use futures::executor::block_on;
     use tempfile::{TempDir, tempdir};
 
+    use crate::StrId;
     use crate::core::fetcher::Fetcher;
     use crate::core::full_identity::{FullIdentity, FullOrigin};
     use crate::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::util::filesystem::{touch, try_fsync_dir, write_file};
     use crate::util::to_url::ToUrl;
-    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
@@ -385,7 +386,7 @@ features:
   xd: []
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
@@ -445,7 +446,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
@@ -513,7 +514,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
@@ -598,7 +599,7 @@ metadata:
   version: '4'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
@@ -670,7 +671,7 @@ features:
   expanded: []
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;
@@ -746,7 +747,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let fetcher = Fetcher::new(&ctx);
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0;
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0;

@@ -22,8 +22,7 @@ use crate::{DuckContext, QuackError, QuackResult};
 ///
 /// An error, from the context creation or from `run`, is printed and the process exits with
 /// [`QuackError::exit_code`]. Returns normally only when `run` succeeds.
-pub fn main(pre: impl FnOnce(), run: impl FnOnce(&mut DuckContext) -> QuackResult<()>) {
-    pre();
+pub fn main(run: impl FnOnce(&mut DuckContext) -> QuackResult<()>) {
     setup_logger();
     let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,

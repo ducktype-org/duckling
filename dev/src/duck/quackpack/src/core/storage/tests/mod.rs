@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use chrono::Utc;
+use duck_core::util::test_utils::duck_context_for_tests;
 use tempfile::TempDir;
 
 use crate::DuckContext;
@@ -49,7 +50,7 @@ fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
         unsafe {
             std::env::set_var("DUCK_HOME", duck_home.path());
         }
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_HOME");

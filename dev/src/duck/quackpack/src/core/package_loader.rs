@@ -226,9 +226,9 @@ impl Display for PackageNotFound {
 
 #[cfg(test)]
 mod tests {
+    use duck_core::util::test_utils::duck_context_for_tests;
     use tempfile::tempdir;
 
-    use crate::DuckContext;
     use crate::core::PackageLoader;
     use crate::util::filesystem::{MkdirOptions, mkdir, normalize, touch, write_file};
 
@@ -245,7 +245,7 @@ metadata:
         #[cfg(not(windows))]
         let root = "/";
         let tmp_file = tempdir().unwrap();
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let err =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap_err();
         assert_eq!(
@@ -262,7 +262,7 @@ metadata:
     fn not_a_dir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("x");
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let err = PackageLoader::find_from_directory(&file, &ctx, false.into()).unwrap_err();
         assert_eq!(
             format!("{err}"),
@@ -279,7 +279,7 @@ metadata:
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         touch(&file).unwrap();
         write_file(&file, BASIC_MANIFEST).unwrap();
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let package =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
         assert_eq!(
@@ -297,7 +297,7 @@ metadata:
         let child = tmp_file.path().join("foo");
         mkdir(&child, MkdirOptions::WithoutParents).unwrap();
         assert!(child.is_dir());
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let package = PackageLoader::find_from_directory(&child, &ctx, false.into()).unwrap();
         assert_eq!(
             normalize(package.into_package().unwrap_package().root_directory()),
@@ -311,7 +311,7 @@ metadata:
         let file = tmp_file.path().join(PackageLoader::MANIFEST_NAME);
         touch(&file).unwrap();
         write_file(&file, BASIC_MANIFEST).unwrap();
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &ctx).unwrap();
         assert_eq!(
             normalize(package.into_package().unwrap_package().root_directory()),
@@ -324,7 +324,7 @@ metadata:
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");
         assert!(!file.exists());
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let err = PackageLoader::find_at_exact_directory(&file, &ctx).unwrap_err();
         assert_eq!(
             format!("{err}"),

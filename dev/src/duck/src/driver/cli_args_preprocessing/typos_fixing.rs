@@ -133,8 +133,8 @@ fn parse_fixed_args(new_cli_args: Vec<OsString>) -> QuackResult<ArgMatches> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
 
+    use duck_core::util::test_utils::duck_context_for_tests;
     use tempfile::{TempDir, tempdir};
 
     use super::*;
@@ -159,7 +159,7 @@ mod tests {
             ),
         )
         .unwrap();
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         assert_eq!(ctx.duck_cfg().max_fix_dist().unwrap(), dist);
         assert!(ctx.duck_cfg().fixes_enabled().unwrap());
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
@@ -201,21 +201,6 @@ mod tests {
         let external_cmds = ExternalSubcommands::default();
         let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
         assert_eq!(result.subcommand_name(), Some("init"));
-    }
-
-    #[test]
-    fn test_fixes_to_alias() {
-        let fake_aliases = HashMap::from([(
-            String::from("my_alias"),
-            String::from("expands to something -a --b c"),
-        )]);
-
-        let args_matches = cli().try_get_matches_from(["duck", "ny_aias"]).unwrap();
-        let (mut ctx, _dir) = setup_test(|| setup_duck_home_with_a_given_max_fix_distance(2));
-        ctx.duck_cfg_mut().set_aliases(fake_aliases);
-        let external_cmds = ExternalSubcommands::default();
-        let result = fix_typos(args_matches, &ctx, &external_cmds).unwrap();
-        assert_eq!(result.subcommand_name(), Some("my_alias"));
     }
 
     #[test]

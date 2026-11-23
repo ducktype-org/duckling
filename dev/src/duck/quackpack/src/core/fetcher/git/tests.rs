@@ -4,12 +4,12 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+use duck_core::util::test_utils::duck_context_for_tests;
 use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
 use tempfile::{TempDir, tempdir};
 use url::Url;
 
 use super::GitClient;
-use crate::DuckContext;
 use crate::core::fetcher::git::git2::Git2Client;
 use crate::core::{GitReference, PackageLoader};
 use crate::util::filesystem::{read_from_path_to_string, write_file};
@@ -64,7 +64,7 @@ fn clone_local_repo() {
     let url = Url::from_directory_path(dir.path()).unwrap();
     let reference = GitReference::Default;
 
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let client = Git2Client::new(&ctx);
     let _repository = client.clone(&url, reference, &target).unwrap();
 
@@ -86,7 +86,7 @@ fn clone_local_repo_with_branch() {
     let url = Url::from_directory_path(dir.path()).unwrap();
     let reference = GitReference::Branch("test-branch".into());
 
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let client = Git2Client::new(&ctx);
     // git2 can clone a branch, no need to checkout.
     let _repository = client.clone(&url, reference, &target).unwrap();
@@ -103,7 +103,7 @@ fn clone_local_repo_with_tag() {
     let url = Url::from_directory_path(dir.path()).unwrap();
     let reference = GitReference::Tag("v1.0.0".into());
 
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let client = Git2Client::new(&ctx);
 
     // git2 can't clone a tag, we need to checkout.
@@ -131,7 +131,7 @@ fn clone_local_repo_with_rev() {
     let url = Url::from_directory_path(dir.path()).unwrap();
     let reference = GitReference::Rev(original_commit.id().to_string().into());
 
-    let ctx = DuckContext::default();
+    let ctx = duck_context_for_tests();
     let client = Git2Client::new(&ctx);
 
     // git2 can't clone a commit, we need to checkout.

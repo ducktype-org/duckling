@@ -24,15 +24,11 @@ use tracing::trace;
 
 /// The entry point of the duck binary: the common duck tool entry point, driving [`duck::run`].
 fn main() {
-    duck_core::pipeline::main(log_curl, run)
-}
-
-fn log_curl() {
     trace!("linked against `{:#?}`", curl::Version::get());
+    duck_core::pipeline::main(run)
 }
 
 /// Run `duck` with the given context: parse the command line and execute the subcommand.
 pub fn run(ctx: &mut DuckContext) -> QuackResult<()> {
-    tracing::trace!("linked against `{:#?}`", curl::Version::get());
     driver::run::run(ctx)
 }

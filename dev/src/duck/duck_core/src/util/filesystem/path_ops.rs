@@ -581,6 +581,7 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::util::test_utils::duck_context_for_tests;
 
     #[test]
     fn resolve_tests() {
@@ -640,7 +641,7 @@ mod tests {
 
     #[test]
     fn relative_tests() {
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
 
         let source = Path::new("foo/bar");
         let target = Path::new("x/y/z");

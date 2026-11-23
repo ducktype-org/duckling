@@ -150,14 +150,15 @@ mod test {
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
 
+    use duck_core::util::test_utils::duck_context_for_tests;
     use tempfile::{TempDir, tempdir};
 
+    use crate::StrId;
     use crate::core::full_identity::{FullIdentity, FullOrigin};
     use crate::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::util::filesystem::{touch, try_fsync_dir, write_file};
     use crate::util::to_url::ToUrl;
-    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
@@ -199,7 +200,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
@@ -285,7 +286,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
@@ -371,7 +372,7 @@ metadata:
   version: '3'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap().0.into_manifest();
@@ -451,7 +452,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap().0.into_manifest();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap().0.into_manifest();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());

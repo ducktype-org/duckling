@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use duck_core::util::test_utils::duck_context_for_tests;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::tempdir;
@@ -165,7 +166,7 @@ fn create_mock_server() -> (MockServer, DuckContext) {
         then.status(200).body("foo-1.2.3");
     });
 
-    (server, DuckContext::default())
+    (server, duck_context_for_tests())
 }
 
 #[test]

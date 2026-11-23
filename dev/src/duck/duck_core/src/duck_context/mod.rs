@@ -202,28 +202,6 @@ impl DuckContext {
     }
 }
 
-impl Default for DuckContext {
-    /// Note: should only be used inside tests.
-    fn default() -> Self {
-        use crate::duck_context::terminal::Verbosity;
-
-        let env = Default::default();
-        let user_home = home_dir().unwrap();
-        let duck_home = DuckHome::new(duck_home_path(&env, &user_home));
-        let mut term = Terminal::default();
-        term.set_verbosity(Verbosity::Quiet);
-        Self {
-            term,
-            duck_cfg: DuckCfg::new(&duck_home).unwrap(),
-            env,
-            cwd: current_dir().unwrap(),
-            duck_home,
-            user_home,
-            offline: false,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

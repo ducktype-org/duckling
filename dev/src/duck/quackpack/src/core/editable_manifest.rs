@@ -16,7 +16,6 @@ use crate::core::lints::errors::Errors;
 use crate::core::lints::warnings::Warnings;
 use crate::core::{DependencyKind, Package, PackageContext, ParseMode, manifest, parse_schema};
 use crate::schemas::manifest::Dependency;
-use crate::util::DescriptionWithAnArticle;
 use crate::util::filesystem::write_file;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
@@ -30,15 +29,14 @@ const TOPLEVEL_KEYS_ORDER: [&str; 6] = [
     "venv",
 ];
 
-impl<'a> DescriptionWithAnArticle<EditableManifest<'a>> for YamlNode {
-    fn desc_with_article(&self) -> &'static str {
-        match self {
-            Self::Scalar(..) => "a value",
-            Self::Sequence(..) => "an array",
-            Self::Mapping(..) => "a table",
-            Self::TaggedNode(..) => "a tagged value",
-            Self::Alias(..) => "an alias",
-        }
+/// Describe [`YamlNode`] with a correct article.
+fn desc_with_article(node: &YamlNode) -> &'static str {
+    match node {
+        YamlNode::Scalar(..) => "a value",
+        YamlNode::Sequence(..) => "an array",
+        YamlNode::Mapping(..) => "a table",
+        YamlNode::TaggedNode(..) => "a tagged value",
+        YamlNode::Alias(..) => "an alias",
     }
 }
 
@@ -239,7 +237,7 @@ impl<'duck> EditableManifest<'duck> {
                 "in the manifest at `{}`, `{}` should be a mapping, not {}",
                 self.manifest_path().display(),
                 kind.key_in_manifest(),
-                mapping.desc_with_article(),
+                desc_with_article(&mapping),
             )
         };
         Ok(mapping)

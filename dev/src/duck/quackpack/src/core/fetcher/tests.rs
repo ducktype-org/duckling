@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use duck_core::util::test_utils::duck_context_for_tests;
 use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
@@ -32,7 +33,7 @@ fn setup_duck_ctx() -> (DuckContext, TempDir) {
         unsafe {
             std::env::set_var("DUCK_HOME", dir.path());
         }
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_HOME");

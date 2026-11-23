@@ -413,10 +413,10 @@ mod test {
     use std::collections::HashSet;
     use std::path::PathBuf;
 
+    use duck_core::util::test_utils::duck_context_for_tests;
     use tempfile::{TempDir, tempdir};
 
     use super::*;
-    use crate::DuckContext;
     use crate::core::full_identity::{FullIdentity, FullOrigin};
     use crate::core::solver::solver_freeze::SolverPackageFreeze;
     use crate::core::solver::solving::input::{PackageData, PreexistenceData};
@@ -468,7 +468,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -550,7 +550,7 @@ dependencies:
     features: [xd]
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -624,7 +624,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -703,7 +703,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -799,7 +799,7 @@ features:
   xdd: []
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -902,7 +902,7 @@ features:
   g: []
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -996,7 +996,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
@@ -1065,7 +1065,7 @@ metadata:
   version: '2'
 "#,
         );
-        let ctx = DuckContext::default();
+        let ctx = duck_context_for_tests();
         let registry_url = "http://localhost:9001".to_url().unwrap();
         let registry_origin = FullOrigin::for_registry(registry_url.clone());
         let registry_source = Source::for_registry(registry_url);
