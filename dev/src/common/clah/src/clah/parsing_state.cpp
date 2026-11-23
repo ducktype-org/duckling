@@ -8,6 +8,8 @@
 
 #include "exceptions.hpp"
 
+#include <cctype>
+
 /**
  * Basic helper functions.
  */
