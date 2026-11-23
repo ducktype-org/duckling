@@ -243,6 +243,7 @@ namespace compiler::helios::code {
 		void visitBlockExpr(const BlockExpr& e) override {
 			handler(e);
 			walk(*e.block);
+			if_opt_some(e.tail, tail) { walk(*tail); }
 		}
 
 		void visitMoveExpr(const MoveExpr& e) override {

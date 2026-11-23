@@ -384,6 +384,67 @@ fun owningMatch() -> () = {
 	# Both moved-out payloads are still owned here, so leaving this function frees them.
 }
 
+# ===== Block case bodies =====
+#
+# A case can run a block, the trailing expression without a semicolon is its value. The locals of
+# the block die at its end, so the value is moved out of them when they own memory.
+
+fun blockValue(v: i32 | f32) -> i64 = {
+	return match (v) {
+		case x : i32 = {
+			var doubled: i64 = x as i64;
+			doubled = doubled * 2i64;
+			doubled + 1i64
+		};
+		case _ = {
+			var acc: i64 = 0i64;
+			var i: i64 = 0i64;
+			while (i < 4i64) {
+				acc = acc + i;
+				i = i + 1i64;
+			}
+			acc
+		};
+	};
+}
+
+fun blockStatement(v: i32 | f32, out: ref mut i64) -> () = {
+	match (v) {
+		case x : i32 = {
+			out = x as i64;
+		};
+		case _ = {};
+	};
+}
+
+fun blockOwning(v: String | i32) -> String = {
+	return match (move v) {
+		case s : String = {
+			var tmp: String = "unused".toString();
+			var result: String = move s;
+			result.append('!');
+			move result
+		};
+		case n : i32 = {
+			"none".toString()
+		};
+	};
+}
+
+fun blockCases() -> () = {
+	check(blockValue(5i32), 11i64, 150i64);
+	check(blockValue(1.5 as f32), 6i64, 151i64);
+
+	var out: i64 = 0i64;
+	blockStatement(7i32, &out);
+	check(out, 7i64, 152i64);
+	blockStatement(1.5 as f32, &out);
+	check(out, 7i64, 153i64);
+
+	check(blockOwning(makeStringVariant("ab")).length(), 3i64, 154i64);
+	check(blockOwning(4i32).length(), 4i64, 155i64);
+}
+
 fun main() -> i64 = {
 	matchPositions();
 	refAlternative();
@@ -393,6 +454,7 @@ fun main() -> i64 = {
 	owningReassignment();
 	owningCopy();
 	owningMatch();
+	blockCases();
 
 	return 0i64;
 }

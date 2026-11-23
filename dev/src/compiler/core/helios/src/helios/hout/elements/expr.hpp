@@ -26,6 +26,7 @@
 namespace compiler::helios::code {
 	class HoutExprVisitor;
 	struct Stmt;
+	struct BlockStmt;
 
 	/**
 	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
@@ -1065,13 +1066,20 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a block of statements that evaluates to a single value.
+	 *
+	 * Without a `tail` the block evaluates to a unit.
 	 */
 	struct BlockExpr final: public Expr {
-		// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
-		// expressions.
-		Box<Stmt> block;
+		Box<BlockStmt> block;
 
-		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
+		/**
+		 * @brief The trailing expression `{ ...; tail }` that gives the block its value. It is
+		 * evaluated in the scope of `block`.
+		 */
+		base::Optional<Box<Expr>> tail;
+
+		BlockExpr(ElementOrigin origin, Box<BlockStmt> block, base::Optional<Box<Expr>> tail = {});
+		~BlockExpr() override;
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -1081,7 +1089,12 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
+		BlockExpr(
+			tsh::ExpressionType<>     expression_type,
+			ElementOrigin             origin,
+			Box<BlockStmt>            block,
+			base::Optional<Box<Expr>> tail
+		);
 	};
 }
 

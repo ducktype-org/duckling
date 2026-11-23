@@ -38,7 +38,7 @@ namespace compiler::helios::code {
 			std::ostream& out, const ControlFlowTargetSelector& selector
 		) {
 			if (const auto* named = std::get_if<NamedTarget>(&selector))
-				out << " " << name(named->id).strView();
+				out << " " << named->name.strView();
 			else if (const auto* kind = std::get_if<KindTarget>(&selector)) {
 				auto keyword = std::string(base::enumToStr(kind->kind));
 				keyword.front()

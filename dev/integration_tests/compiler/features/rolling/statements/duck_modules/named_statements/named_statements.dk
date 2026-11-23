@@ -53,5 +53,17 @@ fun main() -> i64 = {
     }
     if (block_marker != 1) return 7;
 
+    var shadow_outer: i64 = 0;
+    var shadow_inner: i64 = 0;
+    while Shadowed (shadow_outer < 2) {
+        shadow_outer = shadow_outer + 1;
+        while Shadowed (true) {
+            shadow_inner = shadow_inner + 1;
+            break Shadowed;
+        }
+    }
+    if (shadow_outer != 2) return 8;
+    if (shadow_inner != 2) return 9;
+
     return 0;
 }

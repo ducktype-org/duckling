@@ -72,14 +72,22 @@ namespace pst {
 			}
 		};
 
-		template<>
-		struct StmtClassifiers<ExprStmt> {
+		/**
+		 * @brief Statements that end with an expression that may contain a block expression.
+		 */
+		template<class T>
+		concept ValueEndedStmt
+			= std::same_as<T, ExprStmt> || std::same_as<T, Action> || std::same_as<T, Variable>
+		   || std::same_as<T, Const> || std::same_as<T, Field>;
+
+		template<class T>
+		requires ValueEndedStmt<T> struct StmtClassifiers<T> {
 			/**
-			 * @brief Function that checks heuristically for a potential end of an expression
-			 * statement.
+			 * @brief Function that checks heuristically for a potential end of a statement ending
+			 * with an expression.
 			 *
-			 * The difference from the general function is that `{}` doesn't indicate the end of an
-			 * expression statement.
+			 * The difference from the general function is that `{}` doesn't indicate the end of the
+			 * statement, as it can be a block expression.
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				if (state[fwd].is(Token::Type::Sentinel)) return true;
