@@ -18,6 +18,7 @@
 
 #include <printer/stream_printer.hpp>
 
+#include <cctype>
 #include <iostream>
 #include <utility>
 
@@ -37,7 +38,7 @@ namespace {
 		// Check if all of the chars are digits and contain at most one dot.
 		bool has_dot = false;
 		for (usize i = 1; i < token.length(); ++i) {
-			if (!std::isdigit(token[i])) {
+			if (!std::isdigit(static_cast<unsigned char>(token[i]))) {
 				if (token[i] == '.' && !has_dot)
 					has_dot = true;
 				else
