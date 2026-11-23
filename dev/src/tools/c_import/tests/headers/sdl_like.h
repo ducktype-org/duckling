@@ -13,27 +13,42 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/** Initializes the video subsystem. */
 #define SL_INIT_VIDEO 0x00000020u
+/* Not a doc comment. */
 #define SL_WINDOW_RESIZABLE SL_UINT64_C(0x0000000000000020)
 #define SL_UINT64_C(c) c##ULL
-#define SL_SCALE 1.5
+#define SL_SCALE 1.5 /**< The display scale. */
+/// A negative value,
+/// over two lines.
 #define SL_NEGATIVE (-3)
 #define SL_EMPTY
 #define SL_STRING "not a number"
 
 typedef uint32_t SL_InitFlags;
 
+/** The types of events. */
 typedef enum SL_EventType {
-	SL_EVENT_FIRST = 0,
+	SL_EVENT_FIRST = 0, /**< Unused. */
+
+	/** User-requested quit. */
 	SL_EVENT_QUIT  = 0x100,
 	SL_EVENT_KEY_DOWN = 0x300,
 } SL_EventType;
 
+/** A window, only used through a pointer. */
 typedef struct SL_Window SL_Window;
 
+/**
+ * A rectangle, with the origin at the upper left.
+ *
+ *     indented example
+ *
+ * \since This struct is available since SL 1.0.
+ */
 typedef struct SL_Rect {
 	int x, y;
-	int w, h;
+	int w, h; /**< The size. */
 } SL_Rect;
 
 typedef struct SL_FRect {
@@ -43,8 +58,8 @@ typedef struct SL_FRect {
 typedef struct SL_KeyboardEvent {
 	uint32_t type;
 	uint64_t timestamp;
-	int32_t  key;
-	bool     down;
+	int32_t  key;  /**< The key code. */
+	bool     down; ///< Whether the key is pressed.
 } SL_KeyboardEvent;
 
 typedef struct SL_QuitEvent {
@@ -54,7 +69,7 @@ typedef struct SL_QuitEvent {
 
 typedef union SL_Event {
 	uint32_t         type;
-	SL_KeyboardEvent key;
+	SL_KeyboardEvent key;  /**< Keyboard event data. */
 	SL_QuitEvent     quit;
 	uint8_t          padding[64];
 } SL_Event;
@@ -99,8 +114,16 @@ struct SL_List {
 typedef void (*SL_LogFunction)(void* userdata, int priority, const char* message);
 
 bool       SL_Init(SL_InitFlags flags);
+/** Quits — always succeeds. */
 void       SL_Quit(void);
+/**
+ * Creates a window.
+ *
+ * \param title the title, in UTF-8.
+ * \returns the window, or NULL on failure.
+ */
 SL_Window* SL_CreateWindow(const char* title, int w, int h, uint64_t flags);
+/// Destroys a window.
 void       SL_DestroyWindow(SL_Window* window);
 bool       SL_GetWindowSize(SL_Window* window, int* w, int* h);
 bool       SL_PushEvent(SL_Event* event);

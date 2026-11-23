@@ -85,6 +85,8 @@ namespace c_import {
 		/// Size and alignment of the field's type, in bytes.
 		std::uint64_t size  = 0;
 		std::uint64_t align = 0;
+		/// The doc comment, as plain text; empty without one. The same for the types below.
+		std::string doc;
 	};
 
 	struct CRecord final {
@@ -96,6 +98,7 @@ namespace c_import {
 		std::uint64_t       align     = 0;
 		std::vector<CField> fields;
 		CLocation           location;
+		std::string         doc;
 	};
 
 	struct CParam final {
@@ -109,13 +112,15 @@ namespace c_import {
 		std::vector<CParam> params;
 		bool                variadic = false;
 		/// `static` or `static inline`: no symbol to link against.
-		bool      internal_linkage = false;
-		CLocation location;
+		bool        internal_linkage = false;
+		CLocation   location;
+		std::string doc;
 	};
 
 	struct CEnumerator final {
 		std::string                               name;
 		std::variant<std::int64_t, std::uint64_t> value;
+		std::string                               doc;
 	};
 
 	struct CEnum final {
@@ -124,6 +129,7 @@ namespace c_import {
 		CScalar                  underlying;
 		std::vector<CEnumerator> enumerators;
 		CLocation                location;
+		std::string              doc;
 	};
 
 	/// An object-like macro, or a `static const` of the requested headers, that evaluates to a
@@ -133,6 +139,7 @@ namespace c_import {
 		CScalar                                           type;
 		std::variant<std::int64_t, std::uint64_t, double> value;
 		CLocation                                         location;
+		std::string                                       doc;
 	};
 
 	/// A declaration that could not be read at all, kept so it is reported.

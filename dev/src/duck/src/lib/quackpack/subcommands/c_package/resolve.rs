@@ -174,8 +174,29 @@ fn add_platform_cflags(cflags: &mut Vec<String>) {
     }
 }
 
+/// Reads the headers for the target the system C compiler, which links Duckling programs, builds
+/// for: libclang's own default is a glibc target even on musl systems.
 #[cfg(not(target_os = "macos"))]
-fn add_platform_cflags(_cflags: &mut Vec<String>) {}
+fn add_platform_cflags(cflags: &mut Vec<String>) {
+    let has_target = cflags
+        .iter()
+        .any(|flag| flag == "-target" || flag.starts_with("--target="));
+    if has_target {
+        return;
+    }
+    let triple = ["gcc", "cc"].iter().find_map(|compiler| {
+        Command::new(compiler)
+            .arg("-dumpmachine")
+            .output()
+            .ok()
+            .filter(|output| output.status.success())
+            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
+            .filter(|triple| !triple.is_empty())
+    });
+    if let Some(triple) = triple {
+        cflags.push(format!("--target={triple}"));
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -184,7 +205,10 @@ mod tests {
     fn resolve_libraries(libraries: &[&str]) -> Resolved {
         let recipe = Recipe {
             headers: vec!["foo.h".into()],
-            libraries: libraries.iter().map(|&library| library.to_owned()).collect(),
+            libraries: libraries
+                .iter()
+                .map(|&library| library.to_owned())
+                .collect(),
             ..Default::default()
         };
         resolve(&recipe, Path::new("/work/pkg")).unwrap()
@@ -221,6 +245,22 @@ mod tests {
         assert_eq!(resolved.external_lib_paths, ["/opt/foo/lib"]);
         assert!(resolved.external_libs.is_empty());
         assert_eq!(resolved.warnings.len(), 3, "{:?}", resolved.warnings);
+    }
+
+    #[test]
+    fn an_explicit_target_is_kept() {
+        let recipe = Recipe {
+            headers: vec!["foo.h".into()],
+            cflags: vec!["--target=aarch64-linux-gnu".into()],
+            ..Default::default()
+        };
+        let resolved = resolve(&recipe, Path::new("/work/pkg")).unwrap();
+        let targets: Vec<_> = resolved
+            .cflags
+            .iter()
+            .filter(|flag| flag.starts_with("--target="))
+            .collect();
+        assert_eq!(targets, ["--target=aarch64-linux-gnu"]);
     }
 
     #[test]

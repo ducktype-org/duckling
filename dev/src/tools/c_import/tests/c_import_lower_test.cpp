@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <c_import/doc_comment.hpp>
 #include <c_import/emit.hpp>
 #include <c_import/identifiers.hpp>
 #include <c_import/lower.hpp>
@@ -35,7 +36,8 @@ namespace {
 			           .offset_bits = offset_bytes * 8,
 			           .bit_width   = std::nullopt,
 			           .size        = size,
-			           .align       = size };
+			           .align       = size,
+			           .doc         = {} };
 	}
 
 	CRecord record(
@@ -92,6 +94,9 @@ public:
 		TESTER_ADD_TEST(constantLiterals);
 		TESTER_ADD_TEST(emittedModuleShape);
 		TESTER_ADD_TEST(globs);
+		TESTER_ADD_TEST(docCommentsLoseTheirMarkers);
+		TESTER_ADD_TEST(macroDocCommentsAreFoundInTheSource);
+		TESTER_ADD_TEST(docCommentsAreEmittedAboveTheirItems);
 	}
 
 private:
@@ -116,7 +121,8 @@ private:
 			          .offset_bits = 0,
 			          .bit_width   = std::nullopt,
 			          .size        = 104,
-			          .align       = 8 };
+			          .align       = 8,
+			          .doc         = {} };
 		model.records.push_back(record("Locale", { field }, 104, 8));
 		auto module = lower(model, {});
 		assertEqual(
@@ -312,27 +318,33 @@ private:
 			{ .name     = "A",
 			  .type     = { .kind = ScalarKind::UnsignedInt, .bits = 32 },
 			  .value    = std::uint64_t{ 32 },
-			  .location = REQUESTED },
+			  .location = REQUESTED,
+			  .doc      = {} },
 			{ .name     = "B",
 			  .type     = { .kind = ScalarKind::SignedInt, .bits = 32 },
 			  .value    = std::int64_t{ -3 },
-			  .location = REQUESTED },
+			  .location = REQUESTED,
+			  .doc      = {} },
 			{ .name     = "C",
 			  .type     = { .kind = ScalarKind::SignedInt, .bits = 64 },
 			  .value    = std::numeric_limits<std::int64_t>::min(),
-			  .location = REQUESTED },
+			  .location = REQUESTED,
+			  .doc      = {} },
 			{ .name     = "D",
 			  .type     = { .kind = ScalarKind::Float, .bits = 64 },
 			  .value    = 1.5,
-			  .location = REQUESTED },
+			  .location = REQUESTED,
+			  .doc      = {} },
 			{ .name     = "E",
 			  .type     = { .kind = ScalarKind::Float, .bits = 32 },
 			  .value    = 2.0,
-			  .location = REQUESTED },
+			  .location = REQUESTED,
+			  .doc      = {} },
 			{ .name     = "F",
 			  .type     = { .kind = ScalarKind::Bool, .bits = 8 },
 			  .value    = std::uint64_t{ 1 },
-			  .location = REQUESTED },
+			  .location = REQUESTED,
+			  .doc      = {} },
 		};
 		auto module = lower(model, {});
 		assertEqual(std::string{ "32u32" }, named(module.constants, "A")->value, "unsigned");
@@ -385,6 +397,100 @@ private:
 		assertTrue(
 			isReservedName("match") && isReservedName("u8") && !isReservedName("SL_Init"),
 			"reserved names"
+		);
+	}
+
+	void docCommentsLoseTheirMarkers() {
+		assertEqual(
+			std::string{ "Creates a window.\n\n    indented\n\\param title the title." },
+			cleanDocComment("/**\n"
+		                    "   * Creates a window.\n"
+		                    "   *\n"
+		                    "   *     indented\n"
+		                    "   * \\param title the title.\n"
+		                    "   */"),
+			"block comment"
+		);
+		assertEqual(
+			std::string{ "One.\nTwo." }, cleanDocComment("/// One.\n/// Two."), "line comments"
+		);
+		assertEqual(std::string{ "The size." }, cleanDocComment("/**< The size. */"), "trailing");
+		assertEqual(
+			std::string{ "Text." }, cleanDocComment("/*********\n * Text.\n *******/"), "rules"
+		);
+		assertEqual(
+			std::string{ "a?b" },
+			cleanDocComment("/// a\xff"
+		                    "b"),
+			"invalid UTF-8"
+		);
+		assertEqual(std::string{ "\u2014" }, cleanDocComment("/// \u2014"), "valid UTF-8");
+	}
+
+	void macroDocCommentsAreFoundInTheSource() {
+		const std::string source
+			= "/** Block. */\n"
+			  "#define A 1\n"
+			  "#define B 2 /**< Trailing. */\n"
+			  "/// Line one,\n"
+			  "/// line two.\n"
+			  "#define C 3\n"
+			  "/* Plain. */\n"
+			  "#define D 4\n"
+			  "/** Detached. */\n"
+			  "\n"
+			  "#define E 5\n";
+		assertEqual(std::string{ "Block." }, macroDocComment(source, 2), "block above");
+		assertEqual(std::string{ "Trailing." }, macroDocComment(source, 3), "trailing");
+		assertEqual(std::string{ "Line one,\nline two." }, macroDocComment(source, 6), "lines");
+		assertEqual(std::string{}, macroDocComment(source, 8), "a plain comment");
+		assertEqual(std::string{}, macroDocComment(source, 11), "separated by a blank line");
+		assertEqual(std::string{}, macroDocComment(source, 99), "past the end");
+	}
+
+	void docCommentsAreEmittedAboveTheirItems() {
+		CModel model;
+		auto   rect        = record("Rect", { field("x", cI32(), 0, 4) }, 4, 4);
+		rect.doc           = "A rectangle.";
+		rect.fields[0].doc = "The left edge.";
+		model.records.push_back(rect);
+		model.functions.push_back(function("first", cI32(), {}));
+		auto area = function("area", cI32(), { { .name = "r", .type = rec(0) } });
+		area.doc  = "Its area.\n\n\\returns the area.";
+		model.functions.push_back(area);
+		CEnum kind{ .name       = "Kind",
+			        .underlying = { .kind = ScalarKind::UnsignedInt, .bits = 32 },
+			        .enumerators
+			        = { { .name = "KIND_A", .value = std::uint64_t{ 0 }, .doc = {} },
+			            { .name = "KIND_B", .value = std::uint64_t{ 1 }, .doc = "B." } },
+			        .location = REQUESTED,
+			        .doc      = "The kinds." };
+		model.enums.push_back(kind);
+		auto text = emitModule(lower(model, {}), {});
+		assertEqual(
+			std::string{ "extern(\"C\") {\n"
+		                 "    # A rectangle.\n"
+		                 "    class Rect {\n"
+		                 "        # The left edge.\n"
+		                 "        x: i32;\n"
+		                 "    }\n"
+		                 "\n"
+		                 "    fundecl first() -> i32;\n"
+		                 "\n"
+		                 "    # Its area.\n"
+		                 "    #\n"
+		                 "    # \\returns the area.\n"
+		                 "    fundecl area(r: Rect) -> i32;\n"
+		                 "}\n"
+		                 "\n"
+		                 "# The kinds.\n"
+		                 "\n"
+		                 "const KIND_A: u32 = 0u32;\n"
+		                 "\n"
+		                 "# B.\n"
+		                 "const KIND_B: u32 = 1u32;\n" },
+			text,
+			"module text"
 		);
 	}
 };

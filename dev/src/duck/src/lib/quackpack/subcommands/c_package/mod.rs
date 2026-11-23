@@ -128,9 +128,7 @@ pub fn check(ctx: &DuckContext, at: PathBuf) -> QuackResult<()> {
     for (file, content) in &expected {
         match actual.get(file) {
             None => differences.push(format!("`{file}` is missing")),
-            Some(existing) if existing != content => {
-                differences.push(format!("`{file}` differs"))
-            }
+            Some(existing) if existing != content => differences.push(format!("`{file}` differs")),
             Some(_) => {}
         }
     }

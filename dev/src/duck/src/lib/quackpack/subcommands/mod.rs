@@ -7,6 +7,7 @@
 //! Main execution logic of duck-quackpack subcommands.
 pub mod add;
 pub mod build;
+pub mod c_package;
 pub mod clean_storage;
 pub mod info;
 pub mod init;
@@ -15,4 +16,3 @@ pub mod remove;
 pub mod run;
 pub mod run_script;
 pub mod sync;
-pub mod c_package;

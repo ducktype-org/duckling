@@ -117,7 +117,9 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     match matches.subcommand() {
         Some(("new", matches)) => {
             let at = resolve_with_tilde(
-                matches.get_one::<PathBuf>("path").expect("required by clap"),
+                matches
+                    .get_one::<PathBuf>("path")
+                    .expect("required by clap"),
                 ctx,
             );
             new(NewOptions {

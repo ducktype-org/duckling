@@ -15,8 +15,8 @@ import sdl3.*;
 
 ## What it is for, and what it is not
 
-The tool brings a C library into Duckling as a package that other projects depend on. Nothing in
-the package is specific to the machine it was made on:
+The tool brings a C library into Duckling as a package that other projects depend on. The
+package holds no paths from the machine it was made on:
 
 - The recipe (`c-package.yaml`) holds header names, pkg-config package names and paths relative
   to the package.
@@ -24,16 +24,33 @@ the package is specific to the machine it was made on:
   their files when the package is built, on the machine that builds it.
 - The verification program, whose sizes are specific to the target, is not part of the package.
 
-The bindings themselves are made for one target, which their banner names (`Target:
-x86_64-pc-linux-gnu.`): record layouts, the width of `long` and the signedness of `char` come from
-it. A package generated on 64-bit Linux works on other 64-bit Linux machines; bindings for several
-targets in one package need target conditions in Duckling (#4142).
-
-Checking the library's version, or building it from source, belongs to build scripts, which the
-generator will write once they exist (#4141).
-
 It is not a generator of idiomatic wrappers. The names and types are C's. A hand-written SDL
 package could build on the generated one.
+
+## Where a package works
+
+The bindings are made for one target and one version of the library, both named in their banner
+(`from uv.h (libuv 1.53.0)`, `Target: x86_64-pc-linux-gnu.`). The target is the one the system C
+compiler builds for (`gcc -dumpmachine`); record layouts, the width of `long` and the signedness of
+`char` come from it. A package works on another machine when:
+
+- **The architecture and OS are the same.** Bindings for several targets in one package need
+  target conditions in Duckling (#4142).
+- **The library has the same name.** `external-libs` holds the name found where the package was
+  generated, and distributions differ: Arch's `lua` is `lua5.4` on Debian, Ubuntu and Alpine.
+- **The library is at least as new as the headers.** An older one links, but structs and constants
+  that changed in between are read wrongly. Generate a package you publish against the oldest
+  release it supports.
+- **A shared library is found.** duck links `lib<name>.a` before `lib<name>.so` (#4140), and a
+  static library's own dependencies are not linked.
+
+Packages for 23 libraries generated on Arch Linux (glibc) were used unchanged on Ubuntu 24.04,
+Ubuntu 26.04 and Alpine 3.24 (musl). All of them built and ran except lua, for its library name,
+and curl on Ubuntu, whose `libcurl.a` was picked. musl's libc types have other names than glibc's
+but the same sizes for these libraries; nothing guarantees that in general.
+
+Finding the library on the consumer's machine, checking its version and target, and building it
+from source belong to build scripts, which the generator will write once they exist (#4200).
 
 ## Commands
 
@@ -70,7 +87,8 @@ duck c-package check [<path>]
   depending on it is built and run. It compares `size_of`/`alignment_of` of every class with what
   clang reported, so a layout mistake fails generation instead of corrupting memory at run time.
 - `check` regenerates into a temporary directory and fails when the bindings or the library keys
-  of the manifest differ from what the recipe gives, without changing anything.
+  of the manifest differ from what the recipe gives, without changing anything. It compares text,
+  so on a machine with another version of the library it reports a difference.
 
 The generated package:
 
@@ -151,6 +169,17 @@ Every object-like macro of the requested headers is evaluated by clang itself: t
 compiles `static const __auto_type __duck_m_X = (X);` for each one. So `0x20u` becomes `u32`,
 `SDL_UINT64_C(0x20)` becomes `u64`, and `(1 << 3)` works. Macros that do not evaluate to a number
 (include guards, string literals, attribute macros) are left out and only counted.
+
+### Doc comments
+
+A C doc comment becomes `#` lines above what it documents: a class, field, `fundecl`, constant or
+blob accessor. An enum's own comment stands above its first constant, followed by a blank line.
+Doc comments are Doxygen's forms (`/** */`, `///`, `/*! */`, `//!` and the trailing `/**< */`);
+plain `/* */` comments are left out, since they are as often license headers or disabled code.
+The text is kept as written, Doxygen commands such as `\param` included.
+
+libclang attaches no comments to macros, so a macro's is read from the header: one trailing its
+`#define` line, or one ending on the line right above it.
 
 ## What is skipped
 

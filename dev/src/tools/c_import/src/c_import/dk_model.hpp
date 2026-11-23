@@ -20,6 +20,8 @@ namespace c_import {
 	struct DkNameType final {
 		std::string name;
 		std::string type;
+		/// The C doc comment, emitted above the item; empty without one. The same below.
+		std::string doc;
 	};
 
 	/// An `extern("C") class`.
@@ -27,6 +29,7 @@ namespace c_import {
 		std::string             name;
 		std::vector<DkNameType> fields;
 		std::string             comment;
+		std::string             doc;
 	};
 
 	/// An `extern("C") fundecl`; a missing return type is C `void`.
@@ -36,12 +39,16 @@ namespace c_import {
 		std::optional<std::string> return_type;
 		/// The linked C name, when it differs from `name`.
 		std::optional<std::string> symbol_name;
+		std::string                doc;
 	};
 
 	struct DkConst final {
 		std::string name;
 		std::string type;
 		std::string value;
+		std::string doc;
+		/// The doc comment of the C enum the constant starts.
+		std::string group_doc;
 	};
 
 	/// A generated Duckling function, such as a view or an accessor of a layout blob.
@@ -50,6 +57,7 @@ namespace c_import {
 		std::vector<DkNameType>  params;
 		std::string              return_type;
 		std::vector<std::string> body;
+		std::string              doc;
 	};
 
 	struct DkSkipped final {

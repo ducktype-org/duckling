@@ -16,6 +16,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <utility>
 
 namespace c_import {
 
@@ -49,6 +50,7 @@ namespace c_import {
 			std::optional<std::uint32_t> bit_width;
 			std::uint64_t                size;
 			std::uint64_t                align;
+			std::string                  doc;
 		};
 
 		enum class Demand : std::uint8_t {
@@ -309,7 +311,8 @@ namespace c_import {
 					                   base_bits + field.offset_bits,
 					                   field.bit_width,
 					                   field.size,
-					                   field.align });
+					                   field.align,
+					                   field.doc });
 				}
 				return result;
 			}
@@ -350,7 +353,7 @@ namespace c_import {
 						return std::unexpected(std::format(
 							"field `{}` is declared twice once anonymous members are flattened", name
 						));
-					fields.push_back({ std::move(name), std::move(*type) });
+					fields.push_back({ std::move(name), std::move(*type), field.doc });
 				}
 				if (alignUp(offset, max_align) != record.size || max_align != record.align)
 					return std::unexpected(
@@ -550,7 +553,7 @@ namespace c_import {
 						claim(name);
 						out.classes.push_back({
 							name,
-							{ { .name = "_opaque", .type = "u8" } },
+							{ { .name = "_opaque", .type = "u8", .doc = {} } },
 							p.reason.empty()
 								? std::string{ "Opaque handle: only use it through a `cptr`." }
 								: std::format(
@@ -559,11 +562,12 @@ namespace c_import {
 									  "through a `cptr`.",
 									  p.reason
 								  ),
+							record.doc,
 						});
 						break;
 					case PlanKind::Natural: {
 						claim(name);
-						out.classes.push_back({ name, naturalFields(i).value(), {} });
+						out.classes.push_back({ name, naturalFields(i).value(), {}, record.doc });
 						out.layouts.push_back({ name, record.size, record.align });
 						emitAnonymousUnionAccessors(i, i, 0);
 						break;
@@ -572,7 +576,9 @@ namespace c_import {
 						claim(name);
 						out.classes.push_back({
 							name,
-							{ { .name = "_storage", .type = blobStorageType(record).value() } },
+							{ { .name = "_storage",
+						        .type = blobStorageType(record).value(),
+						        .doc  = {} } },
 							std::format(
 								"Layout blob of {} `{}`{}: reach its members through the "
 								"generated `{}_*` functions.",
@@ -581,6 +587,7 @@ namespace c_import {
 								blobReason(i),
 								name
 							),
+							record.doc,
 						});
 						out.layouts.push_back({ name, record.size, record.align });
 						emitBlobAccessors(i);
@@ -616,7 +623,8 @@ namespace c_import {
 					                   base_bits + field.offset_bits,
 					                   field.bit_width,
 					                   field.size,
-					                   field.align });
+					                   field.align,
+					                   field.doc });
 				}
 			}
 
@@ -680,9 +688,10 @@ namespace c_import {
 				}
 				out.functions.push_back({
 					view_name,
-					{ { .name = "__dk_p", .type = "cptr " + record } },
+					{ { .name = "__dk_p", .type = "cptr " + record, .doc = {} } },
 					target,
 					std::move(body),
+					member.doc,
 				});
 			}
 
@@ -768,10 +777,13 @@ namespace c_import {
 				} else {
 					get.push_back(std::format("return __dk_bits as {};", type));
 				}
-				out.functions.push_back({ getter,
-				                          { { .name = "__dk_p", .type = "cptr " + record } },
-				                          type,
-				                          std::move(get) });
+				out.functions.push_back(
+					{ getter,
+				      { { .name = "__dk_p", .type = "cptr " + record, .doc = {} } },
+				      type,
+				      std::move(get),
+				      member.doc }
+				);
 
 				std::vector<std::string> set = read;
 				if (scalar.kind == ScalarKind::Bool) {
@@ -793,11 +805,14 @@ namespace c_import {
 					set.push_back(std::format(
 						"__dk_b[{}] = ((__dk_raw >> {}u64) & 255u64) as u8;", first + k, k * 8
 					));
-				out.functions.push_back({ setter,
-				                          { { .name = "__dk_p", .type = "cptr " + record },
-				                            { .name = "__dk_value", .type = type } },
-				                          "()",
-				                          std::move(set) });
+				out.functions.push_back(
+					{ setter,
+				      { { .name = "__dk_p", .type = "cptr " + record, .doc = {} },
+				        { .name = "__dk_value", .type = type, .doc = {} } },
+				      "()",
+				      std::move(set),
+				      member.doc }
+				);
 				return true;
 			}
 
@@ -818,7 +833,8 @@ namespace c_import {
 					DkFundecl decl{ .name        = usableName(function.name),
 						            .params      = {},
 						            .return_type = std::nullopt,
-						            .symbol_name = std::nullopt };
+						            .symbol_name = std::nullopt,
+						            .doc         = function.doc };
 					if (decl.name != function.name) decl.symbol_name = function.name;
 					std::string failure;
 					if (!std::holds_alternative<CVoid>(function.return_type->kind)) {
@@ -839,7 +855,7 @@ namespace c_import {
 						std::string name
 							= param.name.empty() ? std::format("arg{}", k) : localName(param.name);
 						while (!param_names.insert(name).second) name += '_';
-						decl.params.push_back({ std::move(name), std::move(*type) });
+						decl.params.push_back({ std::move(name), std::move(*type), {} });
 					}
 					if (!failure.empty()) {
 						skip(function.name, failure);
@@ -901,11 +917,12 @@ namespace c_import {
 				return text;
 			}
 
-			void emitConstant(const std::string& c_name, CScalar scalar, const auto& value) {
+			/// Whether the constant was emitted, as the last of `out.constants`.
+			bool emitConstant(const std::string& c_name, CScalar scalar, const auto& value) {
 				auto type = scalarText(scalar);
 				if (!type) {
 					skip(c_name, type.error());
-					return;
+					return false;
 				}
 				std::optional<std::string> literal;
 				std::visit(
@@ -917,25 +934,29 @@ namespace c_import {
 				);
 				if (!literal) {
 					skip(c_name, "value has no Duckling literal");
-					return;
+					return false;
 				}
 				auto name = usableName(c_name);
 				if (!claim(name)) {
 					skip(c_name, "name is already taken");
-					return;
+					return false;
 				}
-				out.constants.push_back({ std::move(name), std::move(*type), std::move(*literal) });
+				out.constants.push_back(
+					{ std::move(name), std::move(*type), std::move(*literal), {}, {} }
+				);
+				return true;
 			}
 
 			void emitEnums() {
 				for (const auto& enumeration: model.enums) {
 					if (!enumeration.location.in_requested_headers) continue;
+					bool first = true;
 					for (const auto& enumerator: enumeration.enumerators) {
 						if (!passesFilters(enumerator.name, options.include, options.exclude))
 							continue;
-						std::visit(
+						bool emitted = std::visit(
 							[&](auto v) {
-								emitConstant(
+								return emitConstant(
 									enumerator.name,
 									enumeration.underlying,
 									std::variant<std::int64_t, std::uint64_t, double>{ v }
@@ -943,6 +964,10 @@ namespace c_import {
 							},
 							enumerator.value
 						);
+						if (!emitted) continue;
+						out.constants.back().doc = enumerator.doc;
+						if (std::exchange(first, false))
+							out.constants.back().group_doc = enumeration.doc;
 					}
 				}
 			}
@@ -950,7 +975,8 @@ namespace c_import {
 			void emitConstants() {
 				for (const auto& constant: model.constants) {
 					if (!wanted(constant.location, constant.name)) continue;
-					emitConstant(constant.name, constant.type, constant.value);
+					if (emitConstant(constant.name, constant.type, constant.value))
+						out.constants.back().doc = constant.doc;
 				}
 			}
 		};

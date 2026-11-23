@@ -27,6 +27,16 @@ namespace c_import {
 			if (!banner.empty()) out += '\n';
 		}
 
+		/// `doc` as comment lines indented by `indent`.
+		void appendDoc(std::string& out, std::string_view indent, std::string_view doc) {
+			if (doc.empty()) return;
+			for (auto line: std::views::split(doc, '\n')) {
+				std::string_view text{ line.begin(), line.end() };
+				out += text.empty() ? std::format("{}#\n", indent)
+				                    : std::format("{}# {}\n", indent, text);
+			}
+		}
+
 		std::string joinParams(const std::vector<DkNameType>& params) {
 			std::string result;
 			for (const auto& [index, param]: std::views::enumerate(params)) {
@@ -52,14 +62,20 @@ namespace c_import {
 		if (!module.classes.empty() || !module.fundecls.empty()) {
 			out += "extern(\"C\") {\n";
 			for (const auto& cls: module.classes) {
+				appendDoc(out, INDENT, cls.doc);
 				if (!cls.comment.empty())
 					out += std::format("{}# {}\n", INDENT, oneLine(cls.comment));
 				out += std::format("{}class {} {{\n", INDENT, cls.name);
-				for (const auto& field: cls.fields)
+				for (const auto& field: cls.fields) {
+					appendDoc(out, std::format("{0}{0}", INDENT), field.doc);
 					out += std::format("{0}{0}{1}: {2};\n", INDENT, field.name, field.type);
+				}
 				out += std::format("{}}}\n\n", INDENT);
 			}
-			for (const auto& decl: module.fundecls) {
+			for (const auto& [index, decl]: std::views::enumerate(module.fundecls)) {
+				// A documented declaration is set apart from its neighbours.
+				if (!decl.doc.empty() && index > 0) out += '\n';
+				appendDoc(out, INDENT, decl.doc);
 				out += INDENT;
 				if (decl.symbol_name)
 					out += std::format("@c_symbol_name(\"{}\") ", *decl.symbol_name);
@@ -72,15 +88,24 @@ namespace c_import {
 
 		if (!module.constants.empty()) {
 			out += '\n';
-			for (const auto& constant: module.constants)
+			for (const auto& [index, constant]: std::views::enumerate(module.constants)) {
+				if ((!constant.doc.empty() || !constant.group_doc.empty()) && index > 0)
+					out += '\n';
+				// The enum's own doc stands apart from its first constant's.
+				appendDoc(out, "", constant.group_doc);
+				if (!constant.group_doc.empty()) out += '\n';
+				appendDoc(out, "", constant.doc);
 				out += std::format(
 					"const {}: {} = {};\n", constant.name, constant.type, constant.value
 				);
+			}
 		}
 
 		for (const auto& fun: module.functions) {
+			out += '\n';
+			appendDoc(out, "", fun.doc);
 			out += std::format(
-				"\nfun {}({}) -> {} = {{\n", fun.name, joinParams(fun.params), fun.return_type
+				"fun {}({}) -> {} = {{\n", fun.name, joinParams(fun.params), fun.return_type
 			);
 			for (const auto& line: fun.body) out += std::format("{}{}\n", INDENT, line);
 			out += "}\n";

@@ -6,15 +6,23 @@
 #   SL_Inline: `static` function: there is no symbol to link against
 
 extern("C") {
+    # A window, only used through a pointer.
     # Opaque handle: only use it through a `cptr`.
     class SL_Window {
         _opaque: u8;
     }
 
+    # A rectangle, with the origin at the upper left.
+    #
+    #     indented example
+    #
+    # \since This struct is available since SL 1.0.
     class SL_Rect {
         x: i32;
         y: i32;
+        # The size.
         w: i32;
+        # The size.
         h: i32;
     }
 
@@ -28,7 +36,9 @@ extern("C") {
     class SL_KeyboardEvent {
         type_: u32;
         timestamp: u64;
+        # The key code.
         key: i32;
+        # Whether the key is pressed.
         down: bool;
     }
 
@@ -75,8 +85,17 @@ extern("C") {
     }
 
     fundecl SL_Init(flags: u32) -> bool;
+
+    # Quits — always succeeds.
     fundecl SL_Quit();
+
+    # Creates a window.
+    #
+    # \param title the title, in UTF-8.
+    # \returns the window, or NULL on failure.
     fundecl SL_CreateWindow(title: cptr char, w: i32, h: i32, flags: u64) -> cptr SL_Window;
+
+    # Destroys a window.
     fundecl SL_DestroyWindow(window: cptr SL_Window);
     fundecl SL_GetWindowSize(window: cptr SL_Window, w: cptr i32, h: cptr i32) -> bool;
     fundecl SL_PushEvent(event: cptr SL_Event) -> bool;
@@ -91,18 +110,31 @@ extern("C") {
     @c_symbol_name("match") fundecl match_(in_: i32) -> i32;
 }
 
+# The types of events.
+
+# Unused.
 const SL_EVENT_FIRST: u32 = 0u32;
+
+# User-requested quit.
 const SL_EVENT_QUIT: u32 = 256u32;
 const SL_EVENT_KEY_DOWN: u32 = 768u32;
+
+# Initializes the video subsystem.
 const SL_INIT_VIDEO: u32 = 32u32;
 const SL_WINDOW_RESIZABLE: u64 = 32u64;
+
+# The display scale.
 const SL_SCALE: f64 = 1.5;
+
+# A negative value,
+# over two lines.
 const SL_NEGATIVE: i32 = -3i32;
 
 fun SL_Event_as_type(__dk_p: cptr SL_Event) -> cptr u32 = {
     return __dk_p as cptr u32;
 }
 
+# Keyboard event data.
 fun SL_Event_as_key(__dk_p: cptr SL_Event) -> cptr SL_KeyboardEvent = {
     return __dk_p as cptr SL_KeyboardEvent;
 }

@@ -183,7 +183,8 @@ pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[
 ];
 /// Directories searched after a package's own `external-lib-paths`.
 #[cfg(target_os = "macos")]
-pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &["/usr/local/lib", "/opt/homebrew/lib", "/usr/lib"];
+pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] =
+    &["/usr/local/lib", "/opt/homebrew/lib", "/usr/lib"];
 /// Directories searched after a package's own `external-lib-paths`.
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub const DEFAULT_EXTERNAL_LIB_PATHS: &[&str] = &[];

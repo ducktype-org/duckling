@@ -4,6 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <c_import/doc_comment.hpp>
 #include <c_import/tu_reader.hpp>
 
 #include <clang-c/Index.h>
@@ -14,7 +15,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
+#include <utility>
 
 namespace c_import {
 
@@ -89,7 +92,8 @@ namespace c_import {
 		TranslationUnit parse(
 			CXIndex index, const std::string& source, const ReadOptions& options, unsigned extra_flags
 		) {
-			std::vector<std::string> args{ "-x", "c" };
+			// Installed headers are system headers, whose comments clang drops by default.
+			std::vector<std::string> args{ "-x", "c", "-fretain-comments-from-system-headers" };
 			if (!options.resource_dir.empty()) {
 				args.emplace_back("-resource-dir");
 				args.push_back(options.resource_dir);
@@ -155,8 +159,9 @@ namespace c_import {
 				}
 			}
 
-			CModel                   model;
-			std::vector<std::string> macros;
+			CModel                             model;
+			std::vector<std::string>           macros;
+			std::map<std::string, std::string> macro_docs;
 
 		private:
 			struct NamedAfterField final {
@@ -165,16 +170,42 @@ namespace c_import {
 				std::string field;
 			};
 
-			CXTranslationUnit                  tu;
-			std::vector<std::string>           requested_directories;
-			std::set<std::string>              requested_files;
-			std::set<std::size_t>              typedef_named;
-			std::set<std::size_t>              filling;
-			std::vector<NamedAfterField>       named_after_field;
-			std::map<std::string, std::size_t> record_by_usr;
-			std::map<std::string, std::size_t> enum_by_usr;
-			std::set<std::string>              seen_functions;
-			std::set<std::string>              ordinary_names;
+			CXTranslationUnit                          tu;
+			std::vector<std::string>                   requested_directories;
+			std::set<std::string>                      requested_files;
+			std::set<std::size_t>                      typedef_named;
+			std::set<std::size_t>                      filling;
+			std::vector<NamedAfterField>               named_after_field;
+			std::map<std::string, std::size_t>         record_by_usr;
+			std::map<std::string, std::size_t>         enum_by_usr;
+			std::set<std::string>                      seen_functions;
+			std::set<std::string>                      ordinary_names;
+			std::set<std::pair<std::string, unsigned>> claimed_comments;
+
+			// ---------- doc comments ----------
+
+			/**
+			 * @brief The doc comment of `cursor`, as plain text.
+			 * @note clang also gives a comment above a declaration to the ones after it up to a
+			 * `;` (enumerators), so such a comment only goes to the first that asks for it.
+			 */
+			std::string docOf(CXCursor cursor) {
+				CXSourceRange range = clang_Cursor_getCommentRange(cursor);
+				if (clang_Range_isNull(range)) return {};
+				CXFile   file           = nullptr;
+				unsigned comment_offset = 0;
+				unsigned cursor_offset  = 0;
+				clang_getSpellingLocation(
+					clang_getRangeStart(range), &file, nullptr, nullptr, &comment_offset
+				);
+				clang_getSpellingLocation(
+					clang_getCursorLocation(cursor), nullptr, nullptr, nullptr, &cursor_offset
+				);
+				if (comment_offset < cursor_offset
+				    && !claimed_comments.emplace(fileName(file), comment_offset).second)
+					return {};
+				return cleanDocComment(take(clang_Cursor_getRawCommentText(cursor)));
+			}
 
 			// ---------- locations ----------
 
@@ -298,9 +329,12 @@ namespace c_import {
 					if (typedef_named.insert(index).second) {
 						record.name      = name;
 						record.anonymous = false;
+						if (record.doc.empty()) record.doc = docOf(cursor);
 					}
 				} else if (underlying.kind == CXType_Enum) {
-					enumIndex(clang_getTypeDeclaration(underlying));
+					if (auto index = enumIndex(clang_getTypeDeclaration(underlying));
+					    index.has_value() && model.enums[*index].doc.empty())
+						model.enums[*index].doc = docOf(cursor);
 				}
 			}
 
@@ -355,12 +389,14 @@ namespace c_import {
 				    );
 				record.location = locationOf(definition);
 				record.complete = true;
+				if (record.doc.empty()) record.doc = docOf(definition);
 				filling.erase(index);
 			}
 
 			CField readField(CXCursor cursor, std::size_t parent) {
 				CField field;
 				field.name        = take(clang_getCursorSpelling(cursor));
+				field.doc         = docOf(cursor);
 				CXType type       = clang_getCursorType(cursor);
 				field.type        = mapType(type);
 				field.offset_bits = static_cast<std::uint64_t>(
@@ -402,6 +438,7 @@ namespace c_import {
 				field.offset_bits = static_cast<std::uint64_t>(outer_offset) - named->offset_bits;
 				field.size        = inner.size;
 				field.align       = inner.align;
+				field.doc         = docOf(cursor);
 
 				return field;
 			}
@@ -470,12 +507,14 @@ namespace c_import {
 
 			// ---------- enums ----------
 
-			void enumIndex(CXCursor cursor) {
+			/// The index of the enum `cursor` declares, if it is defined.
+			std::optional<std::size_t> enumIndex(CXCursor cursor) {
 				CXCursor definition = clang_getCursorDefinition(clang_getCanonicalCursor(cursor));
-				if (clang_Cursor_isNull(definition)) return;
+				if (clang_Cursor_isNull(definition)) return std::nullopt;
 				auto usr = take(clang_getCursorUSR(definition));
-				if (enum_by_usr.contains(usr)) return;
-				enum_by_usr.emplace(usr, model.enums.size());
+				if (auto it = enum_by_usr.find(usr); it != enum_by_usr.end()) return it->second;
+				auto index = model.enums.size();
+				enum_by_usr.emplace(usr, index);
 
 				CEnum enumeration;
 				if (!clang_Cursor_isAnonymous(definition))
@@ -483,6 +522,7 @@ namespace c_import {
 				auto underlying        = mapType(clang_getEnumDeclIntegerType(definition));
 				enumeration.underlying = std::get<CScalar>(underlying->kind);
 				enumeration.location   = locationOf(definition);
+				enumeration.doc        = docOf(definition);
 				const bool is_unsigned
 					= enumeration.underlying.kind == ScalarKind::UnsignedInt
 				   || (enumeration.underlying.kind == ScalarKind::Char && !model.char_is_signed);
@@ -490,6 +530,7 @@ namespace c_import {
 					if (clang_getCursorKind(child) != CXCursor_EnumConstantDecl) return;
 					CEnumerator enumerator;
 					enumerator.name = take(clang_getCursorSpelling(child));
+					enumerator.doc  = docOf(child);
 					if (is_unsigned)
 						enumerator.value = clang_getEnumConstantDeclUnsignedValue(child);
 					else
@@ -499,6 +540,7 @@ namespace c_import {
 					enumeration.enumerators.push_back(std::move(enumerator));
 				});
 				model.enums.push_back(std::move(enumeration));
+				return index;
 			}
 
 			void visitEnum(CXCursor cursor) { enumIndex(cursor); }
@@ -517,6 +559,7 @@ namespace c_import {
 				function.variadic         = clang_isFunctionTypeVariadic(type) != 0;
 				function.internal_linkage = clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
 				function.location         = locationOf(cursor);
+				function.doc              = docOf(cursor);
 				const int count           = clang_Cursor_getNumArguments(cursor);
 				for (int k = 0; k < count; ++k) {
 					CXCursor argument = clang_Cursor_getArgument(cursor, static_cast<unsigned>(k));
@@ -534,6 +577,7 @@ namespace c_import {
 
 				if (clang_Cursor_getStorageClass(cursor) == CX_SC_Static) {
 					if (auto constant = evaluate(cursor, name, location); constant.has_value()) {
+						constant->doc = docOf(cursor);
 						model.constants.push_back(std::move(*constant));
 						return;
 					}
@@ -550,7 +594,23 @@ namespace c_import {
 					return;
 				if (!locationOf(cursor).in_requested_headers) return;
 				auto name = take(clang_getCursorSpelling(cursor));
-				if (!std::ranges::contains(macros, name)) macros.push_back(std::move(name));
+				if (std::ranges::contains(macros, name)) return;
+				macro_docs.emplace(name, macroDoc(cursor));
+				macros.push_back(std::move(name));
+			}
+
+			/// libclang attaches no comments to macros, so they are read from the source.
+			[[nodiscard]] std::string macroDoc(CXCursor cursor) const {
+				CXFile   file = nullptr;
+				unsigned line = 0;
+				clang_getSpellingLocation(
+					clang_getCursorLocation(cursor), &file, &line, nullptr, nullptr
+				);
+				std::size_t size = 0;
+				const char* contents
+					= file == nullptr ? nullptr : clang_getFileContents(tu, file, &size);
+				if (contents == nullptr) return {};
+				return macroDocComment({ contents, size }, line);
 			}
 
 		public:
@@ -573,7 +633,8 @@ namespace c_import {
 				CConstant constant{ .name     = std::move(name),
 					                .type     = *scalar,
 					                .value    = std::int64_t{ 0 },
-					                .location = std::move(location) };
+					                .location = std::move(location),
+					                .doc      = {} };
 				switch (clang_EvalResult_getKind(result.get())) {
 				case CXEval_Int:
 					if (clang_EvalResult_isUnsignedInt(result.get())
@@ -631,6 +692,8 @@ namespace c_import {
 				if (auto constant = reader.evaluate(cursor, name, macro_location);
 				    constant.has_value()) {
 					evaluated.insert(name);
+					if (auto doc = reader.macro_docs.find(name); doc != reader.macro_docs.end())
+						constant->doc = doc->second;
 					reader.model.constants.push_back(std::move(*constant));
 				}
 			});

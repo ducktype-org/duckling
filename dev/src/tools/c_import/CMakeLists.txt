@@ -1,4 +1,5 @@
 add_library(CImport
+	src/c_import/doc_comment.cpp
 	src/c_import/emit.cpp
 	src/c_import/identifiers.cpp
 	src/c_import/lower.cpp

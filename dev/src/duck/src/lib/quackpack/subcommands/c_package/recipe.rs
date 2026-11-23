@@ -150,7 +150,10 @@ mod tests {
             relative_path(Path::new("/work/vendor/a.h"), root),
             "../vendor/a.h"
         );
-        assert_eq!(relative_path(Path::new("/work/pkg/./x/../b.h"), root), "b.h");
+        assert_eq!(
+            relative_path(Path::new("/work/pkg/./x/../b.h"), root),
+            "b.h"
+        );
         assert_eq!(relative_path(root, root), ".");
     }
 
