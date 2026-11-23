@@ -35,6 +35,24 @@ namespace compiler::helios {
 		return element.has_value() and element.value()->isStaticField();
 	}
 
+	bool isStaticMethod(query::Context& ctx, const SymID symbol) {
+		if (kind(symbol) != SymbolKind::Method) return false;
+
+		auto element = typeMemberOwner(symbol).getInterface(ctx)->getElementBySym(symbol);
+		return element.has_value() and element.value()->isStaticMethod();
+	}
+
+	bool isInstanceMember(query::Context& ctx, const SymID symbol) {
+		switch (kind(symbol)) {
+		case SymbolKind::Field:
+			return not isStaticField(ctx, symbol);
+		case SymbolKind::Method:
+			return not isStaticMethod(ctx, symbol);
+		default:
+			return false;
+		}
+	}
+
 	tsh::AbstractType typeMemberOwner(const SymID member) {
 		variant_match(getSymRef(member)->other) {
 			variant_case(ClassMemberSemantics, member_data) { return member_data.owner_class; }

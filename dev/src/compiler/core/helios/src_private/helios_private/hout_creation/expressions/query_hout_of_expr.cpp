@@ -795,13 +795,13 @@ namespace compiler::helios::code {
 				case pst::Keyword::Self: {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getStablePosition(), ctx, base::StrID("self")
-					);
+					const auto self_symbol
+						= HInterface::ofScopeWithParents(scope).lookupExpectSingleSym(
+							stmt->getStablePosition(), ctx, base::StrID("self")
+						);
 
-					node = makeBox<IdentifierExpr>(
-						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
-					);
+					node
+						= makeBox<IdentifierExpr>(ctx, pstOrigin(stmt), self_symbol.valueOrThrow());
 					break;
 				}
 				default:

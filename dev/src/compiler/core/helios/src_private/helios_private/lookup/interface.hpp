@@ -20,14 +20,38 @@
 #include <diagnostic/stable_position.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <functional>
 #include <variant>
 
-namespace dia {
-	// Forward declaration of SourcePosition
-	class SourcePosition;
-}
-
 namespace compiler::helios {
+
+	/**
+	 * @brief Logs that no symbol named @p name was found by the lookup at @p error_position.
+	 */
+	void logSymbolNotFound(query::Context& ctx, dia::StablePosition error_position, base::StrID name);
+
+	/**
+	 * @brief Helper structure for lookup errors.
+	 */
+	struct LookupErrorArgs final {
+		dia::StablePosition error_position;
+
+		/**
+		 * @brief Logs the error when no symbol of the looked-up name exists. The other errors,
+		 * inaccessible and ambiguous symbols, are always reported in the same way.
+		 */
+		std::function<void(query::Context&, dia::StablePosition, base::StrID)> log_not_found
+			= &logSymbolNotFound;
+
+		LookupErrorArgs(dia::StablePosition error_position): error_position(error_position) {}
+
+		LookupErrorArgs(
+			dia::StablePosition                                                    error_position,
+			std::function<void(query::Context&, dia::StablePosition, base::StrID)> log_not_found
+		):
+			  error_position(error_position),
+			  log_not_found(std::move(log_not_found)) {}
+	};
 
 	struct AdditionalLookupParameters final {
 		bool with_wildcards = true;
@@ -146,21 +170,24 @@ namespace compiler::helios {
 		) const;
 
 		/**
-		 * A lookup function that performs a most common lookup operation,
-		 * hiding a lot of boilerplate associated with it. It performs the following steps:
-		 * 1. It looks-ups the interface.
-		 * 2. It reports error if more than one symbol is found.
-		 * 3. Return the symbol list. Aliases are already resolved by the lookup itself.
+		 * @brief Performs a lookup that has to find exactly one symbol.
 		 *
-		 * It some error occurs, it will report it in @p error_position.
-		 *
-		 * @note This function is intended to be used as a quick placeholder
-		 * that we might one day change to custom code for better compilation errors or logic.
+		 * @return The path of the found symbol, owned by the cache of the lookup query.
 		 */
-		query::QResult<SymbolList> lookupExpectUnique(
-			dia::StablePosition error_position,
-			query::Context&     ctx,
-			base::StrID         name,
+		query::QResult<CRef<LookupPath>> lookupExpectSingle(
+			const LookupErrorArgs& error_args,
+			query::Context&        ctx,
+			base::StrID            name,
+			AdditionalLookupParameters = {}
+		) const;
+
+		/**
+		 * @brief The symbol found by @ref lookupExpectSingle.
+		 */
+		query::QResult<SymID> lookupExpectSingleSym(
+			const LookupErrorArgs& error_args,
+			query::Context&        ctx,
+			base::StrID            name,
 			AdditionalLookupParameters = {}
 		) const;
 
@@ -202,4 +229,5 @@ namespace compiler::helios {
 			return HInterface{ CustomInterface{ std::move(custom) } };
 		}
 	};
+
 }

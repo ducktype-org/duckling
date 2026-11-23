@@ -37,6 +37,7 @@
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/misc/anycast.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -47,6 +48,7 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <iterator>
 #include <unordered_set>
 #include <variant>
 
@@ -782,68 +784,134 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupFromScope, query::QResult<LookupResult>) {
 		/**
-		 * @brief Searches @p start and all the scopes its `using`/`import` symbols lead to,
-		 * skipping the ones in @p visited. Adds the symbols found there to @p result.
+		 * @brief Hash of a path, skipping the symbols above its leaf that do not change what the
+		 * path gives access to: the `using`/`import` symbols and the modules, namespaces and
+		 * classes qualifying it.
+		 *
+		 * We want to not insert any duplicates, ignoring the usings and namespaces, but keeping
+		 * the values that would construct the access, and their order.
 		 */
-		static query::QResult<std::monostate> searchScopeWithUsings(
+		struct SeenPathsHash final {
+			std::size_t operator()(const LookupPath& path) const {
+				std::size_t hash = 0;
+				for (usize i = 0; i < path.symbols.size(); i++) {
+					const SymID symbol = path.symbols.at(i);
+					if (i + 1 < path.symbols.size() and isSkippedAboveLeaf(symbol)) continue;
+					hash ^= std::hash<SymID>()(symbol) + 0x9e'37'79'b9'7f'4a'7c'15 + (hash << 6)
+					      + (hash >> 2);
+				}
+				return hash;
+			}
+
+		private:
+			static bool isSkippedAboveLeaf(SymID symbol) {
+				switch (kind(symbol)) {
+				case SymbolKind::Using:
+				case SymbolKind::Import:
+				case SymbolKind::Module:
+				case SymbolKind::Namespace:
+				case SymbolKind::Class:
+					return true;
+				default:
+					return false;
+				}
+			}
+		};
+
+		/**
+		 * @brief Paths giving the same access, compared by their @ref SeenPathsHash.
+		 */
+		struct SeenPathsEqual final {
+			bool operator()(const LookupPath& lhs, const LookupPath& rhs) const {
+				return SeenPathsHash()(lhs) == SeenPathsHash()(rhs);
+			}
+		};
+
+		using SeenPaths = std::unordered_set<LookupPath, SeenPathsHash, SeenPathsEqual>;
+
+		/**
+		 * @brief Searches @p start and all the scopes its `using`/`import` symbols lead to,
+		 * skipping the scopes in @p visited and the paths in @p seen. Returns the symbols found
+		 * there, the ones found through a wildcard of a module or namespace being preceded by the
+		 * `using`/`import` symbol.
+		 */
+		static query::QResult<LookupResult> searchScope(
 			Context&                     ctx,
 			const QKey&                  key,
 			ScopeID                      start,
 			std::unordered_set<ScopeID>& visited,
-			LookupResult&                result
+			SeenPaths&                   seen
 		) {
-			std::vector<ScopeID> pending{ start };
+			LookupResult found;
+			if (not visited.insert(start).second) return found;
 
-			while (not pending.empty()) {
-				auto current = pending.back();
-				pending.pop_back();
-				if (not visited.insert(current).second) continue;
+			const auto add_path = [&found, &seen](LookupPath path) {
+				if (seen.insert(path).second) found.paths.push_back(std::move(path));
+			};
+
+			UNPACK_QRESULT_CREF(
+				CRef<std::vector<SymID>> symbols = &,
+				ctx.query<QueryLookupInScope>({ start, key.name, key.with_wildcards })
+			);
+
+			for (const SymID sym: *symbols) {
+				if (kind(sym) != SymbolKind::Using and kind(sym) != SymbolKind::Import) {
+					add_path(LookupPath{ .symbols = { sym } });
+					continue;
+				}
 
 				UNPACK_QRESULT_CREF(
-					CRef<std::vector<SymID>> symbols = &,
-					ctx.query<QueryLookupInScope>({ current, key.name, key.with_wildcards })
+					const UsingImportTarget& target =,
+					ctx.query<QueryResolveUsingImport>({ .symbol = sym, .keep_whole_chains = false })
 				);
-
-				for (const SymID sym: *symbols) {
-					if (kind(sym) != SymbolKind::Using and kind(sym) != SymbolKind::Import) {
-						result.leaves.push_back(sym);
-						continue;
+				variant_match(target) {
+					variant_case(TargetScope, target_scope) {
+						UNPACK_QRESULT_MOVE(
+							LookupResult in_scope =,
+							searchScope(ctx, key, target_scope.scope, visited, seen)
+						);
+						for (LookupPath& in_scope_path: in_scope.paths) {
+							in_scope_path.symbols.insert(in_scope_path.symbols.begin(), sym);
+							found.paths.push_back(std::move(in_scope_path));
+						}
+						base::appendToVector(found.inaccessible, in_scope.inaccessible);
 					}
-
-					UNPACK_QRESULT_CREF(
-						const UsingImportTarget& target =, ctx.query<QueryResolveUsingImport>(sym)
-					);
-					variant_match(target) {
-						variant_case(std::vector<SymID>, pointed) {
-							result.leaves.insert(
-								result.leaves.end(), pointed.begin(), pointed.end()
-							);
+					variant_case(TargetExpr, target_expr) { add_path(target_expr.chain); }
+					variant_case(WildcardExpr, wildcard) {
+						UNPACK_QRESULT_CREF(
+							CRef<LookupResult> inner = &,
+							HInterface::ofSymbol(ctx, wildcard.chain.leaf())
+								.lookup(ctx, key.name, { .with_wildcards = key.with_wildcards })
+						);
+						for (const LookupPath& inner_path: inner->paths) {
+							LookupPath path = wildcard.chain;
+							base::appendToVector(path.symbols, inner_path.symbols);
+							add_path(stripQualifiers(ctx, std::move(path), true));
 						}
-						variant_case(ScopeID, pointed_scope) { pending.push_back(pointed_scope); }
-						variant_case(SymID, pointed_symbol) {
-							auto interface = HInterface::ofSymbol(ctx, pointed_symbol);
-							UNPACK_QRESULT_CREF(
-								CRef<LookupResult> pointed_result = &,
-								interface.lookup(ctx, key.name)
-							);
-							result.merge(*pointed_result);
-						}
+						base::appendToVector(found.inaccessible, inner->inaccessible);
 					}
 				}
 			}
 
-			return std::monostate{};
+			return found;
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			std::unordered_set<ScopeID> visited;
+			SeenPaths                   seen;
 			LookupResult                result;
+
+			const auto search = [&](ScopeID scope) -> query::QResult<std::monostate> {
+				UNPACK_QRESULT_MOVE(auto found =, searchScope(ctx, key, scope, visited, seen));
+				std::ranges::move(found.paths, std::back_inserter(result.paths));
+				base::appendToVector(result.inaccessible, found.inaccessible);
+				return std::monostate{};
+			};
 
 			base::Optional<ScopeID> current = key.scope;
 
 			while (current.has_value()) {
-				if (searchScopeWithUsings(ctx, key, current.value(), visited, result).hasFailed())
-					return query::Failed();
+				if (search(current.value()).hasFailed()) return query::Failed();
 
 				if (not key.with_parents) break;
 
@@ -854,12 +922,9 @@ namespace compiler::helios {
 			// `import <module>.*;`. A no-op under --no-std.
 			if (key.with_parents) {
 				for (const ScopeID prelude_scope: *ctx.query<QueryImplicitPreludeScopes>({}))
-					if (searchScopeWithUsings(ctx, key, prelude_scope, visited, result).hasFailed())
-						return query::Failed();
+					if (search(prelude_scope).hasFailed()) return query::Failed();
 			}
 
-			std::unordered_set<SymID> seen;
-			std::erase_if(result.leaves, [&](SymID sym) { return not seen.insert(sym).second; });
 			return result;
 		}
 

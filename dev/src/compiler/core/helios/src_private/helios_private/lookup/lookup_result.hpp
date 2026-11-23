@@ -6,132 +6,119 @@
 
 /**
  * @file lookup_result.hpp
- *
- * @note Current lookup system assumes that every rhs of "." operator is
- * well looked-up single symbol.
  */
 
 #pragma once
 
+#include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/utils/symbol_list.hpp>
 
+#include <base/pointers/box.hpp>
+
+#include <query_framework/context/context_fd.hpp>
 #include <query_framework/query_result.hpp>
 
-#include <cstdint>
 #include <vector>
 
+namespace compiler::helios::code {
+	struct Expr;
+}
+
 namespace compiler::helios {
-
 	/**
-	 * @brief Possible errors during lookupExpectUnique.
+	 * @brief One symbol found by a lookup, together with the symbols it is accessed through.
+	 *
+	 * The leaf is the found symbol, but sometimes it requires the preceding symbols to construct
+	 * proper "access" expression. The path consists of two independent type of informations:
+	 * 1. The usings/imports we went through to find the symbol, which is used in error handling.
+	 * 2. The values we need to construct the proper expression. For example `using a.x` where `a`
+	 * is a value of some class, and `x` is a field will construct a path like `[a, x]`. There
+	 * should be no modules or namespaces in the path, as they are not needed.
 	 */
-	namespace errors {
-		class Ambiguity final {};
-
-		class SymbolNotFound final {};
+	struct LookupPath final {
+		std::vector<SymID> symbols;
 
 		/**
-		 * @brief The name was found, but every symbol of that name is hidden by its visibility.
+		 * @brief The found symbol.
 		 */
-		class Inaccessible final {};
-	}
+		[[nodiscard]]
+		SymID leaf() const;
 
-	struct NestedResult;
+		/**
+		 * @brief Whether the path stands for an access expression on a value, i.e. there are other
+		 * symbols than `using`/`import` above the leaf, like the `v` of `v.x`.
+		 */
+		[[nodiscard]]
+		bool constructsAccessExpr() const;
 
-	using GetAsSingleLookupQResult = query::QResult<
-		std::variant<SymbolList, errors::Ambiguity, errors::SymbolNotFound, errors::Inaccessible>>;
+		/**
+		 * @brief The expression evaluating to the found symbol.
+		 *
+		 * The expression starts at the last symbol of the path that is not a non-static field or
+		 * method, and the fields below it are accessed on it.
+		 *
+		 * @note Fails, with a logged error, for a path that does not contain such a symbol or has
+		 * something else than fields below it.
+		 */
+		query::QResult<Box<code::Expr>> asExpression(
+			query::Context& ctx, code::ElementOrigin origin
+		) const;
+	};
 
 	/**
-	 * @brief Tree like structure storing lookup result.
-	 * Actual results are always stored in "leaves", while
-	 * children are responsible for storing results hidden under some aliases.
-	 *
-	 * Intuitively LookupResult is a result of a single "." operator.
+	 * @brief The symbols found by a lookup, every path being one found symbol.
 	 */
 	struct LookupResult final {
-		/**
-		 * Direct symbols found.
-		 */
-		std::vector<SymID> leaves;
+		std::vector<LookupPath> paths;
 
 		/**
-		 * Symbols found under the looked-up name, that are not accessible from the scope the
-		 * lookup was performed in.
-		 *
-		 * They are kept so that the error can say that the symbol exists but cannot be used,
-		 * instead of saying that no such symbol exists. They are never treated as a result of the
-		 * lookup, so an otherwise successful lookup ignores them.
+		 * @brief Symbols of the looked-up name that are hidden by their visibility from the scope
+		 * the lookup was performed in. They are never a result of the lookup.
 		 */
 		std::vector<SymID> inaccessible;
 
-		/**
-		 * Symbols through which results were found.
-		 */
-		std::vector<NestedResult> children;
-
-		/**
-		 * Check if lookup actually found something.
-		 * @return True if it has found something, false otherwise.
-		 */
 		[[nodiscard]]
 		bool isEmpty() const;
 
-		/**
-		 * Check if lookup has found exactly one symbol.
-		 * @return True if exactly one, false otherwise.
-		 */
 		[[nodiscard]]
 		bool isSingle() const;
 
-		/**
-		 * Check if the lookup has found any symbol that it had to hide because of its visibility.
-		 * @return True if it has found one, false otherwise.
-		 */
 		[[nodiscard]]
 		bool hasInaccessible() const;
 
 		/**
-		 * Returns a path to the symbol.
-		 * Panics on ambiguity.
-		 * @return A SymbolList representing a path to the symbol.
+		 * @brief The found symbols, which are the leaves of all the paths.
 		 */
 		[[nodiscard]]
-		GetAsSingleLookupQResult getAsSingle() const;
+		std::vector<SymID> leaves() const;
 
 		/**
-		 * Adds another LookupResult to self (leaves to leaves, children ot children).
-		 */
-		void merge(LookupResult other);
-
-		/**
-		 * Turns LookupResult into NestedResult referencing node.
-		 * @param node SymID, that the NestedResult represents.
-		 * @return New NestedResult from self with node.
+		 * @brief The only found symbol.
+		 * @warning Panics if the result is not single.
 		 */
 		[[nodiscard]]
-		NestedResult toNode(SymID node) const;
+		SymID uniqueLeaf() const;
 
 		/**
-		 * Count the number of found symbols.
-		 * @return The number of found symbols.
+		 * @brief Whether some path stands for an access expression (@see
+		 * LookupPath::constructsAccessExpr).
 		 */
 		[[nodiscard]]
-		u64 symbolCount() const;
+		bool constructsAccessExpr() const;
+
+		/**
+		 * @brief The expressions of all the paths (@see LookupPath::asExpression).
+		 */
+		query::QResult<std::vector<Box<code::Expr>>> asExpressions(
+			query::Context& ctx, code::ElementOrigin origin
+		) const;
 	};
 
 	/**
-	 * @brief NestedResult is used to represent result of lookup that was hidden
-	 * behind some alias. "node" represent the alias, while "inner" represent
-	 * lookup result behind the alias.
+	 * @brief @p path without the symbols that only qualify its leaf, which are the ones above its
+	 * last symbol that is not a non-static field or method, like the `a.N` of `a.N.v.x` or the `v`
+	 * of `v.static_field`.
+	 * @param keep_using_imports Whether the `using`/`import` symbols of @p path are kept.
 	 */
-	struct NestedResult final {
-		SymID        node;  ///< node should always be alias-like of using-like thing
-		LookupResult inner;
-
-		NestedResult(SymID node, LookupResult inner);
-	};
-
-	// @TODO: do we want ChainLookupResult for stuff like aliases, usings etc?
-
+	LookupPath stripQualifiers(query::Context& ctx, LookupPath path, bool keep_using_imports);
 }

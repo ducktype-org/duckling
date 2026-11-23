@@ -115,6 +115,20 @@ namespace compiler::helios {
 	bool isStaticField(query::Context&, SymID symbol);
 
 	/**
+	 * @return whether the symbol is a static method of a class, that is a method called without
+	 * an instance of its class.
+	 *
+	 * False for every symbol that is not a method.
+	 */
+	bool isStaticMethod(query::Context&, SymID symbol);
+
+	/**
+	 * @return whether the symbol is a non-static field or method of a class, that is a member
+	 * that can be used only on an instance of its class.
+	 */
+	bool isInstanceMember(query::Context&, SymID symbol);
+
+	/**
 	 * Check if a symbol is a builtin. If so, return the BuiltinKind.
 	 * Return empty optional is a symbol is not a builtin.
 	 */

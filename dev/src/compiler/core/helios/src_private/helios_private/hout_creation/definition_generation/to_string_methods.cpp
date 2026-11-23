@@ -71,7 +71,7 @@ namespace compiler::helios::defgen {
 		                                ->valueOrThrow();
 
 
-		for (const SymID candidate: lookup_result.leaves) {
+		for (const SymID candidate: lookup_result.leaves()) {
 			const auto fn_type = ctx.query<QueryTypeOfSymbol>(candidate)
 			                         ->valueOrThrow()
 			                         .getType()

@@ -33,7 +33,6 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
-#include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -518,13 +517,12 @@ namespace compiler::helios::code {
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
 					auto value_result = processNamespaceOrValue(
-						lookup_result->leaves.front(), pstOrigin(ident), ident
+						lookup_result->leaves().front(), pstOrigin(ident), ident
 					);
 					UNPACK_QRESULT_MOVE(auto value_state =, value_result);
 					auto res = processIndirectCall(
@@ -614,13 +612,19 @@ namespace compiler::helios::code {
 			-> query::QResult<ChainState> {
 			// Lookup global for const/variables/namespaces. Depending on the type of found
 			// identifier it will return ChainContext with namespace or expr.
-			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				ident->getStablePosition(), query_ctx, ident->getName().unlock(query_ctx)->unwrap()
+			auto scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+			auto name  = ident->getName().unlock(query_ctx)->unwrap();
+			UNPACK_QRESULT_MOVE(
+				CRef<LookupPath> found =,
+				HInterface::ofScopeWithParents(scope).lookupExpectSingle(
+					ident->getStablePosition(), query_ctx, name
+				)
 			);
-			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
-			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
+			if (found->constructsAccessExpr()) {
+				UNPACK_QRESULT_MOVE(auto expr =, found->asExpression(query_ctx, pstOrigin(ident)));
+				return ChainState::ofExpr(std::move(expr));
+			}
+			return processNamespaceOrValue(found->leaf(), pstOrigin(ident), ident);
 		}
 
 		/**
@@ -699,107 +703,66 @@ namespace compiler::helios::code {
 			base::Box<Expr> current_expr, pst::Access<pst::expr::AccessExpr> expr_access
 		) -> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
-			auto lookup_qresult
-				= HInterface::ofTypeInstance(current_expr_type)
-			          .lookup(
-						  query_ctx,
-						  expr_access->getName().unlock(query_ctx)->unwrap(),
-						  { .accessing_scope
-			                = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
-					  );
-			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
-			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
-			// Note that if multiple symbols were found, it results in an error and enters
-			// the following if statement. This is temporary, as symbol ambiguity should be
-			// handled differently than through dynamic field access.
-			UNPACK_QRESULT_MOVE(const auto& looked_up_symbols =, looked_up_symbols_result);
+			auto log_not_found
+				= [](query::Context& ctx, dia::StablePosition position, base::StrID) {
+					  // @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator
+				      // overloads. Ex.: obj.a fails to look up 'a', but it can still call
+				      // obj.selectDynamic("a"). See Scala's Dynamic:
+				      // https://www.scala-lang.org/api/current/scala/Dynamic.html
+					  ctx.log<dia::PlaceholderError>("Accessed value not found.", position);
+				  };
+			UNPACK_QRESULT_MOVE(
+				const SymID sym =,
+				HInterface::ofTypeInstance(current_expr_type)
+					.lookupExpectSingleSym(
+						{ expr_access->getName().unlock(query_ctx)->getStablePosition(),
+			              log_not_found },
+						query_ctx,
+						expr_access->getName().unlock(query_ctx)->unwrap(),
+						{ .accessing_scope
+			              = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
+					)
+			);
 
-			variant_match(looked_up_symbols) {
-				variant_case(SymbolList, result) {
-					// @TODO: #1412 handle dealias expressions:
-					auto sym = result.back();
-
-					if (isStaticField(query_ctx, sym)) {
-						auto node = makeBox<IdentifierExpr>(
-							query_ctx, pstOriginOrdered(current_expr->origin, expr_access), sym
-						);
-						return ChainState::ofExpr(std::move(node));
-					} else if (kind(sym) == SymbolKind::Field) {
-						// Insert a deref if source of field access is not a direct type.
-						if (current_expr->expression_type.getSymbolType().getRefKind()
-						    != tsh::ReferenceKind::Direct) {
-							current_expr = makeBox<DerefExpr>(
-								query_ctx,
-								current_expr->origin.generatedFrom(),
-								std::move(current_expr)
-							);
-						}
-						auto node = makeBox<AccessExpr>(
-							query_ctx,
-							pstOriginOrdered(current_expr->origin, expr_access),
-							std::move(current_expr),
-							sym
-						);
-						return ChainState::ofExpr(std::move(node));
-					} else if (kind(sym) == SymbolKind::Namespace) {
-						result_sequence.push_back(std::move(current_expr));
-						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
-					} else if (kind(sym) == SymbolKind::Method) {
-						query_ctx.log<dia::NotYetImplementedCodeError>(
-							"Handling of access to method without a call is not implemented yet"
-							"argument at compile time",
-							current_expr->origin.getStablePosition()
-						);
-						return query::Failed();
-					}
-					query_ctx.log<dia::PlaceholderError>(
-						base::strConcat(
-							"Unsupported symbol kind in type lookup for symbol: ",
-							prettyDebugPrint(sym, query_ctx)
-						),
-						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
-							query_ctx
-						)
+			if (isStaticField(query_ctx, sym)) {
+				auto node = makeBox<IdentifierExpr>(
+					query_ctx, pstOriginOrdered(current_expr->origin, expr_access), sym
+				);
+				return ChainState::ofExpr(std::move(node));
+			} else if (kind(sym) == SymbolKind::Field) {
+				// Insert a deref if source of field access is not a direct type.
+				if (current_expr->expression_type.getSymbolType().getRefKind()
+				    != tsh::ReferenceKind::Direct) {
+					current_expr = makeBox<DerefExpr>(
+						query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
 					);
-					// @TODO: #1412 Support lookup of other kinds of symbols in classes.
-					return query::Failed();
 				}
-				variant_case_novalue(errors::Ambiguity) {
-					query_ctx.log<dia::PlaceholderError>(
-						"Accessed value is ambiguous.",
-						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
-							query_ctx
-						)
-					);
-					return query::Failed();
-				}
-				variant_case_novalue(errors::SymbolNotFound) {
-					// @TODO: #1472 Handle dynamic field/method names, a.k.a. access operator
-					// overloads. Ex.: obj.a fails to look up 'a', but it can still call
-					// obj.selectDynamic("a"). See Scala's Dynamic:
-					// https://www.scala-lang.org/api/current/scala/Dynamic.html
-
-					query_ctx.log<dia::PlaceholderError>(
-						"Accessed value not found.",
-						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
-							query_ctx
-						)
-					);
-					return query::Failed();
-				}
-				variant_case_novalue(errors::Inaccessible) {
-					query_ctx.log<dia::PlaceholderError>(
-						"Accessed value is not visible from here.",
-						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
-							query_ctx
-						)
-					);
-					return query::Failed();
-				}
-
-				variant_default { CORE_PANIC("Unexpected result type from lookup"); }
+				auto node = makeBox<AccessExpr>(
+					query_ctx,
+					pstOriginOrdered(current_expr->origin, expr_access),
+					std::move(current_expr),
+					sym
+				);
+				return ChainState::ofExpr(std::move(node));
+			} else if (kind(sym) == SymbolKind::Namespace) {
+				result_sequence.push_back(std::move(current_expr));
+				return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
+			} else if (kind(sym) == SymbolKind::Method) {
+				query_ctx.log<dia::NotYetImplementedCodeError>(
+					"Handling of access to method without a call is not implemented yet"
+					"argument at compile time",
+					current_expr->origin.getStablePosition()
+				);
+				return query::Failed();
 			}
-			CORE_UNREACHABLE();
+			query_ctx.log<dia::PlaceholderError>(
+				base::strConcat(
+					"Unsupported symbol kind in type lookup for symbol: ",
+					prettyDebugPrint(sym, query_ctx)
+				),
+				expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
+			);
+			return query::Failed();
 		}
 
 		/**
@@ -810,16 +773,15 @@ namespace compiler::helios::code {
 			SymID namespace_like_symbol, pst::Access<pst::expr::AccessExpr> expr_access
 		) -> query::QResult<ChainState> {
 			const auto& lookup_result = HInterface::ofSymbol(query_ctx, namespace_like_symbol)
-			                                .lookupExpectUnique(
+			                                .lookupExpectSingleSym(
 												expr_access->getStablePosition(),
 												query_ctx,
 												expr_access->getName().unlock(query_ctx)->unwrap()
 											);
-			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+			UNPACK_QRESULT_MOVE(const SymID found =, lookup_result);
 			auto whole_expr_origin
 				= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
-			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
+			return processNamespaceOrValue(found, whole_expr_origin, expr_access);
 		}
 
 		/**
@@ -851,8 +813,7 @@ namespace compiler::helios::code {
 						  );
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				base::Optional<base::Box<Expr>> expr{};
@@ -918,8 +879,7 @@ namespace compiler::helios::code {
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result
@@ -945,17 +905,16 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(TypeInChain type, pst::Access<pst::expr::AccessExpr> expr_access)
 			-> query::QResult<ChainState> {
-			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectUnique(
+			auto lookup_result = HInterface::ofTypeMeta(type.type).lookupExpectSingleSym(
 				expr_access->getStablePosition(),
 				query_ctx,
 				expr_access->getName().unlock(query_ctx)->unwrap(),
 				{ .accessing_scope = query_ctx.query<QueryPrimaryCodeScopeFor>({ expr_access }) }
 			);
-			// @TODO: #1412 handle dealias expressions:
-			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+			UNPACK_QRESULT_MOVE(const SymID found =, lookup_result);
 
 			auto whole_expr_origin = pstOriginOrdered(type.origin, expr_access);
-			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
+			return processNamespaceOrValue(found, whole_expr_origin, expr_access);
 		}
 
 		/**
@@ -982,8 +941,7 @@ namespace compiler::helios::code {
 				);
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(lookup_result->leaves());
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result = processFunctionCall(query_ctx, callees, expr_access, call_expr);
@@ -1103,13 +1061,15 @@ namespace compiler::helios::code {
 			pst::Access<pst::LangElement> pst_elem
 		) -> query::QResult<base::Box<Expr>> {
 			// @TODO: #2135 handle ambiguity in class scopes
-			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
-			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				pst_elem->getStablePosition(), ctx, base::StrID("self")
+			auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
+			UNPACK_QRESULT_MOVE(
+				const SymID self_symbol =,
+				HInterface::ofScopeWithParents(scope).lookupExpectSingleSym(
+					pst_elem->getStablePosition(), ctx, base::StrID("self")
+				)
 			);
-			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
 
-			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
+			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), self_symbol);
 			auto self_type = self_expr->expression_type.getSymbolType().getType();
 
 			auto fields = self_type.getInterface(query_ctx)->getFieldsView();
@@ -1156,32 +1116,21 @@ namespace compiler::helios::code {
 						= HInterface::ofScopeWithParents(scope).lookup(ctx, base::StrID("self"));
 
 					UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
-					UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result->getAsSingle());
-
-					variant_match(sym_list) {
-						variant_case(SymbolList, result) { return result.back(); }
-						variant_case_novalue(errors::SymbolNotFound) {
-							ctx.log<dia::PlaceholderError>(
-								"Method call without `self` argument.",
-								call_expr->getStablePosition()
-							);
-							return query::Failed();
-						}
-						variant_case_novalue(errors::Ambiguity) {
-							ctx.log<dia::PlaceholderError>(
-								"Multiple candidates for `self` argument found which should be "
-								"impossible.",
-								call_expr->getStablePosition()
-							);
-							return query::Failed();
-						}
-						variant_case_novalue(errors::Inaccessible) {
-							// `self` is looked up in a scope, and only the elements of the
-							// interface of a type are ever hidden by their visibility.
-							CORE_PANIC("The `self` argument cannot be inaccessible.");
-						}
+					if (lookup_result->isEmpty()) {
+						ctx.log<dia::PlaceholderError>(
+							"Method call without `self` argument.", call_expr->getStablePosition()
+						);
+						return query::Failed();
 					}
-					CORE_UNREACHABLE();
+					if (not lookup_result->isSingle()) {
+						ctx.log<dia::PlaceholderError>(
+							"Multiple candidates for `self` argument found which should be "
+							"impossible.",
+							call_expr->getStablePosition()
+						);
+						return query::Failed();
+					}
+					return lookup_result->uniqueLeaf();
 				};
 				auto self_arg_result = find_self_arg();
 				UNPACK_QRESULT(auto self_arg =, self_arg_result);
@@ -1274,7 +1223,6 @@ namespace compiler::helios::code {
 			// The element naming the template is the callee, as in a call without a bake.
 			auto callee = chain_elements.at(this->index - 1).unlock(query_ctx);
 
-			// @TODO: #1412 fix dealias
 			const auto callees_q_result = getCallableCandidates(std::vector{ baked });
 			UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 

@@ -92,53 +92,88 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	query::QResult<SymbolList> HInterface::lookupExpectUnique(
-		const dia::StablePosition  error_position,
-		query::Context&            ctx,
-		base::StrID                name,
-		AdditionalLookupParameters params
-	) const {
-		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
+	namespace {
+		/**
+		 * @brief Logs, as @p error_args say, why the lookup of @p name, which gave @p result, did
+		 * not find exactly one symbol.
+		 */
+		void logNotSingleLookup(
+			query::Context&        ctx,
+			const LookupErrorArgs& error_args,
+			base::StrID            name,
+			const LookupResult&    result
+		) {
+			CORE_ASSERT(not result.isSingle(), "The lookup found a single symbol");
 
-		auto get_as_single = lookup_result->getAsSingle();
-
-		if (get_as_single.hasFailed()) return query::Failed();
-
-		variant_match(get_as_single.valueOrThrow()) {
-			variant_case(SymbolList, symbol_list) { return symbol_list; }
-			variant_case(errors::Ambiguity, _) {
-				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
-				for (auto& leaf: lookup_result->leaves) {
-					if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
-						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
-						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
-					}
-				}
-				ctx.log(std::move(msg));
-				return query::Failed();
-			}
-			variant_case(errors::Inaccessible, _) {
-				auto msg = makeBox<InaccessibleSymbolLookupError>(error_position);
-				for (auto& hidden: lookup_result->inaccessible) {
+			if (result.isEmpty() and result.hasInaccessible()) {
+				auto msg = makeBox<InaccessibleSymbolLookupError>(error_args.error_position);
+				for (auto& hidden: result.inaccessible) {
 					if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
 						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
 						msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
 					}
 				}
 				ctx.log(std::move(msg));
-				return query::Failed();
+				return;
 			}
-			variant_case(errors::SymbolNotFound, _) {
-				ctx.log<dia::PlaceholderError>(
-					base::strConcat("Symbol '", name, "' not found in lookup"),
-					error_position,
-					"",
-					"symbol lookup here"
-				);
-				return query::Failed();
+
+			if (result.isEmpty()) {
+				error_args.log_not_found(ctx, error_args.error_position, name);
+				return;
 			}
-			variant_default { CORE_PANIC("Invalid state"); }
+
+			auto msg = makeBox<ShadowedVariableLookupError>(error_args.error_position);
+			for (auto& leaf: result.leaves()) {
+				if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
+					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
+					msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
+				}
+			}
+			ctx.log(std::move(msg));
 		}
-		CORE_UNREACHABLE();
 	}
+
+	query::QResult<CRef<LookupPath>> HInterface::lookupExpectSingle(
+		const LookupErrorArgs&     error_args,
+		query::Context&            ctx,
+		base::StrID                name,
+		AdditionalLookupParameters params
+	) const {
+		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
+		if (lookup_result->isSingle()) return &lookup_result->paths.front();
+
+		logNotSingleLookup(ctx, error_args, name, *lookup_result);
+		return query::Failed();
+	}
+
+	query::QResult<SymID> HInterface::lookupExpectSingleSym(
+		const LookupErrorArgs&     error_args,
+		query::Context&            ctx,
+		base::StrID                name,
+		AdditionalLookupParameters params
+	) const {
+		UNPACK_QRESULT_MOVE(
+			CRef<LookupPath> path =, lookupExpectSingle(error_args, ctx, name, params)
+		);
+		if (path->constructsAccessExpr()) {
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat("Symbol '", name, "' accessed through a value used as a symbol"),
+				error_args.error_position
+			);
+			return query::Failed();
+		}
+		return path->leaf();
+	}
+
+	void logSymbolNotFound(
+		query::Context& ctx, const dia::StablePosition error_position, base::StrID name
+	) {
+		ctx.log<dia::PlaceholderError>(
+			base::strConcat("Symbol '", name, "' not found in lookup"),
+			error_position,
+			"",
+			"symbol lookup here"
+		);
+	}
+
 }
