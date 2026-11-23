@@ -314,7 +314,7 @@ impl<'a> SolverEngine<'a> {
     /// Make sure that every package is present in at most one version.
     /// Important:
     /// ----------
-    /// This assures that not only two packages with the same [`FullIdentity`](crate::core::full_identity::FullIdentity),
+    /// This assures that not only two packages with the same [`FullIdentity`](crate::quackpack::core::full_identity::FullIdentity),
     /// but even two packages with the same [`Identity`] are not chosen.
     /// Thus we have to create a mapping from (not full) identities to packages.
     fn force_singular_versions(&mut self) -> QuackResult<()> {
@@ -421,8 +421,8 @@ mod test {
     use crate::core::solver::solver_freeze::SolverPackageFreeze;
     use crate::core::solver::solving::input::{PackageData, PreexistenceData};
     use crate::core::{Source, Version, parse_manifest};
-    use crate::util::filesystem::{touch, try_fsync_dir, write_file};
     use crate::util::to_url::ToUrl;
+    use crate::util::filesystem::{touch, try_fsync_dir, write_file};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();

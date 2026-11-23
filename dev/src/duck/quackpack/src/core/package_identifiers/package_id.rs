@@ -47,7 +47,7 @@ impl PackageId {
     ///
     /// They correspond to paths under `pkg/`, described in [`storage::paths`].
     ///
-    /// [`storage::paths`]: crate::core::storage::paths
+    /// [`storage::paths`]: crate::quackpack::core::storage::paths
     pub fn push_storage_path(self, root: &Path) -> PathBuf {
         match self.kind() {
             FullKind::Registry => {

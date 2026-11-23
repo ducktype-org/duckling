@@ -187,7 +187,7 @@ private:
 		}
 	}
 
-	/** @brief Target selection by name, construct kind, or the nearest enclosing loop. */
+	/** @brief Targets of `break` and `continue` as written: a name, a construct kind or none. */
 	void testActionStatements() {
 		// Named and implicit targets select the same loop using different selectors.
 		{
@@ -226,8 +226,8 @@ private:
 					= std::get_if<code::NamedTarget>(&continue_stmt->target_selector);
 				ASSERT_TRUE(break_target != nullptr);
 				ASSERT_TRUE(continue_target != nullptr);
-				ASSERT_TRUE(break_target->id == while_stmt->control_flow_id.value());
-				ASSERT_TRUE(continue_target->id == while_stmt->control_flow_id.value());
+				ASSERT_TRUE(break_target->name == base::StrID("target"));
+				ASSERT_TRUE(continue_target->name == base::StrID("target"));
 				auto* implicit_break
 					= dynamic_cast<const code::BreakStmt*>(while_stmt->body.statements.at(2).get());
 				auto* implicit_continue = dynamic_cast<const code::ContinueStmt*>(
@@ -261,40 +261,6 @@ private:
 			});
 		}
 
-		// The nearest matching name wins when nested constructs shadow it.
-		{
-			auto module_id = frontend::createModuleTreeFromContents(
-				R"(
-				fun foo() = {
-					while target (true) {
-						while target (true) {
-							break target;
-						}
-					}
-				}
-			)",
-				"test_pkg"
-			);
-			query::utils::withContextDo([&](query::Context& ctx) {
-				auto  block = compileSingleStatementOfFirstFun(ctx, module_id);
-				auto* outer = dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
-				ASSERT_TRUE(outer != nullptr);
-				ASSERT_HAS_VALUE(outer->control_flow_id);
-
-				auto* inner
-					= dynamic_cast<const code::WhileStmt*>(outer->body.statements.at(0).get());
-				ASSERT_TRUE(inner != nullptr);
-				ASSERT_HAS_VALUE(inner->control_flow_id);
-				ASSERT_TRUE(inner->control_flow_id.value() != outer->control_flow_id.value());
-
-				auto* break_stmt
-					= dynamic_cast<const code::BreakStmt*>(inner->body.statements.at(0).get());
-				ASSERT_TRUE(break_stmt != nullptr);
-				auto* break_target = std::get_if<code::NamedTarget>(&break_stmt->target_selector);
-				ASSERT_TRUE(break_target != nullptr);
-				ASSERT_TRUE(break_target->id == inner->control_flow_id.value());
-			});
-		}
 		// Explicit kinds select the requested construct through intervening constructs.
 		{
 			auto module_id = frontend::createModuleTreeFromContents(

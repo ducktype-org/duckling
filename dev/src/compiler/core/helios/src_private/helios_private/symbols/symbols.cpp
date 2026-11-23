@@ -9,10 +9,12 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/visitors/pst_visitor.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -181,6 +183,10 @@ namespace compiler::helios {
 				case pst::ElementKind::Const:
 					return false;
 
+				case pst::ElementKind::ExprElement:
+					if (el.dynamicCast<pst::expr::BlockExpr>().has_value()) return false;
+					[[fallthrough]];
+
 				// For other elements we go up the PST tree:
 				case pst::ElementKind::CodeBlock:
 				case pst::ElementKind::CodeBlockOrStmt:
@@ -189,7 +195,6 @@ namespace compiler::helios {
 				case pst::ElementKind::StmtSpecifier:
 				case pst::ElementKind::SpecifierBlock:
 				case pst::ElementKind::Block:
-				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
 				case pst::ElementKind::RoundGroupExpr:
@@ -830,6 +835,7 @@ namespace compiler::helios {
 						pst->getName().unlock(ctx)->getStablePosition()
 					);
 					if (hout_qresult.hasFailed()) return query::Failed();
+					refuseBlockExpr(ctx, *hout_qresult.valueOrThrow(), "a const initializer");
 
 					// Evaluate the HOUT expression at compile-time
 					auto ctv = ctx.query<QueryEvaluateHOUTExpression>(
