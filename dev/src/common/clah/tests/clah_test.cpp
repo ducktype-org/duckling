@@ -10,6 +10,7 @@
 #include <tester/tester.hpp>
 
 #include <array>
+#include <string_view>
 
 class ClahTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -207,11 +208,13 @@ private:
 		ASSERT_EQUAL(1, res.getPositionalParameterCount());
 		ASSERT_EQUAL(-123, res.getPositional<i64>(0));
 
-		std::array argv2{ "./prog", "-123", "1231", "test" };
-		assertThrows<clah::exceptions::NoDefaultValueParser>(
-			[&]() { clah.parse(argv2.size(), argv2.begin()); },
-			"Should throw NoDefaultValueParser exception."
-		);
+		try {
+			clah.parseArgs(R"(-123 "" tail)");
+		} catch (const clah::exceptions::NoDefaultValueParser& e) {
+			ASSERT_TRUE(std::string_view(e.what()).ends_with(R"(Extra values: "..."" tail")"));
+			return;
+		}
+		fail("Should throw NoDefaultValueParser for a quoted extra argument.");
 	}
 
 	void escapingTest() {

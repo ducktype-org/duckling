@@ -228,12 +228,16 @@ namespace clah {
 				if (positional_count < getPositionalParameters().size()) {
 					const auto& positional = getPositionalParameters()[positional_count];
 					st.parsePositional(positional.getValueParser());
-				} else {                    // Too many positional arguments.
+				} else {  // Too many positional arguments.
 					auto parser = getDefaultValueParser();
-					if (parser == nullptr)  // Extra arguments and no default value parser.
-						throw exceptions::NoDefaultValueParser(
-							st.position_in_merged, st.merged_view
-						);
+					if (parser == nullptr) {
+						auto snippet_start = st.position_in_merged;
+						// Include the opening quote when the snippet starts at an argument boundary.
+						if (st.inside_word_position == 0 && snippet_start > 0
+						    && st.merged_view.at(snippet_start - 1) == '"')
+							--snippet_start;
+						throw exceptions::NoDefaultValueParser(snippet_start, st.merged_view);
+					}
 					st.parseExtra(*parser);
 				}
 			}
