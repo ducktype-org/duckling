@@ -16,7 +16,7 @@ Tests:
       basic:
         test-cmd: duck -C foo build --features foo
         features: "foo"
-        Output:
+        Err:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
@@ -24,7 +24,7 @@ Tests:
       pulling-feature:
         test-cmd: duck -C foo build --features bar
         features: bar foo
-        Output:
+        Err:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`

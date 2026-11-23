@@ -97,7 +97,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![foo_bar_dep]),
         features: HashMap::new(),
@@ -111,7 +112,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -125,7 +127,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -139,7 +142,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -176,7 +180,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "xd".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: [("dx".into(), vec![])].into(),
@@ -190,7 +195,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "dx".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![dx_xd_dep]),
         features: [("root".into(), vec![])].into(),
@@ -239,7 +245,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![a_c_dep]),
         features: [("f".into(), vec![])].into(),
@@ -253,7 +260,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: [].into(),
@@ -267,7 +275,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![b_a_dep]),
         features: [].into(),
@@ -281,7 +290,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "c".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: [].into(),
@@ -330,7 +340,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "u".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![u_v_dep]),
         features: [("v".into(), vec![])].into(),
@@ -344,7 +355,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "v".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![v_u_dep]),
         features: [("u".into(), vec![])].into(),
@@ -376,7 +388,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "n".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies(vec![n_m_dep]),
         features: [
@@ -394,7 +407,8 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "m".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
         dependencies: registry::Dependencies::default(),
         features: [].into(),
@@ -514,7 +528,7 @@ fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -603,7 +617,7 @@ fn pinned_registry() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -660,7 +674,7 @@ fn features() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -745,7 +759,7 @@ fn pinned_request_while_pending_not_pinned() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -822,7 +836,7 @@ fn cycle() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -891,7 +905,7 @@ fn features_expansion() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:

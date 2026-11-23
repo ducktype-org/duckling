@@ -433,6 +433,10 @@ namespace vm::code {
 			FLAGS_CMP(fcmpLe_p32_p32)
 			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
 			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
+			FLAGS_CMP(cmpEq_pptr_pptr)
+			FLAGS_CMP(cmpNeq_pptr_pptr)
+			FLAGS_CMP(cmpEq_pcptr_pcptr)
+			FLAGS_CMP(cmpNeq_pcptr_pcptr)
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }
@@ -605,6 +609,10 @@ namespace vm::code {
 				deref_read();
 			}
 			instr_case(ins::Op_cast_pcptr_pcptr, i) {
+				wr(i.dst);
+				rd(i.src);
+			}
+			instr_case(ins::Op_cast_p64_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}

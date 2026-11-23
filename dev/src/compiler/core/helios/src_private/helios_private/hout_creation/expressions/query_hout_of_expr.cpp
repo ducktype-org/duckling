@@ -177,14 +177,6 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralUnitExpr>(ctx, pstOrigin(elem));
 			}
 
-			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> stmt) override {
-				// Block expressions are only lowered as statements; there is no expression
-				// lowering for them yet. Report it instead of hitting the panicky visitor.
-				ctx.log<dia::NotYetImplementedCodeError>(
-					"Block expressions are not yet supported.", stmt->getStablePosition()
-				);
-			}
-
 			/**
 			 * @brief Creates the numeric @p literal, which may be negative if @p sign says so.
 			 * For a negative literal, @p origin and @p position also cover the `-`.
@@ -682,6 +674,19 @@ namespace compiler::helios::code {
 
 				node = makeBox<FunctionTypeExpr>(
 					ctx, origin, std::move(parameters), std::move(result).valueOrThrow(), kind
+				);
+			}
+
+			/**
+			 * @brief Block expressions (`{ ... }` used as a value) are not supported yet. A block
+			 * also ends up here when the `;` after a block statement is missing, e.g.
+			 * `{ ... } f(x);` parses as the operator `f` applied to the block and `(x)`.
+			 */
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> block) override {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Using a block `{ ... }` as a value. A block statement currently needs a `;` "
+					"after its `}`.",
+					block->getStablePosition()
 				);
 			}
 

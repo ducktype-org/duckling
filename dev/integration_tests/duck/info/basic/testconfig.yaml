@@ -9,9 +9,8 @@ Tests:
     Cases:
       basic:
         is-ephemeral: ""
-        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
-        stderr-regex: ""
-        stdout-regex: |+
+        test-cmd: "@{expect_output} --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: |+
           foo:
             last-location: $DIT_TMP_DIR/foo
             last-access: @{date-regex}
@@ -19,9 +18,8 @@ Tests:
             not ephemeral
       ephemeral:
         is-ephemeral: "--ephemeral"
-        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
-        stderr-regex: ""
-        stdout-regex: |+
+        test-cmd: "@{expect_output} --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: |+
           foo:
             last-location: $DIT_TMP_DIR/foo
             last-access: @{date-regex}

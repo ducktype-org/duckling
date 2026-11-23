@@ -15,7 +15,5 @@ Tests:
           String: |+
             warning: there is no such lint as \`unknowN_lints\`
                      hint: did you mean \`unknown_lints\` [unknown_lints]
-        Output:
-          String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`

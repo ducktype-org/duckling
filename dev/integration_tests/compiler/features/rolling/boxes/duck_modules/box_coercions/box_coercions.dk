@@ -8,7 +8,7 @@ fun by_value(p: Point) -> i32 = {
     return p.y;
 }
 
-fun by_ref(p: ref Point) -> () = {
+fun by_ref(p: ref mut Point) -> () = {
     p.x = 777; # This should modify the passed box.
 }
 

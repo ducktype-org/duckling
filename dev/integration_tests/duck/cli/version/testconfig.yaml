@@ -10,9 +10,9 @@ Tests:
   version:
     Cases:
       version:
-        test-cmd: '@{expect_output} --out-regex "@{version_line_regex}" -- duck --version'
+        test-cmd: '@{expect_output} --err-regex "@{version_line_regex}" -- duck --version'
 
       version-verbose:
-        test-cmd: '@{expect_output} --out-regex "@{version_line_regex}"
-          --out-regex "\\ncommit-hash: +@{long_commit_hash}\\n"
+        test-cmd: '@{expect_output} --err-regex "@{version_line_regex}"
+          --err-regex "\\ncommit-hash: +@{long_commit_hash}\\n"
           -- duck --version --verbose'

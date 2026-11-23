@@ -300,6 +300,18 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+#define DEFINE_POINTER_COMPARISON_OP(NAME, OP)                            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_pptr_pptr)(FUNCTION_ARGS) {    \
+		{                                                                 \
+			frame->flags.flag = READ_FROM_PLACE_ARG(Pointer, instr->arg0) \
+				OP READ_FROM_PLACE_ARG(Pointer, instr->arg1);             \
+		}                                                                 \
+		FUNCTION_CONT(1);                                                 \
+	}
+
+	DEFINE_POINTER_COMPARISON_OP(cmpEq, ==)
+	DEFINE_POINTER_COMPARISON_OP(cmpNeq, !=)
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
 		FUNCTION_CONT(1);
@@ -797,18 +809,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
-		{
-			if (frame->local_slot_stack_end[-1].block == nullptr) {
-				// Without a block there is nothing to run the destructors off, so they are run
-				// over the variable's bytes directly.
-				const LocalSlot& slot = topLocalSlot(frame);
-				thread.process_memory.runDataDestructors(
-					{ slot.data, slot.type->getSize().asInt() }, slot.type
-				);
-			}
-
-			performDeinit(frame, thread);
-		}
+		{ performDeinitDtor(frame, thread); }
 		FUNCTION_CONT(1);
 	}
 

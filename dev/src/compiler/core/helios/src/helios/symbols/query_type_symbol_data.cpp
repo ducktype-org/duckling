@@ -16,6 +16,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/errors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -145,17 +146,50 @@ namespace compiler::helios {
 			}
 		}
 
+		/**
+		 * @brief The special kind of a user-defined comparison operator, like
+		 * `fun ==(rhs: ref T) -> bool`, which replaces the generated one. The right-hand side has
+		 * to be taken by `ref` and be of the class type, like `self`, because the generated
+		 * comparisons of aggregates pass both fields by `ref`.
+		 */
+		static tsh::MemberSpecialKind comparisonSpecialKind(query::Context& ctx, SymID sym) {
+			const auto* const comparison = std::ranges::find(
+				defgen::COMPARISON_METHODS,
+				name(sym).strView(),
+				&defgen::ComparisonMethodInfo::spelling
+			);
+			CORE_ASSERT(
+				comparison != defgen::COMPARISON_METHODS.end(), "Expected a comparison symbol"
+			);
+
+			const auto method_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+			if (method_type.getKind() != tsh::Kind::Function) return tsh::MemberSpecialKind::None;
+
+			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
+			const auto& params  = fn_type.getParameterTypes();
+			// The parameters are `self` and the right-hand side, both taken by `ref`.
+			const auto is_ref = [](const tsh::SymbolType<>& param) {
+				return param.getRefKind() == tsh::ReferenceKind::Ref;
+			};
+			if (params.size() == 2 && is_ref(params.at(0)) && is_ref(params.at(1))
+			    && params.at(1).getType() == params.at(0).getType()
+			    && fn_type.getResultType().getType() == tsh::getBoolType())
+				return comparison->special_kind;
+			return tsh::MemberSpecialKind::None;
+		}
+
 		static tsh::MemberSpecialKind specialKind(query::Context& ctx, SymID sym) {
 			switch (kind(sym)) {
 			case SymbolKind::Destructor:
 				return tsh::MemberSpecialKind::UserDestructor;
-			case SymbolKind::Constructor:
+			case SymbolKind::Constructor: {
 				CORE_ASSERT(
 					name(sym) == "copy",
 					"The only supported constructor in the class is copy constructor"
 				);
 				return tsh::MemberSpecialKind::CopyConstructor;
-			case SymbolKind::Method:
+			}
+			case SymbolKind::Method: {
 				if (name(sym) == "toString") {
 					const auto method_type
 						= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
@@ -168,7 +202,15 @@ namespace compiler::helios {
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}
+				const auto* const comparison = std::ranges::find(
+					defgen::COMPARISON_METHODS,
+					name(sym).strView(),
+					&defgen::ComparisonMethodInfo::spelling
+				);
+				if (comparison != defgen::COMPARISON_METHODS.end())
+					return comparisonSpecialKind(ctx, sym);
 				return tsh::MemberSpecialKind::None;
+			}
 			default:
 				return tsh::MemberSpecialKind::None;
 			}
@@ -284,12 +326,18 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief A class carries information when it declares at least one field.
+		 * @brief A class carries information when at least one of its fields does. A reference or
+		 * a box field always does, as it is stored as a pointer. So a class without fields, or
+		 * with only `()` or empty-class fields, carries no information, like `()`.
 		 */
-		static bool carriesInformation(const tsh::TypeInterface& class_interface) {
-			// this should probably be changed/expanded in the future:
-			auto fields = class_interface.getFieldsView();
-			return fields.begin() != fields.end();
+		static bool carriesInformation(
+			query::Context& ctx, const tsh::TypeInterface& class_interface
+		) {
+			return std::ranges::any_of(class_interface.getFieldsView(), [&](const auto& field) {
+				const auto field_type = field.getType(ctx);
+				return field_type.getRefKind() != tsh::ReferenceKind::Direct
+				    || field_type.getType().carriesInformation(ctx);
+			});
 		}
 
 		/**
@@ -373,7 +421,7 @@ namespace compiler::helios {
 				= isTriviallyCopyable(ctx, tmp_interface, user_members);
 			class_info.is_trivially_destructible
 				= isTriviallyDestructible(ctx, tmp_interface, user_members);
-			class_info.carries_information = carriesInformation(tmp_interface);
+			class_info.carries_information = carriesInformation(ctx, tmp_interface);
 
 			pushConstructors(
 				ctx, interface_builder, class_type, class_info.is_default_constructible

@@ -1,10 +1,12 @@
-﻿// Copyright 2026 DuckType LLC
+// Copyright 2026 DuckType LLC
 //
 // This file is part of the Duckling project, licensed under the DuckType
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst/parsed_pst.hpp>
@@ -16,6 +18,7 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
+#include <array>
 #include <iostream>
 #include <sstream>
 
@@ -68,6 +71,7 @@ public:
 		TESTER_ADD_TEST(testFunType);
 		TESTER_ADD_TEST(testBlock);
 		TESTER_ADD_TEST(testActions);
+		TESTER_ADD_TEST(testActionStatements);
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testUsing);
 		TESTER_ADD_TEST(testNamespace);
@@ -83,6 +87,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
 		TESTER_ADD_TEST(testOperatorFun);
+		TESTER_ADD_TEST(testMutMethod);
 		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
@@ -192,6 +197,91 @@ private:
 
 	void testActions() { testJsonRelativePath("actions.duck", "actions.json"); }
 
+	/** Checks the three forms of break/continue targets, including an omitted final semicolon. */
+	void testActionStatements() {
+		struct Case {
+			std::string_view                  target;
+			base::Optional<lang_def::Keyword> keyword;
+		};
+
+		const std::array cases = {
+			Case{ .target = "", .keyword = {} },
+			Case{ .target = "target", .keyword = {} },
+			Case{ .target = "if", .keyword = lang_def::Keyword::If },
+			Case{ .target = "while", .keyword = lang_def::Keyword::While },
+			Case{ .target = "for", .keyword = lang_def::Keyword::For },
+			Case{ .target = "block", .keyword = lang_def::Keyword::Block },
+		};
+
+		for (const auto action_name: { "break", "continue" }) {
+			for (const auto& test_case: cases) {
+				for (const auto terminator: { ";", "" }) {
+					const auto code
+						= base::strConcat(action_name, " ", test_case.target, terminator);
+					auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+					assertTrue(
+						parsed->getLogger()->good(), base::strConcat("Failed to parse ", code)
+					);
+
+					auto statements
+						= parsed->getRootElement().illegalAccess().value()->getStatements();
+					ASSERT_EQUAL(usize{ 1 }, statements.size());
+					auto stmt   = statements[0].illegalAccess().value();
+					auto action = stmt.dynamicCast<pst::Action>();
+					ASSERT_HAS_VALUE(action, code);
+					auto target = action.value()->getTargetKeyword();
+					ASSERT_EQUAL(test_case.keyword.has_value(), target.has_value());
+					if (test_case.keyword.has_value()) {
+						ASSERT_EQUAL(test_case.keyword.value(), target.value());
+						ASSERT_NO_VALUE(action.value()->getValue(), code);
+					} else if (test_case.target.empty()) {
+						ASSERT_NO_VALUE(action.value()->getValue(), code);
+					} else {
+						auto value = action.value()->getValue();
+						ASSERT_HAS_VALUE(value, code);
+						auto identifier = value.value()
+						                      .illegalAccess()
+						                      .value()
+						                      ->getExpr()
+						                      .illegalAccess()
+						                      .value()
+						                      .dynamicCast<pst::expr::IdentifierLiteral>();
+						ASSERT_HAS_VALUE(identifier, code);
+						ASSERT_EQUAL(
+							std::string_view{ "target" },
+							identifier.value()->getName().illegalAccess().value()->unwrap().strView()
+						);
+					}
+					ASSERT_EQUAL(std::string_view{ terminator }.empty(), stmt->isImplicitReturn());
+					if (std::string_view{ action_name } == "break")
+						ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Break>(), code);
+					else
+						ASSERT_HAS_VALUE(stmt.dynamicCast<pst::Continue>(), code);
+					const auto cloning = pst::testElementCloning(CRef{
+						&*parsed->getRootElement().illegalAccess().value() });
+					ASSERT_TRUE(cloning.isOk());
+				}
+			}
+		}
+
+		// Other actions retain general expressions, including postfix calls and brackets.
+		for (const auto code:
+		     { "return value + 1;", "return make[T]();", "defer cleanup();", "throw error;" }) {
+			auto parsed = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
+			ASSERT_TRUE(parsed->getLogger()->good());
+			auto action = parsed->getRootElement()
+			                  .illegalAccess()
+			                  .value()
+			                  ->getStatements()[0]
+			                  .illegalAccess()
+			                  .value()
+			                  .dynamicCast<pst::Action>();
+			ASSERT_HAS_VALUE(action);
+			ASSERT_HAS_VALUE(action.value()->getValue());
+			ASSERT_NO_VALUE(action.value()->getTargetKeyword());
+		}
+	}
+
 	void testImport() { testJsonRelativePath("import.duck", "import.json"); }
 
 	void testUsing() { testJsonRelativePath("using.duck", "using.json"); }
@@ -213,6 +303,8 @@ private:
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testOperatorFun() { testJsonRelativePath("operator_fun.duck", "operator_fun.json"); }
+
+	void testMutMethod() { testJsonRelativePath("mut_method.duck", "mut_method.json"); }
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");

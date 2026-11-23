@@ -13,7 +13,7 @@ Tests:
     Cases:
       basic:
         test-cmd: duck -C root sync
-        Output:
+        Err:
           String: |+
             info: loaded source codes of 3 packages, 0 were downloaded, 3 were already present
             info: successfully synchronized venv \`root\`

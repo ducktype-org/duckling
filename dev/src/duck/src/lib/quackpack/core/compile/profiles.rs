@@ -56,6 +56,16 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
             },
         ),
         (
+            "dvm".into(),
+            Profile {
+                name: "dvm".into(),
+                opt_level: OptLevel::One,
+                dvm_bytecode: true,
+                incremental: true,
+                c_std: true,
+            },
+        ),
+        (
             DEFAULT_SCRIPT_PROFILE_NAME.into(),
             Profile {
                 name: DEFAULT_SCRIPT_PROFILE_NAME.into(),

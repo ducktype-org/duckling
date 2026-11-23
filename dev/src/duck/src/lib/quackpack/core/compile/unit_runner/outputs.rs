@@ -15,7 +15,9 @@ use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::{CompilationInput, GraphNodeId, UnitGraph};
 use crate::quackpack::core::compile::unit::{Unit, UnitType};
 use crate::quackpack::core::compile::unit_runner::CompilationOutput;
-use crate::quackpack::core::compile::unit_runner::external_libs::gather_external_libraries;
+use crate::quackpack::core::compile::unit_runner::external_libs::{
+    ExternalLibrary, gather_external_libraries,
+};
 
 /// Get the output of this [`run`] pass.
 ///
@@ -96,13 +98,15 @@ pub fn get_linker_options(
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
     let outputs = get_deps_outputs(unit_id_in_graph, graph, layout, bcx)?;
-    let external_libs = gather_external_libraries(unit_id_in_graph, graph)
-        .into_iter()
-        .map(|x| x.to_string());
+    let external_libs = gather_external_libraries(unit_id_in_graph, graph);
     let args = outputs
         .into_iter()
         .map(|output| output.display().to_string())
-        .chain(external_libs)
+        .chain(
+            external_libs
+                .iter()
+                .flat_map(ExternalLibrary::native_linker_args),
+        )
         .collect::<Vec<_>>();
     debug!(?args, "raw linker args");
     if args.is_empty() && bcx.profile.c_std {
@@ -118,6 +122,23 @@ pub fn get_linker_options(
         })
     };
     Ok(Some(linker_options))
+}
+
+/// Get DVM linking options for the given node.
+pub fn get_dvm_linking_options(
+    unit_id_in_graph: GraphNodeId,
+    graph: &UnitGraph,
+    layout: &dyn ProfileLayout,
+    bcx: &BuildContext<'_, '_>,
+) -> QuackResult<Option<multipackage_schema::DvmLinkingOptions>> {
+    let bytecode_dependencies = get_deps_outputs(unit_id_in_graph, graph, layout, bcx)?;
+    if bytecode_dependencies.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(multipackage_schema::DvmLinkingOptions {
+        shared_libraries: None,
+        bytecode_dependencies: Some(bytecode_dependencies),
+    }))
 }
 
 /// Collect outputs of dependencies (direct and transitive) of this `unit`.

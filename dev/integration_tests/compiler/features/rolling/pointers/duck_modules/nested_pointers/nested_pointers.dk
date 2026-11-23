@@ -3,9 +3,9 @@ var global_val = 10;
 fun pointer_to_pointer() = {
     var value: i32 = 100;
     
-    var p1: ptr i32 = &value as ptr i32;
-    var p2: ptr ptr i32 = &p1 as ptr ptr i32;
-    var p3: ptr ptr ptr i32 = &p2 as ptr ptr ptr i32;
+    var p1: ptr mut i32 = &value as ptr mut i32;
+    var p2: ptr mut ptr mut i32 = &p1 as ptr mut ptr mut i32;
+    var p3: ptr mut ptr mut ptr mut i32 = &p2 as ptr mut ptr mut ptr mut i32;
 
     var read_val: i32 = *(*p2);
     builtin_output_i64(read_val as i64);
