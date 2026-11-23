@@ -1030,8 +1030,10 @@ namespace compiler::helios::code {
 		) -> query::QResult<Box<Expr>> {
 			auto candidates_result
 				= findBracketOperatorCandidates(query_ctx, *callee, base::StrID("()"), call_expr);
+			// Fails only when the operators exist, but are inaccessible.
 			UNPACK_QRESULT_MOVE(const auto candidates =, candidates_result);
 
+			// Empty when the value is not of a class, or its class has no `()` operator.
 			if (not candidates.empty())
 				return processBracketOperatorCall(
 					query_ctx, candidates, call_expr, std::move(callee)

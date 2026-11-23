@@ -121,16 +121,12 @@ namespace compiler::helios::code {
 			char(call_expr->getType())
 		);
 
-		const tsh::coercions::Coercion meta_coercion = coercions::coercionToMeta(ctx, base.ref());
-
 		// A value of a class with a `[]` operator calls the operator, with the value as `self`.
-		if (not meta_coercion.isValid()) {
-			auto candidates_result
-				= findBracketOperatorCandidates(ctx, *base, base::StrID("[]"), call_expr);
-			UNPACK_QRESULT_MOVE(const auto candidates =, candidates_result);
-			if (not candidates.empty())
-				return processBracketOperatorCall(ctx, candidates, call_expr, std::move(base));
-		}
+		auto candidates_result
+			= findBracketOperatorCandidates(ctx, *base, base::StrID("[]"), call_expr);
+		UNPACK_QRESULT_MOVE(const auto candidates =, candidates_result);
+		if (not candidates.empty())
+			return processBracketOperatorCall(ctx, candidates, call_expr, std::move(base));
 
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
@@ -148,6 +144,8 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 		auto arg_pst = arg_pst_opt.value();
+
+		const tsh::coercions::Coercion meta_coercion = coercions::coercionToMeta(ctx, base.ref());
 
 		// If base is coercible to meta, this is an array type creation.
 		if (meta_coercion.isValid()) {

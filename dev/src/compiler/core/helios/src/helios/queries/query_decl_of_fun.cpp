@@ -341,13 +341,6 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Checks if @p name is the name of a bracket operator, `()` or `[]`.
-		 */
-		bool isBracketOperatorName(base::StrID name) {
-			return name == base::StrID("()") || name == base::StrID("[]");
-		}
-
-		/**
 		 * @brief Determines whether a user-declared function or method is an operator and validates
 		 * its fixity.
 		 *
@@ -364,7 +357,8 @@ namespace compiler::helios {
 			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
 			// The parser only accepts these names on methods, and without a fixity.
-			if (isBracketOperatorName(name)) return Operatoriness::Bracket;
+			if (name == base::StrID("()") || name == base::StrID("[]"))
+				return Operatoriness::Bracket;
 
 			const bool is_operator = lexer::isOperatorSymbolString(name.strView());
 			if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
@@ -525,12 +519,6 @@ namespace compiler::helios {
 				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
 				const auto params     = stmt->getParams().unlock(ctx);
 				if (specifiers.is_static) {
-					if (isBracketOperatorName(name(original_symbol))) {
-						ctx.log<StaticBracketOperatorError>(
-							stmt->getStablePosition(), name(original_symbol).str()
-						);
-						query::throwFailed();
-					}
 					const auto operatoriness = operatorinessFromDeclaration(
 						ctx,
 						name(original_symbol),
@@ -538,6 +526,12 @@ namespace compiler::helios {
 						stmt->getOperatorFixity(),
 						stmt->getStablePosition()
 					);
+					if (operatoriness == HOUTFunctionDeclaration::Operatoriness::Bracket) {
+						ctx.log<StaticBracketOperatorError>(
+							stmt->getStablePosition(), name(original_symbol).str()
+						);
+						query::throwFailed();
+					}
 					emplaceDeclaration(params, stmt->getRet(), operatoriness);
 					return;
 				}
