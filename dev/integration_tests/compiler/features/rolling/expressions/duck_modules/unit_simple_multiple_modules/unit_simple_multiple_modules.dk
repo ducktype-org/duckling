@@ -6,7 +6,7 @@ let a: () = ();
 let b: unit_simple_submodule.unitType = ();
 
 fun main() -> i64 = {
-    unit_simple_submodule.foo(a);
-    unit_simple_submodule.foo(b);
-    return 0i64;
+	unit_simple_submodule.foo(a);
+	unit_simple_submodule.foo(b);
+	return 0i64;
 }

@@ -1,45 +1,91 @@
 import std.math;
 
 fun main() -> i64 = {
-    let small: f64 = 3.14;
-    let big: f64 = 9.81;
-    let equal: f64 = 3.14;
+	let small: f64 = 3.14;
+	let big: f64 = 9.81;
+	let equal: f64 = 3.14;
 
-    if (small < big) {} else { builtin_output_i64(1); }
-    if (big < small) { builtin_output_i64(2); }
+	if (small < big) {} else {
+		builtin_output_i64(1);
+	}
+	if (big < small) {
+		builtin_output_i64(2);
+	}
 
-    if (big > small) {} else { builtin_output_i64(3); }
-    if (small > big) { builtin_output_i64(4); }
+	if (big > small) {} else {
+		builtin_output_i64(3);
+	}
+	if (small > big) {
+		builtin_output_i64(4);
+	}
 
-    if (small <= big) {} else { builtin_output_i64(5); }
-    if (small <= equal) {} else { builtin_output_i64(6); }
-    if (big <= small) { builtin_output_i64(7); }
+	if (small <= big) {} else {
+		builtin_output_i64(5);
+	}
+	if (small <= equal) {} else {
+		builtin_output_i64(6);
+	}
+	if (big <= small) {
+		builtin_output_i64(7);
+	}
 
-    if (big >= small) {} else { builtin_output_i64(8); }
-    if (equal >= small) {} else { builtin_output_i64(9); }
-    if (small >= big) { builtin_output_i64(10); }
+	if (big >= small) {} else {
+		builtin_output_i64(8);
+	}
+	if (equal >= small) {} else {
+		builtin_output_i64(9);
+	}
+	if (small >= big) {
+		builtin_output_i64(10);
+	}
 
-    if (small == equal) {} else { builtin_output_i64(11); }
-    if (small == big) { builtin_output_i64(12); }
+	if (small == equal) {} else {
+		builtin_output_i64(11);
+	}
+	if (small == big) {
+		builtin_output_i64(12);
+	}
 
-    if (small != big) {} else { builtin_output_i64(13); }
-    if (small != equal) { builtin_output_i64(14); }
+	if (small != big) {} else {
+		builtin_output_i64(13);
+	}
+	if (small != equal) {
+		builtin_output_i64(14);
+	}
 
-    if (1.5f64 >= 1.50001) { builtin_output_i64(15); }
+	if (1.5f64 >= 1.50001) {
+		builtin_output_i64(15);
+	}
 
-    # A NaN is not ordered with anything: every comparison is false, except `!=`, which is
-    # always `not ==` and so true.
-    let nan = math.sqrt(-1.0f64);
-    if (nan == nan) { builtin_output_i64(16); }
-    if (nan != nan) {} else { builtin_output_i64(17); }
-    if (nan != small) {} else { builtin_output_i64(18); }
-    if (not (nan == small)) {} else { builtin_output_i64(19); }
-    if (nan < small or nan > small or nan <= small or nan >= small) { builtin_output_i64(20); }
+	# A NaN is not ordered with anything: every comparison is false, except `!=`, which is
+	# always `not ==` and so true.
+	let nan = math.sqrt(-1.0f64);
+	if (nan == nan) {
+		builtin_output_i64(16);
+	}
+	if (nan != nan) {} else {
+		builtin_output_i64(17);
+	}
+	if (nan != small) {} else {
+		builtin_output_i64(18);
+	}
+	if (not (nan == small)) {} else {
+		builtin_output_i64(19);
+	}
+	if (nan < small or nan > small or nan <= small or nan >= small) {
+		builtin_output_i64(20);
+	}
 
-    let nan32 = nan as f32;
-    if (nan32 == nan32) { builtin_output_i64(21); }
-    if (nan32 != nan32) {} else { builtin_output_i64(22); }
-    if (nan32 != 0.0f32) {} else { builtin_output_i64(23); }
+	let nan32 = nan as f32;
+	if (nan32 == nan32) {
+		builtin_output_i64(21);
+	}
+	if (nan32 != nan32) {} else {
+		builtin_output_i64(22);
+	}
+	if (nan32 != 0.0f32) {} else {
+		builtin_output_i64(23);
+	}
 
-    return 0i64;
+	return 0i64;
 }

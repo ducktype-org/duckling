@@ -5,12 +5,12 @@ let b: unitType = ();
 const unitType: type = ();
 
 fun foo(u: ()) -> () = {
-    builtin_output_i64(1);
-    return u;
+	builtin_output_i64(1);
+	return u;
 }
 
 fun main() -> i64 = {
-    foo(a);
-    foo(b);
-    return 0i64;
+	foo(a);
+	foo(b);
+	return 0i64;
 }

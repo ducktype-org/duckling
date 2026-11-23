@@ -1,149 +1,149 @@
 fun main() -> i64 = {
-    ### I8 ###
-    let a_8: i8 = -100i8;
-    let b_8: i8 = 10i8;
-    
-    if (a_8 > b_8) {
-        builtin_output_i64(1);
-    }
+	### I8 ###
+	let a_8: i8 = -100i8;
+	let b_8: i8 = 10i8;
 
-    if (a_8 + b_8 != -90i8) {
-        builtin_output_i64(2);
-    }
+	if (a_8 > b_8) {
+		builtin_output_i64(1);
+	}
 
-    let i8_max: i8 = 127i8;
-    let i8_min: i8 = i8_max + 1i8;
+	if (a_8 + b_8 != -90i8) {
+		builtin_output_i64(2);
+	}
 
-    if (i8_min != -128i8) {
-        builtin_output_i64(3);
-    }
+	let i8_max: i8 = 127i8;
+	let i8_min: i8 = i8_max + 1i8;
 
-    if (i8_min - 1i8 != 127i8) {
-        builtin_output_i64(4);
-    }
+	if (i8_min != -128i8) {
+		builtin_output_i64(3);
+	}
 
-    ### I16 ###
-    let a_16: i16 = -32000i16;
-    let b_16: i16 = 10i16;
-    
-    if (a_16 > b_16) {
-        builtin_output_i64(5);
-    }
+	if (i8_min - 1i8 != 127i8) {
+		builtin_output_i64(4);
+	}
 
-    if (a_16 + b_16 != -31990i16) {
-        builtin_output_i64(6);
-    }
+	### I16 ###
+	let a_16: i16 = -32000i16;
+	let b_16: i16 = 10i16;
 
-    let i16_max: i16 = 32767i16;
-    let i16_min: i16 = i16_max + 1i16;
+	if (a_16 > b_16) {
+		builtin_output_i64(5);
+	}
 
-    if (i16_min - 1i16 != 32767i16) {
-        builtin_output_i64(7);
-    }
+	if (a_16 + b_16 != -31990i16) {
+		builtin_output_i64(6);
+	}
 
-    if (i16_min != -32768i16) {
-        builtin_output_i64(17);
-    }
-    
-    ### I32 ###
-    let a_32: i32 = -2000000000i32;
-    let b_32: i32 = 2000000000i32;
+	let i16_max: i16 = 32767i16;
+	let i16_min: i16 = i16_max + 1i16;
 
-    if (a_32 >= b_32) {
-        builtin_output_i64(8);
-    }
+	if (i16_min - 1i16 != 32767i16) {
+		builtin_output_i64(7);
+	}
 
-    if (a_32 == b_32) {
-        builtin_output_i64(9);
-    }
-    
-    if (a_32 + b_32 != 0i32) {
-        builtin_output_i64(10);
-    }
+	if (i16_min != -32768i16) {
+		builtin_output_i64(17);
+	}
 
-    if (1000i32 * (-1000i32) != -1000000i32) {
-        builtin_output_i64(11);
-    }
+	### I32 ###
+	let a_32: i32 = -2000000000i32;
+	let b_32: i32 = 2000000000i32;
 
-    let i32_max: i32 = 2147483647i32;
-    let i32_min: i32 = i32_max + 1i32;
+	if (a_32 >= b_32) {
+		builtin_output_i64(8);
+	}
 
-    if (i32_min - 1i32 != 2147483647i32) {
-        builtin_output_i64(12);
-    }
+	if (a_32 == b_32) {
+		builtin_output_i64(9);
+	}
 
-    if (i32_min != -2147483648i32) {
-        builtin_output_i64(18);
-    }
+	if (a_32 + b_32 != 0i32) {
+		builtin_output_i64(10);
+	}
 
-    ### I64 ###
-    let i64_max: i64 = 9223372036854775807i64;
-    let i64_min: i64 = i64_max + 1i64;
+	if (1000i32 * (-1000i32) != -1000000i32) {
+		builtin_output_i64(11);
+	}
 
-    if (i64_min != -9223372036854775808i64) {
-        builtin_output_i64(19);
-    }
-    
-    ### SMALLEST VALUES ###
-    let i8_min_literal: i8 = -128i8;
-    if (i8_min_literal != i8_min) {
-        builtin_output_i64(22);
-    }
+	let i32_max: i32 = 2147483647i32;
+	let i32_min: i32 = i32_max + 1i32;
 
-    let i16_min_literal: i16 = -32768i16;
-    if (i16_min_literal != i16_min) {
-        builtin_output_i64(23);
-    }
+	if (i32_min - 1i32 != 2147483647i32) {
+		builtin_output_i64(12);
+	}
 
-    let i32_min_literal: i32 = -2147483648i32;
-    if (i32_min_literal != i32_min) {
-        builtin_output_i64(24);
-    }
+	if (i32_min != -2147483648i32) {
+		builtin_output_i64(18);
+	}
 
-    let i64_min_literal: i64 = -9223372036854775808i64;
-    if (i64_min_literal != i64_min) {
-        builtin_output_i64(25);
-    }
+	### I64 ###
+	let i64_max: i64 = 9223372036854775807i64;
+	let i64_min: i64 = i64_max + 1i64;
 
-    var reassigned: i8 = 0i8;
-    reassigned = -128i8;
-    if (reassigned != i8_min) {
-        builtin_output_i64(26);
-    }
+	if (i64_min != -9223372036854775808i64) {
+		builtin_output_i64(19);
+	}
 
-    ### NUMERIC LITERALS ###
-    let bin = 0b010010101;
-    if (bin != 149) {
-        builtin_output_i64(13);
-    }
-    
-    let oct = 0o0234753;
-    if (oct != 80363) {
-        builtin_output_i64(14);
-    }
-    
-    let hex = 0xefabc1239;
-    if (hex != 64336171577) {
-        builtin_output_i64(15);
-    }
-    
-    let hex2 = 0xEFABC1239;
-    if (hex != hex2) {
-        builtin_output_i64(16);
-    }
+	### SMALLEST VALUES ###
+	let i8_min_literal: i8 = -128i8;
+	if (i8_min_literal != i8_min) {
+		builtin_output_i64(22);
+	}
 
-    # A literal that does not fit into `i64` is a `u64`.
-    let u64_max = 18446744073709551615;
-    if (u64_max != 18446744073709551615u64) {
-        builtin_output_i64(20);
-    }
+	let i16_min_literal: i16 = -32768i16;
+	if (i16_min_literal != i16_min) {
+		builtin_output_i64(23);
+	}
 
-    # A negative literal without a type is an `i32`, or an `i64` if it does not fit into `i32`.
-    let negative = -2147483648;
-    let negative_i32: i32 = negative;
-    if (negative_i32 + 1i32 != -2147483647i32) {
-        builtin_output_i64(21);
-    }
-    
-    return 0i64;
+	let i32_min_literal: i32 = -2147483648i32;
+	if (i32_min_literal != i32_min) {
+		builtin_output_i64(24);
+	}
+
+	let i64_min_literal: i64 = -9223372036854775808i64;
+	if (i64_min_literal != i64_min) {
+		builtin_output_i64(25);
+	}
+
+	var reassigned: i8 = 0i8;
+	reassigned = -128i8;
+	if (reassigned != i8_min) {
+		builtin_output_i64(26);
+	}
+
+	### NUMERIC LITERALS ###
+	let bin = 0b010010101;
+	if (bin != 149) {
+		builtin_output_i64(13);
+	}
+
+	let oct = 0o0234753;
+	if (oct != 80363) {
+		builtin_output_i64(14);
+	}
+
+	let hex = 0xefabc1239;
+	if (hex != 64336171577) {
+		builtin_output_i64(15);
+	}
+
+	let hex2 = 0xEFABC1239;
+	if (hex != hex2) {
+		builtin_output_i64(16);
+	}
+
+	# A literal that does not fit into `i64` is a `u64`.
+	let u64_max = 18446744073709551615;
+	if (u64_max != 18446744073709551615u64) {
+		builtin_output_i64(20);
+	}
+
+	# A negative literal without a type is an `i32`, or an `i64` if it does not fit into `i32`.
+	let negative = -2147483648;
+	let negative_i32: i32 = negative;
+	if (negative_i32 + 1i32 != -2147483647i32) {
+		builtin_output_i64(21);
+	}
+
+	return 0i64;
 }

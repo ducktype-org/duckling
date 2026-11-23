@@ -94,7 +94,6 @@ fundecl alignment_of(v: type) -> i64;
 fundecl size_of(v: type) -> i64;
 
 
-
 #{
     Old entry points
 #}

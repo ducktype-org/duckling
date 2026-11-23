@@ -85,11 +85,30 @@ fi
 unformatted=0
 failed=0
 for file in "${files[@]}"; do
-    "$duckfmt" "$file" "${mode[@]}"
+    if [[ ${mode[0]} == -k ]]; then
+        "$duckfmt" "$file" -k
+        case $? in
+        0) ;;
+        1) unformatted=1 ;;
+        *) failed=1 ;;
+        esac
+        continue
+    fi
+
+    errors=$("$duckfmt" "$file" -k 2>&1 > /dev/null)
     case $? in
     0) ;;
-    1) unformatted=1 ;;
-    *) failed=1 ;;
+    1)
+        if "$duckfmt" "$file" -i; then
+            echo "Formatted $file"
+        else
+            failed=1
+        fi
+        ;;
+    *)
+        echo "$errors" >&2
+        failed=1
+        ;;
     esac
 done
 
