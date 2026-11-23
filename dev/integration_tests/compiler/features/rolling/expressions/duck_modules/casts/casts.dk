@@ -58,6 +58,10 @@ fun main() -> i64 = {
     var bool_zero: bool = 0i64 as bool;
     builtin_output_i64(bool_zero as i64);   # 0
 
+    # A `bool` takes a whole byte, so a cast to an 8-bit integer keeps its 0 or 1 as it is.
+    builtin_output_i64((bool_val as u8) as i64);    # 1
+    builtin_output_i64((bool_zero as i8) as i64);   # 0
+
     # 9) `cptr` -> integer reads the native address. Two bytes apart stay two apart, and a
     # narrower integer keeps the low bits of the address.
     var bytes: u8[4];
