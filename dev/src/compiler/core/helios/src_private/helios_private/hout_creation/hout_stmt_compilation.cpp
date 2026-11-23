@@ -49,7 +49,6 @@
 #include <query_framework/query_errors.hpp>
 
 #include <algorithm>
-#include <ranges>
 #include <string_view>
 #include <variant>
 
@@ -673,31 +672,31 @@ namespace compiler::helios {
 		const auto origin = code::pstOrigin(block_expr);
 		auto contents = getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, block_expr->getBlock()));
 
-		base::Optional<pst::Access<pst::ExprStmt>> tail_stmt;
-		if (!contents.empty() && contents.back()->isImplicitReturn())
-			tail_stmt = contents.back().dynamicCast<pst::ExprStmt>();
+		base::Optional<Box<code::Expr>> tail;
+		if (!contents.empty() && contents.back()->isImplicitReturn()) {
+			if (auto expr_stmt_opt = contents.back().dynamicCast<pst::ExprStmt>(); expr_stmt_opt) {
+				auto tail_holder = expr_stmt_opt.value()->getExpr().unlock(ctx);
+				UNPACK_QRESULT_MOVE(
+					auto tail_expr =,
+					code::subExprFromPST(ctx, unlockOrFail(ctx, tail_holder->getExpr()))
+				);
+				const auto tail_type = tail_expr->expression_type.getSymbolType();
+				UNPACK_QRESULT_MOVE(
+					tail =,
+					coercions::coerceFromBox(
+						ctx, std::move(tail_expr), tail_type, tail_holder->getStablePosition()
+					)
+				);
+				contents.pop_back();
+			}
+		}
 
 		code::CodeBlock body({});
-		const auto      body_size = contents.size() - (tail_stmt.has_value() ? 1 : 0);
-		for (const auto& stmt: contents | std::views::take(body_size))
-			appendStmt(ctx, body, stmt, {});
+		for (const auto& stmt: contents) appendStmt(ctx, body, stmt, {});
 
-		auto block = makeBox<code::BlockStmt>(origin, std::move(body));
-		if (tail_stmt.empty())
-			return Box<code::Expr>(makeBox<code::BlockExpr>(ctx, origin, std::move(block)));
-
-		auto tail_holder = tail_stmt.value()->getExpr().unlock(ctx);
-		UNPACK_QRESULT_MOVE(
-			auto tail =, code::subExprFromPST(ctx, unlockOrFail(ctx, tail_holder->getExpr()))
-		);
-		const auto tail_type = tail->expression_type.getSymbolType();
-		UNPACK_QRESULT_MOVE(
-			tail =,
-			coercions::coerceFromBox(
-				ctx, std::move(tail), tail_type, tail_holder->getStablePosition()
-			)
-		);
-		return Box<code::Expr>(makeBox<code::BlockExpr>(origin, std::move(block), std::move(tail)));
+		return Box<code::Expr>(makeBox<code::BlockExpr>(
+			origin, makeBox<code::BlockStmt>(origin, std::move(body)), std::move(tail)
+		));
 	}
 
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(

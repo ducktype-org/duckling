@@ -1078,8 +1078,7 @@ namespace compiler::helios::code {
 		 */
 		base::Optional<Box<Expr>> tail;
 
-		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<BlockStmt> block);
-		BlockExpr(ElementOrigin origin, Box<BlockStmt> block, Box<Expr> tail);
+		BlockExpr(ElementOrigin origin, Box<BlockStmt> block, base::Optional<Box<Expr>> tail = {});
 		~BlockExpr() override;
 
 		void debugPrint(std::ostream& out) const final;
