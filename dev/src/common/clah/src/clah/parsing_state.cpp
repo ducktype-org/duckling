@@ -44,7 +44,7 @@ namespace {
 		for (char c: args) {
 			if (c == '"') {
 				in_quotes = !in_quotes;
-			} else if (std::isspace(c) && not in_quotes) {
+			} else if (std::isspace(static_cast<unsigned char>(c)) && not in_quotes) {
 				if (!current_arg.empty()) {
 					result.push_back(current_arg);
 					current_arg.clear();
