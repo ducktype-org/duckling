@@ -32,9 +32,9 @@ package could build on the generated one.
 
 The bindings are made for one target and one version of the library, both named in their banner
 (`from uv.h (libuv 1.53.0)`, `Target: x86_64-unknown-linux-gnu.`). The target is the one the
-system C compiler builds for (`gcc -dumpmachine`), recorded without its vendor, which does not
-change the ABI. Record layouts, the width of `long` and the signedness of `char` come from it. A
-package works on another machine when:
+system C compiler builds for (`gcc -dumpmachine`), recorded with `unknown` as its vendor (Apple's
+is kept), since the vendor does not change the ABI. Record layouts, the width of `long` and the
+signedness of `char` come from it. A package works on another machine when:
 
 - **The architecture and OS are the same.** Bindings for several targets in one package need
   target conditions in Duckling (#4142), and then a merge of per-target runs (#4201).
@@ -46,10 +46,11 @@ package works on another machine when:
 - **A shared library is found.** duck links `lib<name>.a` before `lib<name>.so` (#4140), and a
   static library's own dependencies are not linked.
 
-Packages for 23 libraries generated on Arch Linux (glibc) were used unchanged on Ubuntu 24.04,
-Ubuntu 26.04 and Alpine 3.24 (musl). All of them built and ran except lua, for its library name,
-and curl on Ubuntu, whose `libcurl.a` was picked. musl's libc types have other names than glibc's
-but the same sizes for these libraries; nothing guarantees that in general.
+Packages for the 22 libraries of the sweep installed on an Arch Linux (glibc) machine were used
+unchanged on Ubuntu 24.04, Ubuntu 26.04 and Alpine 3.24 (musl), wherever the library was installed
+there too. All of them built and ran except lua, for its library name, and curl on Ubuntu, whose
+`libcurl.a` was picked. musl's libc types have other names than glibc's but the same sizes for
+these libraries; nothing guarantees that in general.
 
 Finding the library on the consumer's machine, checking its version and target, and building it
 from source belong to build scripts, which duckbind will write once they exist (#4200). Generating
@@ -254,7 +255,8 @@ in `integration_tests/tools/duckbind/`:
   compared against `expected_bindings.txt`;
 - that package, with the header and library vendored inside it, is verified, run, published
   through git and used from another directory, and holds no absolute path;
-- `math.h` and `-lm` are found by bare names, and zlib through pkg-config;
+- zlib is found through pkg-config; finding `math.h` and `-lm` by bare names is tested too, but
+  disabled until #4140;
 - regeneration, `check` and `bindings` are tested, and so is bad input;
 - SDL3 itself, when pkg-config finds it.
 
