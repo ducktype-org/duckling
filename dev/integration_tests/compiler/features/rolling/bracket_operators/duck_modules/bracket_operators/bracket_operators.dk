@@ -2,40 +2,40 @@
 # `self` are written inside the brackets, and the call goes through the usual overload resolution.
 
 class Grid {
-    a: i64 = 0;
-    b: i64 = 0;
+	a: i64 = 0;
+	b: i64 = 0;
 
-    fun [](i: i64) -> ref i64 = {
-        if (i == 0) return &a;
-        return &b;
-    }
+	fun [](i: i64) -> ref i64 = {
+		if (i == 0) return &a;
+		return &b;
+	}
 
-    fun [](i: i64, j: i64) -> i64 = i * 10 + j;
+	fun [](i: i64, j: i64) -> i64 = i * 10 + j;
 
-    fun []() -> i64 = a + b;
+	fun []() -> i64 = a + b;
 
-    fun ()(x: i64) -> i64 = x + a;
+	fun ()(x: i64) -> i64 = x + a;
 
-    fun ()(x: i64, y: i64, z: i64 = 100) -> i64 = x + y + z;
+	fun ()(x: i64, y: i64, z: i64 = 100) -> i64 = x + y + z;
 
-    fun ()() -> i64 = b;
+	fun ()() -> i64 = b;
 
-    fun throughSelf() -> i64 = self[0] + self(1000);
+	fun throughSelf() -> i64 = self[0] + self(1000);
 }
 
 class Holder {
-    grid: Grid;
+	grid: Grid;
 }
 
 template(T: type)
 class Pair {
-    first: T;
-    second: T;
+	first: T;
+	second: T;
 
-    fun [](i: i64) -> ref T = {
-        if (i == 0) return &first;
-        return &second;
-    }
+	fun [](i: i64) -> ref T = {
+		if (i == 0) return &first;
+		return &second;
+	}
 }
 
 fun makeGrid() -> Grid = Grid(1, 2);
@@ -43,35 +43,35 @@ fun makeGrid() -> Grid = Grid(1, 2);
 fun throughRef(g: ref Grid) -> i64 = g[1] + g(5);
 
 fun main() -> i64 = {
-    var g = Grid(1, 2);
+	var g = Grid(1, 2);
 
-    # Overloads by the number of arguments, with default and named arguments.
-    builtin_output_i64(g[0]);                # 1
-    builtin_output_i64(g[3, 4]);             # 34
-    builtin_output_i64(g[]);                 # 3
-    builtin_output_i64(g(5));                # 6
-    builtin_output_i64(g(5, 6));             # 111
-    builtin_output_i64(g(5, z = 7, y = 1));  # 13
-    builtin_output_i64(g());                 # 2
+	# Overloads by the number of arguments, with default and named arguments.
+	builtin_output_i64(g[0]); # 1
+	builtin_output_i64(g[3, 4]); # 34
+	builtin_output_i64(g[]); # 3
+	builtin_output_i64(g(5)); # 6
+	builtin_output_i64(g(5, 6)); # 111
+	builtin_output_i64(g(5, z = 7, y = 1)); # 13
+	builtin_output_i64(g()); # 2
 
-    # A `[]` returning a reference can be assigned to.
-    g[0] = 40;
-    g[1] += 2;
-    builtin_output_i64(g[0]);  # 40
-    builtin_output_i64(g[1]);  # 4
+	# A `[]` returning a reference can be assigned to.
+	g[0] = 40;
+	g[1] += 2;
+	builtin_output_i64(g[0]); # 40
+	builtin_output_i64(g[1]); # 4
 
-    # The operators apply to any value of the class.
-    builtin_output_i64(g.throughSelf());     # 1080
-    builtin_output_i64(throughRef(&g));      # 49
-    builtin_output_i64(makeGrid()(9));       # 10
-    builtin_output_i64(makeGrid()[1]);       # 2
-    var h = Holder(Grid(7, 8));
-    builtin_output_i64(h.grid(1));           # 8
-    builtin_output_i64(h.grid[0]);           # 7
+	# The operators apply to any value of the class.
+	builtin_output_i64(g.throughSelf()); # 1080
+	builtin_output_i64(throughRef(&g)); # 49
+	builtin_output_i64(makeGrid()(9)); # 10
+	builtin_output_i64(makeGrid()[1]); # 2
+	var h = Holder(Grid(7, 8));
+	builtin_output_i64(h.grid(1)); # 8
+	builtin_output_i64(h.grid[0]); # 7
 
-    # Templated classes too.
-    var p = Pair[i64](3, 4);
-    p[1] = p[0] + 10;
-    builtin_output_i64(p[1]);  # 13
-    return 0;
+	# Templated classes too.
+	var p = Pair[i64](3, 4);
+	p[1] = p[0] + 10;
+	builtin_output_i64(p[1]); # 13
+	return 0;
 }

@@ -29,11 +29,11 @@ class Foo {
 		return x;
 	}
 
-    fun ()(a: i64) -> i64 = {
-        return a;
-    }
+	fun ()(a: i64) -> i64 = {
+		return a;
+	}
 
-    fun [](a: i64) -> i64 = {
-        return a;
-    }
+	fun [](a: i64) -> i64 = {
+		return a;
+	}
 }
