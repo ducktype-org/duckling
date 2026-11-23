@@ -375,7 +375,6 @@ private:
 		                 .addShortName('n')
 		                 .addShortDesc("Package name")
 		                 .build())
-				.add(clah::ParamBuilder::ofFlag().addShortName('v').addShortDesc("Verbose").build())
 		);
 
 		std::array argv{ "./prog", "comple_package", "-n", "main" };
@@ -384,22 +383,20 @@ private:
 			"Clah did not reject an invalid command name."
 		);
 
-		auto check_help
-			= [&](const std::vector<const char*>& args, const char* command, bool verbose) {
-				  try {
-					  clah.parse(args.size(), args.data());
-				  } catch (const clah::exceptions::HelpException& e) {
-					  const auto& result = e.parsing_result;
-					  ASSERT_EQUAL(command, result.getMatchedCommand().value()->getName());
-					  ASSERT_EQUAL(verbose, result.isFlag('v'));
-					  return;
-				  }
-				  fail("Clah should stop parsing after the help option.");
-			  };
+		auto check_help = [&](const std::vector<const char*>& args, const char* command) {
+			try {
+				clah.parse(args.size(), args.data());
+			} catch (const clah::exceptions::HelpException& e) {
+				const auto& result = e.parsing_result;
+				ASSERT_EQUAL(command, result.getMatchedCommand().value()->getName());
+				return;
+			}
+			fail("Clah should stop parsing after the help option.");
+		};
 
-		check_help({ "./prog", "--help", "comple_package" }, "prog", false);
-		check_help({ "./prog", "compile_package", "--help", "--unknown" }, "compile_package", false);
-		check_help({ "./prog", "compile_package", "-hv", "--unknown" }, "compile_package", true);
+		check_help({ "./prog", "--help", "comple_package" }, "prog");
+		check_help({ "./prog", "compile_package", "--help", "--unknown" }, "compile_package");
+		check_help({ "./prog", "compile_package", "-hx" }, "compile_package");
 		ASSERT_EQUAL(0, clah.execute("compile_package --help --unknown"));
 	}
 

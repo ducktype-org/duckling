@@ -169,6 +169,7 @@ namespace clah {
 
 			if (parameter->getValueParser() == nullptr) {
 				parseWithParameter(*parameter, name);
+				if (result.isFlag("help")) return;
 				continue;
 			}
 
