@@ -181,8 +181,8 @@ namespace lexer {
 			else
 				decLiteralHandler(output);
 
-		} else if (isBlockCommentBegin()) {
-			blockCommentHandler(output);
+		} else if (const usize delimiter_length = blockCommentOpeningLength()) {
+			blockCommentHandler(output, delimiter_length);
 		} else if (isCommentBegin()) {
 			commentHandler(output);
 		} else if (isFormatStringBegin()) {
@@ -234,20 +234,20 @@ namespace lexer {
 			));
 	}
 
-	void Lexer::blockCommentHandler(Tokens& output) {
+	void Lexer::blockCommentHandler(Tokens& output, usize delimiter_length) {
 		usize               begin = where;
 		usize               end{};
 		auto                source_start = currentPosition();
-		dia::SourcePosition opening(source_start, begin + 1);
+		dia::SourcePosition opening(source_start, begin + delimiter_length - 1);
 
-		skip(2);  // "#{"
+		skip(delimiter_length);
 		while (true) {
 			if (isEOF()) {
 				logger->log(makeBox<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
-			} else if (isBlockCommentEnd()) {
-				skip(2);
+			} else if (isBlockCommentEnd(begin, delimiter_length)) {
+				skip(delimiter_length);
 				end = where - 1;
 				break;
 			} else {
