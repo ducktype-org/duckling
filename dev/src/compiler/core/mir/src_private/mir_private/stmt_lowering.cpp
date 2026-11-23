@@ -38,6 +38,8 @@ namespace compiler::mir {
 			return "for";
 		case hc::ControlFlowKind::Block:
 			return "block";
+		case hc::ControlFlowKind::COUNT:
+			CORE_UNREACHABLE();
 		}
 		CORE_UNREACHABLE();
 	}
