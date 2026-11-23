@@ -73,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
 		TESTER_ADD_TEST(testUnsupportedAccessErrors);
+		TESTER_ADD_TEST(testBlockExprErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
@@ -3043,6 +3044,16 @@ private:
 		checkForErrorOnCompileModule(
 			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
 			{ "Feature not implemented", "The `::` access operator is not supported yet." },
+			1
+		);
+	}
+
+	void testBlockExprErrors() {
+		query::Context::dumpToOneLoggerAndClear();
+
+		checkForErrorOnCompileModule(
+			"fun f(x: i64) -> i64 = x; fun g() = { { 1; } f(2); }",
+			{ "Feature not implemented", "Using a block `{ ... }` as a value." },
 			1
 		);
 	}

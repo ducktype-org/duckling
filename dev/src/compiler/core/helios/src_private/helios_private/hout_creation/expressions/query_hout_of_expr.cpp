@@ -677,6 +677,19 @@ namespace compiler::helios::code {
 				);
 			}
 
+			/**
+			 * @brief Block expressions (`{ ... }` used as a value) are not supported yet. A block
+			 * also ends up here when the `;` after a block statement is missing, e.g.
+			 * `{ ... } f(x);` parses as the operator `f` applied to the block and `(x)`.
+			 */
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> block) override {
+				ctx.log<dia::NotYetImplementedCodeError>(
+					"Using a block `{ ... }` as a value. A block statement currently needs a `;` "
+					"after its `}`.",
+					block->getStablePosition()
+				);
+			}
+
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round_expr) override {
 				round_expr->getInner().unlock(ctx)->acceptExprVisitor(*this);
 			}
