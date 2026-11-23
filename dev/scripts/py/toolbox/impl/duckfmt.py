@@ -9,6 +9,7 @@ import pathlib
 import shlex
 import shutil
 import subprocess
+import sys
 
 from .helpers import (
     get_input,
@@ -27,6 +28,9 @@ _DEV_DIR = pathlib.Path(__file__).resolve().parents[4]
 # Files that are left unformatted on purpose, one path relative to dev/ per line.
 # `scripts/formatting/format_repo_duckling.sh` reads the same list.
 EXCLUDED_FILES_LIST = _DEV_DIR / "scripts" / "formatting" / "duckfmt_excluded.txt"
+
+# The binary `scripts/formatting/format_repo_duckling.sh` uses when none is given
+_DEFAULT_DUCKFMT = _DEV_DIR / "build" / "bin" / "duckfmt"
 
 # Exit codes of `duckfmt -k`, any other one means duckfmt failed on the file
 _DUCKFMT_OK = 0
@@ -60,13 +64,23 @@ def _read_excluded_files() -> set[str]:
 def _check_file(duckfmt: str, file: str) -> bool | None:
     """
     True when the file is formatted, False when it is not, None when duckfmt failed on it.
+    The "not formatted" report of duckfmt is dropped, because the caller logs those files
+    itself. Any other output, like a lexer error, is passed on, since it explains the failure.
     """
-    returncode = subprocess.run([duckfmt, file, "-k"]).returncode
-    if returncode == _DUCKFMT_OK:
-        return True
-    if returncode == _DUCKFMT_NOT_FORMATTED:
+    result = subprocess.run([duckfmt, file, "-k"], stderr=subprocess.PIPE, text=True)
+    if result.returncode == _DUCKFMT_NOT_FORMATTED:
         return False
+    sys.stderr.write(result.stderr)
+    if result.returncode == _DUCKFMT_OK:
+        return True
     return None
+
+
+def _relative_to_dev(file: str) -> str:
+    """
+    The path of `file` relative to dev/, the directory the toolbox and the format script run from.
+    """
+    return os.path.relpath(file, _DEV_DIR)
 
 
 def _format_in_place(duckfmt: str, file: str) -> None:
@@ -144,17 +158,18 @@ def duckfmt_impl(
             if not unformatted:
                 log_good("Duckling files formatted!")
 
-    if failed:
-        log_warning(
-            f"duckfmt failed on {len(failed)} Duckling file(s), see the errors above: "
-            f"[{', '.join(failed)}]"
-        )
+    for f in failed:
+        log_warning(f"{_relative_to_dev(f)}: duckfmt failed, see the errors above")
+    for f in unformatted:
+        log_warning(f"{_relative_to_dev(f)}: not formatted")
 
     if unformatted:
-        fix_command = (
-            "./scripts/formatting/format_repo_duckling.sh"
-            f"{' --all' if all else ''} {shlex.quote(duckfmt)}"
+        duckfmt_arg = (
+            ""
+            if os.path.abspath(duckfmt) == str(_DEFAULT_DUCKFMT)
+            else f" {shlex.quote(duckfmt)}"
         )
+        fix_command = f"./scripts/formatting/format_repo_duckling.sh{' --all' if all else ''}{duckfmt_arg}"
         log_warning(
             f"{len(unformatted)} Duckling file(s) are not formatted. "
             f"Run `{fix_command}` to format them."

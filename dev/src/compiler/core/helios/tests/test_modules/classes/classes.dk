@@ -7,16 +7,16 @@ class Base {
 	public pub_field: i64 = 1;
 	protected prot_field: i64 = 2;
 	private priv_field: i64 = 3;
-	private unspecified: f32 = 4.0;
+	private unspecified:   f32 = 4.0;
 
-	public global counter: i64 = 5;
+	public global   counter: i64 = 5;
 
-	public global fun make() -> i64 = {
+	public global fun   make() -> i64 = {
 		return counter;
 	}
 
 	public fun getPub() -> i64 = {
-		return pub_field;
+		return  pub_field;
 	}
 
 	public mut fun setPub(new_value: i64) = {

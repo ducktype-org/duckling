@@ -25,8 +25,8 @@ fun main() -> i64 = {
 	by_ref(&b_point);
 
 	# Original box should be affected.
-	builtin_output_i64(b_point.x);
-	builtin_output_i64(b_point.y);
+	builtin_output_i64(b_point.x );
+	builtin_output_i64(b_point. y);
 
 	return 0;
 }
