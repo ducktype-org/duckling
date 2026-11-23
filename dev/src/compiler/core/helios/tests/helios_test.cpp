@@ -1134,7 +1134,6 @@ private:
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
 				makeBox<BlockExpr>(
-					ctx,
 					generatedOrigin(),
 					makeBox<BlockStmt>(generatedOrigin(), CodeBlock{ std::move(block_statements) })
 				)

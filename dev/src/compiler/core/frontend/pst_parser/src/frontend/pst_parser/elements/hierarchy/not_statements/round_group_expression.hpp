@@ -17,7 +17,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(expr, CommaAllowBlocksExprHolder);
+		NAMED_CHILD(expr, CommaExprHolder);
 
 	public:
 		explicit RoundGroupExpr(LangElementConstructionData state): NotStmt(state) {

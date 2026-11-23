@@ -62,12 +62,18 @@ namespace compiler::mir {
 		 */
 		ScopeRef expr_scope;
 
+		const ControlFlowTargets& targets;
+
 		ExprBlockVisitor(
-			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+			BlockBuilderRef           continuation,
+			FunctionBuilder&          function,
+			ScopeRef                  expr_scope,
+			const ControlFlowTargets& targets
 		):
 			  continuation(continuation),
 			  function(function),
-			  expr_scope(expr_scope) {}
+			  expr_scope(expr_scope),
+			  targets(targets) {}
 
 		void output(ExprLowerRes&& lowering_result) {
 			CORE_ASSERT(out.empty(), "Output already set.");
@@ -120,7 +126,7 @@ namespace compiler::mir {
 		}
 
 		ExprLowerRes lowerSubExpr(const hc::Expr& expr, BlockBuilderRef continuation) {
-			return lowerExpr(expr, continuation, function, expr_scope);
+			return lowerExpr(expr, continuation, function, expr_scope, targets);
 		}
 
 		/**
@@ -567,11 +573,11 @@ namespace compiler::mir {
 			auto store_continuation = body_block;
 			if_opt_some(per_element_body, body) {
 				store_continuation
-					= lowerCodeBlock(*body, body_block, function, body_scope, {}).begin;
+					= lowerCodeBlock(*body, body_block, function, body_scope, targets).begin;
 			}
 
 			auto store_hole   = store_continuation->addHole();
-			auto value_result = lowerExpr(value, store_continuation, function, body_scope);
+			auto value_result = lowerExpr(value, store_continuation, function, body_scope, targets);
 			value_result.storeResultInGivenPlace(
 				MIRPlace(dest).withIndex(MIRValue(counter)), store_hole, {}, body_scope, { position }
 			);
@@ -817,8 +823,9 @@ namespace compiler::mir {
 				body_end->setTerminator(
 					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }
 				);
-				auto assign_hole    = body_end->addHole();
-				auto lowered_result = lowerExpr(*match_case.result, body_end, function, case_scope);
+				auto assign_hole = body_end->addHole();
+				auto lowered_result
+					= lowerExpr(*match_case.result, body_end, function, case_scope, targets);
 
 				// The cases are mutually exclusive, so each one initializes the result rather
 				// than overwriting a live value - which is what the construct flag records.
@@ -970,7 +977,7 @@ namespace compiler::mir {
 			// Its instructions are added after the holes were reserved, so they end
 			// up ahead of them.
 			auto lowered_subject
-				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope);
+				= lowerExpr(*expr.subject, first_entry.value(), function, expr_scope, targets);
 
 
 			lowered_subject.storeResultInGivenPlace(
@@ -1475,12 +1482,39 @@ namespace compiler::mir {
 		}
 
 		void visitBlockExpr(const hc::BlockExpr& expr) override {
-			// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
-			// expressions.
-			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope, {});
-			valueOutput(
-				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+			if (expr.tail.empty()) {
+				auto lowered_block
+					= lowerStmt(*expr.block, continuation, function, expr_scope, targets);
+				valueOutput(
+					lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+				);
+				return;
+			}
+
+			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto target_location = function.addTmp(result_type, expr_scope);
+
+			// The tail shares the scope of the block, so the locals it reads are still alive.
+			auto block_scope = function.newScope(expr_scope);
+			auto tail_end    = function.newBlock("block.expr.result");
+			tail_end->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, block_scope }
 			);
+			auto assign_hole = tail_end->addHole();
+			auto lowered_tail
+				= lowerExpr(*expr.tail.value(), tail_end, function, block_scope, targets);
+			lowered_tail.storeResultInGivenPlace(
+				MIRPlace(target_location),
+				assign_hole,
+				{ flagConstruct(target_location) },
+				block_scope,
+				{ expr.getPosition() }
+			);
+
+			auto lowered_body = lowerCodeBlock(
+				expr.block->body, lowered_tail.begin, function, block_scope, targets
+			);
+			valueOutput(lowered_body.begin, target_location);
 		}
 
 
@@ -1714,12 +1748,13 @@ namespace compiler::mir {
 	};
 
 	ExprLowerRes lowerExpr(
-		const hc::Expr&  expr,
-		BlockBuilderRef  continuation,
-		FunctionBuilder& function,
-		ScopeRef         expr_scope
+		const hc::Expr&           expr,
+		BlockBuilderRef           continuation,
+		FunctionBuilder&          function,
+		ScopeRef                  expr_scope,
+		const ControlFlowTargets& targets
 	) {
-		ExprBlockVisitor visitor{ continuation, function, expr_scope };
+		ExprBlockVisitor visitor{ continuation, function, expr_scope, targets };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
 	}

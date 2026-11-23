@@ -32,6 +32,7 @@
 #include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
+#include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
@@ -571,6 +572,12 @@ namespace compiler::helios::code {
 					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
 					HOUTFunctionDeclaration::Operatoriness::Prefix
 				);
+			}
+
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> stmt) override {
+				auto compiled = compileBlockExpr(ctx, stmt);
+				if (compiled.hasFailed()) return;
+				node = std::move(compiled).valueOrThrow();
 			}
 
 			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
