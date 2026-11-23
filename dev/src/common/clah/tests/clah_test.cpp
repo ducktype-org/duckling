@@ -74,16 +74,17 @@ private:
 		auto par = clah::Clah("prog")
 		               .addPositional(clah::StringParser::make())
 		               .addPositional(clah::IntParser::make())
-		               .addPositional(clah::RangeParser::make());
+		               .addPositional(clah::RangeParser::make())
+		               .setDefaultValueParser(clah::RangeParser::make());
 
-		std::array argv{ "prog", "test", "2", "-2..3" };
+		std::array argv{ "prog", "test", "2", "-2..3", "-5..-1" };
 		auto       res = par.parse(argv.size(), argv.begin());
 
 		ASSERT_EQUAL("prog", res.getFilePath());  // now, prog is invoked without "./"
 		ASSERT_EQUAL(0, res.getNamedParameterCount());
 		ASSERT_EQUAL(0, res.getFlagCount());
 		ASSERT_EQUAL(3, res.getPositionalParameterCount());
-		ASSERT_EQUAL(0, res.getExtraParameterCount());
+		ASSERT_EQUAL(1, res.getExtraParameterCount());
 
 		ASSERT_EQUAL("test", res.getPositional<std::string>(0));
 		ASSERT_EQUAL(2, res.getPositional<i64>(1));
@@ -91,6 +92,16 @@ private:
 		const auto range = res.getPositional<clah::RangeParser::Range>(2);
 		ASSERT_EQUAL(-2, range.begin);
 		ASSERT_EQUAL(3, range.end);
+
+		const auto extra_range = res.getExtra<clah::RangeParser::Range>(0).value();
+		ASSERT_EQUAL(-5, extra_range.begin);
+		ASSERT_EQUAL(-1, extra_range.end);
+
+		argv.back() = "-2..x";
+		assertThrows<clah::exceptions::InvalidParameterName>(
+			[&]() { par.parse(argv.size(), argv.begin()); },
+			"A malformed range should be rejected as an unknown option."
+		);
 	}
 
 	void emptyArgumentsTest() {
