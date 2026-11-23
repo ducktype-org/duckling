@@ -16,6 +16,8 @@
 #include <base/pointers/box_or_ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <string_id/string_id.hpp>
+
 #include <variant>
 #include <vector>
 
@@ -31,7 +33,7 @@ namespace compiler::helios::code {
 	struct NearestLoop {};
 
 	struct NamedTarget {
-		SymID id;
+		base::StrID name;
 	};
 
 	struct KindTarget {

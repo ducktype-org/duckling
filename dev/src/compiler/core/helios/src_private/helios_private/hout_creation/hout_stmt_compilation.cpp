@@ -35,7 +35,6 @@
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
-#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -61,7 +60,9 @@ namespace compiler::helios {
 	requires std::same_as<Container, pst::CodeBlock>
 	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context& ctx, pst::Access<Container> container, tsh::SymbolType<> return_type
+		query::Context&                          ctx,
+		pst::Access<Container>                   container,
+		const base::Optional<tsh::SymbolType<>>& return_type
 	);
 
 	template<std::derived_from<pst::Stmt> T>
@@ -71,60 +72,27 @@ namespace compiler::helios {
 		return ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 	}
 
-	using ParsedControlFlowTarget
-		= std::variant<code::NearestLoop, base::StrID, code::ControlFlowKind>;
-
-	template<class Kind>
-	requires(std::same_as<Kind, pst::ElementKind> || std::same_as<Kind, lang_def::Keyword>)
-	static base::Optional<code::ControlFlowKind> controlFlowKind(Kind kind) {
-		switch (kind) {
-		case Kind::If:
+	static base::Optional<code::ControlFlowKind> controlFlowKind(lang_def::Keyword keyword) {
+		switch (keyword) {
+		case lang_def::Keyword::If:
 			return code::ControlFlowKind::If;
-		case Kind::While:
+		case lang_def::Keyword::While:
 			return code::ControlFlowKind::While;
-		case Kind::For:
+		case lang_def::Keyword::For:
 			return code::ControlFlowKind::For;
-		case Kind::Block:
+		case lang_def::Keyword::Block:
 			return code::ControlFlowKind::Block;
 		default:
 			return {};
 		}
 	}
 
-	static bool isCallable(pst::ElementKind kind) {
-		switch (kind) {
-		case pst::ElementKind::Fun:
-		case pst::ElementKind::FunDecl:
-		case pst::ElementKind::ClassMethod:
-		case pst::ElementKind::ClassSpecial:
-		case pst::ElementKind::ClassConstructor:
-		case pst::ElementKind::ClassDestructor:
-			return true;
-		default:
-			return false;
-		}
-	}
-
-	/**
-	 * @brief Whether `element` is a block used as a value, not a block statement `{ ... };`.
-	 */
-	static bool isValueBlockExpr(query::Context& ctx, pst::Access<pst::LangElement> element) {
-		if (!element.dynamicCast<pst::expr::BlockExpr>().has_value()) return false;
-		auto holder = getPSTElementParent(ctx, element);
-		if (!holder.isLangElement()) return true;
-		auto stmt = getPSTElementParent(ctx, holder.getAsLangElement().unlock(ctx));
-		if (!stmt.isLangElement()) return true;
-		return !stmt.getAsLangElement().unlock(ctx).dynamicCast<pst::ExprStmt>().has_value();
-	}
-
 	template<std::derived_from<pst::Action> T>
 	static code::ControlFlowTargetSelector getControlFlowTarget(
-		query::Context& ctx, pst::Access<T> stmt, std::string_view action_name
+		query::Context& ctx, pst::Access<T> stmt
 	) {
-		ParsedControlFlowTarget requested_target = code::NearestLoop{};
-		auto                    target_position  = stmt->getStablePosition();
-		auto                    target_holder    = stmt->getValue();
-		auto                    target_keyword   = stmt->getTargetKeyword();
+		auto target_holder  = stmt->getValue();
+		auto target_keyword = stmt->getTargetKeyword();
 		CORE_ASSERT(
 			!target_holder.has_value() || !target_keyword.has_value(),
 			"Control-flow target cannot be both a keyword and an expression."
@@ -132,88 +100,15 @@ namespace compiler::helios {
 		if (target_keyword.has_value()) {
 			auto kind = controlFlowKind(target_keyword.value());
 			CORE_ASSERT(kind.has_value(), "Invalid parsed control-flow target keyword.");
-			requested_target = kind.value();
-		} else if (target_holder.has_value()) {
+			return code::KindTarget{ kind.value() };
+		}
+		if (target_holder.has_value()) {
 			auto target_expr = target_holder.value().unlock(ctx)->getExpr().unlock(ctx);
-			target_position  = target_expr->getStablePosition();
 			auto identifier  = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>();
 			CORE_ASSERT(identifier.has_value(), "Parsed control-flow target must be a bare name.");
-			requested_target = identifier.value()->getName().unlock(ctx)->unwrap();
+			return code::NamedTarget{ identifier.value()->getName().unlock(ctx)->unwrap() };
 		}
-
-		auto ancestor = getPSTElementParent(ctx, stmt);
-		while (ancestor.isLangElement()) {
-			auto element = ancestor.getAsLangElement().unlock(ctx);
-			if (isValueBlockExpr(ctx, element)) {
-				ctx.log<dia::NotYetImplementedCodeError>(
-					base::strConcat("Leaving a block expression with `", action_name, "`."),
-					stmt->getStablePosition()
-				);
-				query::throwFailed();
-			}
-			if (isCallable(element->getElementKind())) break;
-			auto candidate_kind = controlFlowKind(element->getElementKind());
-			if (candidate_kind.has_value()) {
-				auto ancestor_stmt = element.template dynamicCast<pst::Stmt>().value();
-				variant_match(requested_target) {
-					variant_case(base::StrID, target_name) {
-						auto identifier = ancestor_stmt->getDeclSymbolIdentifier();
-						if (identifier.has_value()
-						    && identifier.value().unlock(ctx)->unwrap() == target_name) {
-							auto id = ctx.query<QuerySymbolOfSTMT>(ancestor_stmt).valueOrThrow();
-							CORE_ASSERT(
-								kind(id) == SymbolKind::NamedCodeElement,
-								"Expected a NamedCodeElement symbol."
-							);
-							return code::NamedTarget{ id };
-						}
-					}
-					variant_case(code::ControlFlowKind, target_kind) {
-						if (candidate_kind.value() == target_kind)
-							return code::KindTarget{ target_kind };
-					}
-					variant_case_novalue(code::NearestLoop) {
-						if (candidate_kind == code::ControlFlowKind::While
-						    || candidate_kind == code::ControlFlowKind::For)
-							return code::NearestLoop{};
-					}
-				}
-			}
-			ancestor = getPSTElementParent(ctx, element);
-		}
-
-		variant_match(requested_target) {
-			variant_case_novalue(code::NearestLoop) {
-				ctx.log<NoEnclosingLoopError>(target_position, action_name);
-			}
-			variant_case(base::StrID, target_name) {
-				ctx.log<NoNamedControlFlowTargetError>(
-					target_position, action_name, target_name.strView()
-				);
-			}
-			variant_case_novalue(code::ControlFlowKind) {
-				ctx.log<NoControlFlowKindTargetError>(
-					target_position,
-					action_name,
-					lang_def::keywordToStr(target_keyword.value()).strView()
-				);
-			}
-		}
-		query::throwFailed();
-	}
-
-	/**
-	 * @brief Whether `element` is inside a block expression of the callable it belongs to.
-	 */
-	static bool isInsideBlockExpr(query::Context& ctx, pst::Access<pst::LangElement> element) {
-		auto ancestor = getPSTElementParent(ctx, element);
-		while (ancestor.isLangElement()) {
-			auto parent = ancestor.getAsLangElement().unlock(ctx);
-			if (isValueBlockExpr(ctx, parent)) return true;
-			if (isCallable(parent->getElementKind())) return false;
-			ancestor = getPSTElementParent(ctx, parent);
-		}
-		return false;
+		return code::NearestLoop{};
 	}
 
 	/**
@@ -221,8 +116,9 @@ namespace compiler::helios {
 	 * It is used locally in processBlock.
 	 */
 	struct HoutStmtMaker final: public pst::PstVisitorPanicky {
-		query::Context&   ctx;
-		tsh::SymbolType<> return_type;
+		query::Context& ctx;
+
+		base::Optional<tsh::SymbolType<>> return_type;
 
 		/**
 		 * Whether the statement generation has failed.
@@ -242,7 +138,7 @@ namespace compiler::helios {
 		 */
 		std::vector<Box<code::Stmt>> prefix_stmts;
 
-		HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
+		HoutStmtMaker(query::Context& ctx, base::Optional<tsh::SymbolType<>> return_type):
 			  ctx(ctx),
 			  return_type(return_type) {}
 
@@ -259,14 +155,6 @@ namespace compiler::helios {
 		}
 
 		void visitReturn(pst::Access<pst::Return> stmt) override {
-			if (isInsideBlockExpr(ctx, stmt)) {
-				ctx.log<dia::NotYetImplementedCodeError>(
-					"Leaving a block expression with `return`.", stmt->getStablePosition()
-				);
-				is_failed = true;
-				return;
-			}
-
 			if (auto val = stmt->getValue()) {
 				const auto pst_expr = val.value().unlock(ctx)->getExpr();
 
@@ -280,9 +168,12 @@ namespace compiler::helios {
 
 				// The returned local dies with the function, so we have to mark it as `LastUse` and
 				// implicitly move it.
-				const auto position = pst_expr.unlock(ctx)->getStablePosition();
+				const auto position    = pst_expr.unlock(ctx)->getStablePosition();
+				const auto target_type = return_type.has_value()
+				                           ? return_type.value()
+				                           : expr_hout->expression_type.getSymbolType();
 				const query::QResult<coercions::Coercion> coercion = coercions::validCoercionOf(
-					ctx, expr_hout.ref(), return_type, position, {}, {}, coercions::HandOverKind::LastUse
+					ctx, expr_hout.ref(), target_type, position, {}, {}, coercions::HandOverKind::LastUse
 				);
 				if (coercion.hasFailed()) query::throwFailed();
 
@@ -300,12 +191,14 @@ namespace compiler::helios {
 					coercions::applyCoercionFromRef(ctx, coercion.valueOrThrow(), expr_hout.ref())
 				));
 			} else {
-				const bool returns_unit = return_type.getType() == tsh::getUnitType()
-				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;
+				const bool returns_unit
+					= !return_type.has_value()
+				   || (return_type.value().getType() == tsh::getUnitType()
+				       && return_type.value().getRefKind() == tsh::ReferenceKind::Direct);
 
 				if (not returns_unit) {
 					ctx.log<ReturnWithoutValueError>(
-						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type)
+						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type.value())
 					);
 					is_failed = true;
 					return;
@@ -601,12 +494,12 @@ namespace compiler::helios {
 		}
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
-			auto target = getControlFlowTarget(ctx, stmt, "continue");
+			auto target = getControlFlowTarget(ctx, stmt);
 			output(code::ContinueStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
-			auto target = getControlFlowTarget(ctx, stmt, "break");
+			auto target = getControlFlowTarget(ctx, stmt);
 			output(code::BreakStmt(code::pstOrigin(stmt), target));
 		}
 
@@ -736,10 +629,10 @@ namespace compiler::helios {
 	 * @brief Compiles `stmt` and appends what it produced to `block`.
 	 */
 	static void appendStmt(
-		query::Context&          ctx,
-		code::CodeBlock&         block,
-		pst::Access<pst::Stmt>   stmt,
-		const tsh::SymbolType<>& return_type
+		query::Context&                          ctx,
+		code::CodeBlock&                         block,
+		pst::Access<pst::Stmt>                   stmt,
+		const base::Optional<tsh::SymbolType<>>& return_type
 	) {
 		HoutStmtMaker stmt_maker(ctx, return_type);
 		stmt->acceptVisitor(stmt_maker);
@@ -764,7 +657,9 @@ namespace compiler::helios {
 	requires std::same_as<Container, pst::CodeBlock>
 	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context& ctx, pst::Access<Container> container, tsh::SymbolType<> return_type
+		query::Context&                          ctx,
+		pst::Access<Container>                   container,
+		const base::Optional<tsh::SymbolType<>>& return_type
 	) {
 		code::CodeBlock block({});
 		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container))
@@ -776,18 +671,16 @@ namespace compiler::helios {
 		query::Context& ctx, pst::Access<pst::expr::BlockExpr> block_expr
 	) {
 		const auto origin = code::pstOrigin(block_expr);
-		const auto unit   = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
 		auto contents = getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, block_expr->getBlock()));
 
 		base::Optional<pst::Access<pst::ExprStmt>> tail_stmt;
 		if (!contents.empty() && contents.back()->isImplicitReturn())
 			tail_stmt = contents.back().dynamicCast<pst::ExprStmt>();
 
-		// A `return` is refused inside a block expression, so the return type is never used.
 		code::CodeBlock body({});
 		const auto      body_size = contents.size() - (tail_stmt.has_value() ? 1 : 0);
 		for (const auto& stmt: contents | std::views::take(body_size))
-			appendStmt(ctx, body, stmt, unit);
+			appendStmt(ctx, body, stmt, {});
 
 		auto block = makeBox<code::BlockStmt>(origin, std::move(body));
 		if (tail_stmt.empty())

@@ -9,6 +9,7 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -315,12 +316,15 @@ namespace compiler::mir {
 			else
 				body_expr = helios::getGlobalDestructorExpr(ctx, global_data);
 
+			if (body_expr.has_value())
+				helios::refuseBlockExpr(ctx, *body_expr.value(), "a global initializer");
+
 			match_optional(body_expr) {
 				opt_some(expr) {
 					auto expr_scope
 						= function_builder.newScope(function_builder.getTopLevelScope());
 					auto lowerexpr_res
-						= lowerExpr(*expr.get(), last_block, function_builder, expr_scope);
+						= lowerExpr(*expr.get(), last_block, function_builder, expr_scope, {});
 
 					std::ignore = lowerexpr_res.getResult(function_builder);
 					function_builder.setEntry(lowerexpr_res.begin);
