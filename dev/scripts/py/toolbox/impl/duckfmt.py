@@ -139,6 +139,12 @@ def duckfmt_impl(
     failed = [f for f, formatted in results.items() if formatted is None]
     unformatted = [f for f, formatted in results.items() if formatted is False]
 
+    # Listed before any fix, so every mode shows which files are not formatted
+    for f in failed:
+        log_warning(f"{_relative_to_dev(f)}: duckfmt failed, see the errors above")
+    for f in unformatted:
+        log_warning(f"{_relative_to_dev(f)}: not formatted")
+
     if unformatted and not no_fix:
         apply = auto_fix
         if not auto_fix:
@@ -151,17 +157,21 @@ def duckfmt_impl(
             for f in unformatted:
                 _format_in_place(duckfmt, f)
             rechecked = {f: _check_file(duckfmt, f) for f in unformatted}
+            for f, formatted in rechecked.items():
+                if formatted:
+                    log_info(f"Formatted {_relative_to_dev(f)}")
+                elif formatted is None:
+                    log_warning(
+                        f"{_relative_to_dev(f)}: duckfmt failed, see the errors above"
+                    )
+                else:
+                    log_warning(f"{_relative_to_dev(f)}: still not formatted")
             failed += [f for f, formatted in rechecked.items() if formatted is None]
             unformatted = [
                 f for f, formatted in rechecked.items() if formatted is False
             ]
             if not unformatted:
                 log_good("Duckling files formatted!")
-
-    for f in failed:
-        log_warning(f"{_relative_to_dev(f)}: duckfmt failed, see the errors above")
-    for f in unformatted:
-        log_warning(f"{_relative_to_dev(f)}: not formatted")
 
     if unformatted:
         duckfmt_arg = (
