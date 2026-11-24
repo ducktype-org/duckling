@@ -18,4 +18,8 @@ namespace pst {
 		}
 		return true;
 	}
+
+	bool ExprElement::isStandaloneKeywordOperator(const LangParserState& state) {
+		return state.ctokens().size() == 1 && state[0].isKeyword() && state[0].isPrefixOperator();
+	}
 }

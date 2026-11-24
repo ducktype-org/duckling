@@ -187,6 +187,12 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  unit_expr{ "()" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  standalone_keyword_op{ "ref" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  fref_prefix{ "fref List[u64]" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  standalone_fref{ "fref" };
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> standalone_symbol_op{ "-" };
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> only_prefix_ops{ "ref mut" };
+
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
 	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
 	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
@@ -393,6 +399,11 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::TemplateStmt, true>  simple_template{ "template () class C {}" };
 	Example<pst::TemplateStmt, false> no_template_list{ "template class C {}" };
 	Example<pst::TemplateStmt, false> no_statement{ "template ()" };
+	Example<pst::TemplateStmt, true>  identifier_like_template_param{
+        "template (fref: funptr(type) -> type) fun a(x: fref List[u64]) -> fref u64 = x;"
+	};
+	Example<pst::TemplateStmt, true>  self_template_param{ "template (self: type) class C {}" };
+	Example<pst::TemplateStmt, false> keyword_template_param{ "template (ref: type) class C {}" };
 
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::Stmt, true> class_using_as{ "using std.math.sqrt as sqrt;" };
