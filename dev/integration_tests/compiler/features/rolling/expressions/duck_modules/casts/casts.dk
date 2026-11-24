@@ -72,5 +72,11 @@ fun main() -> i64 = {
 	builtin_output_i64((third as i64) - (first as i64)); # 2
 	builtin_output_i64(((first as u32) as u64 == address % 4294967296u64) as i64); # 1
 
+	# 10) A `ref` to a number is read first, then cast.
+	var numbers: List[i64];
+	numbers.push(300);
+	builtin_output_i64((numbers.at(0) as i32) as i64); # 300
+	builtin_output_i64((numbers.at(0) as u8) as i64); # 44
+
 	return 0i64;
 }
