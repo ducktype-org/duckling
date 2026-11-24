@@ -10,7 +10,7 @@
 				"sourceEnd": 75
 			},
 			"Function": {
-				"operator_fixity": "infix",
+				"operator_fixity": "Infix",
 				"name": {
 					"position": {
 						"sourceStart": 10,
@@ -257,7 +257,7 @@
 				"sourceEnd": 123
 			},
 			"Function": {
-				"operator_fixity": "infix",
+				"operator_fixity": "Infix",
 				"name": {
 					"position": {
 						"sourceStart": 92,
@@ -396,7 +396,7 @@
 				"sourceEnd": 219
 			},
 			"Function": {
-				"operator_fixity": "infix",
+				"operator_fixity": "Infix",
 				"name": {
 					"position": {
 						"sourceStart": 136,
@@ -776,7 +776,7 @@
 								"sourceEnd": 308
 							},
 							"Class Method": {
-								"operator_fixity": "infix",
+								"operator_fixity": "Infix",
 								"name": {
 									"position": {
 										"sourceStart": 245,

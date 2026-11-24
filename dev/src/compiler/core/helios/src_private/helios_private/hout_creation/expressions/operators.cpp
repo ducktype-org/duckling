@@ -31,7 +31,6 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
-#include <iterator>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -181,18 +180,16 @@ namespace {
 	}
 
 	/**
-	 * @brief Position of the name in the declaration of function @p symbol (e.g. `foo` in
-	 * `fun foo(...)`), falling back to the position stored in its function declaration.
+	 * @brief Position of the name in the declaration of a function (e.g. `foo` in `fun foo(...)`).
 	 */
-	base::Optional<dia::StablePosition> declaredNamePosition(query::Context& ctx, SymID symbol) {
-		if_opt_some(maybeSymbolPst(symbol), element) {
-			if_opt_some(element.unlock(ctx).dynamicCast<pst::Stmt>(), stmt) {
-				if_opt_some(stmt->getDeclSymbolIdentifier(), identifier) {
-					return identifier.unlock(ctx)->getStablePosition();
-				}
-			}
-		}
-		return ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow().origin.getStablePosition();
+	dia::StablePosition declaredNamePosition(query::Context& ctx, SymID symbol) {
+		const auto element = maybeSymbolPst(symbol);
+		CORE_ASSERT(element.has_value(), "An operator candidate should be declared in the source");
+		const auto stmt = element->unlock(ctx).dynamicCast<pst::Stmt>();
+		CORE_ASSERT(stmt.has_value(), "A function declaration should be a statement");
+		const auto identifier = (*stmt)->getDeclSymbolIdentifier();
+		CORE_ASSERT(identifier.has_value(), "A function declaration should have a name");
+		return identifier->unlock(ctx)->getStablePosition();
 	}
 
 	/**
@@ -209,11 +206,9 @@ namespace {
 			op_origin.getStablePosition().value(), op.str()
 		);
 		for (const auto candidate: non_infix_candidates) {
-			const auto position = declaredNamePosition(ctx, candidate);
-			if_opt_none(position) continue;
-			error->addAttachedMessage(
-				makeBox<OperatorDeclaredWithoutInfixNote>(position.value(), op.str())
-			);
+			error->addAttachedMessage(makeBox<OperatorDeclaredWithoutInfixNote>(
+				declaredNamePosition(ctx, candidate), op.str()
+			));
 		}
 		ctx.log(std::move(error));
 	}
@@ -369,7 +364,7 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
-		// Functions dropped by the filters below, to explain a missing `infix` modifier.
+		// All candidates before the filters below, to explain a missing `infix` modifier.
 		std::vector<SymID> non_infix_candidates = all_candidates;
 		filterFunctionsByOperatoriness(
 			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
@@ -393,17 +388,12 @@ namespace compiler::helios::code {
 					all_candidates.push_back(method_candidate);
 		}
 
-		// Step 2c. — An identifier operator (`a foo b`) only considers functions declared `infix`.
-		// If there are none, but there are functions of that name, the modifier is most likely
-		// missing.
-		if (all_candidates.empty() && !lexer::isOperatorSymbolString(op.value.strView())) {
-			filterFunctionsByOperatoriness(
-				ctx, non_infix_candidates, HOUTFunctionDeclaration::Operatoriness::None
-			);
-			if (!non_infix_candidates.empty()) {
-				reportOperatorNotDeclaredInfix(ctx, op, op_origin, non_infix_candidates);
-				query::throwFailed();
-			}
+		// An identifier operator (`a foo b`) only considers functions declared `infix`.
+		// If there are none, but there are functions of that name, the modifier is likely missing.
+		if (all_candidates.empty() && lexer::isIdentifierString(op.value.strView())
+		    && !non_infix_candidates.empty()) {
+			reportOperatorNotDeclaredInfix(ctx, op, op_origin, non_infix_candidates);
+			query::throwFailed();
 		}
 
 		return processBinaryOperatorCall(

@@ -46,7 +46,7 @@ namespace pst {
 	void Fun::dprint(std::ostream& out) const {
 		out << "{";
 		if (operator_fixity != OperatorFixity::None)
-			out << R"("operator_fixity":")" << operatorFixityToStr(operator_fixity) << "\",";
+			out << R"("operator_fixity":")" << base::enumToStr(operator_fixity) << "\",";
 		out << "\"name\":";
 		nullAwareDprint(name, out);
 		out << ",\"parameters\":";

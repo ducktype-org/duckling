@@ -381,8 +381,8 @@ private:
 				{ binary_arity, "expected 2 operands, but 3 are declared" },
 				1
 			);
-			// Without a fixity, nothing says whether a nullary operator was meant to be unary or
-			// binary.
+			// A symbolic operator without parameters and without a fixity could have been meant as
+			// either a unary or a binary operator, so the error accepts either operand count.
 			checkForErrorOnCompileModule(
 				R"(fun +*() -> i64 = 0;)",
 				{ "Operator declarations must take at least one operand.",

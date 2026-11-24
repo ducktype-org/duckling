@@ -391,7 +391,7 @@
 							},
 							"Class Method": {
 								"is_mut": true,
-								"operator_fixity": "prefix",
+								"operator_fixity": "Prefix",
 								"name": {
 									"position": {
 										"sourceStart": 156,
