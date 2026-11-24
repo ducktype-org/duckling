@@ -29,12 +29,20 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace {
+
+	/**
+	 * Exit codes of `duckfmt`. With several files, the highest code of any file wins.
+	 */
+	constexpr int EXIT_OK            = 0;  ///< Every file formatted successfully.
+	constexpr int EXIT_NOT_FORMATTED = 1;  ///< A file is not formatted (check mode).
+	constexpr int EXIT_ERROR         = 2;  ///< A file can't be formatted.
 
 	/**
 	 * @brief Loads the formatter configuration from @p config_path.
@@ -66,10 +74,11 @@ namespace {
 	 *
 	 * @param print_header Print a `==> <path> <==` line before the formatted source, so the
 	 *        output of several files on stdout can be told apart.
-	 * @return `true` on success; `false` when the file could not be tokenized or formatted,
-	 *         or when it is not formatted in check mode (the reason is printed on stderr).
+	 * @return `EXIT_OK` on success, `EXIT_NOT_FORMATTED` when the file is not formatted in check
+	 *         mode, `EXIT_ERROR` when it could not be tokenized or formatted. The reason is printed
+	 *         on stderr.
 	 */
-	bool formatOneFile(
+	int formatOneFile(
 		fs::File&                      file_to_format,
 		const formatter::FormatConfig& format_config,
 		const clah::ParsingResult&     options,
@@ -85,7 +94,7 @@ namespace {
 		// Comments must stay in the token stream, or formatting would erase them.
 		if (not token_source->tokenize({ .keep_comments = true })) {
 			token_source->getIntLogger()->terminalPrint(std::cerr);
-			return false;
+			return EXIT_ERROR;
 		}
 
 		std::string formatted;
@@ -93,24 +102,24 @@ namespace {
 			formatted = formatter::formatTokens(token_source->getTokenData(), format_config);
 		} catch (const base::Exception& e) {
 			std::cerr << path << ": failed to format: " << e.what() << "\n";
-			return false;
+			return EXIT_ERROR;
 		}
 
 		if (options.isFlag("check")) {
-			if (formatted == source_view) return true;
+			if (formatted == source_view) return EXIT_OK;
 			// On stderr, so `duckfmt -k` stays usable in a pipeline.
 			std::cerr << path << ": not formatted\n";
-			return false;
+			return EXIT_NOT_FORMATTED;
 		}
 
 		if (options.isFlag("in-place")) {
 			file_to_format.writeToFile(formatted);
-			return true;
+			return EXIT_OK;
 		}
 
 		if (print_header) std::cout << "==> " << path << " <==\n";
 		std::cout << formatted;
-		return true;
+		return EXIT_OK;
 	}
 
 	/**
@@ -118,7 +127,8 @@ namespace {
 	 *
 	 * All files are processed even when one of them fails.
 	 *
-	 * @return 0 when every file succeeded, 1 otherwise.
+	 * @return The highest exit code of any file (see `EXIT_OK`, `EXIT_NOT_FORMATTED`,
+	 *         `EXIT_ERROR`).
 	 */
 	int formatFiles(const clah::ParsingResult& options) {
 		formatter::FormatConfig format_config = formatter::FormatConfig::defaults();
@@ -126,7 +136,7 @@ namespace {
 		const auto config_path = options.getValue<std::string>("config").copyValueOr("");
 		if (not config_path.empty()) {
 			const auto loaded = loadConfig(config_path);
-			if (not loaded.has_value()) return 1;
+			if (not loaded.has_value()) return EXIT_ERROR;
 			format_config = loaded.value();
 		}
 
@@ -136,16 +146,17 @@ namespace {
 			files_to_format.push_back(options.getExtra<fs::File>(i).value());
 
 		const bool print_headers = files_to_format.size() > 1;
-		bool       all_ok        = true;
+		int        exit_code     = EXIT_OK;
 		for (usize i = 0; i < files_to_format.size(); i++) {
 			// A blank line between two files keeps the headers easy to spot.
 			if (print_headers and i > 0 and not options.isFlag("check")
 			    and not options.isFlag("in-place"))
 				std::cout << "\n";
-			if (not formatOneFile(files_to_format[i], format_config, options, print_headers))
-				all_ok = false;
+			exit_code = std::max(
+				exit_code, formatOneFile(files_to_format[i], format_config, options, print_headers)
+			);
 		}
-		return all_ok ? 0 : 1;
+		return exit_code;
 	}
 
 	clah::Clah getClahForDuckfmt() {
@@ -192,7 +203,7 @@ int main(int argc, const char* argv[]) {
 			{ e.what(), printer::Color::Default },
 			{ "\nAborting\n", printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
@@ -200,7 +211,7 @@ int main(int argc, const char* argv[]) {
 			{ e.what(), printer::Color::Default },
 			{ "\nAborting\n", printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
@@ -208,6 +219,6 @@ int main(int argc, const char* argv[]) {
 		      "caught.\n",
 		      printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	}
 }

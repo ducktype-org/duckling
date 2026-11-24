@@ -9,6 +9,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -44,7 +45,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
-		TESTER_ADD_TEST(testControlFlowTargetErrors);
+		TESTER_ADD_TEST(testBlockExprOutsideFunctionBody);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testFunctionValueErrors);
@@ -72,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testUnsupportedAccessErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
@@ -169,51 +171,31 @@ private:
 		checkForError(present_phrases, logged_msg_count);
 	}
 
-	void testControlFlowTargetErrors() {
+	void testBlockExprOutsideFunctionBody() {
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { if (true) break; })",
-			{ "`break` has no enclosing loop.", "innermost enclosing `while` or `for`" },
+			R"(fun foo(a: i64 = { 1i64 }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
 			1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { block { continue; } })",
-			{ "`continue` has no enclosing loop.", "innermost enclosing `while` or `for`" },
+			R"(fun foo(a: i64 = ({ 1i64 }) + 1i64) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
 			1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { while (true) { break missing; } })",
-			{ "No enclosing control-flow target named `missing` for `break`." },
+			R"(fun foo(a: i64 = { let t: i64 = 1i64; t }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
 			1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { if (true) { continue while; } })",
-			{ "No enclosing `while` target for `continue`." },
+			R"(class A { x: i64 = { let t: i64 = 1i64; t }; } fun foo() = { var a: A; })",
+			{ "A block expression cannot be used in a field initializer." },
 			1
 		);
-		// A kind target must match that exact construct, not just any enclosing loop.
 		checkForErrorOnCompileModule(
-			R"(fun foo() = { while (true) { break for; } })",
-			{ "No enclosing `for` target for `break`." },
+			R"(const C: i64 = { 1i64 }; fun foo() -> i64 = C;)",
+			{ "A block expression cannot be used in a const initializer." },
 			1
-		);
-		// A nested callable cannot select an outer target. Nested functions also emit their
-		// existing unsupported-feature diagnostic, independently of target resolution.
-		checkForErrorOnCompileModule(
-			R"(fun foo() = { while (true) { fun inner() = { break; } } })",
-			{ "Nested functions are not supported yet.", "`break` has no enclosing loop." },
-			2
-		);
-		checkForErrorOnCompileModule(
-			R"(fun foo() = { while Outer (true) { fun inner() = { continue Outer; } } })",
-			{ "Nested functions are not supported yet.",
-		      "No enclosing control-flow target named `Outer` for `continue`." },
-			2
-		);
-		checkForErrorOnCompileModule(
-			R"(fun foo() = { while (true) { fun inner() = { break while; } } })",
-			{ "Nested functions are not supported yet.",
-		      "No enclosing `while` target for `break`." },
-			2
 		);
 	}
 
@@ -2887,14 +2869,8 @@ private:
 
 		std::stringstream ss;
 
-		testDiagnosticMessage<NoEnclosingLoopError>(
-			ss, dia::StablePosition::fakePosition(), "break"
-		);
-		testDiagnosticMessage<NoNamedControlFlowTargetError>(
-			ss, dia::StablePosition::fakePosition(), "continue", "missing"
-		);
-		testDiagnosticMessage<NoControlFlowKindTargetError>(
-			ss, dia::StablePosition::fakePosition(), "break", "for"
+		testDiagnosticMessage<BlockExprNotAllowedError>(
+			ss, dia::StablePosition::fakePosition(), "a default argument"
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -3027,6 +3003,23 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testUnsupportedAccessErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		// `.?` and `::` parse like `.`, but only `.` is compiled for now.
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N.?a;",
+			{ "Feature not implemented", "The `.?` access operator is not supported yet." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
+			{ "Feature not implemented", "The `::` access operator is not supported yet." },
+			1
+		);
 	}
 
 	void testWildcardNamesInSelectorPaths() {

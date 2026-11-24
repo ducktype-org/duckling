@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "expr_lowering.hpp"
 #include "mir_builders.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
@@ -24,21 +25,6 @@ namespace compiler::mir {
 	struct StmtLowerRes final {
 		BlockBuilderRef begin;
 	};
-
-	struct ControlFlowTarget final {
-		helios::code::ControlFlowKind kind;
-		base::Optional<helios::SymID> id;
-
-		// Destination after leaving the construct with `break`.
-		BlockBuilderRef break_target;
-
-		// Destination for `continue`: condition evaluation for if/while,
-		// iteration step for for, or body entry for block/if const.
-		BlockBuilderRef continue_target;
-	};
-
-	/* Enclosing control-flow targets, with the innermost target stored last. */
-	using ControlFlowTargets = std::vector<ControlFlowTarget>;
 
 	/**
 	 * @brief Lowers statement.

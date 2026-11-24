@@ -49,4 +49,13 @@ namespace compiler::helios::code {
 		walkExprTree(expr, calledSymbolCollector(result, visited));
 		return result;
 	}
+
+	base::Optional<CRef<BlockExpr>> findBlockExpr(const Expr& expr) {
+		base::Optional<CRef<BlockExpr>> found;
+		walkExprTree(expr, [&found](const auto& node) {
+			if constexpr (std::same_as<std::remove_cvref_t<decltype(node)>, BlockExpr>)
+				if (found.empty()) found.emplace(&node);
+		});
+		return found;
+	}
 }

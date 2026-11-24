@@ -153,7 +153,6 @@ namespace lang_def {
 		Copy,
 		Copyof,
 		Move,
-		Refof,
 		Ptrof,
 
 		Destroy,

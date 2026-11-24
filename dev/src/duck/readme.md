@@ -19,40 +19,19 @@ Most of them could be avoided by passing appropriate `bundled-*` feature flag, o
 
 While duck is a binary and __the__ entry point for building Duckling programmes, quackpack is the engine behind package management.
 
-That being said, both [share a single code directory](../), with the following structure:
+The code is a Cargo workspace of three crates (this directory is its root):
 ```
-src
-├── bin
-│   └── duck
-│       └── main.rs
-└── lib
-    ├── duck
-    │   └── <duck files>
-    ├── quackpack
-    │   └── <quackpack files>
-    └── <more files>
+.
+├── src/        <`duck`: the CLI driver and the `duck` binary>
+├── quackpack/  <`quackpack`: the package manager>
+└── duck_core/  <`duck_core`: what every duck tool shares>
 ```
-The reasons behind this are not very obvious.
-First of all, duck in its subcommands needs to call into quackpack, so naturally duck depends on quackpack.
-However, quackpack uses types which are defined in duck.
-As a consequence, this creates a local dependency cycle, which isn't supported by rust.
-
-This could be solved in two ways: first is to factor out common types into a third local dependency.
-Second is shown above: we have merged quackpack as a rust's submodule into duck package, but we have kept human-readable separation between the directories.
-
-The second reason, not obvious at a first glance, is more subtle and related to unit tests.
-It turns out that binary and library parts are internally treated as different packages, and when testing are built separately.
-Problems arose when we tried to run unit tests.
-
-We use `#[cfg(test)]` on some functions in order to mock the internal state in tests.
-Since the library and binary are different packages, they are built separately for tests, so the `#[cfg(test)]` from the library is not available in the binary's `#[cfg(test)]`, and vice versa.
-To solve this issue, we have moved __the entirety__ of duck into a library, and the binary is just a thin wrapper around a `duck::main` method, which in combination with the already merged quackpack, has allowed us to write unit test with an ease.
 
 ## More docs
 
-- [from CLI to library: binary side of duck](src/lib/duck/readme.md)
-- [editing the manifest file structure (schema)](src/lib/quackpack/schemas/readme.md)
-- [adding a new subcommand](src/lib/duck/driver/subcommands/readme.md)
-- [storage overview](src/lib/quackpack/core/storage/readme.md)
-- [solving a dependency graph](src/lib/quackpack/core/solver/solving/readme.md)
-- [networking module](src/lib/quackpack/core/fetcher/readme.md)
+- [from CLI to library: binary side of duck](src/readme.md)
+- [editing the manifest file structure (schema)](quackpack/src/schemas/readme.md)
+- [adding a new subcommand](src/driver/subcommands/readme.md)
+- [storage overview](quackpack/src/core/storage/readme.md)
+- [solving a dependency graph](quackpack/src/core/solver/solving/readme.md)
+- [networking module](quackpack/src/core/fetcher/readme.md)
