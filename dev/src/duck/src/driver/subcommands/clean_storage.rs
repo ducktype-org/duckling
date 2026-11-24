@@ -30,7 +30,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     } else {
         let pcx =
             PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).map_err(|mut err| {
-                err.add_hint("to clean the global storage use `global-storage` flag");
+                err.add_hint("to clean the global storage use `--global-storage` flag");
                 err
             })?;
         pcx.storage_path().to_path_buf()

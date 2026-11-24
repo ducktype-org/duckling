@@ -71,11 +71,12 @@ fn remove_dep(
                 pkg_root.display()
             ));
 
-            if matches!(other_kind, DependencyKind::Normal) {
-                err.add_hint("if you want to remove a normal dependency don't use any flags");
+            let hint = if matches!(other_kind, DependencyKind::Normal) {
+                "if you want to remove a normal dependency don't use any flags"
             } else {
-                err.add_hint("if you want to remove a dev dependency use flag `--dev`");
+                "if you want to remove a dev dependency use flag `--dev`"
             };
+            err.add_hint(hint);
             Err(err)
         }
     }

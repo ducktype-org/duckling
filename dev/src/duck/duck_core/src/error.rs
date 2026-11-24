@@ -276,7 +276,7 @@ macro_rules! qp_err {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::message(static_msg)
+            $crate::QuackError::new($crate::error::MessageError::new(static_msg))
         } else {
             $crate::QuackError::message(format!($msg))
         }
