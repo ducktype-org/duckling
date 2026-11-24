@@ -31,8 +31,8 @@ fn main() {
 /// Adds an `rpath` to the bundled `libscip` DLL to the `duck` binary.
 ///
 /// `cargo:rustc-link-arg` only applies to the binaries of the package whose build script emits it,
-/// so the one in `quackpack/build.rs` does not reach `duck`. The feature-combination checks live
-/// there and still run for every `duck` build.
+/// so this must stay in `duck`'s build script. The feature-combination checks live in
+/// `quackpack/build.rs` and still run for every `duck` build.
 fn add_rpath_for_bundled_scip() {
     if std::env::var("CARGO_FEATURE_BUNDLED_SCIP").is_ok() {
         let libscip_dir = std::env::var("DEP_SCIP_LIBDIR")

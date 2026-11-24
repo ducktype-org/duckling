@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Build script of QuackPack: makes its own binaries (unit tests) find a bundled `libscip`.
+//! Build script of QuackPack: rejects invalid combinations of the `scip` features.
 
 fn main() {
     let russcip_bundled = std::env::var("CARGO_FEATURE_BUNDLED_SCIP").is_ok();
@@ -22,12 +22,5 @@ fn main() {
             hint: don't pass `--no-default-features` to cargo to build bundled scip\n\
             hint: pass `--features=static-scip` or `--features=bundled-all` to build static scip"
         )
-    }
-    // We don't compile scip statically, link against local DLL.
-    if russcip_bundled {
-        let libscip_dir = std::env::var("DEP_SCIP_LIBDIR")
-            .expect("`scip-sys` is not a direct dependency in Cargo.toml");
-        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", libscip_dir);
-        println!("cargo:rerun-if-changed={libscip_dir}");
     }
 }

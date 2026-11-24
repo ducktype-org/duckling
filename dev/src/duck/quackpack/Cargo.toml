@@ -21,7 +21,6 @@ percent-encoding = { version = "2.3.2", default-features = false }
 regex = { version = "1.13.1", default-features = false, features = ["perf", "std"] }
 rusqlite = { workspace = true }
 russcip = { workspace = true }
-scip-sys = { workspace = true }
 serde = { workspace = true }
 serde-untagged = { workspace = true }
 serde_ignored = "0.1.14"

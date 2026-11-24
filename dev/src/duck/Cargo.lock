@@ -1561,7 +1561,6 @@ dependencies = [
  "regex",
  "rusqlite",
  "russcip",
- "scip-sys",
  "serde",
  "serde-untagged",
  "serde_ignored",
