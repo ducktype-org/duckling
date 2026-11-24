@@ -474,6 +474,17 @@ private:
 		};
 		auto clah = clah::Clah("prog").add(flag('n', "namespace"));
 		assertThrows<clah::exceptions::ClahException>(
+			[&]() { clah.add(flag('n', "name")); },
+			"Clah should reject a short alias shared by two options on the same command."
+		);
+		assertThrows<clah::exceptions::ClahException>(
+			[&]() { clah.add(flag('h', "host")); }, "Clah should reject reuse of -h."
+		);
+		assertThrows<clah::exceptions::ClahException>(
+			[&]() { clah.add(flag('x', "help")); }, "Clah should reject reuse of --help."
+		);
+
+		assertThrows<clah::exceptions::ClahException>(
 			[&]() {
 				clah.addSubcommand(
 					clah::Clah("remote").addSubcommand(clah::Clah("add").add(flag('n', "name")))

@@ -30,10 +30,10 @@ namespace {
 	constexpr char             HELP_SHORT_NAME = 'h';
 	constexpr std::string_view HELP_LONG_NAME  = "help";
 
-	bool usesHelpAlias(const clah::Parameter& parameter) {
+	bool isHelpFlag(const clah::Parameter& parameter) {
 		const auto& long_name = parameter.getLongName();
-		return parameter.getShortName() == HELP_SHORT_NAME
-		    || (long_name && long_name->stringView() == HELP_LONG_NAME);
+		return parameter.getShortName() == HELP_SHORT_NAME && long_name
+		    && long_name->stringView() == HELP_LONG_NAME;
 	}
 
 	/**
@@ -75,8 +75,6 @@ namespace clah {
 	}
 
 	Clah&& Clah::add(Parameter&& param) {
-		if (usesHelpAlias(param))
-			throw exceptions::ClahException("Aliases -h and --help are reserved for Clah help.");
 		checkParameterAliases(param, name);
 		parameters.push_back(std::move(param));
 		return std::move(*this);
@@ -101,7 +99,7 @@ namespace clah {
 				throw clah::exceptions::DuplicateSubcommand(sub_command.getName(), name);
 
 		for (const auto& parameter: parameters)
-			if (!usesHelpAlias(parameter)) sub_command.checkParameterAliases(parameter, name);
+			if (!isHelpFlag(parameter)) sub_command.checkParameterAliases(parameter, name);
 
 		subcommands.emplace_back(std::move(sub_command));
 		return std::move(*this);
@@ -148,12 +146,12 @@ namespace clah {
 		return std::move(*this);
 	}
 
-	void Clah::addHelpFlag() {
-		parameters.push_back(ParamBuilder::ofFlag()
-		                         .addShortName(HELP_SHORT_NAME)
-		                         .addLongName(HELP_LONG_NAME.data())
-		                         .addShortDesc("Display this information.")
-		                         .build());
+	Clah&& Clah::addHelpFlag() {
+		return add(ParamBuilder::ofFlag()
+		               .addShortName(HELP_SHORT_NAME)
+		               .addLongName(HELP_LONG_NAME.data())
+		               .addShortDesc("Display this information.")
+		               .build());
 	}
 
 	const std::string& Clah::getName() const { return name; }
