@@ -9,8 +9,9 @@ import core.primitive_io as pio;
     gone already, and a following `readLine()` reads the next line.
 #}
 
-fun isBlank(c: i32) -> bool = c == ' ' as i32 or c == '\t' as i32 or c == '\n' as i32
-    or c == '\r' as i32;
+fun isBlank(c: i32) -> bool = {
+	return c == ' ' as i32 or c == '\t' as i32 or c == '\n' as i32 or c == '\r' as i32;
+}
 
 #{
     Reads a signed integer, e.g. `-42`. Returns 0 when the input does not start with a number.
@@ -51,32 +52,32 @@ fun readF32() -> f32 = pio.readF64() as f32;
     switches to the exponent form for large numbers. `|x| * 10^decimals` has to fit in an `i64`.
 #}
 fun formatF64(x: f64, decimals: i64) -> containers.String = {
-    var scale = 1i64;
-    var i     = 0i64;
-    while (i < decimals) {
-        scale = scale * 10i64;
-        i     = i + 1i64;
-    }
+	var scale = 1i64;
+	var i = 0i64;
+	while (i < decimals) {
+		scale = scale * 10i64;
+		i = i + 1i64;
+	}
 
-    let negative  = x < 0.0f64;
-    var magnitude = x;
-    if (negative) magnitude = 0.0f64 - x;
-    let scaled = (magnitude * (scale as f64) + 0.5f64) as i64;
+	let negative = x < 0.0f64;
+	var magnitude = x;
+	if (negative) magnitude = 0.0f64 - x;
+	let scaled = (magnitude * (scale as f64) + 0.5f64) as i64;
 
-    var result: containers.String;
-    if (negative and scaled != 0i64) result.append('-');
-    result.append((scaled / scale).toString());
-    if (decimals > 0i64) {
-        result.append('.');
-        var fraction    = scaled % scale;
-        var digit_value = scale / 10i64;
-        while (digit_value > 0i64) {
-            result.append(('0' as i64 + fraction / digit_value) as char);
-            fraction    = fraction % digit_value;
-            digit_value = digit_value / 10i64;
-        }
-    }
-    return result;
+	var result: containers.String;
+	if (negative and scaled != 0i64) result.append('-');
+	result.append((scaled / scale).toString());
+	if (decimals > 0i64) {
+		result.append('.');
+		var fraction = scaled % scale;
+		var digit_value = scale / 10i64;
+		while (digit_value > 0i64) {
+			result.append(('0' as i64 + fraction / digit_value) as char);
+			fraction = fraction % digit_value;
+			digit_value = digit_value / 10i64;
+		}
+	}
+	return result;
 }
 
 #{
@@ -90,14 +91,14 @@ fun readChar() -> char = pio.readChar();
     input. Returns an empty string at end of input.
 #}
 fun readWord() -> containers.String = {
-    var result: containers.String;
-    var c = pio.readCharCode();
-    while (c >= 0 and isBlank(c)) c = pio.readCharCode();
-    while (c >= 0 and not isBlank(c)) {
-        result.append(c as char);
-        c = pio.readCharCode();
-    }
-    return result;
+	var result: containers.String;
+	var c = pio.readCharCode();
+	while (c >= 0 and isBlank(c)) c = pio.readCharCode();
+	while (c >= 0 and not isBlank(c)) {
+		result.append(c as char);
+		c = pio.readCharCode();
+	}
+	return result;
 }
 
 #{
@@ -105,10 +106,10 @@ fun readWord() -> containers.String = {
     as written on Windows, loses the `\r` too.
 #}
 fun readLine() -> containers.String = {
-    var line = pio.readString();
-    if (line.length() > 0i64) {
-        let last: char = line.at(line.length() - 1i64);
-        if (last == '\r') line.len = line.len - 1i64;
-    }
-    return line;
+	var line = pio.readString();
+	if (line.length() > 0i64) {
+		let last: char = line.at(line.length() - 1i64);
+		if (last == '\r') line.len = line.len - 1i64;
+	}
+	return line;
 }
