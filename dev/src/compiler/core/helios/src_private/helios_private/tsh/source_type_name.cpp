@@ -46,6 +46,26 @@ namespace compiler::tsh {
 
 		SourceTypeName renderSymbolTypeName(query::Context& ctx, SymbolType<> type);
 
+		std::string renderCompileTimeValue(query::Context& ctx, const ctv::CompileTimeValue& value) {
+			if (const auto type = value.get<SymbolType<>>(); type.has_value())
+				return renderSymbolTypeName(ctx, type.value()).text;
+			if (const auto number = value.get<numeric_value::NumericValue>(); number.has_value())
+				return std::visit(
+					[&](const auto stored) -> std::string {
+						if constexpr (std::is_floating_point_v<decltype(stored)>)
+							return std::format(
+								"{}{}",
+								stored,
+								std::is_same_v<decltype(stored), const f32> ? "f32" : "f64"
+							);
+						else
+							return number->toString();
+					},
+					number->getStorage()
+				);
+			return value.toString();
+		}
+
 		std::string templateArgumentsSuffix(
 			query::Context& ctx, const helios::templates::TemplateBakePSTLinkedData& bake_data
 		) {
@@ -58,25 +78,7 @@ namespace compiler::tsh {
 				const auto value
 					= ctx.query<helios::QueryConstValueOf>(postponed->template_arguments_symbols[i])
 				          .valueOrThrow();
-				if (const auto type = value.get<SymbolType<>>(); type.has_value())
-					result += renderSymbolTypeName(ctx, type.value()).text;
-				else if (const auto number = value.get<numeric_value::NumericValue>();
-				         number.has_value())
-					result += std::visit(
-						[&](const auto stored) -> std::string {
-							if constexpr (std::is_floating_point_v<decltype(stored)>)
-								return std::format(
-									"{}{}",
-									stored,
-									std::is_same_v<decltype(stored), const f32> ? "f32" : "f64"
-								);
-							else
-								return number->toString();
-						},
-						number->getStorage()
-					);
-				else
-					result += value.toString();
+				result += renderCompileTimeValue(ctx, value);
 			}
 			return result + "]";
 		}
@@ -140,12 +142,12 @@ namespace compiler::tsh {
 			query::Context&                  ctx,
 			const std::vector<SymbolType<>>& types,
 			std::string_view                 separator,
-			const TypeNamePrecedence         child_precedence = TypeNamePrecedence::Variant
+			const TypeNamePrecedence         parent_precedence = TypeNamePrecedence::Variant
 		) {
 			std::string result;
 			for (usize i = 0; i < types.size(); i++) {
 				if (i != 0) result += separator;
-				result += renderSymbolTypeName(ctx, types[i]).nestedIn(child_precedence);
+				result += renderSymbolTypeName(ctx, types[i]).nestedIn(parent_precedence);
 			}
 			return result;
 		}
@@ -153,14 +155,33 @@ namespace compiler::tsh {
 		SourceTypeName renderAbstractTypeName(query::Context& ctx, const AbstractType type) {
 			switch (type.getKind()) {
 			case Kind::Unit:
+				return { .text = "()", .precedence = TypeNamePrecedence::Atomic };
 			case Kind::Void:
+				return { .text = "void", .precedence = TypeNamePrecedence::Atomic };
 			case Kind::Byte:
+				return { .text = "byte", .precedence = TypeNamePrecedence::Atomic };
 			case Kind::Bool:
+				return { .text = "bool", .precedence = TypeNamePrecedence::Atomic };
 			case Kind::Char:
-			case Kind::Integral:
+				return { .text = "char", .precedence = TypeNamePrecedence::Atomic };
+			case Kind::Integral: {
+				const auto integral = type.as<IntegralAbstractType>();
+				return {
+					.text = base::strConcat(
+						integral.getSignedness() == IntegralAbstractType::Signedness::Signed ? "i"
+																							 : "u",
+						integral.getSize().asInt()
+					),
+					.precedence = TypeNamePrecedence::Atomic,
+				};
+			}
 			case Kind::Float:
+				return {
+					.text = base::strConcat("f", type.as<FloatAbstractType>().getSize().asInt()),
+					.precedence = TypeNamePrecedence::Atomic,
+				};
 			case Kind::Meta:
-				return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
+				return { .text = "type", .precedence = TypeNamePrecedence::Atomic };
 			case Kind::Pointer:
 				return {
 					.text = "ptr "
@@ -185,7 +206,7 @@ namespace compiler::tsh {
 				};
 			case Kind::Slice: {
 				const auto element = type.as<SliceAbstractType>().getElementType();
-				if (element == SymbolType<>::withDefaults(getCharType()))
+				if (element == SymbolType<>::withDefaultsMut(getCharType()))
 					return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
 				return {
 					.text = "slice "
@@ -266,7 +287,7 @@ namespace compiler::tsh {
 			const std::string prefix = base::strConcat(
 				type.getUniqueness() == Uniqueness::Unique ? "unique " : "",
 				type.getLeakage() == Leakage::Leaking ? "leaking " : "",
-				type.getMutability() == Mutability::Immutable ? "const " : "",
+				type.getMutability() == Mutability::Immutable ? "imm " : "",
 				type.getRefKind() == Direct ? ""
 				: type.getRefKind() == Box  ? "box "
 											: "ref "
@@ -284,7 +305,35 @@ namespace compiler::tsh {
 		return renderAbstractTypeName(ctx, *this).text;
 	}
 
-	std::string detail::sourceTypeName(query::Context& ctx, const SymbolType<AbstractType>& type) {
-		return renderSymbolTypeName(ctx, type).text;
+	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
+	std::string SymbolType<ABSTRACT_TYPE>::sourceTypeName(query::Context& ctx) const {
+		return renderSymbolTypeName(ctx, SymbolType<AbstractType>(*this)).text;
 	}
+
+#define INSTANTIATE_SOURCE_TYPE_NAME(TYPE) \
+	template std::string SymbolType<TYPE>::sourceTypeName(query::Context&) const;
+	INSTANTIATE_SOURCE_TYPE_NAME(AbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(UnitAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(VoidAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(ByteAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(BoolAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(CharAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(IntegralAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(FloatAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(RawPointerAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(PointerAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(ManyPointerAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(CPointerAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(SliceAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(TupleAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(FunctionAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(StaticArrayAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(VariantAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(ClassAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(NamespaceAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(ModuleAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(MetaAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(ImportAbstractType)
+	INSTANTIATE_SOURCE_TYPE_NAME(TypeTemplateAbstractType)
+#undef INSTANTIATE_SOURCE_TYPE_NAME
 }

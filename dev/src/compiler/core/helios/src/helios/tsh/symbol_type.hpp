@@ -13,13 +13,6 @@
 #include <hashing/hashing_algorithms.hpp>
 
 namespace compiler::tsh {
-	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
-	class SymbolType;
-
-	namespace detail {
-		std::string sourceTypeName(query::Context& ctx, const SymbolType<AbstractType>& type);
-	}
-
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
 	 */
@@ -421,7 +414,7 @@ namespace compiler::tsh {
 		/**
 		 * @brief Returns a source-oriented representation of this symbol type.
 		 *
-		 * The returned representation includes all applicable symbol qualifiers, such as `const`,
+		 * The returned representation includes all applicable symbol qualifiers, such as `imm`,
 		 * `ref`, `box`, `unique` and `leaking`, in the same order as @ref toString. The qualifiers
 		 * `unique` and `leaking` currently have no type-expression syntax. The underlying type
 		 * follows Duckling source syntax whenever it has a type-expression spelling and otherwise
@@ -434,9 +427,7 @@ namespace compiler::tsh {
 		 * @return A string containing the source-oriented representation of this symbol type.
 		 */
 		[[nodiscard]]
-		std::string sourceTypeName(query::Context& ctx) const {
-			return detail::sourceTypeName(ctx, SymbolType<AbstractType>(*this));
-		}
+		std::string sourceTypeName(query::Context& ctx) const;
 
 	private:
 		ABSTRACT_TYPE abstract_type;
@@ -448,4 +439,5 @@ namespace compiler::tsh {
 
 	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const
 		-> SymbolType<AbstractType>;
+	extern template std::string SymbolType<AbstractType>::sourceTypeName(query::Context&) const;
 }

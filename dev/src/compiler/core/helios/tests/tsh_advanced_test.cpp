@@ -4,11 +4,14 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -284,7 +287,72 @@ private:
 	}
 
 	void sourceTypeNameTest() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/tsh/source_type_names")));
+		const auto package_id  = base::StrID(base::generateRandomString(32));
+		const auto make_module = [&](std::string_view name, std::string_view contents) {
+			auto builder = compiler::frontend::ModuleTreeBuilder::create();
+			builder->setPackageID(package_id);
+			builder->setName(base::StrID(name));
+			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(contents, ".dk"));
+			return builder;
+		};
+		auto module = make_module("source_type_names", R"(
+			class Person {}
+			namespace Types {
+				class Inner {}
+				template(T: type)
+				class Boxed { value: T; }
+			}
+			template(T: type)
+			class Boxed { value: T; }
+			template(N: i64, T: type)
+			class Sized { value: T; }
+			template(F: f64)
+			class FloatT {}
+			template(F: f32)
+			class Float32T {}
+			template(T: type)
+			fun topFn(x: T) -> T = x;
+			namespace FnNs {
+				template(T: type)
+				fun ident(x: T) -> T = x;
+				template(T: type)
+				fun other(x: T) -> T = x;
+				template(N: i64)
+				namespace Number { const value = N; }
+			}
+			import other_mod as om;
+			var primitive: i64;
+			var string: str;
+			var immutable_slice: slice imm char;
+			var pointer: ptr Types.Inner;
+			var many_pointer: manyptr i64;
+			var c_pointer: cptr i64;
+			var pointer_array: (ptr i64)[3];
+			var array_pointer: ptr (i64[3]);
+			var nested_array: i64[3][2];
+			var qualified_nested_array: (imm i64)[3][2];
+			var variant_array: (i64 | bool)[3];
+			var tuple: (i64, bool);
+			var variant: i64 | bool;
+			var class_value: Person;
+			var template_value: Boxed[i64];
+			var namespaced_template: Types.Boxed[Person];
+			var value_template: Sized[3i64, bool];
+			var tiny_float: FloatT[0.000000001];
+			var another_tiny_float: FloatT[0.000000002];
+			var simple_float: FloatT[1.5];
+			var single_precision_float: Float32T[0.1f32];
+			var round_trip_tiny_float: FloatT[1e-09f64];
+			var other_class: om.Person;
+			var other_nested_class: om.NS.Deep;
+			var other_template_argument: Boxed[om.Person];
+		)");
+		module->addSubmodule(make_module("other_mod", R"(
+			class Person {}
+			namespace NS { class Deep {} }
+		)")
+		                         ->finalize());
+		const auto root_scope = getModuleScope(module->finalize()->getModuleID());
 
 		struct TypeNameCase final {
 			TypeNameCase(std::string_view symbol_name, std::string_view expected):
@@ -298,14 +366,14 @@ private:
 		const std::vector cases{
 			TypeNameCase{ "primitive", "i64" },
 			TypeNameCase{ "string", "str" },
-			TypeNameCase{ "const_slice", "slice const char" },
+			TypeNameCase{ "immutable_slice", "slice imm char" },
 			TypeNameCase{ "pointer", "ptr Types.Inner" },
 			TypeNameCase{ "many_pointer", "manyptr i64" },
 			TypeNameCase{ "c_pointer", "cptr i64" },
 			TypeNameCase{ "pointer_array", "(ptr i64)[3]" },
 			TypeNameCase{ "array_pointer", "ptr i64[3]" },
 			TypeNameCase{ "nested_array", "i64[3][2]" },
-			TypeNameCase{ "qualified_nested_array", "(const i64)[3][2]" },
+			TypeNameCase{ "qualified_nested_array", "(imm i64)[3][2]" },
 			TypeNameCase{ "variant_array", "(bool | i64)[3]" },
 			TypeNameCase{ "tuple", "(i64, bool)" },
 			TypeNameCase{ "variant", "bool | i64" },
@@ -346,8 +414,38 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			const auto i64_type
 				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
+			for (const auto bits: { 8u, 16u, 32u, 64u, 128u }) {
+				for (const auto signedness: {
+						 IntegralAbstractType::Signedness::Signed,
+						 IntegralAbstractType::Signedness::Unsigned,
+					 }) {
+					const auto integral = getIntegralType(ctx, bits, signedness);
+					const auto expected = base::strConcat(
+						signedness == IntegralAbstractType::Signedness::Signed ? "i" : "u", bits
+					);
+					ASSERT_EQUAL(expected, integral.sourceTypeName(ctx));
+					ASSERT_EQUAL(
+						expected,
+						SymbolType<IntegralAbstractType>::withDefaultsMut(integral).sourceTypeName(
+							ctx
+						)
+					);
+				}
+			}
+			for (const auto bits: { 16u, 32u, 64u, 80u, 128u }) {
+				const auto floating = getFloatType(ctx, bits);
+				ASSERT_EQUAL(base::strConcat("f", bits), floating.sourceTypeName(ctx));
+				ASSERT_EQUAL(
+					base::strConcat("f", bits),
+					SymbolType<FloatAbstractType>::withDefaultsMut(floating).sourceTypeName(ctx)
+				);
+			}
+			ASSERT_EQUAL(std::string("()"), getUnitType().sourceTypeName(ctx));
+			ASSERT_EQUAL(std::string("byte"), getByteType().sourceTypeName(ctx));
+			ASSERT_EQUAL(std::string("bool"), getBoolType().sourceTypeName(ctx));
+			ASSERT_EQUAL(std::string("char"), getCharType().sourceTypeName(ctx));
 			const KeyFor_QueryTupleType single_tuple_key{
-				.components = { SymbolType<>::withDefaults(i64_type) },
+				.components = { SymbolType<>::withDefaultsMut(i64_type) },
 			};
 			const auto single_tuple = ctx.query<QueryTupleType>(single_tuple_key);
 			assertEqual(
@@ -357,10 +455,13 @@ private:
 			);
 			for (usize index = 0; index < cases.size(); ++index) {
 				const auto& test_case = cases[index];
+				const auto  rendered  = types[index].sourceTypeName(ctx);
 				assertEqual(
 					std::string(test_case.expected),
-					types[index].sourceTypeName(ctx),
-					base::strConcat("Incorrect source type name for `", test_case.symbol_name, "`")
+					rendered,
+					base::strConcat(
+						"Incorrect source type name for `", test_case.symbol_name, "`: ", rendered
+					)
 				);
 			}
 
@@ -378,9 +479,14 @@ private:
 				Uniqueness::Unique
 			);
 			assertEqual(
-				std::string("unique leaking const ref i64"),
+				std::string("unique leaking imm ref i64"),
 				qualified_type.sourceTypeName(ctx),
 				"SymbolType qualifiers should use the same order as toString"
+			);
+			assertEqual(
+				std::string("unique leaking ref i64"),
+				qualified_type.withMutability(Mutability::Mutable).sourceTypeName(ctx),
+				"Mutable symbol types should omit the imm qualifier"
 			);
 
 			assertEqual(
@@ -395,8 +501,8 @@ private:
 			);
 
 			const auto function_type = ctx.query<QueryFunctionType>({
-				.parameter_types = { SymbolType<>::withDefaults(i64_type) },
-				.result_type     = SymbolType<>::withDefaults(getBoolType()),
+				.parameter_types = { SymbolType<>::withDefaultsMut(i64_type) },
+				.result_type     = SymbolType<>::withDefaultsMut(getBoolType()),
 			});
 			assertEqual(
 				std::string("Function (i64) -> (bool)"),
@@ -405,13 +511,13 @@ private:
 			);
 			const auto variant_type = ctx.query<QueryVariantType>({
 				.underlying_types = {
-					SymbolType<>::withDefaults(i64_type),
-					SymbolType<>::withDefaults(getBoolType()),
+					SymbolType<>::withDefaultsMut(i64_type),
+					SymbolType<>::withDefaultsMut(getBoolType()),
 				},
 			});
 			const auto composite_function_type = ctx.query<QueryFunctionType>({
 				.parameter_types = { person_type },
-				.result_type     = SymbolType<>::withDefaults(variant_type),
+				.result_type     = SymbolType<>::withDefaultsMut(variant_type),
 			});
 			assertEqual(
 				std::string("Function (Person) -> (bool | i64)"),
