@@ -32,6 +32,207 @@ namespace compiler::helios::code {
 				return false;
 			}
 		}
+
+		/**
+		 * @brief Builds the `as` conversion of @p value to @p to without looking through a
+		 * reference first.
+		 *
+		 * @return The converted expression, or an empty optional when no conversion applies.
+		 * @p value is moved from only when a conversion is returned.
+		 */
+		base::Optional<Box<Expr>> tryCastAs(
+			query::Context&                        ctx,
+			Box<Expr>&                             value,
+			const tsh::SymbolType<>&               to,
+			pst::Access<pst::expr::BinaryOperator> stmt
+		) {
+			auto from = value->expression_type.getSymbolType();
+			if (from == to) return std::move(value);  // trivial cast, always valid
+
+			using tsh::Kind;
+			using tsh::Mutability;
+			using tsh::ReferenceKind;
+
+			auto cast_expr = [&](Box<Expr> val) {
+				return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(val), to);
+			};
+
+			// We first check if we can cover the case by the coercion logic (from bool or to bool
+			// for example).
+			const tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, value.ref(), to);
+			if (coercion.isValid()) {
+				auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
+
+				// @TODO: #3853 go back to this once defined
+				if (coerced->expression_type.getSymbolType() != to)
+					return cast_expr(std::move(coerced));
+				return coerced;
+			}
+
+			// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
+			// Casting to bool needs custom handling.
+			//
+			// We use coercion logic here because it's surprisingly complex and handles references
+			// (e.g. ref i64 -> bool).
+			if (auto value_type = value->expression_type.getType();
+			    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
+			    && to.getType().getKind() == Kind::Bool) {
+				const tsh::coercions::Coercion to_direct
+					= coercions::coercionOf(ctx, value.ref(), from.toDirect());
+				CORE_ASSERT(to_direct.isValid(), "Should always be valid");
+				return coercions::buildZeroCheck(
+					ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
+				);
+			}
+
+			if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
+			    && from.getRefKind() == ReferenceKind::Direct
+			    && to.getRefKind() == ReferenceKind::Direct)
+				return cast_expr(std::move(value));
+
+			if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
+				return cast_expr(std::move(value));
+
+			struct CastPattern {
+				/// If specified, the cast must have this reference kind on the source side. If
+				/// not specified, any reference kind matches.
+				base::Optional<tsh::ReferenceKind> from_ref_kind;
+				/// If specified, the cast must have this kind on the source side. If not
+				/// specified, any kind matches.
+				base::Optional<tsh::Kind> from_kind;
+				/// If specified, the cast must have this reference kind on the target side. If
+				/// not specified, any reference kind matches.
+				base::Optional<tsh::ReferenceKind> to_ref_kind;
+				/// If specified, the cast must have this kind on the target side. If not
+				/// specified, any kind matches.
+				base::Optional<tsh::Kind> to_kind;
+				/// If true, the cast is only valid if the symbol pointee types are the same.
+				bool same_pointee_type;
+			};
+
+			static const std::vector<CastPattern> valid_pointer_casts = {
+				{
+					.from_ref_kind     = ReferenceKind::Ref,
+					.from_kind         = {},
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = tsh::Kind::Pointer,
+					.same_pointee_type = true,
+				},
+				{
+					.from_ref_kind     = ReferenceKind::Ref,
+					.from_kind         = {},
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = tsh::Kind::CPointer,
+					.same_pointee_type = false,
+				},
+				{
+					.from_ref_kind     = ReferenceKind::Box,
+					.from_kind         = {},
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = tsh::Kind::Pointer,
+					.same_pointee_type = true,
+				},
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::Pointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::CPointer,
+					.same_pointee_type = false,
+				},
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::ManyPointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::CPointer,
+					.same_pointee_type = false,
+				},
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::ManyPointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::Pointer,
+					.same_pointee_type = true,
+				},
+				// From CPointer to Pointer is temporary
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::CPointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::Pointer,
+					.same_pointee_type = false,
+				},
+				// From CPointer to ManypPointer is temporary
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::CPointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::ManyPointer,
+					.same_pointee_type = false,
+				},
+				// From CPointer to CPointer
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::CPointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::CPointer,
+					.same_pointee_type = false,
+				},
+				// From CPointer to Integral
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::CPointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::Integral,
+					.same_pointee_type = false,
+				},
+				// From Pointer to Integral (LLVM only friendly)
+				{
+					.from_ref_kind     = ReferenceKind::Direct,
+					.from_kind         = Kind::Pointer,
+					.to_ref_kind       = ReferenceKind::Direct,
+					.to_kind           = Kind::Integral,
+					.same_pointee_type = false,
+				},
+			};
+
+			bool found_match = false;
+			for (auto& pattern: valid_pointer_casts) {
+				auto equals = [](auto expected) {
+					return [v = std::move(expected)](auto other) { return other == v; };
+				};
+				bool from_ref_match
+					= pattern.from_ref_kind.map(equals(from.getRefKind())).copyValueOr(true);
+				bool from_kind_match
+					= pattern.from_kind.map(equals(from.getType().getKind())).copyValueOr(true);
+				bool to_ref_match
+					= pattern.to_ref_kind.map(equals(to.getRefKind())).copyValueOr(true);
+				bool to_kind_match
+					= pattern.to_kind.map(equals(to.getType().getKind())).copyValueOr(true);
+				if (!from_ref_match || !from_kind_match || !to_ref_match || !to_kind_match)
+					continue;
+				// To check the pointee we have to be sure that we have ref or pointer.
+				bool pointee_match = pattern.same_pointee_type
+				                       ? from.getPointeeSymbolType() == to.getPointeeSymbolType()
+				                       : true;
+				if (from_ref_match && from_kind_match && to_ref_match && to_kind_match
+				    && pointee_match) {
+					found_match = true;
+					break;
+				}
+			}
+			// Temporarily allow casts from CPointer to Pointer and ManyPointer.
+			if (found_match && from.getRefKind() == ReferenceKind::Direct
+			    && from.getType().getKind() == tsh::Kind::CPointer) {
+				// I do not like this syntax "as" to work on some targets and not work on
+				// others. I would like to have some syntax, so that the user has to write
+				// `native_cptr_cast<ptr T>(original_ctype)` or `@native v as ptr T`
+				// to make it explicit that this cast is only supported on native target.
+				return cast_expr(std::move(value));
+			}
+			if (found_match) return cast_expr(std::move(value));
+
+			return {};
+		}
 	}
 
 	Box<Expr> castAs(
@@ -40,194 +241,18 @@ namespace compiler::helios::code {
 		tsh::SymbolType<>                      as_type,
 		pst::Access<pst::expr::BinaryOperator> stmt
 	) {
-		auto from = value->expression_type.getSymbolType();
-		auto to   = as_type;
-		if (from == to) return value;  // trivial cast, always valid
+		const auto from = value->expression_type.getSymbolType();
+		const auto to   = as_type;
+		if (auto cast = tryCastAs(ctx, value, to, stmt)) return std::move(*cast);
 
-		using tsh::Kind;
-		using tsh::Mutability;
-		using tsh::ReferenceKind;
-
-		auto cast_expr = [&](Box<Expr> val) {
-			return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(val), to);
-		};
-
-		// We first check if we can cover the case by the coercion logic (from bool or to bool for
-		// example).
-		const tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, value.ref(), to);
-		if (coercion.isValid()) {
-			auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
-
-			// @TODO: #3853 go back to this once defined
-			if (coerced->expression_type.getSymbolType() != to)
-				return cast_expr(std::move(coerced));
-			return coerced;
+		// A `ref`/`box` converts to a value whenever the value it points to does: e.g.
+		// `list.at(i) as i32`. Conversions of the reference itself (`ref T as ptr T`) are tried
+		// first, above.
+		if (from.getRefKind() != tsh::ReferenceKind::Direct
+		    && to.getRefKind() == tsh::ReferenceKind::Direct) {
+			value = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(value));
+			if (auto cast = tryCastAs(ctx, value, to, stmt)) return std::move(*cast);
 		}
-
-		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
-		// Casting to bool needs custom handling.
-		//
-		// We use coercion logic here because it's surprisingly complex and handles references
-		// (e.g. ref i64 -> bool).
-		if (auto value_type = value->expression_type.getType();
-		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
-		    && to.getType().getKind() == Kind::Bool) {
-			const tsh::coercions::Coercion to_direct
-				= coercions::coercionOf(ctx, value.ref(), from.toDirect());
-			CORE_ASSERT(to_direct.isValid(), "Should always be valid");
-			return coercions::buildZeroCheck(
-				ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
-			);
-		}
-
-		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
-		    && from.getRefKind() == ReferenceKind::Direct
-		    && to.getRefKind() == ReferenceKind::Direct)
-			return cast_expr(std::move(value));
-
-		// E.g. `list.at(i) as i32`: the value is read out of the reference, then cast.
-		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
-		    && from.getRefKind() == ReferenceKind::Ref && to.getRefKind() == ReferenceKind::Direct)
-			return cast_expr(makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(value)));
-
-		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
-			return cast_expr(std::move(value));
-
-		struct CastPattern {
-			/// If specified, the cast must have this reference kind on the source side. If
-			/// not specified, any reference kind matches.
-			base::Optional<tsh::ReferenceKind> from_ref_kind;
-			/// If specified, the cast must have this kind on the source side. If not
-			/// specified, any kind matches.
-			base::Optional<tsh::Kind> from_kind;
-			/// If specified, the cast must have this reference kind on the target side. If
-			/// not specified, any reference kind matches.
-			base::Optional<tsh::ReferenceKind> to_ref_kind;
-			/// If specified, the cast must have this kind on the target side. If not
-			/// specified, any kind matches.
-			base::Optional<tsh::Kind> to_kind;
-			/// If true, the cast is only valid if the symbol pointee types are the same.
-			bool same_pointee_type;
-		};
-
-		static const std::vector<CastPattern> valid_pointer_casts = {
-			{
-				.from_ref_kind     = ReferenceKind::Ref,
-				.from_kind         = {},
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = tsh::Kind::Pointer,
-				.same_pointee_type = true,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Ref,
-				.from_kind         = {},
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = tsh::Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Box,
-				.from_kind         = {},
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = tsh::Kind::Pointer,
-				.same_pointee_type = true,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::Pointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::ManyPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::ManyPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Pointer,
-				.same_pointee_type = true,
-			},
-			// From CPointer to Pointer is temporary
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Pointer,
-				.same_pointee_type = false,
-			},
-			// From CPointer to ManypPointer is temporary
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::ManyPointer,
-				.same_pointee_type = false,
-			},
-			// From CPointer to CPointer
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			// From CPointer to Integral
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Integral,
-				.same_pointee_type = false,
-			},
-			// From Pointer to Integral (LLVM only friendly)
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::Pointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Integral,
-				.same_pointee_type = false,
-			},
-		};
-
-		bool found_match = false;
-		for (auto& pattern: valid_pointer_casts) {
-			auto equals = [](auto expected) {
-				return [v = std::move(expected)](auto other) { return other == v; };
-			};
-			bool from_ref_match
-				= pattern.from_ref_kind.map(equals(from.getRefKind())).copyValueOr(true);
-			bool from_kind_match
-				= pattern.from_kind.map(equals(from.getType().getKind())).copyValueOr(true);
-			bool to_ref_match = pattern.to_ref_kind.map(equals(to.getRefKind())).copyValueOr(true);
-			bool to_kind_match
-				= pattern.to_kind.map(equals(to.getType().getKind())).copyValueOr(true);
-			if (!from_ref_match || !from_kind_match || !to_ref_match || !to_kind_match) continue;
-			// To check the pointee we have to be sure that we have ref or pointer.
-			bool pointee_match = pattern.same_pointee_type
-			                       ? from.getPointeeSymbolType() == to.getPointeeSymbolType()
-			                       : true;
-			if (from_ref_match && from_kind_match && to_ref_match && to_kind_match
-			    && pointee_match) {
-				found_match = true;
-				break;
-			}
-		}
-		// Temporarily allow casts from CPointer to Pointer and ManyPointer.
-		if (found_match && from.getRefKind() == ReferenceKind::Direct
-		    && from.getType().getKind() == tsh::Kind::CPointer) {
-			// I do not like this syntax "as" to work on some targets and not work on
-			// others. I would like to have some syntax, so that the user has to write
-			// `native_cptr_cast<ptr T>(original_ctype)` or `@native v as ptr T`
-			// to make it explicit that this cast is only supported on native target.
-			return cast_expr(std::move(value));
-		}
-		if (found_match) return cast_expr(std::move(value));
 
 		ctx.log<dia::PlaceholderError>(
 			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
