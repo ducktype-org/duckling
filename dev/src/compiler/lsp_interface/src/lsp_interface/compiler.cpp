@@ -443,13 +443,12 @@ namespace duck_ls {
 	}
 
 	lsp::TextDocumentHoverResult Compiler::hover(const lsp::Uri& uri, const lsp::Position& position) {
+		if (!files->isOpened(uri)) return nullptr;
+
 		auto cache_path = files->cachePathFor(uri);
 		if (cache_path.empty()) return nullptr;
 
-		auto path
-			= files->isOpened(uri) ? cache_path.value() : files->sourcePath(cache_path.value());
-
-		auto source_files = SourceFile::getSourceFilesFromPath(path);
+		auto source_files = SourceFile::getSourceFilesFromPath(cache_path.value());
 		if (source_files.empty()) return nullptr;
 		auto source_file = source_files.back();
 

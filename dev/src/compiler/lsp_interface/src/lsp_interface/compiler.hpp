@@ -115,6 +115,7 @@ namespace duck_ls {
 		 *
 		 * @return Null when there is nothing to show, including for a URI the server cannot name a
 		 * file with and for a file that belongs to no loaded package.
+		 * Also returns Null when the file is not open.
 		 */
 		virtual lsp::TextDocumentHoverResult hover(
 			const lsp::Uri& uri, const lsp::Position& position
