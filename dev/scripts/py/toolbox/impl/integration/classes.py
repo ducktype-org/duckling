@@ -50,7 +50,7 @@ class Test:
     fail_fast: bool
     clean: str
     # Run this test's cases with nothing else executing concurrently
-    # (for cases sensitive to machine load, e.g. tight timeouts).
+    # (for cases sensitive to machine load).
     no_parallel: bool
 
     def __str__(self) -> str:
