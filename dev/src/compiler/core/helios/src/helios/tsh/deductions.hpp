@@ -29,27 +29,24 @@ namespace compiler::tsh::deductions {
 	 * its initializer expression.
 	 *
 	 * A `ref` initializer is stripped to its value type, so `var x = list.at(0)` declares a copy
-	 * of the element, not an alias to it. The declaration stays a reference only when the
-	 * initializer explicitly takes one (`var r = &x`) or when the type is written out
-	 * (`var r: ref mut T = list.at(0)`, see declarationTypeFromProvidedType()). A `box`
-	 * initializer keeps its reference kind, as the box owns its value.
+	 * of the element, not an alias to it, even for an explicit `&x` initializer. The declaration is
+	 * a reference only when the type is written out (`var r: ref mut T = list.at(0)`, see
+	 * declarationTypeFromProvidedType()). A `box` initializer keeps its reference kind, as the box
+	 * owns its value.
 	 *
 	 * @param expr_type The expression type of the initializer value.
 	 * @param expected_mutability The mutability expected by the declaration context.
-	 * @param initializer_takes_reference Whether the initializer is an explicit `&` expression.
 	 * @return The symbol type with the appropriate mutability applied.
 	 *
 	 * @example
 	 * // For a declaration like: `let x = 42`
 	 * // where expr_type is the type of `42` (an integral temporary value)
 	 * // and expected_mutability is Immutable (from `let` keyword)
-	 * auto symbol_type = declarationTypeFromInitializer(expr_type, Mutability::Immutable, false);
+	 * auto symbol_type = declarationTypeFromInitializer(expr_type, Mutability::Immutable);
 	 */
 	[[nodiscard]]
 	SymbolType<> declarationTypeFromInitializer(
-		const ExpressionType<>& expr_type,
-		Mutability              expected_mutability,
-		bool                    initializer_takes_reference
+		const ExpressionType<>& expr_type, Mutability expected_mutability
 	);
 
 	/**

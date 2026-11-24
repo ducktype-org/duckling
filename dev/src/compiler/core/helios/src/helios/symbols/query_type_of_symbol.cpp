@@ -72,14 +72,6 @@ namespace compiler::helios {
 				}
 			}
 
-			/**
-			 * @brief Whether a declaration initializer explicitly takes a reference (`&x`), so the
-			 * deduced type stays a `ref`.
-			 */
-			static bool isExplicitReference(const code::Expr& initializer) {
-				return dynamic_cast<const code::RefOfExpr*>(&initializer) != nullptr;
-			}
-
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
@@ -98,11 +90,9 @@ namespace compiler::helios {
 						setFailed();
 						return;
 					}
-					const auto& initializer = parsed->valueOrThrow();
+					const auto& expr_type = parsed->valueOrThrow()->expression_type;
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
-						initializer->expression_type,
-						tsh::Mutability::Immutable,
-						isExplicitReference(*initializer)
+						expr_type, tsh::Mutability::Immutable
 					));
 				} else {
 					CORE_PANIC(
@@ -126,7 +116,7 @@ namespace compiler::helios {
 					                   ->valueOrThrow();
 
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
-						parsed->expression_type, decl_mutability, isExplicitReference(*parsed)
+						parsed->expression_type, decl_mutability
 					));
 				} else {
 					CORE_PANIC(

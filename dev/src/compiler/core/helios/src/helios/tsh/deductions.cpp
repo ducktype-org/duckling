@@ -13,14 +13,12 @@
 
 namespace compiler::tsh::deductions {
 	SymbolType<> declarationTypeFromInitializer(
-		const ExpressionType<>& expr_type,
-		const Mutability        expected_mutability,
-		const bool              initializer_takes_reference
+		const ExpressionType<>& expr_type, const Mutability expected_mutability
 	) {
 		const auto& initializer_type = expr_type.getSymbolType();
-		const bool  strip_reference  = initializer_type.getRefKind() == ReferenceKind::Ref
-		                         and not initializer_takes_reference;
-		const auto declared_type = strip_reference ? initializer_type.toDirect() : initializer_type;
+		const auto  declared_type    = initializer_type.getRefKind() == ReferenceKind::Ref
+		                                 ? initializer_type.toDirect()
+		                                 : initializer_type;
 		return declared_type.withMutability(expected_mutability);
 	}
 

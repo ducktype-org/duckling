@@ -16,7 +16,7 @@ fun test_simple_ref() -> i32 = {
 	var p: i32 = r + r2; # Deref in binary.
 
 	var point = RefPoint(&x, &y);
-	var ref_point = &point;
+	var ref_point: ref mut RefPoint = &point;
 	var val: i32 = ref_point.x; # Two derefs should appear. One for `ref_point`, one for `x`.
 
 	return r; # Deref in return.
@@ -29,7 +29,7 @@ fun test_deduced_from_ref() -> i32 = {
 	var r: ref mut i32 = &x;
 	var copied = r; # A deduced declaration copies a `ref` initializer.
 	let copied_let = r;
-	var taken = &x; # An explicit `&` keeps the reference.
+	var taken = &x; # An explicit `&` is copied too.
 	copied = 5; # Writes to `copied` only, not to `x`.
 	return copied + copied_let + taken;
 }

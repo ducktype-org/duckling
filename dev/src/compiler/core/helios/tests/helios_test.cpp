@@ -1736,14 +1736,14 @@ private:
 			ASSERT_TRUE(deref_expr != nullptr);
 		}
 		{
-			// A declaration without a type copies a `ref` initializer, unless it is `&x`.
+			// A declaration without a type copies a `ref` initializer, even `&x`.
 			auto scope = getFunctionBodyScope(getChain("test_deduced_from_ref", top_scope).back());
 			auto i32_type = getIntegralTypeNoContext(32, Signed);
 			ASSERT_EQUAL(st(i32_type), getSymbolTypeOf("copied", scope));
 			ASSERT_EQUAL(
 				st(i32_type).withMutability(Immutable), getSymbolTypeOf("copied_let", scope)
 			);
-			ASSERT_EQUAL(st(i32_type).toRef(), getSymbolTypeOf("taken", scope));
+			ASSERT_EQUAL(st(i32_type), getSymbolTypeOf("taken", scope));
 		}
 	}
 
