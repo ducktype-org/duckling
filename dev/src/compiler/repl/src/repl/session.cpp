@@ -207,10 +207,10 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid.asInt(), "\n");
 	}
 
-	void ReplSession::preloadStandardLibrary() {
+	void ReplSession::preloadPackages() {
 		std::string error_message;
 		runWithContextErrorHandling(
-			"Unexpected error while preloading the standard library: ",
+			"Unexpected error while preloading packages: ",
 			[&](query::Context& ctx) {
 				// Reuse the persistent statement-lowering context so functions loaded here are
 			    // recorded as already-lowered and are not re-emitted for later statements.
@@ -218,17 +218,15 @@ namespace compiler::repl {
 				m_lowering_context->setContext(ctx);
 				defer(m_lowering_context->invalidateContext());
 
-				auto load_result = compiler::repl::preloadStandardLibrary(
-					ctx, m_dvm_pid, m_lowering_context.value()
-				);
-				if (!load_result.has_value())
-					error_message = "Failed to load standard library: " + load_result.error();
+				auto load_result
+					= compiler::repl::preloadPackages(ctx, m_dvm_pid, m_lowering_context.value());
+				if (!load_result.has_value()) error_message = load_result.error();
 			},
 			error_message
 		);
 
-		// A missing or broken standard library should not abort the REPL: report it and keep
-		// going so code that does not rely on the standard library still works.
+		// A broken package should not abort the REPL: report it and keep going so code that does
+		// not rely on it still works.
 		if (!error_message.empty()) std::cerr << error_message << "\n";
 	}
 

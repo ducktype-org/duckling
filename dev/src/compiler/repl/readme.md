@@ -29,6 +29,7 @@ Execution model notes:
 - Statement history with retained per-statement module context
 - Multi-statement input support
 - Script preload and `/load` command
+- User packages importable from cells (`--packages`)
 - Full HELIOS -> LIR -> DVM path for execution
 
 ## Structure
@@ -74,6 +75,32 @@ Suppress prompts, welcome and exit messages, and result markers:
 With the minimal frontend (`-DUSE_REPLXX=OFF`), this mode reads one line at a
 time without the interactive editor. Alt+Enter multiline input and history
 navigation shortcuts are unavailable; `/commands` still shows entered commands.
+
+Make user packages importable from cells:
+
+```bash
+./duckc repl --packages packages.json
+```
+
+The manifest lists every package to load (same entries as the `packages` list of a
+[`compile_packages` manifest](../driver/driver/src/driver/manifest/readme.md)) and the ones cells
+may import:
+
+```json
+{
+  "packages": [
+    { "id": "util-1.0.0", "name": "util", "path": "/abs/util/src" },
+    { "id": "plot-1.0.0", "name": "plot", "path": "/abs/plot/src",
+      "dependencies": [{ "id": "util-1.0.0" }] }
+  ],
+  "session_dependencies": [{ "id": "plot-1.0.0" }, { "id": "util-1.0.0", "alias": "u" }]
+}
+```
+
+Both lists are required and may be empty. A package left out of `session_dependencies` is still
+loaded for its dependents, but `import` from a cell cannot see it. Packages are compiled from source
+at startup and loaded after the standard library, so a package that fails to compile leaves the
+standard library usable. `/reset` keeps the packages.
 
 ### Commands
 
