@@ -119,6 +119,7 @@ namespace compiler::helios {
 	 * parameter list.
 	 */
 	class OperatorWithoutOperandsError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -154,6 +155,7 @@ namespace compiler::helios {
 	 * @brief An operator marked `prefix` or `suffix` does not take exactly one operand.
 	 */
 	class InvalidUnaryOperatorArityError final: public OperatorArityError {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -173,6 +175,7 @@ namespace compiler::helios {
 	 * declared without a fixity takes more than two.
 	 */
 	class InvalidBinaryOperatorArityError final: public OperatorArityError {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",

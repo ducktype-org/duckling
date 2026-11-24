@@ -324,8 +324,32 @@ private:
 			      "write `infix` before the name to allow `a has b`" },
 				1
 			);
+			{
+				// Inside its own class, a method is found both by the scope lookup and by the
+				// method lookup, but it must be reported only once.
+				const frontend::ModuleID module_id = frontend::createModuleTreeFromContents(R"(
+					class Bag {
+						x: i64;
+						fun contains(item: i64) -> bool = self.x == item;
+						fun check() -> bool = self contains 1;
+					}
+				)");
+				assertTrue(
+					query::entryPoint<helios::QueryModuleHOUT>(module_id)->hasFailed(),
+					"Expected HOUT query to fail for module content."
+				);
+				std::stringstream logged_messages;
+				query::Context::dumpToOneLoggerAndClear()->terminalPrint(logged_messages);
+				const std::string      logged_str = logged_messages.str();
+				const std::string_view note       = "Found `contains` declared without `infix`.";
+				usize                  note_count = 0;
+				for (usize pos = logged_str.find(note); pos != std::string::npos;
+				     pos       = logged_str.find(note, pos + note.size()))
+                    note_count++;
+				assertEqual(note_count, usize{ 1 }, "Expected exactly one note per declaration.");
+			}
 			// Operators take one or two operands. The pointer counts the `self` operand of methods.
-			constexpr std::string_view binary_arity
+			constexpr std::string_view BINARY_ARITY
 				= "Binary operator declarations must take exactly two operands.";
 			checkForErrorOnCompileModule(
 				R"(fun prefix +*() -> i64 = 0;)",
@@ -335,17 +359,17 @@ private:
 			);
 			checkForErrorOnCompileModule(
 				R"(fun infix contains(a: i64) -> bool = true;)",
-				{ binary_arity, "expected 2 operands, but 1 is declared" },
+				{ BINARY_ARITY, "expected 2 operands, but 1 is declared" },
 				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun infix +*(a: i64, b: i64, c: i64) -> i64 = a;)",
-				{ binary_arity, "expected 2 operands, but 3 are declared" },
+				{ BINARY_ARITY, "expected 2 operands, but 3 are declared" },
 				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun +*(a: i64, b: i64, c: i64) -> i64 = a;)",
-				{ binary_arity, "expected 2 operands, but 3 are declared" },
+				{ BINARY_ARITY, "expected 2 operands, but 3 are declared" },
 				1
 			);
 			checkForErrorOnCompileModule(
@@ -355,7 +379,7 @@ private:
 						fun infix has(a: i64, b: i64) -> bool = true;
 					}
 				)",
-				{ binary_arity,
+				{ BINARY_ARITY,
 			      "expected 2 operands, but 3 are declared, including `self` as the first" },
 				1
 			);
@@ -366,7 +390,7 @@ private:
 						fun +*(a: i64, b: i64) -> i64 = a;
 					}
 				)",
-				{ binary_arity,
+				{ BINARY_ARITY,
 			      "expected 2 operands, but 3 are declared, including `self` as the first" },
 				1
 			);
@@ -378,7 +402,7 @@ private:
 						global fun +*(a: i64, b: i64, c: i64) -> i64 = a;
 					}
 				)",
-				{ binary_arity, "expected 2 operands, but 3 are declared" },
+				{ BINARY_ARITY, "expected 2 operands, but 3 are declared" },
 				1
 			);
 			// A symbolic operator without parameters and without a fixity could have been meant as

@@ -898,13 +898,13 @@
 																			"sourceStart": 283,
 																			"sourceEnd": 286
 																		},
-																		"Keyword Expression": {
-																			"keyword": {
+																		"Identifier Expression": {
+																			"name": {
 																				"position": {
 																					"sourceStart": 283,
 																					"sourceEnd": 286
 																				},
-																				"Keyword Wrapper": {
+																				"Identifier Wrapper": {
 																					"value": "self"
 																				}
 																			}

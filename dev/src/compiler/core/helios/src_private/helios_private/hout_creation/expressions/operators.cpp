@@ -378,7 +378,11 @@ namespace compiler::helios::code {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
-			std::ranges::copy(method_candidates, std::back_inserter(non_infix_candidates));
+			// A method can also be found by the scope lookup above, e.g. inside its own class.
+			// It needs deduplicating so that it doesn't appear twice in diagnostics.
+			for (const auto method_candidate: method_candidates)
+				if (not std::ranges::contains(non_infix_candidates, method_candidate))
+					non_infix_candidates.push_back(method_candidate);
 			filterFunctionsByOperatoriness(
 				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 			);

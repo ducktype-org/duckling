@@ -99,12 +99,12 @@ namespace lexer {
 			    { NamedOperator::Minus, 570 },      { NamedOperator::SingleArrow, 580 },
 			    { NamedOperator::As, 400 } };
 		// Identifier operators (e.g. `a contains b`) bind looser than every symbolic operator.
-		static constexpr i64 identifier_operator_precedence = 600;
-		static constexpr i64 custom_operator_precedence     = 500;
+		static constexpr i64 IDENTIFIER_OPERATOR_PRECEDENCE = 600;
+		static constexpr i64 CUSTOM_OPERATOR_PRECEDENCE     = 500;
 
 		if (precedences.contains(asNamed())) return precedences.at(asNamed());
-		if (!isOperatorSymbolString(value.strView())) return identifier_operator_precedence;
-		return custom_operator_precedence;
+		if (!isOperatorSymbolString(value.strView())) return IDENTIFIER_OPERATOR_PRECEDENCE;
+		return CUSTOM_OPERATOR_PRECEDENCE;
 	}
 
 	bool Operator::isGenBinOpRightAssociative() const {

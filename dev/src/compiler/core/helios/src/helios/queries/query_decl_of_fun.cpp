@@ -356,8 +356,8 @@ namespace compiler::helios {
 		 * declared parameters, plus the implicit `self` of a non-static method if `has_self`.
 		 */
 		struct DeclaredParameters {
-			u64                 count;
-			bool                has_self;
+			u64                 count{};
+			bool                has_self{};
 			dia::StablePosition position;
 		};
 
@@ -413,6 +413,8 @@ namespace compiler::helios {
 						ctx, params.position, operands, params.has_self
 					);
 				return Operatoriness::Infix;
+			case pst::OperatorFixity::COUNT:
+				CORE_UNREACHABLE();
 			}
 			CORE_UNREACHABLE();
 		}
@@ -552,8 +554,8 @@ namespace compiler::helios {
 			void visitMethod(pst::Access<pst::Method> stmt) final {
 				// We can't use the interface directly because the interface
 				// can use the declaration of function query, and we could get a cycle.
-				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
-				const auto params     = stmt->getParams().unlock(ctx);
+				auto       specifiers    = getClassMemberSpecifiers(ctx, original_symbol);
+				const auto params        = stmt->getParams().unlock(ctx);
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),

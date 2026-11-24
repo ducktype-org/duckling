@@ -45,6 +45,7 @@ namespace compiler::helios::code {
 	 * names is declared `infix`.
 	 */
 	class OperatorNotDeclaredInfixError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
@@ -64,6 +65,7 @@ namespace compiler::helios::code {
 	 * would match, if it were declared `infix`.
 	 */
 	class OperatorDeclaredWithoutInfixNote final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "note",
