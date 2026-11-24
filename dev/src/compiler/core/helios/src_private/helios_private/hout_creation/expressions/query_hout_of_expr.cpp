@@ -11,6 +11,7 @@
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
+#include <ctv/ctv.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
@@ -348,6 +349,87 @@ namespace compiler::helios::code {
 				);
 			}
 
+			/**
+			 * @brief Creates the type `<operator> <operand>` of @p stmt. The operator is looked up
+			 * by @p operator_name and must be a single constant holding a `typeoperator` value,
+			 * like `refkind` in `template(T: type, refkind: typeoperator) fun f(x: refkind T)`.
+			 */
+			void applyRefKindOperator(
+				pst::Access<pst::expr::PrefixOperator> stmt, base::StrID operator_name
+			) {
+				using TypeOperator = ctv::CompileTimeValue::TypeOperator;
+
+				auto symbol
+					= HInterface::ofScopeWithParents(ctx.query<QueryPrimaryCodeScopeFor>({ stmt }))
+				          .lookupExpectUnique(stmt->getStablePosition(), ctx, operator_name)
+				          .valueOrThrow()
+				          .back();
+
+				TypeOperator type_operator = [&] {
+					if (kind(symbol) != SymbolKind::Const) {
+						ctx.log<dia::PlaceholderError>(
+							base::strConcat("`", operator_name.strView(), "` must be a constant."),
+							stmt->getStablePosition()
+						);
+						query::throwFailed();
+					}
+					auto ctv        = ctx.query<QueryConstValueOf>({ symbol }).valueOrThrow();
+					auto typeop_opt = ctv.get<ctv::CompileTimeValue::TypeOperator>();
+					if_opt_none(typeop_opt) {
+						ctx.log<dia::PlaceholderError>(
+							base::strConcat(
+								"`", operator_name.strView(), "` must be a `typeoperator`."
+							),
+							stmt->getStablePosition()
+						);
+						query::throwFailed();
+					}
+					return typeop_opt.value();
+				}();
+
+
+				if (base::holds<tsh::TemplateDeductionPlaceholderAbstractType>(type_operator.op)) {
+					const auto placeholder
+						= std::get<tsh::TemplateDeductionPlaceholderAbstractType>(type_operator.op);
+					const auto operand_ctv = getTypeCTVFromPST(ctx, stmt->getExpr());
+					if (operand_ctv.hasFailed()) return;
+					node = makeBox<LiteralTypeExpr>(
+						ctx,
+						pstOrigin(stmt),
+						ctx.query<tsh::QueryTemplateDeductionPlaceholderType>({
+							.template_symbol = placeholder.getTemplate(),
+							.parameter_index = placeholder.getParameterIndex(),
+							.operand = operand_ctv.valueOrPanic().get<tsh::ValueType<>>().value(),
+						})
+					);
+					return;
+				}
+
+				auto operand = subExprFromPSTWithType(
+								   ctx,
+								   unlockOrFail(ctx, stmt->getExpr()),
+								   tsh::ValueType<>::withDefaultsMut(tsh::getMetaType())
+				)
+				                   .valueOrThrow();
+
+				switch (std::get<TypeOperator::Kind>(type_operator.op)) {
+				case TypeOperator::Kind::Identity:
+					node = std::move(operand);
+					return;
+				case TypeOperator::Kind::Ref:
+					node = makeBox<UnaryOperatorExpr>(
+						ctx, pstOrigin(stmt), BuiltinUnary::Ref, std::move(operand)
+					);
+					return;
+				case TypeOperator::Kind::Box:
+					node = makeBox<UnaryOperatorExpr>(
+						ctx, pstOrigin(stmt), BuiltinUnary::Box, std::move(operand)
+					);
+					return;
+				}
+				CORE_UNREACHABLE();
+			}
+
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				const auto op = stmt->getOperator().unlock(ctx);
 
@@ -357,6 +439,11 @@ namespace compiler::helios::code {
 						"`funptr(i64) -> ()`.",
 						stmt->getStablePosition()
 					);
+					return;
+				}
+
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::RefKind)) {
+					applyRefKindOperator(stmt, op->unwrap());
 					return;
 				}
 
@@ -724,6 +811,12 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::Type:
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getMetaType());
+					break;
+
+				case pst::Keyword::TypeOperator:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, pstOrigin(stmt), tsh::getTypeOperatorType(ctx)
+					);
 					break;
 
 				case pst::Keyword::Void:

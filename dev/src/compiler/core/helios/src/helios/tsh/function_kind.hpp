@@ -22,5 +22,11 @@ namespace compiler::tsh {
 		 * @brief A callable that may carry an environment, written `(A) -> R`.
 		 */
 		Closure,
+
+		/**
+		 * @brief A compile-time only operator `(type) -> type` building a type from another one,
+		 * written `typeoperator`. Its values are ctv::CompileTimeValue::TypeOperator.
+		 */
+		TypeOperator,
 	};
 }

@@ -87,6 +87,20 @@ namespace compiler::ctv {
 			variant_case(tsh::ValueType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
+			variant_case(TypeOperator, type_operator) {
+				hashing::addToHash(hasher, type_operator.op.index());
+				variant_match(type_operator.op) {
+					variant_case(TypeOperator::Kind, op_kind) {
+						hashing::addToHash(hasher, op_kind);
+					}
+					variant_case(tsh::TemplateDeductionPlaceholderAbstractType, placeholder) {
+						hashing::addToHash(
+							hasher,
+							tsh::ValueType<>::withDefaults(placeholder).queryUnstablePerfectHash()
+						);
+					}
+				}
+			}
 			variant_case(VMValue, vm_value) {
 				hashing::addToHash(hasher, vm_value.type.queryUnstablePerfectHash());
 				hashing::addToHash(
@@ -126,6 +140,24 @@ namespace compiler::ctv {
 				return ss.str();
 			}
 			variant_case(tsh::ValueType<>, val) { return val.toString(); }
+			variant_case(TypeOperator, type_operator) {
+				variant_match(type_operator.op) {
+					variant_case(TypeOperator::Kind, op_kind) {
+						switch (op_kind) {
+						case TypeOperator::Kind::Identity:
+							return "typeoperator(ident)";
+						case TypeOperator::Kind::Ref:
+							return "typeoperator(ref)";
+						case TypeOperator::Kind::Box:
+							return "typeoperator(box)";
+						}
+					}
+					variant_case(tsh::TemplateDeductionPlaceholderAbstractType, placeholder) {
+						return placeholder.toString();
+					}
+				}
+				CORE_UNREACHABLE();
+			}
 			variant_case(VMValue, vm_value) {
 				// @TODO: #3774 Pretty print the VMValue instead of dumping it.
 				std::stringstream ss;
@@ -179,6 +211,9 @@ namespace compiler::ctv {
 				return tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
 			}
 			variant_case(VMValue, vm_value) { return vm_value.type; }
+			variant_case_novalue(TypeOperator) {
+				return tsh::ValueType<>::withDefaultsMut(tsh::getTypeOperatorType(ctx));
+			}
 		}
 		CORE_UNREACHABLE();
 	}

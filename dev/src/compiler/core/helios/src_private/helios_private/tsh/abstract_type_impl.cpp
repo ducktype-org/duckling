@@ -325,6 +325,10 @@ namespace compiler::tsh {
 		  result_type(result_type),
 		  pure(pure),
 		  function_kind(function_kind) {
+		if (function_kind == FunctionKind::TypeOperator) {
+			representation = "typeoperator";
+			return;
+		}
 		representation = (function_kind == FunctionKind::Closure ? "" : "Function ")
 		               + stringifyTypeVector(this->parameter_types) + " -> ("
 		               + result_type.toString() + ")";

@@ -615,11 +615,16 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief The type substituted for a type parameter of a template while its arguments are
-	 * deduced.
+	 * deduced. This type serves two different purpose, first be used where the `T` template
+	 * parameter and second one to replace the type where the `refkind <inner type>` is used.
 	 *
-	 * The template is baked with one placeholder per type parameter, so the parameter types of
-	 * the baked declaration show where each template parameter occurs. The placeholder is never a
-	 * valid type of a value, like `void`.
+	 * For example:
+	 * ```
+	 * template(T: type, refkind: typeoperator)
+	 * fun foo(a: T | str, b: refkind i64) = {...}
+	 * ```
+	 * First function param create a variant of `str` and this type and the second parameter
+	 * returns this type with the `i64` kept inside in `getOperand()`.
 	 */
 	class TemplateDeductionPlaceholderAbstractType: public AbstractType {
 	public:
@@ -634,6 +639,12 @@ namespace compiler::tsh {
 		 * @brief The index of the template parameter this placeholder stands for.
 		 */
 		[[nodiscard]] usize getParameterIndex() const;
+
+		/**
+		 * @brief The type a `typeoperator` placeholder is applied to, like `T` in `refkind T`.
+		 * Empty for the placeholder of a `type` parameter.
+		 */
+		[[nodiscard]] const base::Optional<ValueType<>>& getOperand() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(TemplateDeductionPlaceholderAbstractType)
 

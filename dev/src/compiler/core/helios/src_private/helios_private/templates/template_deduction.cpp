@@ -42,24 +42,39 @@ namespace compiler::helios::templates {
 		 * @brief A parameter of the function template baked with placeholders.
 		 */
 		struct ParameterPattern final {
-			base::StrID       name;
-			tsh::SymbolType<> type;
+			base::StrID      name;
+			tsh::ValueType<> type;
 		};
 
 		/**
-		 * @brief Bakes the function template with a placeholder for each of its type parameters
-		 * and returns the parameters of the baked function.
+		 * @brief Whether the template parameter is a `typeoperator`.
+		 */
+		bool isTypeOperatorParameter(
+			query::Context& ctx, const TemplateDeclarationSignature::Parameter& parameter
+		) {
+			return parameter.type.getType() == tsh::getTypeOperatorType(ctx);
+		}
+
+		/**
+		 * @brief Bakes the function template with a placeholder for each of its parameters and
+		 * returns the parameters of the baked function.
 		 */
 		std::vector<ParameterPattern> getParameterPatterns(
-			query::Context& ctx, SymID template_sym_id, usize template_parameter_count
+			query::Context& ctx, SymID template_sym_id, const TemplateDeclarationSignature& signature
 		) {
 			TemplateBakeKey key{ .template_sym_id = template_sym_id, .template_arguments = {} };
-			for (usize i = 0; i < template_parameter_count; i++) {
+			for (const auto& [index, parameter]: std::views::enumerate(signature.parameters)) {
 				const auto placeholder = ctx.query<tsh::QueryTemplateDeductionPlaceholderType>({
 					.template_symbol = template_sym_id,
-					.parameter_index = i,
+					.parameter_index = static_cast<usize>(index),
 				});
-				key.template_arguments.emplace_back(tsh::SymbolType<>::withDefaultsMut(placeholder));
+				if (isTypeOperatorParameter(ctx, parameter))
+					key.template_arguments.emplace_back(ctv::CompileTimeValue::TypeOperator{
+						.op = placeholder });
+				else
+					key.template_arguments.emplace_back(
+						tsh::ValueType<>::withDefaultsMut(placeholder)
+					);
 			}
 
 			const SymID baked = ctx.query<QueryBakeTemplateSymID>(key).valueOrThrow();
@@ -84,8 +99,8 @@ namespace compiler::helios::templates {
 		 * @brief Whether a placeholder occurs anywhere in @p type.
 		 */
 		bool containsPlaceholder(const tsh::AbstractType& type) {
-			const auto any_of = [](const std::vector<tsh::SymbolType<>>& types) {
-				return std::ranges::any_of(types, [](const tsh::SymbolType<>& inner) {
+			const auto any_of = [](const std::vector<tsh::ValueType<>>& types) {
+				return std::ranges::any_of(types, [](const tsh::ValueType<>& inner) {
 					return containsPlaceholder(inner.getType());
 				});
 			};
@@ -124,25 +139,71 @@ namespace compiler::helios::templates {
 		 * first value found for each template parameter.
 		 */
 		class TemplateArgumentDeducer final {
-			query::Context&                                ctx;
-			std::vector<base::Optional<tsh::SymbolType<>>> deduced;
+			using TypeOperator = ctv::CompileTimeValue::TypeOperator;
 
-			void bind(usize parameter_index, const tsh::SymbolType<>& value) {
+			query::Context&                                    ctx;
+			std::vector<base::Optional<ctv::CompileTimeValue>> deduced;
+
+			void bind(usize parameter_index, ctv::CompileTimeValue value) {
 				if (deduced.at(parameter_index).has_value()) return;
-				deduced.at(parameter_index) = value;
+				deduced.at(parameter_index) = std::move(value);
 			}
 
 			static usize placeholderIndex(const tsh::AbstractType& type) {
 				return tsh::TemplateDeductionPlaceholderAbstractType(type).getParameterIndex();
 			}
 
+			static base::Optional<tsh::ValueType<>> placeholderOperand(const tsh::AbstractType& type
+			) {
+				if (type.getKind() != tsh::Kind::TemplateDeductionPlaceholder) return {};
+				return tsh::TemplateDeductionPlaceholderAbstractType(type).getOperand();
+			}
+
+			static TypeOperator::Kind typeOperatorOf(tsh::ReferenceKind ref_kind) {
+				switch (ref_kind) {
+				case tsh::ReferenceKind::Direct:
+					return TypeOperator::Kind::Identity;
+				case tsh::ReferenceKind::Ref:
+					return TypeOperator::Kind::Ref;
+				case tsh::ReferenceKind::Box:
+					return TypeOperator::Kind::Box;
+				}
+				CORE_UNREACHABLE();
+			}
+
+			/**
+			 * @brief Matches a `typeoperator` placeholder applied to @p operand, like `refkind T`.
+			 * The reference kind of the argument determines the operator, and the operand is
+			 * matched with the direct argument.
+			 * @return Whether @p param is such a placeholder.
+			 */
+			bool deduceTypeOperator(
+				const tsh::ValueType<>& param, const tsh::ValueType<>& arg, bool nested
+			) {
+				const auto operand = placeholderOperand(param.getType());
+				if (not operand.has_value()) return false;
+				if (param.getRefKind() != tsh::ReferenceKind::Direct) return true;
+
+				bind(
+					placeholderIndex(param.getType()),
+					TypeOperator{ .op = typeOperatorOf(arg.getRefKind()) }
+				);
+				if (nested)
+					deduceNested(operand.value(), arg.toDirect());
+				else
+					deduce(operand.value(), arg.toDirect());
+				return true;
+			}
+
 			/**
 			 * @brief Matches a type nested in another one, where the reference kind and the
 			 * mutability are part of the matched value.
 			 */
-			void deduceNested(const tsh::SymbolType<>& param, const tsh::SymbolType<>& arg) {
+			void deduceNested(const tsh::ValueType<>& param, const tsh::ValueType<>& arg) {
+				if (deduceTypeOperator(param, arg, true)) return;
+
 				if (param.getType().getKind() != tsh::Kind::TemplateDeductionPlaceholder) {
-					deduceStructure(param.getType(), arg.getType());
+					deduceStructure(param.getType(), arg);
 					return;
 				}
 
@@ -153,8 +214,8 @@ namespace compiler::helios::templates {
 			}
 
 			void deduceEach(
-				const std::vector<tsh::SymbolType<>>& params,
-				const std::vector<tsh::SymbolType<>>& args
+				const std::vector<tsh::ValueType<>>& params,
+				const std::vector<tsh::ValueType<>>& args
 			) {
 				if (params.size() != args.size()) return;
 				for (const auto& [param, arg]: std::views::zip(params, args))
@@ -165,10 +226,11 @@ namespace compiler::helios::templates {
 			 * @brief Matches the alternatives of a variant. The alternatives without placeholders
 			 * are removed from the argument, and the single alternative with placeholders is
 			 * matched with what is left: one alternative, or a variant of all of them when the
-			 * alternative is a bare placeholder.
+			 * alternative is a bare placeholder. An argument which is not a variant is matched with
+			 * the alternative with placeholders, unless it is one of the other alternatives.
 			 */
-			void deduceVariant(const tsh::VariantAbstractType& param, const tsh::AbstractType& arg) {
-				std::vector<tsh::SymbolType<>> patterns;
+			void deduceVariant(const tsh::VariantAbstractType& param, const tsh::ValueType<>& arg) {
+				std::vector<tsh::ValueType<>>  patterns;
 				std::vector<tsh::AbstractType> concrete;
 				for (const auto& alternative: param.getUnderlyingTypes())
 					if (containsPlaceholder(alternative.getType()))
@@ -178,13 +240,18 @@ namespace compiler::helios::templates {
 				if (patterns.size() != 1) return;
 				const auto& pattern = patterns.front();
 
-				if (arg.getKind() != tsh::Kind::Variant) {
-					deduceNested(pattern, tsh::SymbolType<>::withDefaultsMut(arg));
+				if (arg.getType().getKind() != tsh::Kind::Variant) {
+					if (std::ranges::contains(concrete, arg.getType())) return;
+					if (placeholderOperand(pattern.getType()).has_value())
+						deduceNested(pattern, arg);
+					else
+						deduceNested(pattern, tsh::ValueType<>::withDefaultsMut(arg.getType()));
 					return;
 				}
 
-				std::vector<tsh::SymbolType<>> rest;
-				for (const auto& alternative: tsh::VariantAbstractType(arg).getUnderlyingTypes())
+				std::vector<tsh::ValueType<>> rest;
+				for (const auto& alternative:
+				     tsh::VariantAbstractType(arg.getType()).getUnderlyingTypes())
 					if (not std::ranges::contains(concrete, alternative.getType()))
 						rest.push_back(alternative);
 
@@ -199,7 +266,7 @@ namespace compiler::helios::templates {
 					const auto rest_variant = ctx.query<tsh::QueryVariantType>({ rest });
 					bind(
 						placeholderIndex(pattern.getType()),
-						tsh::SymbolType<>::withDefaultsMut(rest_variant)
+						tsh::ValueType<>::withDefaultsMut(rest_variant)
 					);
 				}
 			}
@@ -208,13 +275,15 @@ namespace compiler::helios::templates {
 			 * @brief Peels off the same kind of type from the parameter and the argument, and
 			 * matches their components.
 			 */
-			void deduceStructure(const tsh::AbstractType& param, const tsh::AbstractType& arg) {
+			void deduceStructure(const tsh::AbstractType& param, const tsh::ValueType<>& arg_symbol) {
 				if (not containsPlaceholder(param)) return;
 
 				if (param.getKind() == tsh::Kind::Variant) {
-					deduceVariant(tsh::VariantAbstractType(param), arg);
+					deduceVariant(tsh::VariantAbstractType(param), arg_symbol);
 					return;
 				}
+
+				const tsh::AbstractType arg = arg_symbol.getType();
 
 				if (param.getKind() != arg.getKind()) return;
 
@@ -277,15 +346,17 @@ namespace compiler::helios::templates {
 			 * reference kind and the mutability of the argument only say how it is passed, so a
 			 * placeholder at the top is bound to the bare type of the argument.
 			 */
-			void deduce(const tsh::SymbolType<>& param, const tsh::SymbolType<>& arg) {
+			void deduce(const tsh::ValueType<>& param, const tsh::ValueType<>& arg) {
+				if (deduceTypeOperator(param, arg, false)) return;
+
 				if (param.getType().getKind() == tsh::Kind::TemplateDeductionPlaceholder) {
 					bind(
 						placeholderIndex(param.getType()),
-						tsh::SymbolType<>::withDefaultsMut(arg.getType())
+						tsh::ValueType<>::withDefaultsMut(arg.getType())
 					);
 					return;
 				}
-				deduceStructure(param.getType(), arg.getType());
+				deduceStructure(param.getType(), arg);
 			}
 
 			[[nodiscard]] bool isComplete() const {
@@ -303,7 +374,7 @@ namespace compiler::helios::templates {
 			[[nodiscard]] std::vector<ctv::CompileTimeValue> getArguments() const {
 				std::vector<ctv::CompileTimeValue> arguments;
 				arguments.reserve(deduced.size());
-				for (const auto& value: deduced) arguments.emplace_back(value.value());
+				for (const auto& value: deduced) arguments.push_back(value.value());
 				return arguments;
 			}
 		};
@@ -320,7 +391,8 @@ namespace compiler::helios::templates {
 				= getTemplateDeclarationSignature(ctx, key.template_sym_id).valueOrThrow();
 
 			for (const auto& [index, parameter]: std::views::enumerate(signature.parameters)) {
-				if (parameter.type.getType().getKind() != tsh::Kind::Meta) {
+				if (parameter.type.getType().getKind() != tsh::Kind::Meta
+				    and not isTypeOperatorParameter(ctx, parameter)) {
 					return TemplateDeductionResult{ TemplateDeductionFailure{
 						.reason          = TemplateDeductionFailure::Reason::NonTypeParameter,
 						.parameter_index = static_cast<usize>(index),
@@ -329,8 +401,7 @@ namespace compiler::helios::templates {
 				}
 			}
 
-			const auto patterns
-				= getParameterPatterns(ctx, key.template_sym_id, signature.parameters.size());
+			const auto patterns = getParameterPatterns(ctx, key.template_sym_id, signature);
 
 			TemplateArgumentDeducer deducer(ctx, signature.parameters.size());
 

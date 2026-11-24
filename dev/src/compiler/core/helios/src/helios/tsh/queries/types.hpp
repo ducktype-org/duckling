@@ -322,6 +322,12 @@ namespace compiler::tsh {
 	)
 
 	/**
+	 * @brief Get the `typeoperator` type, the compile-time only function type `(type) -> type`
+	 * of FunctionKind::TypeOperator.
+	 */
+	FunctionAbstractType getTypeOperatorType(query::Context& ctx);
+
+	/**
 	 * @brief Query to get the Class type.
 	 *
 	 * \query_thread_safe_if_cache
@@ -377,13 +383,24 @@ namespace compiler::tsh {
 		 */
 		usize parameter_index;
 
+		/**
+		 * @brief The type the placeholder of a `typeoperator` parameter is applied to. Empty for
+		 * the placeholder of a `type` parameter.
+		 */
+		base::Optional<ValueType<>> operand = {};
+
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryTemplateDeductionPlaceholderType&) const
 			= default;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(template_symbol, parameter_index);
+			hashing::SHA256 hasher{};
+			addToHash(hasher, template_symbol);
+			addToHash(hasher, parameter_index);
+			addToHash(hasher, operand.has_value());
+			if (operand.has_value()) addToHash(hasher, operand.value());
+			return hasher.finalize();
 		}
 	};
 

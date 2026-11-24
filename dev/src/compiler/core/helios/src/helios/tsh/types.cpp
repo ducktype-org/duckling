@@ -156,6 +156,10 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getParameterIndex();
 	}
 
+	const base::Optional<ValueType<>>& TemplateDeductionPlaceholderAbstractType::getOperand() const {
+		return toCPimpl(pimpl)->getOperand();
+	}
+
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/

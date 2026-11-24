@@ -57,6 +57,33 @@ fun pick(x: T) -> i64 = 1;
 
 fun pick(x: bool) -> i64 = 2;
 
+# A `typeoperator` template parameter applied with `refkind` is deduced from the reference kind of
+# the
+# argument.
+template(T: type, refkind: typeoperator)
+fun refKindOrDefault(x: refkind (T | optional_primitives.None), d: T) -> T = {
+	return match (x) {
+		case v: T = v;
+		case _ = d;
+	};
+}
+
+template(T: type, refkind: typeoperator)
+fun refKindPass(x: refkind T) -> refkind T = {
+	return x;
+}
+
+template(T: type, refkind: typeoperator)
+fun refKindTupleSecond(t: (refkind T, i64)) -> i64 = t._2;
+
+# Returns 20 for the identity, 21 for `ref` and 22 for `box`.
+template(refkind: typeoperator)
+fun operatorOf(v: str | refkind String) -> i64 = {
+	const IS_REF: bool = refkind i64 == ref i64;
+	const IS_BOX: bool = refkind i64 == box i64;
+	return if IS_REF then 21 else (if IS_BOX then 22 else 20);
+}
+
 fun main() -> i64 = {
 	builtin_output_i64(ident(1i64));
 	builtin_output_i64(ident[i64](2)); # an explicit bake still works
@@ -81,5 +108,31 @@ fun main() -> i64 = {
 
 	# The template is an overload like any other function.
 	builtin_output_i64(pick(5i64) + 11);
+
+	var rk_some: i64 | optional_primitives.None = 13i64;
+	var rk_nothing: i64 | optional_primitives.None = none;
+	builtin_output_i64(refKindOrDefault(rk_some, 0));
+	builtin_output_i64(refKindOrDefault(&rk_some, 0) + 1);
+	builtin_output_i64(refKindOrDefault(&rk_nothing, 15));
+
+	var w: i64 = 16;
+	builtin_output_i64(refKindPass(w));
+	var r: ref i64 = refKindPass(&w);
+	builtin_output_i64(r + 1);
+
+	var b: box i64 = new 18i64;
+	var passed: box i64 = refKindPass(move b);
+	builtin_output_i64(passed);
+
+	builtin_output_i64(refKindTupleSecond((&w, 19i64)));
+
+	var s: String = "abc".toString();
+	var by_value: str | String = "x".toString();
+	var by_ref: str | ref String = &s;
+	var by_box: str | box String = new "y".toString();
+	builtin_output_i64(operatorOf(move by_value));
+	builtin_output_i64(operatorOf(by_ref));
+	builtin_output_i64(operatorOf(move by_box));
+	builtin_output_i64(operatorOf(&s));
 	return 0;
 }

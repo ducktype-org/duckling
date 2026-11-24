@@ -8,7 +8,7 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -30,12 +30,12 @@ namespace compiler::helios::templates {
 		/**
 		 * @brief The types of the positional arguments of the call, in order.
 		 */
-		std::vector<tsh::SymbolType<>> positional_argument_types;
+		std::vector<tsh::ValueType<>> positional_argument_types;
 
 		/**
 		 * @brief The names and types of the named arguments of the call, in order.
 		 */
-		std::vector<std::pair<base::StrID, tsh::SymbolType<>>> named_argument_types;
+		std::vector<std::pair<base::StrID, tsh::ValueType<>>> named_argument_types;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

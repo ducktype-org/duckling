@@ -871,10 +871,10 @@ namespace compiler::helios::code {
 					.named_argument_types      = {},
 				};
 				for (const auto& arg: call_arguments.positional_arguments)
-					key.positional_argument_types.push_back(arg->expression_type.getSymbolType());
+					key.positional_argument_types.push_back(arg->expression_type.getValueType());
 				for (const auto& [arg_name, arg]: call_arguments.named_arguments)
 					key.named_argument_types.emplace_back(
-						arg_name, arg->expression_type.getSymbolType()
+						arg_name, arg->expression_type.getValueType()
 					);
 
 				const auto deduction = ctx.query<templates::QueryTemplateArgumentDeduction>(key);
@@ -982,7 +982,9 @@ namespace compiler::helios::code {
 		ElementOrigin                whole_call_origin,
 		pst::Access<pst::expr::Call> call_expr
 	) {
-		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
+		if (callee->expression_type.getType().getKind() != tsh::Kind::Function
+		    or tsh::FunctionAbstractType(callee->expression_type.getType()).getFunctionKind()
+		           == tsh::FunctionKind::TypeOperator) {
 			ctx.log<CallNotCallableError>(
 				call_expr->getStablePosition(),
 				makeBox<InteractiveType>(ctx, callee->expression_type.getValueType())

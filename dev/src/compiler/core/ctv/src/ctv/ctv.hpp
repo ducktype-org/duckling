@@ -7,6 +7,7 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios/tsh/value_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
@@ -90,6 +91,35 @@ namespace compiler::ctv {
 			std::vector<Element> elements;
 		};
 
+		/**
+		 * @brief A value of the `typeoperator` type: an operator building a type from another one,
+		 * like the `refkind` template parameter in `fun f(x: refkind T)`.
+		 */
+		struct TypeOperator {
+			enum class Kind : uint8_t {
+				/**
+				 * @brief Gives the operand as it is: `T`.
+				 */
+				Identity,
+
+				/**
+				 * @brief Gives a reference to the operand: `ref T`.
+				 */
+				Ref,
+
+				/**
+				 * @brief Gives a box of the operand: `box T`.
+				 */
+				Box,
+			};
+
+			/**
+			 * @brief The operator, or the placeholder standing for a `typeoperator` template
+			 * parameter while the template arguments are deduced.
+			 */
+			std::variant<Kind, tsh::TemplateDeductionPlaceholderAbstractType> op;
+		};
+
 	private:
 		using Storage = std::variant<
 			bool,
@@ -100,7 +130,8 @@ namespace compiler::ctv {
 			UnitCTV,
 			TypeTuple,
 			tsh::ValueType<>,
-			VMValue>;
+			VMValue,
+			TypeOperator>;
 		Storage value;
 
 	public:

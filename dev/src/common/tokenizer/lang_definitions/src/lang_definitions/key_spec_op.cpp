@@ -112,8 +112,8 @@ namespace lang_def {
 			{ Keyword::Copyof, "copyof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::FRef,
-	          "fref",
+			{ Keyword::RefKind,
+	          "refkind",
 	          KeywordFlagsOptions::IsGenPrefixOp | KeywordFlagsOptions::IsIdentifierLike },
 
 			// `not` isn't a general prefix operator,
@@ -160,6 +160,7 @@ namespace lang_def {
 			{ Keyword::Bool, "bool", KeywordFlagsOptions::IsType },
 			{ Keyword::Str, "str", KeywordFlagsOptions::IsType },
 			{ Keyword::Type, "type", KeywordFlagsOptions::IsType },
+			{ Keyword::TypeOperator, "typeoperator", KeywordFlagsOptions::IsType },
 			{ Keyword::Void, "void", KeywordFlagsOptions::IsType },
 
 			{ Keyword::Set, "Set", KeywordFlagsOptions::IsType },

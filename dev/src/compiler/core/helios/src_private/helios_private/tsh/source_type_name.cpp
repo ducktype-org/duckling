@@ -222,6 +222,8 @@ namespace compiler::tsh {
 			};
 		case Kind::Function: {
 			const auto function = type.as<FunctionAbstractType>();
+			if (function.getFunctionKind() == FunctionKind::TypeOperator)
+				return { .text = "typeoperator", .precedence = TypeNamePrecedence::Atomic };
 			return {
 				.text = base::strConcat(
 					function.getFunctionKind() == FunctionKind::Raw ? "funptr(" : "(",
@@ -247,6 +249,8 @@ namespace compiler::tsh {
 			return { .text = "module", .precedence = TypeNamePrecedence::Atomic };
 		case Kind::Import:
 			return { .text = "import", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::TemplateDeductionPlaceholder:
+			return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
 		case Kind::COUNT:
 			CORE_UNREACHABLE();
 		}

@@ -2437,7 +2437,8 @@ private:
 		);
 	}
 
-	/// @brief Template arguments of a called function template that cannot be deduced.
+	/// @brief Template arguments of a called function template that cannot be deduced, and
+	/// `refkind` applied to something other than a `typeoperator`.
 	void testTemplateArgumentDeductionErrors() {
 		checkForErrorOnCompileModule(
 			R"(
@@ -2482,6 +2483,52 @@ private:
 				fun main() -> i64 = ident(undefined_thing);
 			)",
 			{ "Symbol 'undefined_thing' not found in lookup" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(refkind: type)
+				fun f(x: refkind i64) -> i64 = 0;
+
+				fun main() -> i64 = f[i64](1);
+			)",
+			{ "`refkind` must be a `typeoperator`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun f(refkind: i64) -> i64 = {
+					var x: refkind i64 = 0;
+					return x;
+				}
+
+				fun main() -> i64 = f(1);
+			)",
+			{ "`refkind` must be a constant." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun f(x: refkind i64) -> i64 = 0;
+
+				fun main() -> i64 = f(1);
+			)",
+			{ "Symbol 'refkind' not found in lookup" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(refkind: typeoperator)
+				fun f(v: str | refkind i64) -> i64 = 0;
+
+				fun main() -> i64 = f("lit");
+			)",
+			{ "Cannot deduce the template parameter `refkind` of `f` from the arguments of the "
+		      "call." },
 			1
 		);
 	}
