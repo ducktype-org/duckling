@@ -13,8 +13,8 @@
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/utils/hout_walker_generic.hpp>
 #include <lsp_interface/hover.hpp>
+#include <lsp_interface/hout_utils.hpp>
 #include <lsp_interface/pst_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -25,12 +25,10 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
-#include <concepts>
 #include <exception>
 #include <iostream>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 
 namespace duck_ls {
@@ -38,54 +36,6 @@ namespace duck_ls {
 	namespace {
 
 		using namespace compiler::helios;
-
-		/**
-		 * @brief The smallest HOUT expression in `root` whose source position covers `offset`,
-		 * or empty when there is none.
-		 *
-		 * HELIOS also adds expressions that are not written in the code, such as an implicit cast
-		 * or dereference, or a default argument copied into a call. Two rules keep them out:
-		 * - An added expression is never chosen itself, but the walk still goes into its children,
-		 *   so hovering over `y` in an implicit cast of `y` shows `y`, not the cast.
-		 * - An expression counts only if its position is in the same file and inside `bounds`,
-		 *   the range of `root`. A copied default argument keeps the position of the declaration
-		 *   it came from, which can be anywhere.
-		 */
-		base::Optional<CRef<code::Expr>> findInnermostExpression(
-			query::Context& ctx, const code::Expr& root, usize offset, const dia::SourcePosition& bounds
-		) {
-			base::Optional<CRef<code::Expr>> found{};
-			// How long `found` is (end minus start), so that each new candidate can be compared
-			// with it without asking HELIOS for its position again.
-			usize found_size = 0;
-
-			auto consider = [&](const auto& node) {
-				// The walker hands over statements too; only an expression can be the answer.
-				if constexpr (std::derived_from<std::remove_cvref_t<decltype(node)>, code::Expr>) {
-					const code::Expr& expr = node;
-					if (expr.origin.isGenerated()) return;
-
-					auto position_opt = expr.origin.getSourcePosition(ctx);
-					if (!position_opt.has_value()) return;
-					const auto& position = position_opt.value();
-
-					if (position.getSource().get() != bounds.getSource().get()) return;
-					if (position.getStart() < bounds.getStart() || position.getEnd() > bounds.getEnd())
-						return;
-					if (!covers(position, offset)) return;
-
-					// Children come after their parents, so on a tie the deeper one wins.
-					const usize size = position.getEnd() - position.getStart();
-					if (found.empty() || size <= found_size) {
-						found      = &expr;
-						found_size = size;
-					}
-				}
-			};
-
-			code::walkExprTree(root, consider);
-			return found;
-		}
 
 		/**
 		 * @brief Wraps `code` in a Markdown code block marked as Duckling, so the editor

@@ -6,6 +6,7 @@ add_library(LspInterface
 	src/lsp_interface/positions.cpp
 	src/lsp_interface/hover.cpp
 	src/lsp_interface/pst_utils.cpp
+	src/lsp_interface/hout_utils.cpp
 )
 
 make_module(LspInterface USES Base Init Lexer PstParser Clah Version HELIOS QueryFramework
