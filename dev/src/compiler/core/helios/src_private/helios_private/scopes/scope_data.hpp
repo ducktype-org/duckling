@@ -47,6 +47,12 @@ namespace compiler::helios {
 		u64 depth;
 
 		/**
+		 * @brief Whether the scope is the one of a baked template root, i.e. the scope in which
+		 * the template instance is declared.
+		 */
+		bool is_template_instance_root;
+
+		/**
 		 * @brief ID used for unstable perfect hashing of scopes.
 		 */
 		ScopeInternalID unstable_id;
@@ -56,13 +62,15 @@ namespace compiler::helios {
 			bool                          is_root,
 			base::Optional<pst::HashType> related_pst_element_hash,
 			frontend::ModuleID            parent_module,
-			u64                           depth
+			u64                           depth,
+			bool                          is_template_instance_root
 		):
 			  parent(parent),
 			  is_root(is_root),
 			  related_pst_element_hash(related_pst_element_hash),
 			  parent_module(parent_module),
 			  depth(depth),
+			  is_template_instance_root(is_template_instance_root),
 			  unstable_id(ScopeInternalID::next()) {
 			CORE_ASSERT(
 				related_pst_element_hash.empty() == is_root,
