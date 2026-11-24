@@ -19,9 +19,10 @@ namespace duck_ls {
 	/**
 	 * @brief The hover text for the code at `offset` in `file`, as Markdown.
 	 *
-	 * @param offset A code point offset, as `codePointOffset` computes it.
-	 * @return Empty when there is nothing to describe, or on a failure inside the compiler, which
-	 * is logged rather than propagated.
+	 * @param offset A code point offset, as `toCodePointOffset` computes it.
+	 * @return Empty when there is nothing to describe. Also empty when the compiler throws while
+	 * computing the hover; the exception is logged. A compiler panic throws only in Dev builds,
+	 * so in Release builds it is not caught here.
 	 */
 	base::Optional<std::string> hoverMarkdownAt(
 		base::Ref<compiler::frontend::SourceFile> file, usize offset
