@@ -28,6 +28,10 @@ namespace compiler::tsh::deductions {
 	 * This is commonly used when inferring the type of a variable declaration from
 	 * its initializer expression.
 	 *
+	 * The declaration gets the abstract type of the initializer with default symbol properties, so
+	 * `var x = list.at(0)` declares a copy of the element, not an alias to it. A `ref` or `box`
+	 * declaration needs the type written out (see declarationTypeFromProvidedType()).
+	 *
 	 * @param expr_type The expression type of the initializer value.
 	 * @param expected_mutability The mutability expected by the declaration context.
 	 * @return The symbol type with the appropriate mutability applied.

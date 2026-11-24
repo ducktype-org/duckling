@@ -115,10 +115,9 @@ namespace compiler::helios {
 					)
 					                   ->valueOrThrow();
 
-					const auto& expr_type = parsed->expression_type;
-					setTypeOfSymbol(
-						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
-					);
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
+						parsed->expression_type, decl_mutability
+					));
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
