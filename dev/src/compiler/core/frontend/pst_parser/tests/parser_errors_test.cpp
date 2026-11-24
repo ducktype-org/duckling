@@ -164,6 +164,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
 	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
 	Example<pst::Variable, true>  ref_var{ "var x: ref i32 = 5" };
+	Example<pst::Variable, true>  ref_op_type_var{ "var a: ref = foo()" };
+	Example<pst::Variable, true>  mut_op_type_let{ "let a: mut = foo()" };
+	Example<pst::Stmt, true>      ref_op_type_var_stmt{ "var a : ref = foo();" };
 	Example<pst::Variable, true>  type_var{ "var x: i32" };
 	Example<pst::Variable, true>  value_var{ "var x = 5" };
 	Example<pst::Variable, false> no_name_var{ "var: i32 = 5" };
