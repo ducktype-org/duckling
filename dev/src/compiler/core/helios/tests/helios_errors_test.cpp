@@ -9,6 +9,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -44,6 +45,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testBlockExprOutsideFunctionBody);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testFunctionValueErrors);
@@ -71,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testUnsupportedAccessErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
@@ -166,6 +169,34 @@ private:
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
+	}
+
+	void testBlockExprOutsideFunctionBody() {
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = { 1i64 }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = ({ 1i64 }) + 1i64) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = { let t: i64 = 1i64; t }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(class A { x: i64 = { let t: i64 = 1i64; t }; } fun foo() = { var a: A; })",
+			{ "A block expression cannot be used in a field initializer." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(const C: i64 = { 1i64 }; fun foo() -> i64 = C;)",
+			{ "A block expression cannot be used in a const initializer." },
+			1
+		);
 	}
 
 	/**
@@ -1214,30 +1245,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						break;
-					}
-				}
-			)",
-				{ "Feature not implemented", "break" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						continue;
-					}
-				}
-			)",
-				{ "Feature not implemented", "continue" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -2862,6 +2869,10 @@ private:
 
 		std::stringstream ss;
 
+		testDiagnosticMessage<BlockExprNotAllowedError>(
+			ss, dia::StablePosition::fakePosition(), "a default argument"
+		);
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
@@ -2992,6 +3003,23 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testUnsupportedAccessErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		// `.?` and `::` parse like `.`, but only `.` is compiled for now.
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N.?a;",
+			{ "Feature not implemented", "The `.?` access operator is not supported yet." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
+			{ "Feature not implemented", "The `::` access operator is not supported yet." },
+			1
+		);
 	}
 
 	void testWildcardNamesInSelectorPaths() {

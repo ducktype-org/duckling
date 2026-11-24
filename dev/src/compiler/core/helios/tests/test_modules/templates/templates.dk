@@ -1,6 +1,6 @@
 template(a: i64)
 namespace Number {
-    const inner = a;
+	const inner = a;
 }
 
 const one = Number[0i64].inner + Number[1i64].inner;

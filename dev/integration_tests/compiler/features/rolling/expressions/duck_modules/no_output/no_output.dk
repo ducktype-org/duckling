@@ -1,14 +1,14 @@
 fun foo() -> i64 = 123;
 
 fun main() -> i64 = {
-    i64 | i32;
-    2+2;
-    -1;
-    foo();
-    var a = 123;
-    &a; 
-    1 < 2; 
-    1 as f32;
+	i64 | i32;
+	2 + 2;
+	-1;
+	foo();
+	var a = 123;
+	&a;
+	1 < 2;
+	1 as f32;
 
-    return 0;
+	return 0;
 }

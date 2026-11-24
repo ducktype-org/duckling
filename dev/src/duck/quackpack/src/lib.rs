@@ -1,0 +1,17 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+//! QuackPack, an engine behind Duckling's package management.
+pub mod core;
+pub mod schemas;
+pub mod subcommands;
+pub mod util;
+
+<<<<<<< HEAD:dev/src/duck/src/lib/duck/mod.rs
+pub use main::{main, main_runner, setup_logger};
+=======
+pub use duck_core::*;
+>>>>>>> main:dev/src/duck/quackpack/src/lib.rs

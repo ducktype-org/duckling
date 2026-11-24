@@ -3,6 +3,13 @@
 # returned by value and passed to a by-value parameter, for the temporaries of a conditionally
 # evaluated part of an expression, and for global variables.
 Tests:
+  jump_scope_destructors:
+    Cases:
+      all:
+        Output:
+          String: "11\n22\n12\n19\n41\n31\n42\n32\n33\n39\n1\n71\n72\n3\n73\n79\n"
+        ExitCode: 0
+
   destructors:
     Cases:
       all:
@@ -10,7 +17,6 @@ Tests:
           String: "2\n3\n1\n4\n6\n5\n7\n8\n11\n10\n9\n14\n13\n20\n30\n21\n31\n22\n23\n32\n24\n25\n33\n42\n40\n41\n34\n100\n101\n102\n999\n103\n101\n"
         ExitCode: 0
       llvm_valgrind:
-        TimeOut: 3
         Output:
           String: "2\n3\n1\n4\n6\n5\n7\n8\n11\n10\n9\n14\n13\n20\n30\n21\n31\n22\n23\n32\n24\n25\n33\n42\n40\n41\n34\n100\n101\n102\n999\n103\n101\n"
         ExitCode: 0
@@ -22,7 +28,6 @@ Tests:
           String: "1\n2\n4\n3\n5\n6\n7\n9\n8\n10\n11\n12\n13\n15\n14\n16\n18\n17\n16\n18\n17\n16\n18\n18\n16\n20\n21\n22\n23\n"
         ExitCode: 0
       llvm_valgrind:
-        TimeOut: 3
         Output:
           String: "1\n2\n4\n3\n5\n6\n7\n9\n8\n10\n11\n12\n13\n15\n14\n16\n18\n17\n16\n18\n17\n16\n18\n18\n16\n20\n21\n22\n23\n"
         ExitCode: 0

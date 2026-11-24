@@ -111,8 +111,10 @@ namespace lang_def {
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copyof, "copyof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::FRef,
+	          "fref",
+	          KeywordFlagsOptions::IsGenPrefixOp | KeywordFlagsOptions::IsIdentifierLike },
 
 			// `not` isn't a general prefix operator,
 			// it has specific handling together with the other boolean operators
@@ -171,7 +173,7 @@ namespace lang_def {
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
-			{ Keyword::Self, "self", KeywordFlags() },
+			{ Keyword::Self, "self", KeywordFlagsOptions::IsIdentifierLike },
 
 			{ Keyword::Destroy, "destroy", KeywordFlags() },
 		});

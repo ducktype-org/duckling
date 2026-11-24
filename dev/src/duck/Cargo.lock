@@ -524,44 +524,44 @@ dependencies = [
 name = "duck"
 version = "0.3.0"
 dependencies = [
- "base64",
- "chrono",
  "clap",
  "clap_complete",
  "console",
  "curl",
- "dialoguer",
- "flate2",
- "futures",
+ "duck_core",
  "git2",
- "hmac",
- "http",
- "httpmock",
  "itertools 0.15.0",
- "libc",
  "libgit2-sys",
  "openssl",
  "openssl-sys",
- "percent-encoding",
- "regex",
+ "quackpack",
  "rusqlite",
  "russcip",
  "scip-sys",
  "serde",
- "serde-untagged",
- "serde_ignored",
- "serde_json",
- "serde_yaml_ng",
- "sha1",
- "sha2 0.11.0",
- "tar",
  "tempfile",
- "thiserror 2.0.19",
+ "tracing",
+]
+
+[[package]]
+name = "duck_core"
+version = "0.3.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "console",
+ "dialoguer",
+ "itertools 0.15.0",
+ "libc",
+ "serde",
+ "serde-untagged",
+ "serde_yaml_ng",
+ "sha2 0.11.0",
+ "tempfile",
  "tracing",
  "tracing-subscriber",
  "url",
  "windows-sys 0.61.2",
- "yaml-edit",
 ]
 
 [[package]]
@@ -1546,6 +1546,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "quackpack"
+version = "0.3.0"
+dependencies = [
+ "base64",
+ "chrono",
+ "clap",
+ "curl",
+ "duck_core",
+ "flate2",
+ "futures",
+ "git2",
+ "hmac",
+ "http",
+ "httpmock",
+ "itertools 0.15.0",
+ "libc",
+ "percent-encoding",
+ "regex",
+ "rusqlite",
+ "russcip",
+ "serde",
+ "serde-untagged",
+ "serde_ignored",
+ "serde_json",
+ "serde_yaml_ng",
+ "sha1",
+ "sha2 0.11.0",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.19",
+ "tracing",
+ "url",
+ "yaml-edit",
 ]
 
 [[package]]

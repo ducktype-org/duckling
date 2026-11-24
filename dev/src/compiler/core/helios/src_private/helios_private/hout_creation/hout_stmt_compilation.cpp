@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
@@ -30,6 +31,7 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
@@ -47,6 +49,8 @@
 #include <query_framework/query_errors.hpp>
 
 #include <algorithm>
+#include <string_view>
+#include <variant>
 
 namespace compiler::helios {
 
@@ -55,16 +59,65 @@ namespace compiler::helios {
 	requires std::same_as<Container, pst::CodeBlock>
 	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context& ctx, pst::Access<Container> container, tsh::SymbolType<> return_type
+		query::Context&                          ctx,
+		pst::Access<Container>                   container,
+		const base::Optional<tsh::SymbolType<>>& return_type
 	);
+
+	template<std::derived_from<pst::Stmt> T>
+	static base::Optional<SymID> getControlFlowID(query::Context& ctx, pst::Access<T> stmt) {
+		if (!stmt->getDeclSymbolIdentifier().has_value()) return {};
+
+		return ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
+	}
+
+	static base::Optional<code::ControlFlowKind> controlFlowKind(lang_def::Keyword keyword) {
+		switch (keyword) {
+		case lang_def::Keyword::If:
+			return code::ControlFlowKind::If;
+		case lang_def::Keyword::While:
+			return code::ControlFlowKind::While;
+		case lang_def::Keyword::For:
+			return code::ControlFlowKind::For;
+		case lang_def::Keyword::Block:
+			return code::ControlFlowKind::Block;
+		default:
+			return {};
+		}
+	}
+
+	template<std::derived_from<pst::Action> T>
+	static code::ControlFlowTargetSelector getControlFlowTarget(
+		query::Context& ctx, pst::Access<T> stmt
+	) {
+		auto target_holder  = stmt->getValue();
+		auto target_keyword = stmt->getTargetKeyword();
+		CORE_ASSERT(
+			!target_holder.has_value() || !target_keyword.has_value(),
+			"Control-flow target cannot be both a keyword and an expression."
+		);
+		if (target_keyword.has_value()) {
+			auto kind = controlFlowKind(target_keyword.value());
+			CORE_ASSERT(kind.has_value(), "Invalid parsed control-flow target keyword.");
+			return code::KindTarget{ kind.value() };
+		}
+		if (target_holder.has_value()) {
+			auto target_expr = target_holder.value().unlock(ctx)->getExpr().unlock(ctx);
+			auto identifier  = target_expr.template dynamicCast<pst::expr::IdentifierLiteral>();
+			CORE_ASSERT(identifier.has_value(), "Parsed control-flow target must be a bare name.");
+			return code::NamedTarget{ identifier.value()->getName().unlock(ctx)->unwrap() };
+		}
+		return code::NearestLoop{};
+	}
 
 	/**
 	 * @brief Visitor that creates HOUT statements from PST statements.
 	 * It is used locally in processBlock.
 	 */
 	struct HoutStmtMaker final: public pst::PstVisitorPanicky {
-		query::Context&   ctx;
-		tsh::SymbolType<> return_type;
+		query::Context& ctx;
+
+		base::Optional<tsh::SymbolType<>> return_type;
 
 		/**
 		 * Whether the statement generation has failed.
@@ -84,7 +137,7 @@ namespace compiler::helios {
 		 */
 		std::vector<Box<code::Stmt>> prefix_stmts;
 
-		HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
+		HoutStmtMaker(query::Context& ctx, base::Optional<tsh::SymbolType<>> return_type):
 			  ctx(ctx),
 			  return_type(return_type) {}
 
@@ -114,9 +167,12 @@ namespace compiler::helios {
 
 				// The returned local dies with the function, so we have to mark it as `LastUse` and
 				// implicitly move it.
-				const auto position = pst_expr.unlock(ctx)->getStablePosition();
+				const auto position    = pst_expr.unlock(ctx)->getStablePosition();
+				const auto target_type = return_type.has_value()
+				                           ? return_type.value()
+				                           : expr_hout->expression_type.getSymbolType();
 				const query::QResult<coercions::Coercion> coercion = coercions::validCoercionOf(
-					ctx, expr_hout.ref(), return_type, position, {}, {}, coercions::HandOverKind::LastUse
+					ctx, expr_hout.ref(), target_type, position, {}, {}, coercions::HandOverKind::LastUse
 				);
 				if (coercion.hasFailed()) query::throwFailed();
 
@@ -134,12 +190,14 @@ namespace compiler::helios {
 					coercions::applyCoercionFromRef(ctx, coercion.valueOrThrow(), expr_hout.ref())
 				));
 			} else {
-				const bool returns_unit = return_type.getType() == tsh::getUnitType()
-				                       && return_type.getRefKind() == tsh::ReferenceKind::Direct;
+				const bool returns_unit
+					= !return_type.has_value()
+				   || (return_type.value().getType() == tsh::getUnitType()
+				       && return_type.value().getRefKind() == tsh::ReferenceKind::Direct);
 
 				if (not returns_unit) {
 					ctx.log<ReturnWithoutValueError>(
-						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type)
+						stmt->getStablePosition(), makeBox<InteractiveType>(ctx, return_type.value())
 					);
 					is_failed = true;
 					return;
@@ -289,7 +347,9 @@ namespace compiler::helios {
 			if (taken.valueOrThrow()) {
 				output(code::BlockStmt(
 					code::pstOrigin(stmt),
-					processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type)
+					processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type),
+					getControlFlowID(ctx, stmt),
+					code::ControlFlowKind::If
 				));
 				return;
 			}
@@ -298,7 +358,9 @@ namespace compiler::helios {
 				opt_some(else_body) {
 					output(code::BlockStmt(
 						code::pstOrigin(stmt),
-						processBlock(ctx, unlockOrFail(ctx, else_body), return_type)
+						processBlock(ctx, unlockOrFail(ctx, else_body), return_type),
+						getControlFlowID(ctx, stmt),
+						code::ControlFlowKind::If
 					));
 				}
 				opt_none {
@@ -327,6 +389,7 @@ namespace compiler::helios {
 			)
 			                     .valueOrThrow();
 
+			auto control_flow_id = getControlFlowID(ctx, stmt);
 			auto then_body = processBlock(ctx, unlockOrFail(ctx, stmt->getThenBody()), return_type);
 
 			match_optional(stmt->getElseBody()) {
@@ -335,12 +398,16 @@ namespace compiler::helios {
 						code::pstOrigin(stmt),
 						std::move(condition),
 						std::move(then_body),
-						processBlock(ctx, unlockOrFail(ctx, else_body), return_type)
+						processBlock(ctx, unlockOrFail(ctx, else_body), return_type),
+						control_flow_id
 					));
 				}
 				opt_none {
 					output(code::IfStmt(
-						code::pstOrigin(stmt), std::move(condition), std::move(then_body)
+						code::pstOrigin(stmt),
+						std::move(condition),
+						std::move(then_body),
+						control_flow_id
 					));
 				}
 			}
@@ -348,6 +415,7 @@ namespace compiler::helios {
 
 		void visitWhile(pst::Access<pst::While> stmt) override {
 			auto bool_type        = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
+			auto control_flow_id  = getControlFlowID(ctx, stmt);
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
 				is_failed = true;
@@ -361,7 +429,9 @@ namespace compiler::helios {
 
 			auto body = processBlock(ctx, unlockOrFail(ctx, stmt->getBody()), return_type);
 
-			output(code::WhileStmt(code::pstOrigin(stmt), std::move(condition), std::move(body)));
+			output(code::WhileStmt(
+				code::pstOrigin(stmt), std::move(condition), std::move(body), control_flow_id
+			));
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -406,9 +476,15 @@ namespace compiler::helios {
 		}
 
 		void visitBlock(pst::Access<pst::Block> stmt) override {
+			auto control_flow_id = getControlFlowID(ctx, stmt);
 			auto block_body
 				= processBlock(ctx, unlockOrFail(ctx, stmt->getCodeBlock()), return_type);
-			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+			output(code::BlockStmt(
+				code::pstOrigin(stmt),
+				std::move(block_body),
+				control_flow_id,
+				code::ControlFlowKind::Block
+			));
 		}
 
 		void visitConst(pst::Access<pst::Const>) override {
@@ -417,17 +493,13 @@ namespace compiler::helios {
 		}
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
-			ctx.log<dia::NotYetImplementedCodeError>(
-				"`continue` statements are not supported yet.", stmt->getStablePosition()
-			);
-			is_failed = true;
+			auto target = getControlFlowTarget(ctx, stmt);
+			output(code::ContinueStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
-			ctx.log<dia::NotYetImplementedCodeError>(
-				"`break` statements are not supported yet.", stmt->getStablePosition()
-			);
-			is_failed = true;
+			auto target = getControlFlowTarget(ctx, stmt);
+			output(code::BreakStmt(code::pstOrigin(stmt), target));
 		}
 
 		void visitRedo(pst::Access<pst::Redo> stmt) override {
@@ -462,6 +534,7 @@ namespace compiler::helios {
 			auto result = desugaring::desugarFor(
 				ctx,
 				stmt,
+				getControlFlowID(ctx, stmt),
 				[&](pst::AccessLocked<pst::CodeBlockOrStmt> body_pst) -> code::CodeBlock {
 					return processBlock(ctx, unlockOrFail(ctx, body_pst), return_type);
 				}
@@ -552,6 +625,27 @@ namespace compiler::helios {
 	};
 
 	/**
+	 * @brief Compiles `stmt` and appends what it produced to `block`.
+	 */
+	static void appendStmt(
+		query::Context&                          ctx,
+		code::CodeBlock&                         block,
+		pst::Access<pst::Stmt>                   stmt,
+		const base::Optional<tsh::SymbolType<>>& return_type
+	) {
+		HoutStmtMaker stmt_maker(ctx, return_type);
+		stmt->acceptVisitor(stmt_maker);
+
+		if (stmt_maker.is_failed) query::throwFailed();
+
+		for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+			block.statements.emplace_back(std::move(prefix_stmt));
+
+		if (stmt_maker.out.has_value())
+			block.statements.emplace_back(std::move(stmt_maker.out.value()));
+	}
+
+	/**
 	 * @brief Compiles a PST code block or statement into a HOUT CodeBlock.
 	 *
 	 * Iterates all statements in the container via HoutStmtMaker and returns the
@@ -562,25 +656,47 @@ namespace compiler::helios {
 	requires std::same_as<Container, pst::CodeBlock>
 	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context& ctx, pst::Access<Container> container, tsh::SymbolType<> return_type
+		query::Context&                          ctx,
+		pst::Access<Container>                   container,
+		const base::Optional<tsh::SymbolType<>>& return_type
 	) {
 		code::CodeBlock block({});
-		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {
-			HoutStmtMaker stmt_maker(ctx, return_type);
-			stmt->acceptVisitor(stmt_maker);
-
-			if (stmt_maker.is_failed) {
-				// @TODO: #1753 change here to grab errors from all statements.
-				query::throwFailed();
-			}
-
-			for (auto& prefix_stmt: stmt_maker.prefix_stmts)
-				block.statements.emplace_back(std::move(prefix_stmt));
-
-			if (stmt_maker.out.has_value())
-				block.statements.emplace_back(std::move(stmt_maker.out.value()));
-		}
+		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container))
+			appendStmt(ctx, block, stmt, return_type);
 		return block;
+	}
+
+	query::QResult<Box<code::Expr>> compileBlockExpr(
+		query::Context& ctx, pst::Access<pst::expr::BlockExpr> block_expr
+	) {
+		const auto origin = code::pstOrigin(block_expr);
+		auto contents = getStmtsFromStmtAggregate(ctx, unlockOrFail(ctx, block_expr->getBlock()));
+
+		base::Optional<Box<code::Expr>> tail;
+		if (!contents.empty() && contents.back()->isImplicitReturn()) {
+			if (auto expr_stmt_opt = contents.back().dynamicCast<pst::ExprStmt>(); expr_stmt_opt) {
+				auto tail_holder = expr_stmt_opt.value()->getExpr().unlock(ctx);
+				UNPACK_QRESULT_MOVE(
+					auto tail_expr =,
+					code::subExprFromPST(ctx, unlockOrFail(ctx, tail_holder->getExpr()))
+				);
+				const auto tail_type = tail_expr->expression_type.getSymbolType();
+				UNPACK_QRESULT_MOVE(
+					tail =,
+					coercions::coerceFromBox(
+						ctx, std::move(tail_expr), tail_type, tail_holder->getStablePosition()
+					)
+				);
+				contents.pop_back();
+			}
+		}
+
+		code::CodeBlock body({});
+		for (const auto& stmt: contents) appendStmt(ctx, body, stmt, {});
+
+		return Box<code::Expr>(makeBox<code::BlockExpr>(
+			origin, makeBox<code::BlockStmt>(origin, std::move(body)), std::move(tail)
+		));
 	}
 
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(

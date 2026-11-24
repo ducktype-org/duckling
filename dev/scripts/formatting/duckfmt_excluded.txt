@@ -1,0 +1,6 @@
+# Duckling files that are left unformatted on purpose, so `toolbox.py duckfmt` and
+# `format_repo_duckling.sh` skip them. One path per line, relative to dev/.
+
+# duckfmt's own itest fixtures: an unformatted input and a file with a lexer error
+integration_tests/tools/formatter/format_unformatted.dk
+integration_tests/tools/formatter/format_lexer_error.dk
