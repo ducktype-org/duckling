@@ -27,6 +27,15 @@ pub struct MultiPackage {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+/// Packages handed to `duckc repl --packages`.
+pub struct ReplPackages {
+    /// Packages to load into the session, including their __entire__ dependencies trees.
+    pub packages: Vec<Package>,
+    /// Packages importable from REPL cells.
+    pub session_dependencies: Vec<Dependency>,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Package {
     #[serde(rename = "id")]
     /// ID of a package to compile. Note, that it doesn't have to be a package's name, it can be a

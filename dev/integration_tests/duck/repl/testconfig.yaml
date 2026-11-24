@@ -1,0 +1,60 @@
+# `duck repl` hands the package's (or the global venv's) packages to `duckc repl --packages`.
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add --local ../bar bar
+  cat <<'DK' > bar/src/src.dk
+  const BAR_MAX: i64 = 100i64;
+
+  fun bar_value() -> i64 = { return 28i64; }
+  DK
+  cat <<'DK' > foo/src/src.dk
+  import bar.*;
+
+  fun fooValue() -> i64 = { return bar_value() + 1i64; }
+
+  fun main() -> i64 = { return fooValue() - 29i64; }
+  DK
+
+repl-cmd: "duck repl -- --plain-output --disable-bracketed-paste"
+
+Tests:
+  package:
+    Description: inside a package, cells import the package itself and its dependencies
+    Cases:
+      dependency:
+        test-cmd: "cd foo && @{repl-cmd}"
+        Input:
+          String: "import bar;\nbar.bar_value() + bar.BAR_MAX\n"
+        Output:
+          String: "128\n"
+      root-package:
+        test-cmd: "cd foo && @{repl-cmd}"
+        Input:
+          String: "import foo;\nfoo.fooValue()\n"
+        Output:
+          String: "29\n"
+      writes-manifest:
+        test-cmd: "cd foo && @{repl-cmd} && grep -c '\"session_dependencies\"' .duck_build/repl/packages.json"
+        Input:
+          String: "1\n"
+        Output:
+          String: "1\n1\n"
+
+  global:
+    Description: outside a package, or with --global, cells import the global packages
+    Cases:
+      outside-package:
+        test-cmd: "duck add -g --local \"$DIT_TMP_DIR/bar\" bar >/dev/null 2>&1 && mkdir empty && cd empty && @{repl-cmd}"
+        Input:
+          String: "import bar;\nbar.bar_value()\n"
+        Output:
+          String: "28\n"
+      global-flag-hides-package:
+        test-cmd: "cd foo && duck repl --global -- --plain-output --disable-bracketed-paste"
+        Input:
+          String: "import foo;\nfoo.fooValue()\n2 + 2\n"
+        Output:
+          String: "4\n"
