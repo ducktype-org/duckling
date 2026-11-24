@@ -7,6 +7,7 @@
 //! Build script of QuackPack: rejects invalid combinations of the `scip` features.
 
 fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
     let russcip_bundled = std::env::var("CARGO_FEATURE_BUNDLED_SCIP").is_ok();
     let russcip_static = std::env::var("CARGO_FEATURE_STATIC_SCIP").is_ok();
     if russcip_static && russcip_bundled {
