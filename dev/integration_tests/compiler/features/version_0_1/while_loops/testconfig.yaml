@@ -1,5 +1,5 @@
 # Test configuration for while-loops
-# Tests while loops with named loops, break, continue, and performance
+# Tests while loops with named loops, break, continue, and a long-running loop
 
 Tests:
   while_test:
@@ -10,7 +10,7 @@ Tests:
           String: "5\n4\n5\n4\n5\n4\n5\n4\n2\n1\n5\n4\n2\n1\n5\n4\n2\n1\n"
         ExitCode: 0
   loops_performance:
-    Description: Performance test for while loops.
+    Description: Runs a while loop for about 3*10^7 iterations. Checks the output only, not the speed.
     Cases:
       all:
         Output:

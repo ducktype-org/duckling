@@ -41,8 +41,9 @@ Tests:
         ExitCode: 0
 
   loops-performance: # while
+    Description: Runs a while loop for about 3*10^7 iterations. Checks the output only, not the speed.
     Cases:
-      llvm:
+      all:
         Output:
           String: "20\n100000001\n"
         ExitCode: 0
