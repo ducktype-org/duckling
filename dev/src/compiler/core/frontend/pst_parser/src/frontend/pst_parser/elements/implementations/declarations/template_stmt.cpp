@@ -22,9 +22,15 @@ namespace pst {
 		if (!assertStmtChoice<TemplateStmt>(state, state[0].is(Keyword::Template))) return nullptr;
 
 		PARSE().one(&out->template_decl);
+		auto inner_position = state.getPosition();
 		PARSE().one(&out->inner_statement);
 
 		if (!out->inner_statement.internal()) return nullptr;
+
+		if (out->inner_statement.internal()->isDeclaration() != DeclKind::Symbol) {
+			state.logInt(makeBox<TemplateNotDeclarationError>(inner_position));
+			return nullptr;
+		}
 
 		PST_RETURN out;
 	}

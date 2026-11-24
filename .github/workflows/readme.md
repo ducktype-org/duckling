@@ -105,6 +105,12 @@ of one per platform, and an unhandled platform fails there with a clear message.
 passes `env.PLATFORM` (the matrix's `compiler.platform`) -- compared against by value rather than
 reduced to an `IS_MACOS` boolean, so adding Windows means adding a value, not a second flag.
 
+The Linux setup actions never call `sudo apt` directly; they go through the `apt-get` action.
+apt runs as root, so when a job is cancelled the runner cannot kill it, and on a self-hosted
+runner, whose container outlives the job, a hung apt would keep the apt lock and fail every later
+job. The action time-limits each call, retries while the lock is busy, and kills apt processes
+left over from earlier jobs. New apt steps should use it too.
+
 The launchd jobs starting the mac runners must set `ProcessType: Interactive`; without it launchd
 throttles the whole job chain to utility QoS, which stretches a 10 ms sleep to ~70 ms.
 

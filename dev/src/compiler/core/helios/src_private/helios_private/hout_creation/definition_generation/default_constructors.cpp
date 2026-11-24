@@ -7,6 +7,7 @@
 #include "default_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -77,6 +78,7 @@ namespace compiler::helios::defgen {
 								  ctx, field_init.unlock(ctx)->getExpr(), field_type
 							)
 						          .valueOrThrow();
+						refuseBlockExpr(ctx, *field_init_hout, "a field initializer");
 						field_values.emplace_back(
 							field_init_hout.isBox() ? std::move(field_init_hout.getBox())
 													: field_init_hout->clone()

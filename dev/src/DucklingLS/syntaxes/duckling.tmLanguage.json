@@ -315,6 +315,17 @@
     "keywords": {
       "patterns": [
         {
+          "match": "\\b(if)\\s+(const)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.duckling"
+            },
+            "2": {
+              "name": "keyword.control.duckling"
+            }
+          }
+        },
+        {
           "name": "keyword.control.duckling",
           "match": "\\b(if|then|else|while|for|loop|in|match|switch|case|with|try|catch|break|continue|redo|restart|return|defer|throw)\\b"
         },
@@ -375,12 +386,32 @@
     "operatorsWord": {
       "patterns": [
         {
-          "name": "keyword.operator.logical.duckling",
+          "name": "keyword.other.logical.duckling",
           "match": "\\b(and|or|not|xor)\\b"
         },
         {
-          "name": "keyword.operator.word.duckling",
-          "match": "\\b(as|sizeof|mut|imm|ref|box|new|ptr|cptr|manyptr|slice|copy|copyof|move|refof|ptrof)\\b"
+          "name": "keyword.other.expression.duckling",
+          "match": "\\b(copy|copyof|move|ptrof)\\b"
+        },
+        {
+          "name": "keyword.other.new.duckling",
+          "match": "\\bnew\\b"
+        },
+        {
+          "name": "keyword.other.sizeof.duckling",
+          "match": "\\bsizeof\\b"
+        },
+        {
+          "name": "keyword.other.cast.duckling",
+          "match": "\\bas\\b"
+        },
+        {
+          "name": "storage.modifier.duckling",
+          "match": "\\b(mut|imm|ref)\\b"
+        },
+        {
+          "name": "storage.type.duckling",
+          "match": "\\b(box|ptr|cptr|manyptr|funptr|slice)\\b"
         }
       ]
     },

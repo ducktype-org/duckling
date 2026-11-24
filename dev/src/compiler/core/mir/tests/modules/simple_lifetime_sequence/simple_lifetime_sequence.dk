@@ -1,12 +1,14 @@
 class R {
-    a: i32 = 0;
-    R.destroy() = { var t: i32 = a; }
+	a: i32 = 0;
+	R.destroy() = {
+		var t: i32 = a;
+	}
 }
 
 fun side() -> i32 = 7;
 
 fun goo() = {
-    var a: R;
-    a.a = 24;
-    side();
+	var a: R;
+	a.a = 24;
+	side();
 }

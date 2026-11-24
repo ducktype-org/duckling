@@ -139,6 +139,7 @@ namespace compiler::helios {
 		case pst::ElementKind::FlowPattern:
 		case pst::ElementKind::BindingPattern:
 		case pst::ElementKind::WildcardPattern:
+		case pst::ElementKind::ValuePattern:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ClassConstructor:

@@ -1,0 +1,88 @@
+# ===== `break` and `continue` leave a block expression to the enclosing loop =====
+
+fun firstSquareAbove(limit: i64) -> i64 = {
+	var i: i64 = 0i64;
+	var found: i64 = -1i64;
+	while (i < 10i64) {
+		let doubled = {
+			if (i * i > limit) {
+				found = i;
+				break;
+			}
+			i * 2i64
+		};
+		i = i + 1i64;
+		let kept = {
+			if (doubled > 100i64) continue;
+			doubled
+		};
+	}
+	return found;
+}
+
+fun breakNamedFromBlock() -> i64 = {
+	var count: i64 = 0i64;
+	while Outer(true) {
+		while (true) {
+			let step = {
+				count = count + 1i64;
+				if (count > 3i64) break Outer;
+				1i64
+			};
+			break;
+		}
+	}
+	return count;
+}
+
+fun skipInMatch(values: i32 | f32, rounds: i64) -> i64 = {
+	var i: i64 = 0i64;
+	var ints: i64 = 0i64;
+	while (i < rounds) {
+		i = i + 1i64;
+		match (values) {
+			case x: i32 = {
+				ints = ints + 1i64;
+				continue;
+			};
+			case _ = {
+				break;
+			};
+		};
+	}
+	return ints;
+}
+
+# ===== `return` leaves the function from a block expression =====
+
+fun earlyReturn(x: i64) -> i64 = {
+	let doubled = {
+		if (x < 0i64) return -1i64;
+		x * 2i64
+	};
+	return doubled + 1i64;
+}
+
+fun earlyReturnOwning(x: i64) -> String = {
+	let s = {
+		var keep: String = "kept".toString();
+		if (x < 0i64) {
+			var neg: String = "neg".toString();
+			return neg;
+		}
+		"pos".toString()
+	};
+	return s;
+}
+
+fun main() -> i64 = {
+	if (firstSquareAbove(10i64) != 4i64) return 1i64;
+	if (breakNamedFromBlock() != 4i64) return 2i64;
+	if (skipInMatch(3i32, 5i64) != 5i64) return 3i64;
+	if (skipInMatch(1.5 as f32, 5i64) != 0i64) return 4i64;
+	if (earlyReturn(-5i64) != -1i64) return 5i64;
+	if (earlyReturn(3i64) != 7i64) return 6i64;
+	if (earlyReturnOwning(-1i64).length() != 3i64) return 7i64;
+	if (earlyReturnOwning(1i64).length() != 3i64) return 8i64;
+	return 0i64;
+}

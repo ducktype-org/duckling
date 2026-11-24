@@ -1134,7 +1134,6 @@ private:
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
 				makeBox<BlockExpr>(
-					ctx,
 					generatedOrigin(),
 					makeBox<BlockStmt>(generatedOrigin(), CodeBlock{ std::move(block_statements) })
 				)
@@ -1735,6 +1734,14 @@ private:
 				stripImplicitMove(ret_stmt.value.get())
 			);
 			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			auto scope = getFunctionBodyScope(getChain("test_deduced_from_ref", top_scope).back());
+			auto i32_type = getIntegralTypeNoContext(32, Signed);
+			ASSERT_EQUAL(st(i32_type), getSymbolTypeOf("copied", scope));
+			ASSERT_EQUAL(
+				st(i32_type).withMutability(Immutable), getSymbolTypeOf("copied_let", scope)
+			);
 		}
 	}
 

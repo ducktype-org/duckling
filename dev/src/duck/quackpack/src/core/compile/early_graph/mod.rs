@@ -1,0 +1,149 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+//! Dependency DAG and dictionary with all parsed [`CompilerPackage`]s.
+
+use std::collections::{HashMap, HashSet};
+
+use crate::core::compile::compiler_package::CompilerPackage;
+use crate::core::compile::missing_depenendcy_in_graph;
+use crate::core::identity::Identity;
+use crate::{QuackResult, StrId};
+
+pub mod creating_graph;
+pub mod modifying_graph;
+
+#[cfg(test)]
+pub mod tests;
+
+#[derive(Debug)]
+/// Dictionary [`Identity`] -> [`CompilerPackage`].
+///
+/// *Should* contain root and all dependencies listed in a freezefile.
+pub struct PackagesSet {
+    inner: HashMap<Identity, CompilerPackage>,
+}
+
+impl PackagesSet {
+    /// Get [`CompilerPackage`] for the given `name`.
+    pub fn package(&self, name: &Identity) -> &CompilerPackage {
+        self.inner
+            .get(name)
+            .unwrap_or_else(|| missing_depenendcy_in_graph(*name, self))
+    }
+
+    /// Same as [`package`](Self::package), but returns a mutable reference.
+    pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
+        self.inner
+            .get_mut(name)
+            // @TODO: #3318 Because of borrows, we can't pass `self`.
+            // Although this requires rust to change their borrow checker, which, at the time of
+            // writing this, has only been enabled on nightly.
+            .unwrap_or_else(|| panic!("missing dependency `{name}` in the graph"))
+    }
+
+    /// Get the underlying packages' map.
+    pub fn into_inner(self) -> HashMap<Identity, CompilerPackage> {
+        self.inner
+    }
+}
+
+#[derive(Debug)]
+/// Dependency graph ([`DependencyGraph`]) + packages cache ([`PackagesSet`]).
+pub struct EarlyGraph {
+    packages: PackagesSet,
+    graph: DependencyGraph,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+/// Graph representing dependency-dependant relations.
+pub struct DependencyGraph {
+    root: Identity,
+    graph: HashMap<Identity, DependencyNode>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Default)]
+/// Single dependency node.
+///
+/// Contains dependencies of this node.
+/// Each dependency is a pair `(<effective name>, <identity of the dependency>)`.
+pub struct DependencyNode {
+    dependencies: Vec<(StrId, Identity)>,
+}
+
+impl DependencyGraph {
+    /// Get the root package of this graph.
+    pub fn root(&self) -> Identity {
+        self.root
+    }
+
+    /// Get the [`DependencyNode`] for the given package.
+    pub fn dependencies_for_package(&self, package: &Identity) -> &DependencyNode {
+        self.graph
+            .get(package)
+            .unwrap_or_else(|| missing_depenendcy_in_graph(*package, self))
+    }
+
+    /// All packages reachable from package (including the package itself).
+    pub fn reachable_subgraph_nodes(&self, package: Identity) -> HashSet<Identity> {
+        let mut result = HashSet::new();
+        self.reachable_subgraph_nodes_inner(package, &mut result);
+        result
+    }
+
+    fn reachable_subgraph_nodes_inner(&self, package: Identity, visited: &mut HashSet<Identity>) {
+        if !visited.contains(&package) {
+            visited.insert(package);
+            for (_ename, pkg_dep) in self.dependencies_for_package(&package).dependencies() {
+                self.reachable_subgraph_nodes_inner(*pkg_dep, visited);
+            }
+        }
+    }
+
+    /// Get the iterator over all entries in this graph.
+    pub fn iter(&self) -> impl Iterator<Item = (&Identity, &DependencyNode)> {
+        self.graph.iter()
+    }
+
+    /// Get the iterator over all keys in this graph.
+    pub fn keys(&self) -> impl Iterator<Item = &Identity> {
+        self.graph.keys()
+    }
+}
+
+impl DependencyNode {
+    /// Get dependencies of this node.
+    pub fn dependencies(&self) -> &[(StrId, Identity)] {
+        &self.dependencies
+    }
+
+    /// Same as [`dependencies`](Self::dependencies), but returns a mutable vector.
+    pub fn dependencies_mut(&mut self) -> &mut Vec<(StrId, Identity)> {
+        &mut self.dependencies
+    }
+}
+
+impl EarlyGraph {
+    /// Get the [`CompilerPackage`] for the given `name`.
+    pub fn package(&self, name: &Identity) -> &CompilerPackage {
+        self.packages.package(name)
+    }
+
+    /// Same as [`package`](Self::package), but returns a mutable reference.
+    pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
+        self.packages.package_mut(name)
+    }
+
+    /// Get the underlying [`DependencyGraph`].
+    pub fn graph(&self) -> &DependencyGraph {
+        &self.graph
+    }
+
+    /// Decompose this [`EarlyGraph`].
+    pub(super) fn into_inner(self) -> (PackagesSet, DependencyGraph) {
+        (self.packages, self.graph)
+    }
+}

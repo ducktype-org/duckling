@@ -10,17 +10,22 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_lowering/errors.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/logger.hpp>
+#include <diagnostic/stable_position.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
+
+#include <sstream>
 
 using namespace compiler;
 
@@ -35,9 +40,87 @@ public:
 		TESTER_ADD_TEST(testUseBeforeInit);
 		TESTER_ADD_TEST(testShortCircuitMoveState);
 		TESTER_ADD_TEST(testMaybeUninitialized);
+		TESTER_ADD_TEST(testControlFlowTargetErrors);
+		TESTER_ADD_TEST(testReturnFromBlockExpr);
+		TESTER_ADD_TEST(testBlockExprInGlobal);
+		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
 
 private:
+	void testControlFlowTargetErrors() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) break; })",
+			{ "`break` has no enclosing loop.", "innermost enclosing `while` or `for`" },
+			1
+		);
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() = { block { continue; } })",
+			{ "`continue` has no enclosing loop.", "innermost enclosing `while` or `for`" },
+			1
+		);
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break missing; } })",
+			{ "No enclosing control-flow target named `missing` for `break`." },
+			1
+		);
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() = { if (true) { continue while; } })",
+			{ "No enclosing `while` target for `continue`." },
+			1
+		);
+		// A kind target must match that exact construct, not just any enclosing loop.
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() = { while (true) { break for; } })",
+			{ "No enclosing `for` target for `break`." },
+			1
+		);
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() = { let a = { if (true) break; 1 }; })",
+			{ "`break` has no enclosing loop." },
+			1
+		);
+	}
+
+	void testReturnFromBlockExpr() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() -> i64 = { let a = { return 5i32; }; return 1i64; })",
+			{ "Returned value of type `i32` does not match the result type `i64`" },
+			1
+		);
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun foo() -> i64 = { let a = { return; }; return 1i64; })",
+			{ "Returned value of type `()` does not match the result type `i64`" },
+			1
+		);
+	}
+
+	void testBlockExprInGlobal() {
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(let g: i64 = { 1i64 };)",
+			{ "A block expression cannot be used in a global initializer." },
+			1
+		);
+	}
+
+	void testDiagnosticErrorsCorrectness() {
+		using dia::testDiagnosticMessage;
+
+		std::stringstream ss;
+
+		testDiagnosticMessage<mir::NoEnclosingLoopError>(
+			ss, dia::StablePosition::fakePosition(), "break"
+		);
+		testDiagnosticMessage<mir::NoNamedControlFlowTargetError>(
+			ss, dia::StablePosition::fakePosition(), "continue", "missing"
+		);
+		testDiagnosticMessage<mir::NoControlFlowKindTargetError>(
+			ss, dia::StablePosition::fakePosition(), "break", "for"
+		);
+		testDiagnosticMessage<mir::ReturnTypeMismatchError>(
+			ss, dia::StablePosition::fakePosition(), "i32", "i64"
+		);
+	}
+
 	void testErrorLogging() {
 		// ============================ Unused shadowed variable ============================
 		compiler::mir::test_utils::checkForErrorOnCompileModule(

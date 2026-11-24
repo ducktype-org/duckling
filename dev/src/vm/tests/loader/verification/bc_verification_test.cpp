@@ -85,6 +85,7 @@ public:
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
 		TESTER_ADD_TEST(globalWrongTypeSize);
+		TESTER_ADD_TEST(cptrCastToFloat);
 		TESTER_ADD_TEST(usingPointerAsPrimitive);
 		TESTER_ADD_TEST(variantWrongType);
 		TESTER_ADD_TEST(fixedSizeTableWrongType);
@@ -327,6 +328,16 @@ private:
 			"wrong/types/global_wrong_type_size.dbc",
 			{
 				vm::code::InvalidArgumentSizeError::ERR_MSG,
+			}
+		);
+	}
+
+	// `cast_p64_pcptr` writes a native address, so its destination must be an `i64`.
+	void cptrCastToFloat() {
+		loadInvalidDbc(
+			"wrong/types/cptr_cast_to_float.dbc",
+			{
+				vm::code::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
