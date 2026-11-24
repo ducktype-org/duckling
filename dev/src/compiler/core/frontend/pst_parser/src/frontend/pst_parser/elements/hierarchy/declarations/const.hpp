@@ -18,7 +18,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
-		NAMED_CHILD_OPT(type, CommaExprHolder);
+		NAMED_CHILD_OPT(type, CommaNoBlockExprHolder);
 		NAMED_CHILD_OPT(value, CommaExprHolder);
 
 		template<typename T, lang_def::Keyword key>

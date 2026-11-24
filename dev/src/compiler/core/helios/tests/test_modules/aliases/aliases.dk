@@ -42,7 +42,10 @@ const rb_from_ra_v: i32 = RB.rb_from_ra;
 
 namespace SelfUsing {
 	const self_x: i32 = 31;
-	fun f() -> i32 = { using SelfUsing.*; return self_x; }
+	fun f() -> i32 = {
+		using SelfUsing.*;
+		return self_x;
+	}
 }
 
 const self_using_v: i32 = SelfUsing.f();

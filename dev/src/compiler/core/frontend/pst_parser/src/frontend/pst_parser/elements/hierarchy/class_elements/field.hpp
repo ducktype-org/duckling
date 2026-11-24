@@ -19,7 +19,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
-		NAMED_CHILD(type, CommaExprHolder);
+		NAMED_CHILD(type, CommaNoBlockExprHolder);
 		NAMED_CHILD_OPT(init, CommaExprHolder);
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;

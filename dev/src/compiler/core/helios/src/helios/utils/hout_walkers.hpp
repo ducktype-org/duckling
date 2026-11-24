@@ -9,6 +9,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/optional.hpp>
+#include <base/pointers/ref.hpp>
+
 namespace compiler::helios::code {
 	/**
 	 * @brief Collect the symbols of every function called from `fun`.
@@ -26,4 +29,7 @@ namespace compiler::helios::code {
 	 */
 	[[nodiscard]]
 	std::vector<SymID> collectCalledSymbolsFromHOUT(const Expr& expr);
+
+	[[nodiscard]]
+	base::Optional<CRef<BlockExpr>> findBlockExpr(const Expr& expr);
 }

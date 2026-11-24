@@ -32,6 +32,7 @@
 #include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
+#include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
@@ -573,6 +574,12 @@ namespace compiler::helios::code {
 				);
 			}
 
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> stmt) override {
+				auto compiled = compileBlockExpr(ctx, stmt);
+				if (compiled.hasFailed()) return;
+				node = std::move(compiled).valueOrThrow();
+			}
+
 			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
 				auto desugared = desugaring::desugarMatch(ctx, stmt);
 				if (desugared.hasFailed()) return;
@@ -674,19 +681,6 @@ namespace compiler::helios::code {
 
 				node = makeBox<FunctionTypeExpr>(
 					ctx, origin, std::move(parameters), std::move(result).valueOrThrow(), kind
-				);
-			}
-
-			/**
-			 * @brief Block expressions (`{ ... }` used as a value) are not supported yet. A block
-			 * also ends up here when the `;` after a block statement is missing, e.g.
-			 * `{ ... } f(x);` parses as the operator `f` applied to the block and `(x)`.
-			 */
-			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> block) override {
-				ctx.log<dia::NotYetImplementedCodeError>(
-					"Using a block `{ ... }` as a value. A block statement currently needs a `;` "
-					"after its `}`.",
-					block->getStablePosition()
 				);
 			}
 
@@ -805,18 +799,6 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
-				case pst::Keyword::Self: {
-					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getStablePosition(), ctx, base::StrID("self")
-					);
-
-					node = makeBox<IdentifierExpr>(
-						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
-					);
-					break;
-				}
 				default:
 					ctx.log<dia::NotYetImplementedCodeError>(
 						"Keyword not yet handled.", stmt->getStablePosition()

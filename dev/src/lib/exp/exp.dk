@@ -2,6 +2,6 @@ import core;
 import std;
 
 fun c() = {
-    core.a();
-    std.b();
+	core.a();
+	std.b();
 }

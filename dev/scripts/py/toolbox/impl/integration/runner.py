@@ -191,7 +191,7 @@ def run_case(
         timeout=(
             None
             if dry
-            else ctx.timeout_scale * resolve_timeout(case.timeout, test.cwd)
+            else resolve_timeout(case.timeout, test.cwd)
         ),
         core_dumps=ctx.core_dumps,
     )

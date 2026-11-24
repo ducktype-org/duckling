@@ -15,7 +15,8 @@ namespace compiler::tsh::deductions {
 	SymbolType<> declarationTypeFromInitializer(
 		const ExpressionType<>& expr_type, const Mutability expected_mutability
 	) {
-		return expr_type.getSymbolType().withMutability(expected_mutability);
+		return SymbolType<>::withDefaults(expr_type.getSymbolType().getType())
+		    .withMutability(expected_mutability);
 	}
 
 	SymbolType<> declarationTypeFromProvidedType(
