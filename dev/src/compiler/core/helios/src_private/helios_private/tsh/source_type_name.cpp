@@ -255,12 +255,13 @@ namespace compiler::tsh {
 				.precedence = TypeNamePrecedence::Atomic,
 			};
 		case Kind::RawPointer:
+			return { .text = "raw_pointer", .precedence = TypeNamePrecedence::Atomic };
 		case Kind::Namespace:
+			return { .text = "namespace", .precedence = TypeNamePrecedence::Atomic };
 		case Kind::Module:
+			return { .text = "module", .precedence = TypeNamePrecedence::Atomic };
 		case Kind::Import:
-			// These compiler-level kinds do not currently have a Duckling type-expression
-			// spelling. Keep their existing human-readable representation until one is defined.
-			return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
+			return { .text = "import", .precedence = TypeNamePrecedence::Atomic };
 		case Kind::COUNT:
 			CORE_UNREACHABLE();
 		}
