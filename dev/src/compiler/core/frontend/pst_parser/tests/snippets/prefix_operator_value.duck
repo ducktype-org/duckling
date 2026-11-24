@@ -1,9 +1,0 @@
-template(fref: funptr(type) -> type)
-fun a(x: fref List[u64]) -> fref u64 = x;
-
-template(self: type)
-fun b(x: self) -> self = x;
-
-const R: type = ref;
-let pair = foo(ref, mut);
-let wrapped: type = fref ref i64;

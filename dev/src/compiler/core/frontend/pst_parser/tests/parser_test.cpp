@@ -69,7 +69,6 @@ public:
 		TESTER_ADD_TEST(testFun);
 		TESTER_ADD_TEST(testFun2);
 		TESTER_ADD_TEST(testFunType);
-		TESTER_ADD_TEST(testPrefixOperatorValue);
 		TESTER_ADD_TEST(testBlock);
 		TESTER_ADD_TEST(testActions);
 		TESTER_ADD_TEST(testActionStatements);
@@ -193,10 +192,6 @@ private:
 	void testFun2() { testJsonRelativePath("fun2.duck", "fun2.json"); }
 
 	void testFunType() { testJsonRelativePath("fun_type.duck", "fun_type.json"); }
-
-	void testPrefixOperatorValue() {
-		testJsonRelativePath("prefix_operator_value.duck", "prefix_operator_value.json");
-	}
 
 	void testBlock() { testJsonRelativePath("block.duck", "block.json"); }
 

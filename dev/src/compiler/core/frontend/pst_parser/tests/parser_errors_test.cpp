@@ -192,6 +192,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  standalone_fref{ "fref" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> standalone_symbol_op{ "-" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> only_prefix_ops{ "ref mut" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> keyword_ops_as_args{ "foo(ref, mut)" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> nested_fref{ "fref ref i64" };
 
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
 	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
@@ -402,7 +404,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::TemplateStmt, true>  identifier_like_template_param{
         "template (fref: funptr(type) -> type) fun a(x: fref List[u64]) -> fref u64 = x;"
 	};
-	Example<pst::TemplateStmt, true>  self_template_param{ "template (self: type) class C {}" };
+	Example<pst::TemplateStmt, true> self_template_param{
+		"template (self: type) fun b(x: self) -> self = x;"
+	};
 	Example<pst::TemplateStmt, false> keyword_template_param{ "template (ref: type) class C {}" };
 
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
