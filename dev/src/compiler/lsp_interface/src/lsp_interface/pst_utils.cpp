@@ -39,22 +39,24 @@ namespace duck_ls {
 		 * `path` on the way.
 		 *
 		 * At each level it goes into the one child that contains `offset`, and stops when no
-		 * child does. On the way it records the first expression it passes as
-		 * `path.top_expression` and the last declaration whose name contains `offset` as
-		 * `path.declaration`.
+		 * child does. On the way it records the first expression it passes after the last
+		 * statement as `path.top_expression`, and the last declaration whose name contains
+		 * `offset` as `path.declaration`.
 		 */
 		void descend(pst::Access<pst::LangElement> element, usize offset, PstPath& path) {
+			if (auto statement = element.dynamicCast<pst::Stmt>()) {
+				path.top_expression.reset();
+
+				if (declaresNameAt(statement.value(), offset))
+					path.declaration.emplace(statement.value());
+			}
+
 			if (path.top_expression.empty()
 			    && element.dynamicCast<pst::expr::Assignment>().empty()) {
 				if (auto expression = element.dynamicCast<pst::ExprElement>())
 					path.top_expression.emplace(expression.value());
 			}
-
-			if (auto statement = element.dynamicCast<pst::Stmt>()) {
-				if (declaresNameAt(statement.value(), offset))
-					path.declaration.emplace(statement.value());
-			}
-
+	
 			for (auto child_locked: element->viewChildren()) {
 				auto child = child_locked.illegalAccess();
 				if (!child.has_value()) continue;

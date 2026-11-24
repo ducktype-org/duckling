@@ -30,9 +30,11 @@ namespace duck_ls {
 	 * from the root of the PST down to the offset.
 	 */
 	struct PstPath final {
-		/// The outermost expression containing the offset. HELIOS gives HOUT only for whole
-		/// expressions like this one, not for their parts, so the hover asks for this one and
-		/// then looks inside it. The two sides of an assignment count as separate expressions.
+		/// The outermost expression containing the offset inside the innermost statement that
+		/// contains it, like `n + 2i64` in `var b = { var y = n + 2i64; y };` when the cursor
+		/// is on `n`. HELIOS gives HOUT only for whole expressions like this one, not for
+		/// their parts, so the hover asks for this one and then looks inside it. The two sides
+		/// of an assignment count as separate expressions.
 		base::Optional<pst::Access<pst::ExprElement>> top_expression{};
 		/// The innermost declaration whose name contains the offset, like `var sum` when the
 		/// cursor is on `sum`.
