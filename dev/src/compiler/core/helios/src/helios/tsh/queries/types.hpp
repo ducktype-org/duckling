@@ -362,4 +362,41 @@ namespace compiler::tsh {
 		TypeTemplateAbstractType,
 		({ .uses_qresult = false })
 	)
+
+	/**
+	 * @brief Key for QueryTemplateDeductionPlaceholderType.
+	 */
+	struct KeyFor_QueryTemplateDeductionPlaceholderType final {
+		/**
+		 * @brief The template whose type parameter is replaced by the placeholder.
+		 */
+		helios::SymID template_symbol;
+
+		/**
+		 * @brief The index of the replaced template parameter.
+		 */
+		usize parameter_index;
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryTemplateDeductionPlaceholderType&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(template_symbol, parameter_index);
+		}
+	};
+
+	/**
+	 * @brief Query to get the placeholder of a template type parameter used in template argument
+	 * deduction.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryTemplateDeductionPlaceholderType,
+		KeyFor_QueryTemplateDeductionPlaceholderType,
+		TemplateDeductionPlaceholderAbstractType,
+		({ .uses_qresult = false })
+	)
 }

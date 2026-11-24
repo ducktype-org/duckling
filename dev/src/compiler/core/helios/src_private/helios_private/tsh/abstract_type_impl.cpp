@@ -111,6 +111,7 @@ namespace compiler::tsh {
 			case StaticArray:
 			case Variant:
 			case TypeTemplate:
+			case TemplateDeductionPlaceholder:
 			case Namespace:
 			case Module:
 			case Import:
@@ -510,6 +511,12 @@ namespace compiler::tsh {
 
 	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
+	}
+
+	CRef<TypeInterface> TemplateDeductionPlaceholderAbstractTypeImpl::getDeclaredInterface(query::Context&)
+		const {
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx

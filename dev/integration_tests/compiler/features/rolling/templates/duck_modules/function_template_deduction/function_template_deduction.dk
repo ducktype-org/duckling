@@ -1,0 +1,85 @@
+# A called function template deduces its template arguments from the arguments of the call.
+
+import core.builtins.*;
+import core.optional.*;
+
+template(T: type)
+fun ident(x: T) -> T = {
+	return x;
+}
+
+template(A: type, B: type)
+fun second(a: A, b: B) -> B = {
+	return b;
+}
+
+# The first argument determines `T`, the second one is coerced to it.
+template(T: type)
+fun first(a: T, b: T) -> T = {
+	return a;
+}
+
+template(T: type)
+fun addRef(x: ref T, y: T) -> T = {
+	return x + y;
+}
+
+template(T: type)
+fun orDefault(x: T | optional_primitives.None, d: T) -> T = {
+	return match (x) {
+		case v: T = v;
+		case _ = d;
+	};
+}
+
+template(T: type)
+fun optOr(x: ?T, d: T) -> T = {
+	return match (x) {
+		case v: T = v;
+		case _ = d;
+	};
+}
+
+template(T: type)
+fun tupleFirst(t: (T, T)) -> T = {
+	return t._1;
+}
+
+namespace NS {
+	template(T: type)
+	fun twice(x: T) -> T = {
+		return x + x;
+	}
+}
+
+template(T: type)
+fun pick(x: T) -> i64 = 1;
+
+fun pick(x: bool) -> i64 = 2;
+
+fun main() -> i64 = {
+	builtin_output_i64(ident(1i64));
+	builtin_output_i64(ident[i64](2)); # an explicit bake still works
+	builtin_output_i64(second(true, 3i64));
+	builtin_output_i64(first(4i64, 5));
+
+	var v: i64 = 1;
+	builtin_output_i64(addRef(&v, 4));
+
+	var some: i64 | optional_primitives.None = 6i64;
+	var nothing: i64 | optional_primitives.None = none;
+	builtin_output_i64(orDefault(some, 0));
+	builtin_output_i64(orDefault(nothing, 7));
+
+	var opt_some: ?i64 = 8i64;
+	var opt_none: ?i64 = none;
+	builtin_output_i64(optOr(opt_some, 0));
+	builtin_output_i64(optOr(opt_none, 9));
+
+	builtin_output_i64(tupleFirst((10i64, 0i64)));
+	builtin_output_i64(NS.twice(11i64) - 11);
+
+	# The template is an overload like any other function.
+	builtin_output_i64(pick(5i64) + 11);
+	return 0;
+}

@@ -48,7 +48,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	Import,
 
 	/** @brief The kind of the type which holds type values. In other words, the "type" type. */
-	Meta
+	Meta,
+
+	/**
+		@brief The kind of the type standing for a type template parameter during template argument
+		deduction. It is never valid as the type of a value.
+	*/
+	TemplateDeductionPlaceholder
 )
 
 namespace compiler::tsh {

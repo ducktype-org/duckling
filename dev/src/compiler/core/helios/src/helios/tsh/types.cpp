@@ -148,6 +148,14 @@ namespace compiler::tsh {
 
 	usize StaticArrayAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
+	helios::SymID TemplateDeductionPlaceholderAbstractType::getTemplate() const {
+		return toCPimpl(pimpl)->getTemplate();
+	}
+
+	usize TemplateDeductionPlaceholderAbstractType::getParameterIndex() const {
+		return toCPimpl(pimpl)->getParameterIndex();
+	}
+
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/
@@ -234,4 +242,5 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(ModuleAbstractType)
 	INSTANTIATE_CHECKED_CAST(MetaAbstractType)
 	INSTANTIATE_CHECKED_CAST(TypeTemplateAbstractType)
+	INSTANTIATE_CHECKED_CAST(TemplateDeductionPlaceholderAbstractType)
 }

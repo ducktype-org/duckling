@@ -239,4 +239,16 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeTemplateType)
+
+	struct IMPLEMENT_QUERY(
+		QueryTemplateDeductionPlaceholderType, TemplateDeductionPlaceholderAbstractType::Impl
+	) {
+		static auto provide(Context&, const QKey& key) -> PResult {
+			return { key.template_symbol, key.parameter_index };
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTemplateDeductionPlaceholderType)
 }

@@ -46,6 +46,7 @@ namespace compiler::tsh {
 	class MetaAbstractTypeImpl;
 	class ImportAbstractTypeImpl;
 	class TypeTemplateAbstractTypeImpl;
+	class TemplateDeductionPlaceholderAbstractTypeImpl;
 
 	/******************\
 	|    BASIC TYPES   |
@@ -610,5 +611,32 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateAbstractType)
+	};
+
+	/**
+	 * @brief The type substituted for a type parameter of a template while its arguments are
+	 * deduced.
+	 *
+	 * The template is baked with one placeholder per type parameter, so the parameter types of
+	 * the baked declaration show where each template parameter occurs. The placeholder is never a
+	 * valid type of a value, like `void`.
+	 */
+	class TemplateDeductionPlaceholderAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(TemplateDeductionPlaceholderAbstractType, AbstractType)
+
+		/**
+		 * @brief The template whose parameter this placeholder stands for.
+		 */
+		[[nodiscard]] helios::SymID getTemplate() const;
+
+		/**
+		 * @brief The index of the template parameter this placeholder stands for.
+		 */
+		[[nodiscard]] usize getParameterIndex() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(TemplateDeductionPlaceholderAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(TemplateDeductionPlaceholderAbstractType)
 	};
 }

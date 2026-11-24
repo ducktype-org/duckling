@@ -401,10 +401,22 @@ namespace compiler::helios::code {
 		}
 
 		/**
+		 * @brief Whether @p symbol is called directly, without a lookup of its call operators: a
+		 * function or a function template, whose arguments are deduced from the call.
+		 */
+		[[nodiscard]] bool isFunctionOrFunctionTemplate(SymID symbol) const {
+			if (kind(symbol) == SymbolKind::Template)
+				return templates::isFunctionTemplate(query_ctx, symbol);
+			return kind(symbol) == SymbolKind::Function
+			    || kind(symbol) == SymbolKind::FunctionDeclaration;
+		}
+
+		/**
 		 * @brief Resolves a set of symbols which act as callees into a set of function symbols.
 		 *
 		 * The resolution follows the following steps:
-		 * 1. If the set consists of only function symbols, return them as is.
+		 * 1. If the set consists of only function symbols and function templates, return them as
+		 *    is.
 		 * 2. If the set consists of multiple symbols, but one of them is not a function symbol,
 		 *    log an error and return an empty set.
 		 * 3. Otherwise, the set consists of a single non-function symbol. Then, look up
@@ -424,8 +436,7 @@ namespace compiler::helios::code {
 
 			// If all candidates are functions, return them as is.
 			if (std::ranges::all_of(looked_up_callees, [&](const SymID symbol) {
-					return kind(symbol) == SymbolKind::Function
-				        || kind(symbol) == SymbolKind::FunctionDeclaration;
+					return isFunctionOrFunctionTemplate(symbol);
 				}))
 				return looked_up_callees;
 
@@ -522,7 +533,8 @@ namespace compiler::helios::code {
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
+				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))
+				    && not isFunctionOrFunctionTemplate(callees.front())) {
 					auto value_result = processNamespaceOrValue(
 						lookup_result->leaves.front(), pstOrigin(ident), ident
 					);

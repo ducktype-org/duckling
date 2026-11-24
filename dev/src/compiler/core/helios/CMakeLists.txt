@@ -45,6 +45,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/tsh/source_type_name.cpp
 	src_private/helios_private/tsh/queries.cpp
 	src_private/helios_private/templates/templates.cpp
+	src_private/helios_private/templates/template_deduction.cpp
 	src/helios/utils/main_return_type.cpp
 
 	src/helios/errors/block_expr_not_allowed.cpp
