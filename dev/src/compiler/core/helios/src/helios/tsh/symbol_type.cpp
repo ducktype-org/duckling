@@ -8,6 +8,7 @@
 
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/tsh/source_type_name.hpp>
 
 namespace compiler::tsh {
 
@@ -31,4 +32,11 @@ namespace compiler::tsh {
 
 	template auto SymbolType<AbstractType>::getPointeeSymbolType() const
 		-> SymbolType<AbstractType>;
+
+	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
+	std::string SymbolType<ABSTRACT_TYPE>::sourceTypeName(query::Context& ctx) const {
+		return renderSymbolTypeName(ctx, SymbolType<AbstractType>(*this)).text;
+	}
+
+	template std::string SymbolType<AbstractType>::sourceTypeName(query::Context&) const;
 }
