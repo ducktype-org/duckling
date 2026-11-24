@@ -266,7 +266,8 @@ private:
 			);
 			checkForErrorOnCompileModule(
 				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
-				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				{ "Unary operator declarations must take exactly one operand.",
+			      "expected 1 operand, but 2 are declared" },
 				1
 			);
 			checkForErrorOnCompileModule(
@@ -286,27 +287,8 @@ private:
 						fun suffix +(rhs: i64) -> i64 = rhs;
 					}
 				)",
-				{ "Only unary operator declarations may use `prefix` or `suffix`." },
-				1
-			);
-			checkForErrorOnCompileModule(
-				R"(fun infix contains(a: i64) -> bool = true;)",
-				{ "Operator declarations marked `infix` must take exactly two parameters." },
-				1
-			);
-			checkForErrorOnCompileModule(
-				R"(fun infix +*(a: i64, b: i64, c: i64) -> i64 = a;)",
-				{ "Operator declarations marked `infix` must take exactly two parameters." },
-				1
-			);
-			checkForErrorOnCompileModule(
-				R"(
-					class Number {
-						value: i64;
-						fun infix has(a: i64, b: i64) -> bool = true;
-					}
-				)",
-				{ "Operator declarations marked `infix` must take exactly two parameters." },
+				{ "Unary operator declarations must take exactly one operand.",
+			      "expected 1 operand, but 2 are declared, including `self` as the first" },
 				1
 			);
 			checkForErrorOnCompileModule(
@@ -320,7 +302,8 @@ private:
 				{ "`contains` cannot be used as an infix operator because no matching declaration "
 			      "is "
 			      "marked `infix`.",
-			      "Declared here without `infix`" },
+			      "Found `contains` declared without `infix`.",
+			      "write `infix` before the name to allow `a contains b`" },
 				1
 			);
 			checkForErrorOnCompileModule(
@@ -337,7 +320,73 @@ private:
 				)",
 				{ "`has` cannot be used as an infix operator because no matching declaration is "
 			      "marked `infix`.",
-			      "Declared here without `infix`" },
+			      "Found `has` declared without `infix`.",
+			      "write `infix` before the name to allow `a has b`" },
+				1
+			);
+			// Operators take one or two operands. The pointer counts the `self` operand of methods.
+			constexpr std::string_view binary_arity
+				= "Binary operator declarations must take exactly two operands.";
+			checkForErrorOnCompileModule(
+				R"(fun prefix +*() -> i64 = 0;)",
+				{ "Unary operator declarations must take exactly one operand.",
+			      "expected 1 operand, but 0 are declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun infix contains(a: i64) -> bool = true;)",
+				{ binary_arity, "expected 2 operands, but 1 is declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun infix +*(a: i64, b: i64, c: i64) -> i64 = a;)",
+				{ binary_arity, "expected 2 operands, but 3 are declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun +*(a: i64, b: i64, c: i64) -> i64 = a;)",
+				{ binary_arity, "expected 2 operands, but 3 are declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun infix has(a: i64, b: i64) -> bool = true;
+					}
+				)",
+				{ binary_arity,
+			      "expected 2 operands, but 3 are declared, including `self` as the first" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun +*(a: i64, b: i64) -> i64 = a;
+					}
+				)",
+				{ binary_arity,
+			      "expected 2 operands, but 3 are declared, including `self` as the first" },
+				1
+			);
+			// Static methods have no `self` operand.
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						global fun +*(a: i64, b: i64, c: i64) -> i64 = a;
+					}
+				)",
+				{ binary_arity, "expected 2 operands, but 3 are declared" },
+				1
+			);
+			// Without a fixity, nothing says whether a nullary operator was meant to be unary or
+			// binary.
+			checkForErrorOnCompileModule(
+				R"(fun +*() -> i64 = 0;)",
+				{ "Operator declarations must take at least one operand.",
+			      "expected 1 or 2 operands, but 0 are declared" },
 				1
 			);
 			// An identifier operator is still an ordinary function, so it collides with a plain

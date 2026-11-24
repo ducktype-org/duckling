@@ -26,6 +26,16 @@ namespace lexer {
 	bool isOperatorSymbolString(std::string_view name);
 
 	/**
+	 * @brief Checks whether `name` is an identifier (or a keyword), per the same
+	 * `name_start`/`name_continue` character classes the lexer itself uses.
+	 *
+	 * @note Names that are neither identifiers nor operator symbols exist too, e.g. bracket
+	 * operator names, so this is not the negation of `isOperatorSymbolString`.
+	 */
+	[[nodiscard]]
+	bool isIdentifierString(std::string_view name);
+
+	/**
 	 * @brief Simple wrapper for an operator.
 	 */
 	struct Operator final {

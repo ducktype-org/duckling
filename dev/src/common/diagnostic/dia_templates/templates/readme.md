@@ -323,26 +323,17 @@ specified in the `of` field. Once a match is found, all other cases are
 discarded and only the content of the matching one is evaluated.
 
 A few things to note about the matching algorithm:
-- cases are divided into *exact cases* and *class cases*,
-- *exact cases* are matched first, in order of appearance, only later
-*class cases*, also in order of appearance, except for the `[other]` case,
-which is considered last,
-- *exact cases* are matched exactly with the value of the `case` field,
-- *class cases* are matched more broadly, depending on the logic associated
-with a given class,
-- *class cases* are specified in square brackets,
-- `[other]` is a special class case, required in every matching node,
-which always produces a match.
-
-> Currently, there is only one class case - `[other]`. More are to be
-introduced when needed.
+- cases are matched exactly with the value of the `case` field,
+- if no case matches, the `default` case is evaluated instead,
+- the `default` case is optional, but if it is missing and no case matches,
+the evaluation of the template fails.
 
 ~~~~~yaml
 case: <message_components>
 of:
   <case_1>: <message_components>
   <case_2>: <message_components>
-  "[other]": <message_components>
+  default: <message_components>
 ~~~~~
 > A scheme for defining a matching node. Any number of cases can be introduced.
-The `[other]` class case is required.
+The `default` case is optional.

@@ -369,7 +369,8 @@ namespace compiler::helios::mangler {
 
 			/**
 			 * @brief Returns the bare name of the symbol prefixed with its size, or the mangled
-			 * `<operator-name>` if the symbol is an operator function/method with a symbolic name.
+			 * `<operator-name>` if the symbol is an operator function/method whose name is not an
+			 * identifier.
 			 * @note Identifier operators (`fun infix contains(...)`) are mangled like ordinary
 			 * functions: they stay callable as such, so `fun foo(a, b)` and `fun infix foo(a, b)`
 			 * with the same signature must collide.
@@ -378,7 +379,7 @@ namespace compiler::helios::mangler {
 			std::string unscopedName(query::Context& ctx, SymID symbol_id) {
 				// @TODO: #3285 add backreferences
 				const auto symbol_name = compiler::helios::name(symbol_id).strView();
-				if (isFunctionLike(kind(symbol_id)) && lexer::isOperatorSymbolString(symbol_name)) {
+				if (isFunctionLike(kind(symbol_id)) && !lexer::isIdentifierString(symbol_name)) {
 					const auto& fun_decl
 						= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic(
 						);

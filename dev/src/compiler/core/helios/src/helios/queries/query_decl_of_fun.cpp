@@ -54,6 +54,7 @@
 
 #include <algorithm>
 #include <set>
+#include <utility>
 
 namespace compiler::helios {
 	namespace {
@@ -342,59 +343,78 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Logs an @p Error constructed from @p args and fails the current query.
+		 */
+		template<typename Error, typename... Args>
+		[[noreturn]] void fail(query::Context& ctx, Args&&... args) {
+			ctx.log<Error>(std::forward<Args>(args)...);
+			query::throwFailed();
+		}
+
+		/**
+		 * @brief The parameter list of a function or method declaration: `count` explicitly
+		 * declared parameters, plus the implicit `self` of a non-static method if `has_self`.
+		 */
+		struct DeclaredParameters {
+			u64                 count;
+			bool                has_self;
+			dia::StablePosition position;
+		};
+
+		/**
 		 * @brief Determines whether a user-declared function or method is an operator and validates
 		 * its fixity.
 		 *
 		 * Symbolic names are always operators: binary ones are infix (`infix` is optional and
-		 * redundant), unary ones need `prefix` or `suffix`. Identifier names are operators only
-		 * when marked `infix`; they then remain callable as ordinary functions too.
+		 * redundant), unary ones need `prefix` or `suffix`, and other operand counts are an error.
+		 * A fixity fixes the expected operand count: two for `infix`, one for `prefix`/`suffix`.
+		 * Identifier names are operators only when marked `infix`; they then remain callable as
+		 * ordinary functions too.
 		 *
-		 * @param arity Parameter count, including the implicit `self` parameter of non-static
-		 * methods.
+		 * Each fixity is handled by one self-contained case: its checks first, then its result.
 		 */
 		HOUTFunctionDeclaration::Operatoriness operatorinessFromDeclaration(
-			query::Context&     ctx,
-			base::StrID         name,
-			u64                 arity,
-			pst::OperatorFixity fixity,
-			dia::StablePosition source_position
+			query::Context&           ctx,
+			base::StrID               name,
+			const DeclaredParameters& params,
+			pst::OperatorFixity       fixity,
+			dia::StablePosition       source_position
 		) {
 			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
-			if (fixity == pst::OperatorFixity::Infix) {
-				if (arity != 2) {
-					ctx.log<InvalidInfixOperatorArityError>(source_position);
-					query::throwFailed();
-				}
-				return Operatoriness::Infix;
-			}
-
 			const bool is_symbolic = lexer::isOperatorSymbolString(name.strView());
-			if (fixity != pst::OperatorFixity::None && !(is_symbolic && arity == 1)) {
-				ctx.log<InvalidOperatorFixityError>(source_position);
-				query::throwFailed();
-			}
-			if (!is_symbolic) return Operatoriness::None;
+			const u64  operands    = params.count + (params.has_self ? 1 : 0);
 
-			switch (arity) {
-			case 1:
-				switch (fixity) {
-				case pst::OperatorFixity::Prefix:
-					return Operatoriness::Prefix;
-				case pst::OperatorFixity::Suffix:
-					return Operatoriness::Suffix;
-				case pst::OperatorFixity::None:
-					ctx.log<MissingUnaryOperatorFixityError>(source_position);
-					query::throwFailed();
-				case pst::OperatorFixity::Infix:
-					break;  // Handled above.
-				}
-				CORE_UNREACHABLE();
-			case 2:
+			switch (fixity) {
+			case pst::OperatorFixity::Infix:
+				if (operands != 2)
+					fail<InvalidBinaryOperatorArityError>(
+						ctx, params.position, operands, params.has_self
+					);
 				return Operatoriness::Infix;
-			default:
-				return Operatoriness::None;
+			case pst::OperatorFixity::Prefix:
+			case pst::OperatorFixity::Suffix:
+				CORE_ASSERT(
+					is_symbolic,
+					"`prefix`/`suffix` on a non-symbolic name should be caught by the parser"
+				);
+				if (operands != 1)
+					fail<InvalidUnaryOperatorArityError>(
+						ctx, params.position, operands, params.has_self
+					);
+				return fixity == pst::OperatorFixity::Prefix ? Operatoriness::Prefix
+				                                             : Operatoriness::Suffix;
+			case pst::OperatorFixity::None:
+				if (!is_symbolic) return Operatoriness::None;
+				if (operands == 0) fail<OperatorWithoutOperandsError>(ctx, params.position);
+				if (operands == 1) fail<MissingUnaryOperatorFixityError>(ctx, source_position);
+				if (operands > 2)
+					fail<InvalidBinaryOperatorArityError>(
+						ctx, params.position, operands, params.has_self
+					);
+				return Operatoriness::Infix;
 			}
+			CORE_UNREACHABLE();
 		}
 
 		bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
@@ -506,7 +526,9 @@ namespace compiler::helios {
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					params->size(),
+					{ .count    = params->size(),
+				      .has_self = false,
+				      .position = params->getStablePosition() },
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
@@ -518,7 +540,9 @@ namespace compiler::helios {
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					params->size(),
+					{ .count    = params->size(),
+				      .has_self = false,
+				      .position = params->getStablePosition() },
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
@@ -530,26 +554,17 @@ namespace compiler::helios {
 				// can use the declaration of function query, and we could get a cycle.
 				auto       specifiers = getClassMemberSpecifiers(ctx, original_symbol);
 				const auto params     = stmt->getParams().unlock(ctx);
-				if (specifiers.is_static) {
-					const auto operatoriness = operatorinessFromDeclaration(
-						ctx,
-						name(original_symbol),
-						params->size(),
-						stmt->getOperatorFixity(),
-						stmt->getStablePosition()
-					);
-					emplaceDeclaration(params, stmt->getRet(), operatoriness);
-					return;
-				}
 				const auto operatoriness = operatorinessFromDeclaration(
 					ctx,
 					name(original_symbol),
-					params->size() + 1,
+					{ .count    = params->size(),
+				      .has_self = !specifiers.is_static,
+				      .position = params->getStablePosition() },
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
-				// +1 for the implicit `self` parameter.
 				emplaceDeclaration(params, stmt->getRet(), operatoriness);
+				if (specifiers.is_static) return;
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({

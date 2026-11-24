@@ -11,25 +11,41 @@
 #include <set>
 
 namespace lexer {
+	namespace {
+		/**
+		 * @brief Checks whether `name` is non-empty, starts with a character from `start`, and
+		 * continues with characters from `continuation`.
+		 */
+		bool matchesCharacterClasses(
+			std::string_view name, const icu::UnicodeSet& start, const icu::UnicodeSet& continuation
+		) {
+			if (name.empty()) return false;
+
+			const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
+				icu::StringPiece(name.data(), static_cast<i32>(name.size()))
+			);
+			const i32 length = unicode_name.length();
+
+			i32 index = 0;
+			if (!start.contains(unicode_name.char32At(index))) return false;
+			index = unicode_name.moveIndex32(index, 1);
+
+			while (index < length) {
+				if (!continuation.contains(unicode_name.char32At(index))) return false;
+				index = unicode_name.moveIndex32(index, 1);
+			}
+			return true;
+		}
+	}
+
 	bool isOperatorSymbolString(std::string_view name) {
 		using Class = unicode::Classifications;
+		return matchesCharacterClasses(name, Class::operator_start, Class::operator_continue);
+	}
 
-		if (name.empty()) return false;
-
-		const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
-			icu::StringPiece(name.data(), static_cast<i32>(name.size()))
-		);
-		const i32 length = unicode_name.length();
-
-		i32 index = 0;
-		if (!Class::operator_start.contains(unicode_name.char32At(index))) return false;
-		index = unicode_name.moveIndex32(index, 1);
-
-		while (index < length) {
-			if (!Class::operator_continue.contains(unicode_name.char32At(index))) return false;
-			index = unicode_name.moveIndex32(index, 1);
-		}
-		return true;
+	bool isIdentifierString(std::string_view name) {
+		using Class = unicode::Classifications;
+		return matchesCharacterClasses(name, Class::name_start, Class::name_continue);
 	}
 
 	bool Operator::isComparison() const {
@@ -82,8 +98,7 @@ namespace lexer {
 			    { NamedOperator::Remainder, 560 },  { NamedOperator::Plus, 570 },
 			    { NamedOperator::Minus, 570 },      { NamedOperator::SingleArrow, 580 },
 			    { NamedOperator::As, 400 } };
-		// Identifier operators (e.g. `a contains b`) bind looser than every symbolic general binary
-		// operator, following Scala: `xs contains a + 1` is `xs contains (a + 1)`.
+		// Identifier operators (e.g. `a contains b`) bind looser than every symbolic operator.
 		static constexpr i64 identifier_operator_precedence = 600;
 		static constexpr i64 custom_operator_precedence     = 500;
 

@@ -27,7 +27,6 @@
 
 #include <base/collections/maps.hpp>
 
-#include <diagnostic/placeholder.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -206,31 +205,15 @@ namespace {
 		const ElementOrigin&      op_origin,
 		const std::vector<SymID>& non_infix_candidates
 	) {
-		if_opt_none(op_origin.getStablePosition()) {
-			ctx.log<dia::PlaceholderError>(base::strConcat(
-				"`",
-				op.str(),
-				"` cannot be used as an infix operator because no matching ",
-				"declaration is marked `infix`."
-			));
-			return;
-		}
 		auto error = makeBox<OperatorNotDeclaredInfixError>(
 			op_origin.getStablePosition().value(), op.str()
 		);
 		for (const auto candidate: non_infix_candidates) {
 			const auto position = declaredNamePosition(ctx, candidate);
 			if_opt_none(position) continue;
-			error->addAttachedMessage(makeBox<dia::PlaceholderNote>(
-				base::strConcat(
-					"Declared here without `infix`; write `fun infix ",
-					op.str(),
-					"(...)` to allow `a ",
-					op.str(),
-					" b`."
-				),
-				position.value()
-			));
+			error->addAttachedMessage(
+				makeBox<OperatorDeclaredWithoutInfixNote>(position.value(), op.str())
+			);
 		}
 		ctx.log(std::move(error));
 	}
