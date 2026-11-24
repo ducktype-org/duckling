@@ -23,8 +23,8 @@ fun builtinOperators() -> () = {
 	var x: i32 = 123;
 	var y: i32 = 234;
 
-	var ref_x = &x;
-	var ref_y = &y;
+	var ref_x: ref mut i32 = &x;
+	var ref_y: ref mut i32 = &y;
 	builtin_output_i64(ref_x); # 123
 	builtin_output_i64(ref_y); # 234
 

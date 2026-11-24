@@ -2,13 +2,13 @@ import core.builtins.*;
 
 fun fromRef() -> type = {
 	var x: type = i64;
-	var r = &x;
+	var r: ref mut type = &x;
 	return (r, i32);
 }
 
 fun fromNestedRef() -> type = {
 	var x: type = i16;
-	var r = &x;
+	var r: ref mut type = &x;
 	return ((), (r, i8));
 }
 

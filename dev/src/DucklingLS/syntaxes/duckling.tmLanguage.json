@@ -407,7 +407,7 @@
         },
         {
           "name": "storage.modifier.duckling",
-          "match": "\\b(mut|imm|ref)\\b"
+          "match": "\\b(mut|imm|ref|fref)\\b"
         },
         {
           "name": "storage.type.duckling",

@@ -17,7 +17,7 @@ fun max(a: ref i32, b: ref i32) -> ref i32 = {
 fun localsTest() -> () = {
 	# ===== Basic =====
 	var a: i32 = 10;
-	var r_a = &a;
+	var r_a: ref mut i32 = &a;
 	runtime.dvm.builtin_output_i64(a); # 10
 	r_a = 20;
 	runtime.dvm.builtin_output_i64(a); # 20
@@ -63,8 +63,8 @@ fun localsTest() -> () = {
 	# ===== Ref To Ref ===== 
 	var g = 300;
 	var h = 400;
-	var r_g = &g;
-	var r_h = &h;
+	var r_g: ref mut i32 = &g;
+	var r_h: ref mut i32 = &h;
 
 	r_g = r_h;
 
