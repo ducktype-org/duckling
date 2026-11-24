@@ -147,6 +147,7 @@ namespace vm::code {
 			FLAGS_W(mov_p32_imm)
 			FLAGS_W(mov_p64_imm)
 			FLAGS_W(setNull_pptr)
+			FLAGS_W(mov_pfun_func)
 
 			FLAGS_W_R(mov_p8_p8)
 			FLAGS_W_R(mov_p16_p16)
@@ -154,6 +155,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_p64_p64)
 			FLAGS_W_R(mov_pptr_pptr)
 			FLAGS_W_R(mov_pcptr_pcptr)
+			FLAGS_W_R(mov_pfun_pfun)
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
@@ -431,6 +433,10 @@ namespace vm::code {
 			FLAGS_CMP(fcmpLe_p32_p32)
 			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
 			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
+			FLAGS_CMP(cmpEq_pptr_pptr)
+			FLAGS_CMP(cmpNeq_pptr_pptr)
+			FLAGS_CMP(cmpEq_pcptr_pcptr)
+			FLAGS_CMP(cmpNeq_pcptr_pcptr)
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }
@@ -479,6 +485,13 @@ namespace vm::code {
 				// call it is opaque, may do IO, runs outside the VM, and can block.
 				flags |= CallExternal | InstructionFlag(ControlFlowModifying)
 				       | InstructionFlag(IORead) | InstructionFlag(IOWrite)
+				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
+			}
+			instr_case(ins::Op_call_pfun, i) {
+				rd(i.callee);
+				flags |= Call | InstructionFlag(ControlFlowModifying) | InstructionFlag(IORead)
+				       | InstructionFlag(IOWrite) | InstructionFlag(GlobalRead)
+				       | InstructionFlag(GlobalWrite) | InstructionFlag(Multithread)
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
 			instr_case(ins::Op_setThreadCtx_func, i) {
@@ -596,6 +609,10 @@ namespace vm::code {
 				deref_read();
 			}
 			instr_case(ins::Op_cast_pcptr_pcptr, i) {
+				wr(i.dst);
+				rd(i.src);
+			}
+			instr_case(ins::Op_cast_p64_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}
@@ -779,7 +796,7 @@ namespace vm::code {
 			// ===== Misc =====
 			instr_case(ins::Op_nop, i) {}
 			instr_case(ins::Op_exit, i) { flags |= ControlFlowModifying; }
-			instr_case(ins::Op_initFromVMValue, i) {}
+			instr_case(ins::Op_initFromVMValue_pany_type_imm, i) { wr(i.var); }
 			instr_case(ins::Comment, i) {}
 			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}

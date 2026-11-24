@@ -7,6 +7,7 @@
 #pragma once
 
 #include "execution_config.hpp"
+#include "function_source_info.hpp"
 #include "process_info.hpp"
 
 #include <events/emitter.hpp>
@@ -88,6 +89,10 @@ namespace vm::api {
 			std::string type_name;
 		};
 
+		struct FreeVMValue final {
+			Ref<IVMValue> vm_value;
+		};
+
 		struct StatusRequest final {};
 
 		struct Input final {
@@ -102,8 +107,6 @@ namespace vm::api {
 		};
 
 		struct Detach final {};
-
-		struct ExitCodeRequest final {};
 
 		struct DeinitAndValidate final {};
 
@@ -122,6 +125,10 @@ namespace vm::api {
 
 		struct SetExecutionConfig final {
 			api::ExecutionConfig config;
+		};
+
+		struct SetFunctionSourceInfo final {
+			FunctionSourceInfos infos;
 		};
 
 		struct AttachOutputListener final {
@@ -157,6 +164,7 @@ namespace vm::api {
 		request::ExecutionPosition,
 		request::TypeMetadata,
 		request::VMValue,
+		request::FreeVMValue,
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,
@@ -164,10 +172,10 @@ namespace vm::api {
 		request::Output,
 		request::Attach,
 		request::Detach,
-		request::ExitCodeRequest,
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
 		request::SetExecutionConfig,
+		request::SetFunctionSourceInfo,
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;

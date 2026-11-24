@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 
 #include <tester/tester.hpp>
 
@@ -52,7 +52,7 @@ public:
 		{
 			std::minstd_rand rng(42);
 
-			base::StableHashMap<BigObject<13>, BigObject<16>> map;
+			base::HashMap<BigObject<13>, BigObject<16>> map;
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
@@ -118,7 +118,7 @@ public:
 	}
 
 	void containsTest() {
-		base::StableHashMap<u64, u64> map;
+		base::HashMap<u64, u64> map;
 		map.put(1ull, 10ull);
 
 		ASSERT_TRUE(map.contains(1ull));
@@ -136,7 +136,7 @@ public:
 	}
 
 	void clearTest() {
-		base::StableHashMap<u64, u64> map;
+		base::HashMap<u64, u64> map;
 		map.put(1ull, 10ull);
 		map.put(2ull, 20ull);
 		map.put(3ull, 30ull);
@@ -152,12 +152,12 @@ public:
 	}
 
 	void moveTest() {
-		base::StableHashMap<u64, u64> map;
+		base::HashMap<u64, u64> map;
 		map.put(1ull, 10ull);
 		map.put(2ull, 20ull);
 		map.put(3ull, 30ull);
 
-		base::StableHashMap<u64, u64> moved_map = std::move(map);
+		base::HashMap<u64, u64> moved_map = std::move(map);
 
 		// we don't lint here, so we can use map after move:
 		// NOLINTBEGIN

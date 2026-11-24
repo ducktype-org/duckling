@@ -29,6 +29,7 @@ namespace compiler::lir {
 			);
 
 			auto lir_global = LIRGlobal::fromMIR(ctx, mir_global->global);
+			auto metadata   = LIRVariableMetadata::fromHeliosId(ctx, mir_global->global.helios_id);
 
 			variant_match(mir_global->initial_value) {
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
@@ -38,6 +39,7 @@ namespace compiler::lir {
 					lir_unit.lir_globals.emplace_back(LIRGlobalData{
 						.global              = lir_global,
 						.data_initialization = ctv_initial_value,
+						.metadata            = metadata,
 					});
 				}
 				variant_case(mir::MIRCtorDtorPair, pair) {
@@ -52,6 +54,7 @@ namespace compiler::lir {
                             .global_ctor = lir_ctor_function,
                             .global_dtor = lir_dtor_function,
                         },
+                        .metadata = metadata,
                     });
 				}
 				variant_default {

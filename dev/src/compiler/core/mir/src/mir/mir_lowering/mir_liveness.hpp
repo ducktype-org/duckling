@@ -9,6 +9,8 @@
 #include <mir/mir_lowering/mir_destructors.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/hashmap.hpp>
+
 #include <diagnostic/stable_position.hpp>
 
 #include <algorithm>

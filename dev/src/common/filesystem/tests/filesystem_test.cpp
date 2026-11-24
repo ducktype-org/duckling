@@ -19,7 +19,9 @@ class SimpleFileSystemTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(getSimpleContentTest);
+		TESTER_ADD_TEST(getContentOfDirectoryTest);
 		TESTER_ADD_TEST(filePathTest);
+		TESTER_ADD_TEST(isTemporaryTest);
 		TESTER_ADD_TEST(vfsTest);
 		TESTER_ADD_TEST(virtualFileTest);
 		TESTER_ADD_TEST(fileOperationsTest);
@@ -34,6 +36,33 @@ private:
 
 		assertTrue(a_content.view().size() == 12, "Wrong a_content file size");
 		assertTrue(a_content.view().stringView() == "abrakadabra\n", "Wrong a_content file content");
+	}
+
+	void getContentOfDirectoryTest() {
+		// Reading a directory used to size the buffer from `tellg()` after seeking to the end.
+		// A directory has no meaningful size there, so it asked for a huge allocation.
+		auto temp_dir = fs::FileManager::createRandomTempDirectory();
+
+		auto safe_content = temp_dir.getContentSafe();
+		ASSERT_NO_VALUE(safe_content, "getContentSafe should fail for a directory");
+		assertTrue(
+			safe_content.error().find("is a directory") != std::string::npos,
+			base::strConcat("getContentSafe should name the directory, got: ", safe_content.error())
+		);
+
+		bool panicked = false;
+		try {
+			std::ignore = temp_dir.getContent();
+		} catch (const base::Panic&) { panicked = true; }
+		assertTrue(panicked, "getContent should panic for a directory");
+
+		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
+		ASSERT_NO_VALUE(
+			virtual_dir.getContentSafe(), "getContentSafe should fail for a virtual directory"
+		);
+
+		fs::FileManager::deleteFolder(temp_dir);
+		fs::FileManager::deleteFolder(virtual_dir);
 	}
 
 	void filePathTest() {
@@ -83,6 +112,47 @@ private:
 		fs::FilePath vpath2("vfs:/abs_test");
 		auto         abs_vpath = vpath2.absolute();
 		assertTrue(abs_vpath == vpath2, "absolute() on virtual path should return itself");
+	}
+
+	void isTemporaryTest() {
+		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
+
+		// Inside the temp directory, including the directory itself.
+		assertTrue(fs::FilePath(temp_dir).isTemporary(), "Temp dir itself should be temporary");
+		assertTrue(
+			fs::FilePath(temp_dir / "some" / "file.txt").isTemporary(),
+			"A (non-existent) path under the temp dir should be temporary"
+		);
+
+		// Outside the temp directory.
+		assertTrue(
+			!fs::FilePath(temp_dir.parent_path() / "not_a_temp_dir").isTemporary(),
+			"A path outside the temp dir should not be temporary"
+		);
+		assertTrue(
+			!fs::FilePath(temp_dir.string() + "foo").isTemporary(),
+			"A sibling sharing the temp dir's name as a prefix should not be temporary"
+		);
+		assertTrue(
+			!fs::FilePath("vfs:" + temp_dir.generic_string()).isTemporary(),
+			"A virtual path should never be temporary"
+		);
+
+		// A relative path is resolved against the working directory.
+		auto old_cwd = std::filesystem::current_path();
+		auto tmp_cwd = fs::FileManager::createRandomTempDirectory();
+		std::filesystem::current_path(tmp_cwd.getFilePath().getPath());
+		bool relative_in_temp = fs::FilePath("some_file.txt").isTemporary();
+		std::filesystem::current_path(temp_dir.parent_path());
+		bool relative_outside_temp = fs::FilePath("not_a_temp_dir").isTemporary();
+		std::filesystem::current_path(old_cwd);
+		fs::FileManager::deleteFolder(tmp_cwd, true);
+
+		assertTrue(relative_in_temp, "A relative path with cwd in the temp dir should be temporary");
+		assertTrue(
+			!relative_outside_temp,
+			"A relative path with cwd outside the temp dir should not be temporary"
+		);
 	}
 
 	void vfsTest() {
@@ -276,8 +346,10 @@ private:
 		// Test default directory getters
 		fs::File temp_default = fs::FilePath::getDefaultTempDirectoryPath();
 		assertTrue(
-			temp_default.getType() == fs::FileType::Temporary, "Default temp dir should be temporary"
+			temp_default.getType() == fs::FileType::Physical,
+			"Default temp dir lives on the physical filesystem"
 		);
+		assertTrue(temp_default.isTemporary(), "Default temp dir should report itself as temporary");
 
 		// Test createFileIn with random name generation
 		auto virtual_dir = fs::FileManager::createRandomVirtualDirectory();
@@ -337,16 +409,18 @@ private:
 			virtual_folder2.isDirectory(), "Virtual folder should be recreated with override"
 		);
 
-		// Test temp folder creation with unique name
+		// A folder in the temp directory is created by the physical factory like any other:
+		// the temp directory has no factory of its own.
 		auto unique_temp_name
 			= "test_temp_folder_"
 		    + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 		fs::FilePath temp_folder_path = std::filesystem::temp_directory_path() / unique_temp_name;
-		auto         temp_folder      = fs::FileManager::createTempFolder(temp_folder_path);
+		auto         temp_folder      = fs::FileManager::createPhysicalFolder(temp_folder_path);
 		assertTrue(temp_folder.isDirectory(), "Temp folder should be created");
+		assertTrue(temp_folder.isTemporary(), "Folder in the temp dir should report as temporary");
 
 		// Test temp folder with override
-		auto temp_folder2 = fs::FileManager::createTempFolder(temp_folder_path, true);
+		auto temp_folder2 = fs::FileManager::createPhysicalFolder(temp_folder_path, true);
 		assertTrue(temp_folder2.isDirectory(), "Temp folder should be recreated with override");
 
 		// Test folderExists with path
@@ -377,12 +451,12 @@ private:
 			// Expected behavior
 		}
 
-		try {
-			std::ignore = temp_folder_path.toVirtualPath();
-			assertTrue(false, "Should fail to convert temp path to virtual path");
-		} catch (const base::Panic&) {
-			// Expected behavior
-		}
+		// A path in the temp directory is physical, so it virtualizes like any other; only a
+		// relative path has to be made absolute first.
+		assertTrue(
+			fs::VFS::isVirtualPath(temp_folder_path.toVirtualPath()),
+			"Should convert a temp path to a virtual path"
+		);
 
 		try {
 			std::ignore = simple_physical_path.toPhysicalPath();
@@ -492,7 +566,10 @@ private:
 		// Test writeToFile functionality
 		auto temp_file = fs::FileManager::createRandomTempFile("Initial content");
 		assertTrue(temp_file.isFile(), "Temp file was not created correctly");
-		assertTrue(temp_file.getType() == fs::FileType::Temporary, "File should be temporary");
+		assertTrue(
+			temp_file.getType() == fs::FileType::Physical, "Temp file should be a physical file"
+		);
+		assertTrue(temp_file.isTemporary(), "Temp file should report itself as temporary");
 
 		// Test reading content
 		auto content = temp_file.getContent();

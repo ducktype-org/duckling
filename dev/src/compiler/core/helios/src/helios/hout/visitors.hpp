@@ -17,6 +17,8 @@ namespace compiler::helios::code {
 		ExprStmt,
 		IfStmt,
 		WhileStmt,
+		BreakStmt,
+		ContinueStmt,
 		VariableStmt,
 		AssignmentStmt,
 		BlockStmt
@@ -36,6 +38,8 @@ namespace compiler::helios::code {
 		ChainComparisonExpr,
 		TupleExpr,
 		VariantTypeConstructorExpr,
+		FunctionTypeExpr,
+		OptionalTypeConstructorExpr,
 		VariantConstructExpr,
 		MatchExpr,
 		CallExpr,

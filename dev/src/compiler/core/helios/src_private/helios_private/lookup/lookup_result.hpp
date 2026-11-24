@@ -18,6 +18,7 @@
 
 #include <query_framework/query_result.hpp>
 
+#include <cstdint>
 #include <vector>
 
 namespace compiler::helios {

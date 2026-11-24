@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(basicTypesTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(variantTagWidthTest);
+		TESTER_ADD_TEST(variantSizeIsMultipleOfAlignmentTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
@@ -335,6 +336,40 @@ private:
 		});
 	}
 
+	void variantSizeIsMultipleOfAlignmentTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			// `i8 | u8[5]`: a 1-byte tag, then a 5-byte payload placed at offset 8. The 13 bytes
+			// round up to 16, so the next element of an array of these variants stays aligned.
+			const SymbolType<> i8_type = st(
+				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
+			const StaticArrayAbstractType bytes_type
+				= ctx.query<QueryStaticArrayType>({ st(getByteType()), 5 });
+			const VariantAbstractType variant_type
+				= ctx.query<QueryVariantType>({ { i8_type, st(bytes_type) } });
+			const auto layout = queryLayout(ctx, variant_type);
+
+			assertEqual(
+				layout->getAlignment(), Bytes(8), "The variant alignment comes from its size."
+			);
+			assertEqual(
+				layout->getSize(),
+				base::bytes2bits(Bytes(16)),
+				"The variant size must be a multiple of its alignment."
+			);
+			variant_match(layout->getVariant()) {
+				variant_case(VariantTypeLayout, variant_layout) {
+					assertEqual(
+						variant_layout.getDataOffset(),
+						Bytes(8),
+						"The payload offset does not change."
+					);
+				}
+				variant_default { fail("Layout of variant type should be variant-like."); }
+			}
+		});
+	}
+
 	void tupleTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const SymbolType<> i8_type = st(
@@ -550,11 +585,11 @@ private:
 
 	void pointerLayoutManglingTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto i64 = SymbolType<>::withDefaults(
+			auto i64 = SymbolType<>::withDefaultsMut(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			auto ref_i64 = i64.withReferenceKind(ReferenceKind::Ref);
-			auto box_i64 = i64.withReferenceKind(ReferenceKind::Box);
+			auto ref_i64 = i64.toRef();
+			auto box_i64 = i64.toBox();
 
 			auto i64_layout     = querySymbolLayout(ctx, i64);
 			auto ref_i64_layout = querySymbolLayout(ctx, ref_i64);

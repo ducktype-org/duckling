@@ -20,6 +20,7 @@
 
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 #include <string_id/string_id.hpp>
@@ -41,6 +42,12 @@ namespace compiler::tsh {
 		UserDestructor,
 		CopyConstructor,
 		ToString,
+		Equal,
+		NotEqual,
+		Lesser,
+		LesserEqual,
+		Greater,
+		GreaterEqual,
 		None
 	};
 

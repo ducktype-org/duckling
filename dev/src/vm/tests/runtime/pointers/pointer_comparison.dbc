@@ -1,0 +1,87 @@
+type data: Pair { a: i64, b: i64 }
+
+# Each check writes 1 to `r` when the flag is set and 0 otherwise, then prints `r`.
+function main { i64, ptr_argv } -> { i64 } {
+	# arg0 -> argc
+	# arg1 -> *argv
+
+	init_pany_type s, Pair;
+	init_pany_type x, i64;
+	init_pany_type y, i64;
+	init_pany_type pa, ptr_i64;
+	init_pany_type pb, ptr_i64;
+	init_pany_type pa2, ptr_i64;
+	init_pany_type px, ptr_i64;
+	init_pany_type py, ptr_i64;
+	init_pany_type nul, ptr_i64;
+	init_pany_type r, i64;
+
+	structLea_pptr_pste_field pa, s, Pair.a;    # pa := &s.a
+	structLea_pptr_pste_field pb, s, Pair.b;    # pb := &s.b
+	structLea_pptr_pste_field pa2, s, Pair.a;   # pa2 := &s.a
+	ref_pptr_pany px, x;                        # px := &x
+	ref_pptr_pany py, y;                        # py := &y
+
+	# Same block, same offset: equal.
+	mov_p64_imm r, 0;
+	cmpEq_pptr_pptr pa, pa2;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 1
+
+	# Same block, different offsets: not equal.
+	mov_p64_imm r, 0;
+	cmpEq_pptr_pptr pa, pb;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 0
+
+	mov_p64_imm r, 0;
+	cmpNeq_pptr_pptr pa, pb;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 1
+
+	# A null pointer equals another null pointer and differs from a live pointer.
+	mov_p64_imm r, 0;
+	cmpEq_pptr_pptr nul, nul;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 1
+
+	mov_p64_imm r, 0;
+	cmpEq_pptr_pptr nul, pa;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 0
+
+	mov_p64_imm r, 0;
+	cmpNeq_pptr_pptr pa, nul;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 1
+
+	# Different blocks: never equal.
+	mov_p64_imm r, 0;
+	cmpEq_pptr_pptr px, py;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 0
+
+	mov_p64_imm r, 0;
+	cmpNeq_pptr_pptr px, py;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 1
+
+	mov_p64_imm r, 0;
+	cmpNeq_pptr_pptr pa, pa2;
+	cmov_p64_imm r, 1;
+	output_p64 r;                               # 0
+
+	deinit;     # r
+	deinit;     # nul
+	deinit;     # py
+	deinit;     # px
+	deinit;     # pa2
+	deinit;     # pb
+	deinit;     # pa
+	deinit;     # y
+	deinit;     # x
+	deinit;     # s
+	deinit;     # *argv
+	deinit;     # argc
+	ret;
+}

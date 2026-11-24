@@ -30,7 +30,7 @@ impl<'a> Selector<'a> {
         match self {
             Self::Name(name) => dependency.name() == *name,
             Self::Alias(alias) => dependency.alias() == Some(*alias),
-            Self::EffectiveName(effective_name) => dependency.effective_name() == *effective_name,
+            Self::EffectiveName(ename) => dependency.effective_name() == *ename,
             Self::EnabledBy(features) => dependency.is_enabled_for(features),
             Self::Kind(kind) => dependency.kind() == *kind,
             Self::All(selectors) => selectors

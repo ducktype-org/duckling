@@ -23,12 +23,10 @@ namespace fs {
 	 *
 	 * Physical: A file that exists on the physical filesystem.
 	 * Virtual: A file that exists in the virtual filesystem.
-	 * Temporary: A file that is temporary and managed by the system.
 	 */
 	enum class FileType {
 		Physical,
 		Virtual,
-		Temporary,
 	};
 
 	/**
@@ -41,21 +39,21 @@ namespace fs {
 
 	/**
 	 * @class File
-	 * @brief Represents a file or directory in the filesystem, supporting physical, virtual,
-	 * and temporary files.
+	 * @brief Represents a file or directory in the filesystem, supporting physical (including
+	 * temp-dir) and virtual files.
 	 *
 	 * The File class provides a unified interface for managing and processing files and
-	 * directories across three types of filesystems:
+	 * directories across two types of filesystems:
 	 *
-	 * 1. **Physical Filesystem**: Represents files and directories that exist on the physical disk.
+	 * 1. **Physical Filesystem**: Represents files and directories that exist on the physical
+	 * disk. The system's temporary directory is part of it, so a temporary file is a physical
+	 * one that additionally answers `isTemporary()`.
 	 * 2. **Virtual Filesystem**: Represents files and directories managed by a virtual filesystem
 	 * (VFS).
-	 * 3. **Temporary Filesystem**: Represents temporary files and directories managed by the
-	 * system.
 	 *
 	 * ### Key Features:
 	 * - **File and Directory Management**:
-	 *   - Create, access, and manage files and directories in physical, virtual, and temporary
+	 *   - Create, access, and manage files and directories in the physical and virtual
 	 * filesystems.
 	 *   - Support for creating unique paths for files and directories.
 	 * - **Content Management**:
@@ -69,8 +67,9 @@ namespace fs {
 	 *   - Support for reading and writing virtual file content.
 	 *
 	 * ### Usage:
-	 * - Use `FileManager::createTempFile` and `FileManager::createRandomTempDirectory` for
-	 * temporary files and directories.
+	 * - Use `FileManager::createRandomTempFile` and `FileManager::createRandomTempDirectory` for
+	 * temporary files and directories. A file at a known path in the temp directory is created
+	 * with the physical factories - the temp directory is part of the physical filesystem.
 	 * - Use `FileManager::createVirtualFile` and `FileManager::createRandomVirtualDirectory` for
 	 * virtual files and directories.
 	 * - Use `getContent` or `getContentSafe` to retrieve file content.
@@ -79,7 +78,7 @@ namespace fs {
 	 * ### Example:
 	 * ```cpp
 	 * // Create a temporary file
-	 * auto tempFile = FileManager::createTempFile("Temporary content");
+	 * auto tempFile = FileManager::createRandomTempFile("Temporary content");
 	 *
 	 * // Retrieve its content
 	 * auto content = tempFile.getContent();
@@ -140,6 +139,13 @@ namespace fs {
 			return type;
 		}
 
+		/**
+		 * @brief Checks whether the file lives in the system's temporary directory.
+		 * @return True if the file lies in the system temp directory, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isTemporary() const;
+
 		[[nodiscard]]
 		bool isFile() const noexcept;
 
@@ -149,7 +155,7 @@ namespace fs {
 		/**
 		 * @brief Writes content to the file.
 		 *
-		 * This method works for all file types (physical, virtual, temporary).
+		 * This method works for both file types (physical and virtual).
 		 *
 		 * @param new_content The content to write to the file.
 		 * @param append If true, appends to the file; if false, overwrites the file.
@@ -218,6 +224,10 @@ namespace fs {
 		/**
 		 * Creates a temporary directory. The directory is managed by the system and has a random
 		 * name.
+		 *
+		 * The system temp directory is part of the physical filesystem, so a file placed there is
+		 * created with the physical factories like any other. Only the *random naming* is specific
+		 * to temporary files, which is all this helper and `createRandomTempFile` add.
 		 * @return A File with the new temporary directory.
 		 */
 		static File createRandomTempDirectory();
@@ -245,6 +255,8 @@ namespace fs {
 
 		/**
 		 * Creates a random-named temporary file in the system's temporary directory.
+		 * Like `createRandomTempDirectory`, it only picks a random name and then creates a
+		 * physical file there.
 		 * @param content The content to write to the file.
 		 * @return The created File object.
 		 */
@@ -254,8 +266,9 @@ namespace fs {
 		 * @brief Creates a physical file in the physical filesystem's root directory or at the
 		 * given absolute path. If the file already exists and override is false, throws an error.
 		 * If override is true, overwrites the file.
-		 * The path must be phisical.
-		 * @param path The absolute or relative path to the file.
+		 * The path must be absolute and on disk; a path under the system temp directory counts
+		 * (physical and temporary are the same filesystem), a virtual one does not.
+		 * @param path The absolute path to the file.
 		 * @param content The content to write to the file.
 		 * @param allow_overwrite If true, overwrites the file if it exists.
 		 * @return The created File object.
@@ -268,8 +281,9 @@ namespace fs {
 		 * @brief Creates a physical folder in the physical filesystem's root directory or at the
 		 * given absolute path. If the folder already exists and override is false, throws an error.
 		 * If override is true, recreates the folder.
-		 * The path must be phisical.
-		 * @param path The absolute or relative path to the folder.
+		 * The path must be absolute and on disk; a path under the system temp directory counts
+		 * (physical and temporary are the same filesystem), a virtual one does not.
+		 * @param path The absolute path to the folder.
 		 * @param allow_overwrite If true, recreates the folder if it exists.
 		 * @return The created File object.
 		 */
@@ -295,26 +309,6 @@ namespace fs {
 		 * @return The created File object.
 		 */
 		static File createVirtualFolder(const FilePath& path, bool allow_overwrite = false);
-
-		/**
-		 * @brief Creates a temporary file in the system's temporary directory or at the given path.
-		 * @param path The path to the file (should be inside the system temp directory).
-		 * @param content The content to write to the file.
-		 * @param allow_overwrite If true, overwrites the file if it exists.
-		 * @return The created File object.
-		 */
-		static File createTempFile(
-			const FilePath& path, std::string_view content = "", bool allow_overwrite = false
-		);
-
-		/**
-		 * @brief Creates a temporary folder in the system's temporary directory or at the given
-		 * path. The path must be inside system temp folder
-		 * @param path The path to the folder (will be placed in temp directory if not already).
-		 * @param allow_overwrite If true, recreates the folder if it exists.
-		 * @return The created File object.
-		 */
-		static File createTempFolder(const FilePath& path, bool allow_overwrite = false);
 
 		/**
 		 * @brief Deletes a file specified by a File object, according to its type.

@@ -7,7 +7,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::compile::unit::graph::GraphNodeId;
-use crate::quackpack::core::compile::unit_runner::incremental::IncrementalData;
+use crate::quackpack::core::compile::unit_runner::incremental::RedGreenData;
 use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::{
     SerializableGraphNode, SerializableGraphNodeData, SerializableUnitGraph,
 };
@@ -58,17 +58,15 @@ impl SerializableUnitGraph {
     }
 
     /// Get information about which nodes and packages in the current graph are the same as in the previous graph.
-    /// This allows us to not rerun such nodes.
-    pub fn get_incremental_data(&self, other: &Self) -> IncrementalData {
+    /// Creates [`RedGreenData`] with correct values of `common_packages` and `common_nodes`.
+    /// `green_nodes` is left empty, to be gradually filled up by the compilation process.
+    pub fn get_red_green_data(&self, other: &Self) -> RedGreenData {
         let common_packages = self.get_common_packages(other);
         let common_nodes = self.get_common_nodes(other, &common_packages);
-        IncrementalData {
-            common_packages,
-            common_nodes,
-        }
+        RedGreenData::new(common_packages, common_nodes)
     }
 
-    /// Helper for [`Self::get_incremental_data`].
+    /// Helper for [`Self::get_red_green_data`].
     /// Checks which packages are the same (have the same [`Identity`] and [`SerializablePackageData`]) as in the previous build.
     /// This in fact checks that:
     /// - identities and versions are the same,
@@ -88,7 +86,7 @@ impl SerializableUnitGraph {
         result
     }
 
-    /// Helper for [`Self::get_incremental_data`].
+    /// Helper for [`Self::get_red_green_data`].
     /// After [`Self::get_common_packages`] is run, checks which nodes are the same as in the previous graph.
     /// This not only means that they describe the same tasks on the same package, but that the dependencies are the same in both graphs.
     ///
@@ -167,12 +165,12 @@ impl SerializableUnitGraph {
 mod test {
     use std::str::FromStr;
 
-    use crate::quackpack::core::compile::unit_runner::IncrementalData;
+    use crate::quackpack::core::compile::unit_runner::incremental::RedGreenData;
     use crate::quackpack::core::compile::unit_runner::incremental::serializable_types::SerializableUnitGraph;
     use crate::quackpack::core::identity::Identity;
 
     /// Serialized graph for scenario "foo depends on both bar and baz".
-    const LARGE_GRAPH: &'static str = r#"{
+    const LARGE_GRAPH: &str = r#"{
     "root-id": 5,
     "nodes": [
       {
@@ -270,7 +268,7 @@ mod test {
   }"#;
 
     /// Serialized graph for scenario "foo depends on bar".
-    const SMALL_GRAPH: &'static str = r#"{
+    const SMALL_GRAPH: &str = r#"{
     "root-id": 3,
     "nodes": [
       {
@@ -338,7 +336,7 @@ mod test {
   }"#;
 
     /// As [`SMALL_GRAPH`], but dependencies are not sorted.
-    const MALFORMED_GRAPH: &'static str = r#"{
+    const MALFORMED_GRAPH: &str = r#"{
     "root-id": 3,
     "nodes": [
       {
@@ -406,34 +404,37 @@ mod test {
   }"#;
 
     #[test]
-    fn get_incremental_data_check() {
+    fn get_red_green_data_check() {
         let without_baz = serde_json::from_str::<SerializableUnitGraph>(SMALL_GRAPH).unwrap();
         let with_baz = serde_json::from_str::<SerializableUnitGraph>(LARGE_GRAPH).unwrap();
         let identity_bar = Identity::from_str("bar local+file:///home/bar").unwrap();
         let identity_baz = Identity::from_str("baz local+file:///home/baz").unwrap();
         let identity_foo = Identity::from_str("foo local+file:///home/foo").unwrap();
-        let without_to_with = with_baz.get_incremental_data(&without_baz);
-        let with_to_without = without_baz.get_incremental_data(&with_baz);
-        let with_to_with = with_baz.get_incremental_data(&with_baz);
+        let without_to_with = with_baz.get_red_green_data(&without_baz);
+        let with_to_without = without_baz.get_red_green_data(&with_baz);
+        let with_to_with = with_baz.get_red_green_data(&with_baz);
         assert_eq!(
             without_to_with,
-            IncrementalData {
+            RedGreenData {
                 common_packages: [identity_bar].into(),
                 common_nodes: [0, 3].into(),
+                green_nodes: [].into(),
             }
         );
         assert_eq!(
             with_to_without,
-            IncrementalData {
+            RedGreenData {
                 common_packages: [identity_bar].into(),
                 common_nodes: [0, 2].into(),
+                green_nodes: [].into(),
             }
         );
         assert_eq!(
             with_to_with,
-            IncrementalData {
+            RedGreenData {
                 common_packages: [identity_bar, identity_baz, identity_foo].into(),
                 common_nodes: [0, 1, 2, 3, 4, 5].into(),
+                green_nodes: [].into(),
             }
         );
     }

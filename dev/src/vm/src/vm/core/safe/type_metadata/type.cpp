@@ -156,7 +156,7 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
+		size      = TypeSize(Bytes(8));
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };

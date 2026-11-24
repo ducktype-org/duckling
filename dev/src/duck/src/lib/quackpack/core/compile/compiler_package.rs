@@ -87,7 +87,7 @@ impl CompilerPackage {
             .expand_features(features)
             .with_context(|| {
                 format!(
-                    "while expanding features of the {} `{}`",
+                    "failed to expand the features of the {} `{}`",
                     self.pkg_type,
                     self.package.name()
                 )
@@ -110,7 +110,7 @@ impl CompilerPackage {
             .expand_features(features)
             .with_context(|| {
                 format!(
-                    "while expanding features of the {} `{}`",
+                    "failed to expand the features of the {} `{}`",
                     self.pkg_type,
                     self.package.name()
                 )

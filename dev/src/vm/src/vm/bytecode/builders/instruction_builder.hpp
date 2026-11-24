@@ -118,7 +118,8 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	variantGetInner,
 	variantSetInner,
 
-	exit
+	exit,
+	initFromVMValue
 )
 // clang-format on
 // NOLINTEND

@@ -24,7 +24,7 @@
 						"sourceStart": 7,
 						"sourceEnd": 8
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": {
 					"position": {
@@ -86,7 +86,7 @@
 						"sourceStart": 27,
 						"sourceEnd": 28
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": {
 					"position": {
@@ -166,7 +166,7 @@
 						"sourceStart": 49,
 						"sourceEnd": 50
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": {
 					"position": {
@@ -255,7 +255,7 @@
 						"sourceStart": 74,
 						"sourceEnd": 75
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": {
 					"position": {
@@ -404,7 +404,7 @@
 						"sourceStart": 111,
 						"sourceEnd": 112
 					},
-					"function parameter list": []
+					"parameter list": []
 				},
 				"return": {
 					"position": {

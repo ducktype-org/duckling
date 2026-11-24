@@ -11,9 +11,9 @@ Tests:
     Description: deps with empty versions list should be reused by solver
     Cases:
       dep-with-empty-versions-list:
-        test-cmd: duck -C foo sync
+        test-cmd: duck --verbose -C foo sync
         alias_bar: ""
-        Output:
+        Err:
           # This checks two things:
           # 1. Absence of `running gathering` means we don't even enter gathering,
           # 2. and absence of `starting the solver engine` means we don't run the engine.
@@ -27,9 +27,9 @@ Tests:
             info: successfully synchronized venv \`foo\`"
       alias:
         # Aliases are stored in storage freeze and recovered by solver.
-        test-cmd: duck -C foo sync
+        test-cmd: duck --verbose -C foo sync
         alias_bar: --alias alias
-        Output:
+        Err:
           Run: |+
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph

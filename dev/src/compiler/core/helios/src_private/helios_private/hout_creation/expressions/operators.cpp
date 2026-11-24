@@ -36,6 +36,7 @@ namespace {
 	using namespace compiler;
 	using namespace compiler::helios;
 	using namespace compiler::helios::code;
+	using compiler::tsh::coercions::Coercion;
 
 	/**
 	 * @brief Tries to find a common type for builtin binary operation arguments through implicit
@@ -52,19 +53,19 @@ namespace {
 		// Numeric operators only work on direct values. When provided with references or box types
 		// we have to force a coercion to a direct type which will insert a DerefExpr. This is
 		// needed to handle cases like: var x = referenceA + referenceB.
-		auto lhs_direct = lhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
-		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
+		auto lhs_direct = lhs_type.toDirect();
+		auto rhs_direct = rhs_type.toDirect();
 
 		// Try to coerce both values to the rhs direct type.
-		auto lhs_to_rhs = canCoerce(ctx, lhs->expression_type, rhs_direct).valueOrThrow();
-		auto rhs_to_rhs = canCoerce(ctx, rhs->expression_type, rhs_direct).valueOrThrow();
+		Coercion lhs_to_rhs = coercions::coercionOf(ctx, lhs, rhs_direct);
+		Coercion rhs_to_rhs = coercions::coercionOf(ctx, rhs, rhs_direct);
 
 		if (lhs_to_rhs.isValid() && rhs_to_rhs.isValid())
 			return std::make_tuple(rhs_direct, std::move(lhs_to_rhs), std::move(rhs_to_rhs));
 
 		// Try to coerce both values to the lhs direct type.
-		auto lhs_to_lhs = canCoerce(ctx, lhs->expression_type, lhs_direct).valueOrThrow();
-		auto rhs_to_lhs = canCoerce(ctx, rhs->expression_type, lhs_direct).valueOrThrow();
+		Coercion lhs_to_lhs = coercions::coercionOf(ctx, lhs, lhs_direct);
+		Coercion rhs_to_lhs = coercions::coercionOf(ctx, rhs, lhs_direct);
 
 		if (lhs_to_lhs.isValid() && rhs_to_lhs.isValid())
 			return std::make_tuple(lhs_direct, std::move(lhs_to_lhs), std::move(rhs_to_lhs));
@@ -112,11 +113,11 @@ namespace {
 		switch (op) {
 		case IntegerPow: {
 			if (!isLanguagePrimitivePresent(ctx, LanguagePrimitive::PowInt)) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
 					base::enumToStr(LanguagePrimitive::PowInt),
 					"' language primitive, but no such primitive was found."
-				)));
+				));
 				return query::Failed();
 			}
 			auto callee = bakeLanguagePrimitiveWithTypes(
@@ -136,18 +137,18 @@ namespace {
 			}();
 			if_opt_none(lang_primitive) {
 				// @TODO: #1498 handle other float types
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat("Float exponentiation on unhandled type. Only `f32` and `f64` "
 				                    "are handled for now.")
-				));
+				);
 				return query::Failed();
 			}
 			if (!isLanguagePrimitivePresent(ctx, lang_primitive.value())) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(base::strConcat(
+				ctx.log<dia::PlaceholderError>(base::strConcat(
 					"Calling an operator that requires '",
 					base::enumToStr(lang_primitive.value()),
 					"' language primitive, but no such primitive was found."
-				)));
+				));
 				return query::Failed();
 			}
 			auto callee = ctx.query<helios::QueryLanguagePrimitiveSymID>({ lang_primitive.value() })
@@ -184,13 +185,12 @@ namespace compiler::helios::code {
 		return numeric_ops.contains(op.str());
 	}
 
-	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+	base::Optional<std::tuple<BuiltinUnary, tsh::coercions::Coercion>> findNumericUnaryBuiltin(
 		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
-		auto operation_kind = expr->expression_type.getType().getKind();
-		auto direct_type
-			= expr->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Direct);
-		auto coercion = canCoerce(ctx, expr->expression_type, direct_type).valueOrThrow();
+		auto                     operation_kind = expr->expression_type.getType().getKind();
+		auto                     direct_type    = expr->expression_type.getSymbolType().toDirect();
+		tsh::coercions::Coercion coercion       = coercions::coercionOf(ctx, expr, direct_type);
 		if (not coercion.isValid()) return {};
 
 		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators
@@ -209,9 +209,11 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<std::tuple<BuiltinBinaryOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
-	) {
+	base::Optional<
+		std::tuple<BuiltinBinaryOperation, tsh::coercions::Coercion, tsh::coercions::Coercion>>
+		findNumericBinaryBuiltin(
+			query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+		) {
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
 		if (!common_type_res.has_value()) return {};
 
@@ -305,8 +307,8 @@ namespace compiler::helios::code {
 				Shorthand s{ ctx };
 
 				auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
-				auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-				auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+				auto coerced_lhs = coercions::applyCoercion(ctx, lhs_coercion, std::move(lhs));
+				auto coerced_rhs = coercions::applyCoercion(ctx, rhs_coercion, std::move(rhs));
 
 				return desugarBuiltinBinaryOperation(
 						   ctx, operation, std::move(coerced_lhs), std::move(coerced_rhs)
@@ -330,9 +332,10 @@ namespace compiler::helios::code {
 		);
 
 		// Step 2b. — Look for operator methods declared on the left-hand side's type
-		// (classes only)
+		// (classes and tuples only)
 		const auto lhs_abstract_type = lhs_type.getType();
-		if (lhs_abstract_type.getKind() == tsh::Kind::Class) {
+		if (lhs_abstract_type.getKind() == tsh::Kind::Class
+		    || lhs_abstract_type.getKind() == tsh::Kind::Tuple) {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
@@ -380,7 +383,7 @@ namespace compiler::helios::code {
 
 			if_opt_some(numeric_builtin_opt, numeric_builtin) {
 				auto [operation, coercion] = numeric_builtin;
-				auto coerced_inner         = coercion.coerce(ctx, std::move(inner));
+				auto coerced_inner = coercions::applyCoercion(ctx, coercion, std::move(inner));
 				return makeBox<UnaryOperatorExpr>(
 					ctx, new_origin, operation, std::move(coerced_inner)
 				);
@@ -457,7 +460,7 @@ namespace compiler::helios::code {
 		);
 		// @TODO: #3697 Improve dia. Coercions happen in places that are not very clear in compact
 		// `location X= value` form, for dia purposes add message with extended form as needed.
-		auto coerced_value = coerceFromBox(
+		auto coerced_value = coercions::coerceFromBox(
 								 ctx,
 								 std::move(value),
 								 location_deref->expression_type.getSymbolType(),
@@ -471,11 +474,7 @@ namespace compiler::helios::code {
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {
 		static auto provide(Context& ctx, QKey) -> PResult {
 			// Preamble
-			const auto bool_t = tsh::SymbolType<>{
-				tsh::getBoolType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto bool_t = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 			using enum HOUTFunctionDeclaration::Operatoriness;
 			using enum BuiltinUnary;
 			using enum BuiltinBinary;
@@ -516,11 +515,7 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
 
 			/// Meta constructions ///
-			const auto meta_t = tsh::SymbolType<>{
-				tsh::getMetaType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto meta_t = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
 
 			builtin_op(keywordToStr(Keyword::Ref), { meta_t }, meta_t, Ref, Prefix);
 			builtin_op(keywordToStr(Keyword::Box), { meta_t }, meta_t, Box, Prefix);
@@ -528,7 +523,8 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(Keyword::ManyPtr), { meta_t }, meta_t, ManyPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::CPtr), { meta_t }, meta_t, CPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::Slice), { meta_t }, meta_t, Slice, Prefix);
-			builtin_op(keywordToStr(Keyword::Const), { meta_t }, meta_t, Const, Prefix);
+			builtin_op(keywordToStr(Keyword::Mut), { meta_t }, meta_t, Mut, Prefix);
+			builtin_op(keywordToStr(Keyword::Imm), { meta_t }, meta_t, Imm, Prefix);
 
 			/// Meta comparisons ///
 			builtin_op(base::StrID("=="), { meta_t, meta_t }, bool_t, MetaEq, Infix);
@@ -543,16 +539,10 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("!="), { bool_t, bool_t }, bool_t, IntegerNeq, Infix);
 
 			/// Character arithmetic ///
-			const auto u8_t = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			const auto char_t = tsh::SymbolType<>{
-				tsh::getCharType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
+			const auto u8_t = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
+			);
+			const auto char_t = tsh::SymbolType<>::withDefaults(tsh::getCharType());
 			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt, Infix);
 			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq, Infix);
 			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt, Infix);

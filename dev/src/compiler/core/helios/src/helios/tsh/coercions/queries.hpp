@@ -26,6 +26,7 @@
 #pragma once
 
 #include "coercion.hpp"
+#include "coercion_mode.hpp"
 #include "value_source.hpp"
 
 #include <hashing/hash.hpp>
@@ -46,9 +47,19 @@ namespace compiler::tsh::coercions {
 		 */
 		SymbolType<> target;
 
-		KeyFor_QuerySymbolTypeCoercion(const SymbolType<>& source, const SymbolType<>& target):
+		/**
+		 * @brief Which coercions are allowed at the root of the coercion.
+		 */
+		CoercionMode mode;
+
+		KeyFor_QuerySymbolTypeCoercion(
+			const SymbolType<>& source,
+			const SymbolType<>& target,
+			const CoercionMode  mode = CoercionMode::Default
+		):
 			  source(source),
-			  target(target) {}
+			  target(target),
+			  mode(mode) {}
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QuerySymbolTypeCoercion&) const
@@ -56,7 +67,7 @@ namespace compiler::tsh::coercions {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(source, target);
+			return hashing::justHash<hashing::SHA256>(source, target, mode);
 		}
 	};
 
@@ -81,11 +92,15 @@ namespace compiler::tsh::coercions {
 	 * location of the target type. Queries the coercion plan from `QuerySymbolTypeCoercion` and
 	 * decides every `HandOver` of it for @p source.
 	 *
-	 * @TODO: #1920 Convert array literals into ValueSource when performing coercions.
+	 * In the CoercionMode::ImplicitRefOf mode a direct or boxed value may also be taken by `ref`
+	 * when the target is a `ref`.
 	 *
 	 * @return A full coercion that can be performed by HELIoS.
 	 */
 	[[nodiscard]] Coercion coercionOf(
-		query::Context& ctx, const ValueSource& source, const SymbolType<>& target
+		query::Context&     ctx,
+		const ValueSource&  source,
+		const SymbolType<>& target,
+		CoercionMode        mode = CoercionMode::Default
 	);
 }

@@ -158,14 +158,16 @@ Provide function can in general perform any computations, however programmer sho
 Provide function takes two parameters:
 
 - `QKey` -- Query Key of type defined in the query declaration.
-- `Context& context` -- Context, a parameter provided by the framework. This parameter is very important as it allows for three key functionalities that should **NEVER** be done by other methods:
+- `Context& context` -- Context, a parameter provided by the framework. This parameter is very important as it allows for two key functionalities that should **NEVER** be done by other methods:
 
 - Calling other queries from inside a query.
-- Emitting logs from inside a query.
-- Reporting compilation errors from inside a query.
+- Reporting diagnostics (errors, warnings, notes) from inside a query.
 
 @note
-As of right now emitting logs and reporting errors is based on simple strings. In the future, this will change after the diagnostic framework is created.
+Diagnostics are messages from the diagnostic framework: classes derived from `dia::MessageBase`, each backed by a YAML template.
+Use `context.log<Msg>(args...)` to build a message and log it in one call.
+Only build the `Box` yourself when the message needs more work before it is logged (for example, attached notes), then pass it to `context.log(std::move(message))`.
+See `examples/query_framework_decl.cpp` for a complete example.
 
 Provider function:
 ~~~~~cpp
@@ -176,11 +178,13 @@ Provider function:
         // call other query:
         auto result = context.query<OtherQueryName>(other_query_key);
 
-        // logging:
-        context.log("Some random log.");
+        // reporting a diagnostic, the arguments go to the `ExampleError` constructor:
+        context.log<ExampleError>(source_position, "example error");
 
-        // reporting errors:
-        context.compilationError("Error -- example error.");
+        // a diagnostic that needs more work before it is logged:
+        auto error = makeBox<ExampleError>(source_position, "example error");
+        error->addAttachedMessage(makeBox<dia::PlaceholderNote>("Declared here", other_position));
+        context.log(std::move(error));
     }
 ~~~~~
 

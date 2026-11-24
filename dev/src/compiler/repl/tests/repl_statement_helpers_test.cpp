@@ -7,7 +7,7 @@
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/mangler/mangler.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>

@@ -32,9 +32,10 @@ namespace compiler::helios {
 		case SymbolKind::Namespace:
 			return ofNamespace(symbol);
 		case SymbolKind::Using:
-			return ofUsing(symbol);
 		case SymbolKind::Import:
-			return ofImport(symbol);
+			CORE_PANIC(
+				"Lookup inside usings and imports should never be done by their symbols directly"
+			);
 		case SymbolKind::Class:
 			return ofTypeMeta(ctx.query<tsh::QueryClassType>(symbol));
 		case SymbolKind::Variable:
@@ -55,31 +56,23 @@ namespace compiler::helios {
 	) const {
 		variant_match(data) {
 			variant_case(ScopeInterface, scope) {
-				return ctx.query<QueryLookupInScope>({ scope.scope, name, params.with_wildcards });
+				return ctx.query<QueryLookupFromScope>(
+					{ scope.scope, name, params.with_wildcards, false }
+				);
 			}
 			variant_case(ScopeWithParentsInterface, scope) {
-				return ctx.query<QueryLookupInScopeAndParents>(
-					{ scope.scope, name, params.with_wildcards }
+				return ctx.query<QueryLookupFromScope>(
+					{ scope.scope, name, params.with_wildcards, true }
 				);
 			}
 			variant_case(ModuleInterface, symbol) {
-				return ctx.query<QueryLookupInNamespaceOrModule>(
-					{ symbol.id, name, params.with_wildcards }
+				return ctx.query<QueryLookupFromScope>(
+					{ scopeOfNamespaceLike(ctx, symbol.id), name, params.with_wildcards, false }
 				);
 			}
 			variant_case(NamespaceInterface, symbol) {
-				return ctx.query<QueryLookupInNamespaceOrModule>(
-					{ symbol.id, name, params.with_wildcards }
-				);
-			}
-			variant_case(UsingInterface, symbol) {
-				return ctx.query<QueryLookupInUsingImport>(
-					{ symbol.symbol, name, params.with_wildcards }
-				);
-			}
-			variant_case(ImportInterface, symbol) {
-				return ctx.query<QueryLookupInUsingImport>(
-					{ symbol.symbol, name, params.with_wildcards }
+				return ctx.query<QueryLookupFromScope>(
+					{ scopeOfNamespaceLike(ctx, symbol.id), name, params.with_wildcards, false }
 				);
 			}
 			variant_case(TypeInstanceInterface, type) {
@@ -121,7 +114,7 @@ namespace compiler::helios {
 						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 					}
 				}
-				ctx.logInt(std::move(msg));
+				ctx.log(std::move(msg));
 				return query::Failed();
 			}
 			variant_case(errors::Inaccessible, _) {
@@ -132,16 +125,16 @@ namespace compiler::helios {
 						msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
 					}
 				}
-				ctx.logInt(std::move(msg));
+				ctx.log(std::move(msg));
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
-				ctx.logInt(makeBox<dia::PlaceholderError>(
+				ctx.log<dia::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
 					error_position,
 					"",
 					"symbol lookup here"
-				));
+				);
 				return query::Failed();
 			}
 			variant_default { CORE_PANIC("Invalid state"); }

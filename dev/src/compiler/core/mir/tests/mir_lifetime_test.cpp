@@ -108,8 +108,8 @@ private:
 			.expectDestruct("b")
 			.expectScopeEnd("b")
 
-			.expectConstruct("c")
 			.expectScopeStart("c")
+			.expectConstruct("c")
 			.expectDestruct("c")
 			.expectScopeEnd("c")
 
@@ -369,6 +369,10 @@ private:
 			.expectScopeStart("r")
 			.expectMove("v")
 			.expectConstruct("r")
+			.validate(match_out);
+		// The shared exit can be visited before the case binding by the checker's DFS traversal.
+		// Check its conditional destruction separately; the count below still requires exactly one.
+		LifetimeChecker{}
 			.expectInstruction(Operation::DestructIf)
 			.expectDestruct("r")
 			.expectScopeEnd("r")
@@ -481,7 +485,7 @@ private:
 			// the entry block instead.
 			auto  param       = getMIRFunctionByName(module, "maybeMoveParam");
 			auto  param_flag  = conditionalDropOf(param, "a")->arguments.at(2).get<MIRPlace>();
-			auto& entry_block = *param->blocks.at(param->block_order.front());
+			auto& entry_block = param->blocks.at(param->block_order.front());
 			auto& first_instr = entry_block.instructions.at(0);
 
 			ASSERT_EQUAL(Operation::Assign, first_instr.operation);
@@ -603,8 +607,8 @@ private:
 		std::vector<const compiler::mir::Instruction*> instructions;
 		for (const auto& block_id: func->block_order) {
 			const auto& block = func->blocks.at(block_id);
-			for (const auto& instr: block->instructions) instructions.push_back(&instr);
-			instructions.push_back(&block->terminator);
+			for (const auto& instr: block.instructions) instructions.push_back(&instr);
+			instructions.push_back(&block.terminator);
 		}
 		return instructions;
 	}
@@ -707,9 +711,16 @@ private:
 
 		// Reading the pointee out of the moved box does not hand the box over.
 		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "readThrough"), "a");
-		assertMovedIntoDestructedTemporary(
-			getMIRFunctionByName(module, "readThroughImplicitly"), "a"
-		);
+
+		// The same as above but without an explicit `move`. The `return` doesn't insert a naive
+		// move of the whole returned expression, but lets the coercion decide to insert it if it's
+		// needed. Thus the temporary which will get destructed will never be created here, cause
+		// reading a trivial `i64` out of the box doesn't need it since it can be just byte copied.
+		{
+			auto func = getMIRFunctionByName(module, "readThroughImplicitly");
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Move, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "a"));
+		}
 
 		// An implicitly moved argument goes straight to the callee.
 		{
@@ -971,8 +982,8 @@ private:
 		usize intermediate_blocks_count = 0;
 		for (const auto& block_id: func->block_order) {
 			const auto& block = func->blocks.at(block_id);
-			if (block->debug_name.has_value()
-			    && block->debug_name.value() == base::StrID("scope_end.destructors"))
+			if (block.debug_name.has_value()
+			    && block.debug_name.value() == base::StrID("scope_end.destructors"))
 				intermediate_blocks_count++;
 		}
 		return intermediate_blocks_count;

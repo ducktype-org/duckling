@@ -19,13 +19,13 @@ namespace pst {
 	protected:
 		NAMED_CHILD(condition, RoundGroupExpr);
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrAnyStmt);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit While(const LangParserState& state): CodeDecl(state) {
+		explicit While(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::While;
 		}
 

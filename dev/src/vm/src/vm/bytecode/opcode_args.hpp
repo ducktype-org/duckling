@@ -69,13 +69,18 @@ namespace vm::opargs {
 	DEFINE_PLACE(CPtr, "pcptr");
 
 	/**
+	 * @brief Represents place of a function value (an 8-byte reference to a function).
+	 */
+	DEFINE_PLACE(Func, "pfun");
+
+	/**
 	 * @brief Represents place variant argument.
 	 */
 	DEFINE_PLACE(Vnt, "pvnt");
 
 #define VM_OPARG_PLACE_TYPES                                                                   \
 	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, PlaceVnt, PlaceOpq, PlaceStructure, \
-		PlaceFSTable, PlaceCPtr
+		PlaceFSTable, PlaceCPtr, PlaceFunc
 
 	/**
 	 * @brief Represents type name argument.

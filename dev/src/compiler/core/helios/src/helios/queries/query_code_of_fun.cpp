@@ -15,7 +15,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
@@ -25,6 +25,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -74,8 +75,8 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition()));
-				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
+				ctx.log<SingleStmtFunctionMustBeExprError>(stmt->getStablePosition());
+				query::throwFailed();
 			}
 		}
 
@@ -107,7 +108,7 @@ namespace compiler::helios {
 					"This should not happen"
 				);
 
-				auto output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
+				auto output_body = compileCodeOfCodeBlock(ctx, unlocked_body, decl.return_type);
 
 				const bool ends_with_return
 					= !output_body->statements.empty()
@@ -153,9 +154,9 @@ namespace compiler::helios {
 			}
 
 			void visitConstructor(pst::Access<pst::Constructor>) final {
-				ctx.logInt(makeBox<dia::NotYetImplementedCodeError>(
+				ctx.log<dia::NotYetImplementedCodeError>(
 					"Support for user defined constructors will be deleted."
-				));
+				);
 				query::throwFailed();
 			}
 
@@ -190,11 +191,11 @@ namespace compiler::helios {
 				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
 
 				if (decl.parameters.size() != 1) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						"A copy constructor must declare exactly one parameter: a reference to "
 						"the object being copied.",
 						params_source
-					));
+					);
 					query::throwFailed();
 				}
 
@@ -204,10 +205,10 @@ namespace compiler::helios {
 					= other_type.getType().getKind() == tsh::Kind::Class
 				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
 				          == class_type.getSymbol();
-				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
-				// resolves to an immutable reference.
+				// @TODO: #2104 Require the reference to be read-only once read-only references are
+				// enforced.
 				if (!is_reference || !is_matching_class) {
-					ctx.logInt(makeBox<dia::PlaceholderError>(
+					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
 							"A copy constructor's parameter must be a reference to its own "
 							"class `",
@@ -215,25 +216,25 @@ namespace compiler::helios {
 							"`."
 						),
 						params_source
-					));
+					);
 					query::throwFailed();
 				}
 			}
 		};
 
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto& sym_ref = getSymRef(key);
+		static auto provide(Context& ctx, QKey sym_id) -> PResult {
+			const auto& sym_ref = getSymRef(sym_id);
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
 				variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
 					CORE_ASSERT(
-						isFunctionLike(kind(key)),
+						isFunctionLike(kind(sym_id)),
 						"Function creation called on non-function, non-method and non-constructor "
 						"symbol"
 					);
-					HOUTFunctionMaker func_maker(ctx, key);
-					stmt(ctx, key).value()->acceptVisitor(func_maker);
+					HOUTFunctionMaker func_maker(ctx, sym_id);
+					stmt(ctx, sym_id).value()->acceptVisitor(func_maker);
 
 					// A visitor that could not build the function has reported why.
 					if_opt_none(func_maker.out) return query::Failed();
@@ -241,7 +242,7 @@ namespace compiler::helios {
 					return func_maker.out.value();
 				}
 				variant_case(BuiltinSemantics, data) {
-					return getBuiltinImpl(ctx, key, data.builtin);
+					return getBuiltinImpl(ctx, sym_id, data.builtin);
 				}
 				variant_case(defgen::Constructor, ctor) {
 					switch (ctor.kind) {
@@ -302,19 +303,27 @@ namespace compiler::helios {
 					case defgen::Method::Kind::LengthMethod:
 						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
 						    ->valueOrThrow();
+					case defgen::Method::Kind::Equal:
+					case defgen::Method::Kind::Lesser:
+					case defgen::Method::Kind::NotEqual:
+					case defgen::Method::Kind::LesserEqual:
+					case defgen::Method::Kind::Greater:
+					case defgen::Method::Kind::GreaterEqual:
+						return ctx.query<defgen::QueryGeneratedComparisonMethod>(sym_id)
+						    ->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
 				}
 				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
-					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
+					return getBuiltinImpl(ctx, sym_id, symbol_data.getBuiltinKind());
 				}
 				variant_case(defgen::ReplInputWrapper, input) {
-					return repl::getReplInputFunction(ctx, input);
+					return repl::getReplInputFunction(ctx, sym_id, input);
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(
 						"QueryCodeOfFun: symbol '",
-						prettyDebugPrint(key, ctx),
+						prettyDebugPrint(sym_id, ctx),
 						"' is neither a PST nor a supported generated function"
 					));
 				}

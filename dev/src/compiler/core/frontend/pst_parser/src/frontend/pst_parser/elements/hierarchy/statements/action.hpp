@@ -8,20 +8,38 @@
 
 #include "../meta.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 namespace pst {
-	/**
-	 * @note Action assumes optional expression before the semicolon.
-	 */
+	[[nodiscard]]
+	constexpr bool isControlFlowTargetKeyword(lang_def::Keyword keyword) {
+		switch (keyword) {
+		case lang_def::Keyword::If:
+		case lang_def::Keyword::While:
+		case lang_def::Keyword::For:
+		case lang_def::Keyword::Block:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	class Action: public Stmt {
 		PARENT_CLASS(Stmt);
 		THIS_CLASS(Action);
 		CLONE_SUBELEMENTS();
 
 	protected:
+		/**
+		 * @note For successfully parsed break/continue statements, the target is either absent,
+		 * a bare IdentifierLiteral in expr, or a block-kind keyword in target_keyword. The two
+		 * fields are mutually exclusive. Other actions keep their ordinary expression in expr.
+		 */
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
+		base::Optional<lang_def::Keyword> target_keyword;
 
 	public:
-		ELEMENT_CLONE_DECL(Action);
+		ELEMENT_CLONE_DECL(Action, target_keyword);
 
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
 		static MBox<Action> parse(LangParserState& state);
@@ -39,5 +57,10 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		base::Optional<AccessLocked<ExprHolder>> getValue() const;
+
+		[[nodiscard]]
+		base::Optional<lang_def::Keyword> getTargetKeyword() const {
+			return target_keyword;
+		}
 	};
 }

@@ -16,6 +16,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -40,9 +41,10 @@ namespace compiler::helios::defgen {
 	 * fields with a default value (which may mean a call to another constructor); returns the
 	 * initialized static array value.
 	 *
-	 * - `Copy`: the compiler-generated default copy constructor. It takes a single `const ref T`
-	 *   source and returns a new `T` that copies each member (trivially-copyable members are
-	 *   byte-copied, non-trivially-copyable members are copied via their own copy constructor).
+	 * - `Copy`: the compiler-generated default copy constructor. It takes a single read-only
+	 *   `ref T` source and returns a new `T` that copies each member (trivially-copyable members
+	 *   are byte-copied, non-trivially-copyable members are copied via their own copy
+	 *   constructor).
 	 */
 	struct Constructor final {
 		enum class Kind {
@@ -59,14 +61,20 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
-	 * `toString`). The concrete method is distinguished by `kind`.
+	 * Represents a compiler-generated method shared by all types (the destructor, `length`, and
+	 * `toString`, or comparison operator). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
 		enum class Kind {
 			DefaultDestructor,
 			LengthMethod,
 			ToString,
+			Equal,
+			NotEqual,
+			Lesser,
+			LesserEqual,
+			Greater,
+			GreaterEqual,
 		};
 
 		tsh::AbstractType owner_type;
@@ -76,11 +84,17 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief Whether @p kind is one of the generated comparison operators (`==`, `!=`, `<`, `<=`,
+	 * `>`, `>=`).
+	 */
+	[[nodiscard]] bool isComparisonMethodKind(Method::Kind kind);
+
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
 
-		HOUTFunctionDeclaration::Operatoriness operatoriness;
+		HOUTFunctionDeclaration::Operatoriness operatoriness{};
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -211,45 +225,53 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated function wrapper for REPL expressions,
-	 * instructions and global initializers. It's a synthetic function wrapper around them.
-	 *
-	 * @warning counter must never be reused with a different return_type and type.
-	 * The mangled name is based only on counter, so reusing counter with different return_type
-	 * will produce linker symbol collisions. The REPL code path (ReplSession::executeInput)
-	 * enforces this by incrementing m_line_counter per statement, but any manual wrapper
-	 * construction must preserve this rule.
+	 * Represents a compiler-generated function wrapper for REPL expressions, instructions, global
+	 * initializers and comp-time expression evaluation. It's a synthetic function wrapper around
+	 * them.
 	 */
 	struct ReplInputWrapper final {
 		/**
-		 * @brief Which kind of REPL input the wrapper was generated for.
+		 * @brief A PST statement, compiled into a unit-returning body.
 		 */
-		enum class Type { Instruction, Expression, GlobalInitializer };
-		Type type;
+		struct Instruction {
+			pst::HashType stmt;
+		};
 
 		/**
-		 * @brief A unique counter to distinguish different REPL expression wrappers.
+		 * @brief A HOUT expression, returned from the wrapper.
+		 * @note The expression is stored in a `SharedBox` rather than referenced through its PST
+		 * hash, because the coercions create HOUT expressions with no PST counterpart.
 		 */
-		u64 counter;
+		struct Expression {
+			SharedBox<code::Expr> expr;
+		};
+
+		using ElementVariant = std::variant<Instruction, Expression>;
+		ElementVariant element;
 
 		/**
-		 * @brief Return type of the wrapper function.
+		 * @brief A unique counter to distinguish different wrappers in the mangled name. Present
+		 * for the REPL/script wrappers, empty for the comp-time expression wrappers.
 		 */
-		tsh::SymbolType<> return_type;
+		base::Optional<u64> counter;
+
+		ReplInputWrapper(ElementVariant element, base::Optional<u64> counter = {}):
+			  element(std::move(element)),
+			  counter(counter) {}
 
 		/**
-		 * @brief Hash of the PST element (expression statement or instruction statement) that the
-		 * wrapper executes.
+		 * @brief Get the return type of the wrapper function.
 		 */
-		pst::HashType pst_element_hash;
+		[[nodiscard]]
+		tsh::SymbolType<> getReturnType() const;
 
-		ReplInputWrapper(
-			Type type, u64 counter, tsh::SymbolType<> return_type, pst::HashType pst_element_hash
-		):
-			  type(type),
-			  counter(counter),
-			  return_type(return_type),
-			  pst_element_hash(pst_element_hash) {}
+		/**
+		 * @brief Get the identifier distinguishing the wrapper in its mangled name.
+		 * @return The counter if present, otherwise the ID of the wrapped HOUT expression or the
+		 * hash of the wrapped statement.
+		 */
+		[[nodiscard]]
+		std::string getUniqueId() const;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

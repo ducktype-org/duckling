@@ -24,7 +24,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit Block(const LangParserState& state): CodeDecl(state) {
+		explicit Block(LangElementConstructionData state): CodeDecl(state) {
 			element_kind = ElementKind::Block;
 		}
 

@@ -1,0 +1,28 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+#pragma once
+
+#include "../meta.hpp"
+#include "code_block_or_statement.hpp"
+
+namespace pst {
+	/**
+	 * @brief Code Block or Statement that specifically allows any statement.
+	 */
+	class CodeBlockOrAnyStmt final: public CodeBlockOrStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CodeBlockOrAnyStmt, CodeBlockOrStmt);
+		CLONE_SUBELEMENTS();
+
+	public:
+		explicit CodeBlockOrAnyStmt(const LangParserState& state): CodeBlockOrStmt(state) {
+			this->element_kind = ElementKind::CodeBlockOrStmt;
+		}
+
+		static MBox<CodeBlockOrAnyStmt> parse(LangParserState& state);
+		~CodeBlockOrAnyStmt() final = default;
+	};
+}

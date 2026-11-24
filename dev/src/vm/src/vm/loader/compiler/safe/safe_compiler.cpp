@@ -8,6 +8,8 @@
 
 #include "instruction_lowering.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <vm/bytecode/validator/ffi_type_builder.hpp>
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/core/builtin_functions.hpp>

@@ -529,6 +529,9 @@ namespace vm::code {
 		CPointerTypeMismatchError, "C pointer type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		FunctionTypeMismatchError, "Function type does not match the expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		CPtrNotDereferenceableError,
 		"This C pointer cannot be dereferenced: its pointee is unknown or not FFI-compliant."
 	);

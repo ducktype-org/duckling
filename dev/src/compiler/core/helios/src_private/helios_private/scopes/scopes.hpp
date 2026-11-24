@@ -26,7 +26,7 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <frontend/pst_parser/generic_query_key.hpp>
+#include <frontend/pst_parser/pst_query/generic_pst_query_key.hpp>
 #include <helios/scope_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 
@@ -112,19 +112,50 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Performs lookup of single name inside given scope.
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({}));
-
-	/**
-	 * @brief Performs lookup of single name inside given scope and its parents.
+	 * @brief Symbols directly inside given scope that may provide the name: symbols of that name
+	 * and `using`/`import` symbols whose selector provides it (wildcard ones only when
+	 * `with_wildcards` is set). The `using`/`import` symbols are not resolved, they are returned
+	 * as-is.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({})
+		QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<std::vector<SymID>>>, ({})
+	);
+
+	struct KeyOf_LookupFromScope final {
+		ScopeID     scope;
+		base::StrID name;
+
+		/**
+		 * @brief Include the wildcard usings and imports (`using a.*`). Disabled for the lookup
+		 * of the using target - the `a` in the example above - otherwise it would cycle.
+		 */
+		bool with_wildcards;
+
+		/**
+		 * @brief Continue the lookup in the enclosing scopes, the REPL history and the prelude.
+		 */
+		bool with_parents;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
+	/**
+	 * @brief Performs lookup of single name starting from given scope.
+	 *
+	 * Each scope is searched together with everything its `using`/`import` symbols bring in,
+	 * every scope is searched at most once, so recursive `using`/`import` are fine. The enclosing
+	 * scopes are walked in a loop: the parent scopes, then the root scopes of the parent REPL
+	 * modules and finally the implicit prelude, the symbols of the name are collected from all of
+	 * them. The found `using`/`import` symbols are resolved, the result holds only the symbols they
+	 * point at.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	/**
@@ -134,43 +165,6 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<query::QResult<std::vector<SymID>>>, ({}));
-
-	/**
-	 * @brief Value type for the QueryScopesInModule query.
-	 * See the QueryScopesInModule query for details.
-	 */
-	struct QueryScopesInModuleValue final {
-		struct Success final {
-			std::vector<ScopeID> scopes;
-		};
-
-		struct Failure final {
-			std::vector<ScopeID> partial_scopes;
-		};
-
-		std::variant<Success, Failure> value;
-	};
-
-	/**
-	 * @brief Query all scopes defined in a given module.
-	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or
-	 * a partial list of scopes that where possible to obtain despite some other failures. The
-	 * semantics of this failed state are the same as of a failed QResult (i.e. errors were already
-	 * reported), but we still want to return the scopes that we managed to obtain. This is because
-	 * this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
-	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
-	 *
-	 * \query_thread_safe_if_cache
-	 *
-	 * @TODO: #3080 consider making it internal helper of query module hout. This query is no longer
-	 * a trivial walk-over-PST to get all of the scopes in the module.
-	 */
-	DECLARE_QUERY(
-		QueryScopesInModule,
-		frontend::ModuleID,
-		CRef<QueryScopesInModuleValue>,
-		({ .uses_qresult = false })
-	);
 
 
 	/**
@@ -183,4 +177,34 @@ namespace compiler::helios {
 	 * @return ScopeID
 	 */
 	ScopeID queryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
+
+	/**
+	 * @brief A way helios creates scope for given pst element.
+	 */
+	enum class ElementScopeKind {
+		// Has standard scope:
+		Standard,
+
+		// Inherits scope from its parent:
+		Transparent,
+
+		// Gets parent scope of what transparent scope would be.
+		// This is used for expand expressions, where the lookup should happen higher than the
+		// expand statement itself.
+		ParentTransparent,
+
+		// Does not have a scope:
+		Invalid,
+
+		// In the future we might introduce:
+		// * TransparentInvalid -- transparent for implementation, but invalid for user
+		// this allows to easily implement scope parents, but disallow to get PrimaryScopes for
+		// elements that don't have it.
+		// For examples namespaces don't have primary scopes (which can be counterintuitive)
+	};
+
+	/**
+	 * Determines scope kind for given PST element.
+	 */
+	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement>);
 }

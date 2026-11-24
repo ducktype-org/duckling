@@ -25,25 +25,20 @@ use crate::quackpack::core::{PackageContext, PackageId, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{touch, try_fsync_dir, write_file};
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
+    fn git_path(&self, _package: PackageId) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
+    fn is_stored(&self, _package: PackageId) -> bool {
         unimplemented!()
     }
 
-    fn store(
-        &self,
-        _url: InternedUrl,
-        _commit: &str,
-        _source_path: &std::path::Path,
-    ) -> crate::QuackResult<()> {
+    fn store(&self, _package: PackageId, _source_path: &std::path::Path) -> crate::QuackResult<()> {
         unimplemented!()
     }
 }
@@ -70,9 +65,9 @@ fn setup_duck_ctx() -> (DuckContext, TempDir) {
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
-    manifest.touch().unwrap();
-    manifest.write(contents).unwrap();
-    dir.path().try_fsync_dir().unwrap();
+    touch(&manifest).unwrap();
+    write_file(&manifest, contents).unwrap();
+    try_fsync_dir(dir.path()).unwrap();
     (dir, manifest)
 }
 
@@ -87,9 +82,10 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -101,9 +97,10 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: [("a".into(), vec![])].into(),
         profiles: HashMap::new(),
     };
@@ -115,9 +112,10 @@ fn create_mock_server() -> MockServer {
             license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
-            links: None,
+            external_libs: vec![],
+            external_lib_paths: vec![],
         },
-        dependencies: [].into(),
+        dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
         profiles: HashMap::new(),
     };
@@ -158,7 +156,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -248,7 +246,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -337,7 +335,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx);
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:

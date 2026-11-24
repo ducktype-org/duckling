@@ -10,10 +10,10 @@ use std::{fmt, io};
 
 use serde::Deserialize;
 use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::DescriptionWithAnArticle;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::read_from_path_to_string;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
@@ -49,7 +49,6 @@ macro_rules! delegate_getter {
         CastFunctionName: $yaml_value_fn:ident $(,)?
     ) => {
         #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
-        #[tracing::instrument(skip_all)]
         pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
             let value = self.get(key)?;
             let Some(value) = value else {
@@ -73,7 +72,6 @@ macro_rules! delegate_setter {
         InputType: $value:ty $(,)?
     ) => {
         #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
-        #[tracing::instrument(skip_all)]
         pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
             let value: Value = value.into();
             self.set(key, value)
@@ -99,21 +97,18 @@ impl fmt::Debug for YamlConfig {
 impl YamlConfig {
     /// Create a new [`YamlConfig`] from the YAML file at `path`.
     pub fn new(path: PathBuf) -> QuackResult<Self> {
-        debug!(path = %path.display(), "parsing YAML config");
-        let content = match path.as_path().read_to_string() {
+        debug!("parsing the YAML config at `{}`", path.display());
+        let content = match read_from_path_to_string(&path) {
             Ok(string) => string,
             Err(e) => {
                 if let Some(err) = e.downcast_ref_in_chain::<io::Error>()
                     && err.kind() == io::ErrorKind::NotFound
                 {
-                    debug!(
-                        path = %path.display(),
-                        "missing config",
-                    );
+                    debug!("no YAML config at `{}`, using an empty one", path.display());
                     return Ok(Self::default());
                 } else {
                     return Err(e).context(format!(
-                        "when trying to read a user config at `{}`",
+                        "failed to read the user config at `{}`",
                         path.display()
                     ));
                 }
@@ -121,7 +116,7 @@ impl YamlConfig {
         };
         let content: Value = from_str(&content).with_context(|| {
             format!(
-                "when trying to parse a user config at `{}` into the YAML value",
+                "failed to parse the user config at `{}` into a YAML value",
                 path.display()
             )
         })?;
@@ -140,9 +135,9 @@ impl YamlConfig {
     /// Create an error message.
     pub fn make_location_error(&self) -> String {
         match self.source {
-            Some(ref path) => format!("when parsing the configuration at `{}`", path.display()),
+            Some(ref path) => format!("failed to parse the configuration at `{}`", path.display()),
             None => {
-                "You've encountered an internal error: when parsing the default user configuration"
+                "You've encountered an internal error: failed to parse the default user configuration"
                     .into()
             }
         }
@@ -158,7 +153,7 @@ impl YamlConfig {
     #[track_caller]
     /// Get the value from the dotted key.
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
-        debug!(%key, where = %self.get_location_description());
+        trace!(%key, where = %self.get_location_description());
         if key.is_empty() {
             qp_bail_internal!("empty key in `_get`")
         }
@@ -201,7 +196,7 @@ impl YamlConfig {
     #[track_caller]
     /// Set the value at the dotted key.
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
-        debug!(%key, ?value, where = %self.get_location_description());
+        trace!(%key, ?value, where = %self.get_location_description());
         if key.is_empty() {
             qp_bail_internal!("empty key in `_set`")
         }
@@ -443,42 +438,42 @@ foo:
         assert_eq!(
             config.get_i64("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_table("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_array("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_bool("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_f64("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
         assert_eq!(
             config.get_str("foo.xd.a").unwrap_err().to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
+                "failed to parse the configuration at `{}`\nin the chain `foo.xd` expected a table, not a string",
                 file.path().display()
             )
         );
@@ -522,7 +517,7 @@ foo:
         assert_eq!(
             err.to_string(),
             format!(
-                "when parsing the configuration at `{}`\nin the chain `foo` expected a table, not an array",
+                "failed to parse the configuration at `{}`\nin the chain `foo` expected a table, not an array",
                 file.path().display()
             )
         );
@@ -558,7 +553,7 @@ b: 1
         assert_eq!(
             err.to_string(),
             format!(
-                "when trying to parse a user config at `{}` into the YAML value
+                "failed to parse the user config at `{}` into a YAML value
 deserializing from YAML containing more than one document is not supported",
                 file.path().display()
             )
@@ -643,7 +638,7 @@ foo:
             missing.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 missing key `nonexistentkey`",
                 file.path().display()
             )
@@ -657,7 +652,7 @@ missing key `nonexistentkey`",
             err.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 invalid type: integer `1`, expected struct FooWithA",
                 file.path().display()
             )
@@ -691,7 +686,7 @@ invalid type: integer `1`, expected struct FooWithA",
             err.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 invalid type: map, expected an int or a string",
                 file.path().display()
             )
@@ -704,7 +699,7 @@ invalid type: map, expected an int or a string",
             err.to_string(),
             format!(
                 "\
-when parsing the configuration at `{}`
+failed to parse the configuration at `{}`
 missing key `nonexistentkey`",
                 file.path().display()
             )

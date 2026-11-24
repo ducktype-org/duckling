@@ -40,10 +40,19 @@ features:
 };
 
 /// Run the pass for [`LINT`].
-pub fn pass(manifest: &Manifest, _: &DuckContext, buffer: &mut LintBuffer) -> QuackResult<()> {
+pub fn pass(
+    manifest: &Manifest,
+    _: &DuckContext,
+    level: LintLevel,
+    buffer: &mut LintBuffer,
+) -> QuackResult<()> {
     for (feature, expands_to) in manifest.features().all_features() {
         if expands_to.contains(feature) {
-            buffer.register_warning(SelfImplyingFeatureDiagnostic { feature: *feature }, LINT);
+            buffer.register(
+                SelfImplyingFeatureDiagnostic { feature: *feature },
+                LINT,
+                level,
+            );
         }
     }
     Ok(())

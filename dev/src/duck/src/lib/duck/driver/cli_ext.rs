@@ -7,7 +7,7 @@
 use std::any::Any;
 
 use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
-use tracing::{error, info};
+use tracing::warn;
 
 use crate::StrId;
 use crate::quackpack::core::Package;
@@ -122,8 +122,10 @@ fn get_available_parallelism() -> usize {
     match std::thread::available_parallelism() {
         Ok(value) => value.get(),
         Err(e) => {
-            error!(error = %e, "failed to determine number of available threads");
-            info!("falling back to 1 available thread");
+            warn!(
+                error = %e,
+                "failed to determine the number of available threads, falling back to 1"
+            );
             1
         }
     }

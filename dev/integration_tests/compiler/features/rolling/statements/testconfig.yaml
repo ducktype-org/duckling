@@ -7,6 +7,17 @@ Tests:
         Output:
           String: "42\n42\n42\n"
         ExitCode: 0
+  block_expressions: # leaving a block expression with `break`, `continue` and `return`
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        Output:
+          String: ""
+        ExitCode: 0
+
   conditional: # if, if-else
     Cases:
       all:

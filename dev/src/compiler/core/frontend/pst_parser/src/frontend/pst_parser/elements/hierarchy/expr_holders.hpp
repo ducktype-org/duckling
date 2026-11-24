@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "../lang_state_unmethods.hpp"
+#include "../../state/lang_state_unmethods.hpp"
 #include "meta.hpp"
 
 #include <diagnostic/source_position.hpp>
@@ -36,7 +36,7 @@ namespace pst {
 	public:
 		ELEMENT_CLONE_DECL(ExprHolder);
 
-		explicit ExprHolder(const LangParserState& state): NotStmt(state) {
+		explicit ExprHolder(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::ExprHolder;
 		}
 
@@ -63,10 +63,10 @@ namespace pst {
 	class ExprParserHelper {
 	public:
 		ExprParserHelper() = delete;
+		static bool untilUniversalNoBlockEnd(const TokenStream&, i64);
 		static bool untilUniversalEnd(const TokenStream&, i64);
-		static bool untilUniversalAllowBlockEnd(const TokenStream&, i64);
+		static bool untilUniversalAllowCommaNoBlockEnd(const TokenStream&, i64);
 		static bool untilUniversalAllowCommaEnd(const TokenStream&, i64);
-		static bool untilUniversalAllowCommaAndBlockEnd(const TokenStream&, i64);
 		static bool untilSemicolon(const TokenStream&, i64);
 		static bool untilForTypeEnd(const TokenStream&, i64);
 		static bool untilExtendsEnd(const TokenStream&, i64);
@@ -117,8 +117,25 @@ namespace pst {
 	};
 
 	/**
+	 * @brief `UniversalExprHolder` that ends at a block instead of parsing it as a block
+	 * expression.
+	 */
+	class UniversalNoBlockExprHolder final:
+		  public ExprHolderTemplate<
+			  UniversalNoBlockExprHolder,
+			  ExprParserHelper::parseTernary,
+			  ExprParserHelper::untilUniversalNoBlockEnd,
+			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UniversalNoBlockExprHolder, ExprHolderTemplate);
+
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalNoBlockExprHolder() final = default;
+	};
+
+	/**
 	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
-	 * top-level, it also doesn't allow for block expressions.
+	 * top-level.
 	 */
 	class UniversalExprHolder final:
 		  public ExprHolderTemplate<
@@ -134,24 +151,7 @@ namespace pst {
 	};
 
 	/**
-	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
-	 * top-level, it allows for block expressions.
-	 */
-	class UniversalAllowBlockExprHolder final:
-		  public ExprHolderTemplate<
-			  UniversalAllowBlockExprHolder,
-			  ExprParserHelper::parseTernary,
-			  ExprParserHelper::untilUniversalAllowBlockEnd,
-			  true> {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UniversalAllowBlockExprHolder, ExprHolderTemplate);
-
-	public:
-		using ExprHolderTemplate::ExprHolderTemplate;
-		~UniversalAllowBlockExprHolder() final = default;
-	};
-
-	/**
-	 * @brief The version of the default entry point that isn't top-level
+	 * @brief The version of `UniversalExprHolder` that isn't top-level.
 	 */
 	class UniversalExprHolderLowerLevel final:
 		  public ExprHolderTemplate<
@@ -168,24 +168,7 @@ namespace pst {
 
 	/**
 	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
-	 * allow for assignment expressions top-level, allows block expressions.
-	 */
-	class CommaAllowBlocksExprHolder final:
-		  public ExprHolderTemplate<
-			  CommaAllowBlocksExprHolder,
-			  ExprParserHelper::parseComma,
-			  ExprParserHelper::untilUniversalAllowCommaAndBlockEnd,
-			  true> {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CommaAllowBlocksExprHolder, ExprHolderTemplate);
-
-	public:
-		using ExprHolderTemplate::ExprHolderTemplate;
-		~CommaAllowBlocksExprHolder() final = default;
-	};
-
-	/**
-	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
-	 * allow for assignment expressions top-level, doesn't allow for block expressions.
+	 * allow for assignment expressions top-level.
 	 */
 	class CommaExprHolder final:
 		  public ExprHolderTemplate<
@@ -198,6 +181,25 @@ namespace pst {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~CommaExprHolder() final = default;
+	};
+
+	/**
+	 * @brief `CommaExprHolder` that ends at a block instead of parsing it as a block expression.
+	 *
+	 * Used for types, so that a missing `=` in `fun f() -> T { ... }` does not make the body a
+	 * part of the type.
+	 */
+	class CommaNoBlockExprHolder final:
+		  public ExprHolderTemplate<
+			  CommaNoBlockExprHolder,
+			  ExprParserHelper::parseComma,
+			  ExprParserHelper::untilUniversalAllowCommaNoBlockEnd,
+			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CommaNoBlockExprHolder, ExprHolderTemplate);
+
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~CommaNoBlockExprHolder() final = default;
 	};
 
 	/**
@@ -257,7 +259,7 @@ namespace pst {
 		  public ExprHolderTemplate<
 			  ImplementsElementExprHolder,
 			  ExprParserHelper::parseTernary,
-			  ExprParserHelper::untilUniversalEnd,
+			  ExprParserHelper::untilUniversalNoBlockEnd,
 			  true> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImplementsElementExprHolder, ExprHolderTemplate);
 
@@ -273,7 +275,7 @@ namespace pst {
 		  public ExprHolderTemplate<
 			  ValuePatternExprHolder,
 			  ExprParserHelper::parseTernary,
-			  ExprParserHelper::untilUniversalAllowBlockEnd,
+			  ExprParserHelper::untilUniversalEnd,
 			  true> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ValuePatternExprHolder, ExprHolderTemplate);
 

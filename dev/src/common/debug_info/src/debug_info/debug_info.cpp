@@ -45,6 +45,10 @@ namespace debug_info {
 				if (variable_meta.position)
 					variable_meta.position = resolvePosition(*variable_meta.position, resolver);
 		}
+
+		for (auto& [_, global_meta]: globals)
+			if (global_meta.position)
+				global_meta.position = resolvePosition(*global_meta.position, resolver);
 	}
 
 	void DebugInfo::mergeFrom(DebugInfo&& other) {
@@ -56,6 +60,7 @@ namespace debug_info {
 
 		for (auto& [name, metadata]: other.functions) functions.emplace(name, std::move(metadata));
 		for (auto& [name, metadata]: other.types) types.emplace(name, std::move(metadata));
+		for (auto& [name, metadata]: other.globals) globals.emplace(name, std::move(metadata));
 		auto _ = std::move(other);
 	}
 

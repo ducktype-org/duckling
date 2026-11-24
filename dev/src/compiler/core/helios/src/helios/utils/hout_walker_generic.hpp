@@ -95,7 +95,12 @@ namespace compiler::helios::code {
 			handler(s);
 			walk(*s.condition);
 			walkBlock(s.body);
+			if (s.step.has_value()) walk(*s.step.value());
 		}
+
+		void visitBreakStmt(const BreakStmt& s) override { handler(s); }
+
+		void visitContinueStmt(const ContinueStmt& s) override { handler(s); }
 
 		void visitBlockStmt(const BlockStmt& s) override {
 			handler(s);
@@ -166,6 +171,17 @@ namespace compiler::helios::code {
 			for (const auto& subtype: e.subtypes) walk(*subtype);
 		}
 
+		void visitFunctionTypeExpr(const FunctionTypeExpr& e) override {
+			handler(e);
+			for (const auto& parameter: e.parameters) walk(*parameter);
+			walk(*e.result);
+		}
+
+		void visitOptionalTypeConstructorExpr(const OptionalTypeConstructorExpr& e) override {
+			handler(e);
+			walk(*e.value_type);
+		}
+
 		void visitVariantConstructExpr(const VariantConstructExpr& e) override {
 			handler(e);
 			walk(*e.inner);
@@ -227,6 +243,7 @@ namespace compiler::helios::code {
 		void visitBlockExpr(const BlockExpr& e) override {
 			handler(e);
 			walk(*e.block);
+			if_opt_some(e.tail, tail) { walk(*tail); }
 		}
 
 		void visitMoveExpr(const MoveExpr& e) override {

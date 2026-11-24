@@ -12,10 +12,10 @@ use std::path::PathBuf;
 use chrono::Utc;
 use futures::executor::block_on;
 use load_deps::{LoadedFreezePackages, load_packages_in_freeze};
-use tracing::{debug, error, warn};
+use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::lints::emit_warnings_and_run_lint_passes;
+use crate::quackpack::core::lints::emit_diagnostics_and_run_lint_passes;
 use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -31,7 +31,7 @@ use crate::quackpack::core::{
 };
 use crate::util::Pluralize;
 use crate::util::error::MessageError;
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops::{read_from_path_to_string, write_file};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 pub mod load_deps;
@@ -60,14 +60,14 @@ pub struct SyncOutput {
 #[tracing::instrument(skip_all)]
 pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResult<SyncOutput> {
     debug!(root = %pcx.package().root().display(), ?options);
-    emit_warnings_and_run_lint_passes(pcx)?;
-    pcx.ctx().info(format!(
+    emit_diagnostics_and_run_lint_passes(pcx)?;
+    pcx.ctx().info_verbose(format!(
         "starting synchronization of the {}",
         pcx.package().display()
     ))?;
     let venv_config = pcx.package().venv();
     let storage = Storage::new(venv_config.storage_path());
-    let fetcher = Fetcher::new(pcx.ctx())?;
+    let fetcher = Fetcher::new(pcx.ctx());
     let git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.expose_freezefile();
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
@@ -115,12 +115,14 @@ pub fn sync(pcx: &PackageContext<'_>, options: StorageSyncOptions) -> QuackResul
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
-        freeze_name(
-            pcx.package()
-                .try_get_package()
-                .context_internal("`expose-freezefile` set on a script")?,
-        )
-        .write(json)?;
+        write_file(
+            freeze_name(
+                pcx.package()
+                    .try_get_package()
+                    .context_internal("`expose-freezefile` set on a script")?,
+            ),
+            json,
+        )?;
     }
     make_success_message(pcx, id)?;
     Ok(SyncOutput {
@@ -165,7 +167,7 @@ fn check_if_overwrites(
             (replaces, context)
         }
         Err(e) => {
-            error!(path = %dir.display(), error = %e, "failed to load the package");
+            debug!(error = %e, "failed to load the package at `{}`", dir.display());
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
                 let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
@@ -183,15 +185,15 @@ fn check_if_overwrites(
         }
     };
     if replaces {
-        let mut error = QuackError::hint("use `--overwrite` to force an overwrite");
         let same_ids_message = format!("the packages share the same name `{id}`");
-        error = error.context(MessageError::new(same_ids_message));
+        let mut error = QuackError::message(same_ids_message);
+        error.add_hint("use `--overwrite` to force an overwrite");
         if let Some(context) = context {
-            error = error.context(MessageError::new(context));
+            error.context(MessageError::new(context));
         }
         let tried_to_override_message =
             "tried to overwrite an existing virtual environment from another location";
-        error = error.context(MessageError::new(tried_to_override_message));
+        error.context(MessageError::new(tried_to_override_message));
         Err(error)
     } else {
         Ok(())
@@ -221,7 +223,7 @@ fn load_external_freezefile(
     if !freeze_path.is_file() {
         return Ok(None);
     }
-    let content = freeze_path.read_to_string()?;
+    let content = read_from_path_to_string(&freeze_path)?;
 
     serde_json::from_str(&content)
         .with_context(|| format!("malformed freezefile `{}`", freeze_path.display()))
@@ -230,10 +232,9 @@ fn load_external_freezefile(
 
 /// Helper for [`sync`].
 /// Creates [`Solver`] and runs it.
-#[tracing::instrument(skip_all)]
-fn get_solver_answer(
-    pcx: &PackageContext<'_>,
-    fetcher: &Fetcher<'_>,
+fn get_solver_answer<'duck>(
+    pcx: &PackageContext<'duck>,
+    fetcher: &Fetcher<'duck>,
     git_access: StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,

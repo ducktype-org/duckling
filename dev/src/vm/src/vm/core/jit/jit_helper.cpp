@@ -37,7 +37,25 @@ namespace vm::jit::helpers {
 		buffer.at(slot_count) = vm::makeLowInstruction(vm::low::MicroOpcode::exit, 0, 0);
 		instr += slot_count;
 
-		return runInterpreter(buffer.data(), local_stack, frame, thread);
+		// The call saves its return address in the caller frame, and that address points into
+		// `buffer`. A runtime error unwinds past this function, so the address would then point
+		// nowhere, and a stack trace could not find the call site.
+		Frame* const caller = frame;
+		try {
+			runInterpreter(buffer.data(), local_stack, frame, thread);
+		} catch (...) {
+			restoreReturnAddress(*caller, instr);
+			throw;
+		}
+	}
+
+	void restoreReturnAddress(Frame& caller, const vm::MicroInstruction* resume) {
+		// The JIT compiles the pristine copy of the bytecode, which has the same layout as the
+		// bytecode the interpreter runs.
+		const auto& func = *caller.current_function;
+		const auto* orig = func.orig_bc.data();
+		if (resume < orig || resume > orig + func.orig_bc.size()) return;
+		caller.instr = func.bc.data() + (resume - orig);
 	}
 
 	void disableEntrypointAfterFailure(

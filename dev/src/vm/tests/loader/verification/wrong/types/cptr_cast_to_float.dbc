@@ -1,0 +1,15 @@
+type primitive: f64 8
+
+function main { i64, ptr_argv } -> { i64 } {
+	# A C pointer's address is an integer, so it cannot be read into an `f64`.
+	init_pany_type       c, cptr;
+	init_pany_type       f, f64;
+
+	cast_p64_pcptr       f, c;
+
+	deinit; # f
+	deinit; # c
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

@@ -19,9 +19,11 @@
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
+#include <vm/api/data/function_source_info.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/loader/loader.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <ranges>
 #include <string_view>
@@ -46,29 +48,6 @@ namespace compiler::driver {
 			return func.name.str.strView();
 		});
 		base::deduplicateBy(code.object_files, [](const std::string& file) { return file; });
-	}
-
-	namespace {
-		/**
-		 * @brief The debug info file of a linked library is assumed to sit next to it, with
-		 * the DVM bytecode extension swapped for the debug info one.
-		 * @return the path, if such a file exists.
-		 */
-		base::Optional<fs::FilePath> findLinkLibraryDebugInfoPath(const std::string& link_library_path
-		) {
-			constexpr std::string_view DBC_EXTENSION = ".dbc";
-			constexpr std::string_view DI_EXTENSION  = ".di.json";
-
-			if (!link_library_path.ends_with(DBC_EXTENSION)) return {};
-
-			std::string stem = link_library_path;
-			stem.resize(stem.size() - DBC_EXTENSION.size());
-
-			fs::FilePath debug_info_path = stem + std::string(DI_EXTENSION);
-			if (!debug_info_path.isRegularFile()) return {};
-
-			return debug_info_path;
-		}
 	}
 
 	base::OkBad linkDVMPackage(
@@ -123,7 +102,9 @@ namespace compiler::driver {
 		debug_info_paths.reserve(debug_info_artifacts.size());
 		for (auto& art: debug_info_artifacts) debug_info_paths.push_back(art.file.getFilePath());
 		for (const auto& link_library: dvm_linking_options.link_libraries)
-			if_opt_some(findLinkLibraryDebugInfoPath(link_library.string()), debug_info_path) {
+			if_opt_some(
+				vm::api::findDebugInfoNextToBytecode(link_library.string()), debug_info_path
+			) {
 				debug_info_paths.push_back(debug_info_path);
 			}
 
@@ -157,15 +138,12 @@ namespace compiler::driver {
 			if (merged_debug_info.has_value()) {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
 
-				auto output_file_stem = output_file.file.stem();
-				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
-				if (output_file_stem.ends_with(".dbc"))
-					output_file_stem.resize(output_file_stem.size() - 4);
-
-
-				auto di_output = output_file.parent->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
-				);
+				// Keep the directory part of the artifact name: the output may be an absolute path
+				// outside the artifact collection, and the VM looks for the debug info next to it.
+				auto di_name
+					= std::filesystem::path(output_file.name.str()).replace_extension(".di.json");
+				auto di_output
+					= output_file.parent->fileArtifactAtOrNew(base::StrID(di_name.string().c_str()));
 				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!di_out.is_open())
 					CORE_PANIC("Failed to open DVM package debug info output file for writing");

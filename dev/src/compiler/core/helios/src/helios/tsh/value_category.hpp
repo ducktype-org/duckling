@@ -47,7 +47,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, uint8_t, PrimaryCategory,
 
 namespace compiler::tsh {
 	/**
-	 * @brief Get the primary category of a symbol: either Local or Global.
+	 * @brief Get the primary category of a symbol: Local or Global, or Literal for a function (its
+	 * address).
 	 * @param ctx The query context, needed to distinguish local variables from global ones.
 	 * @param symbol The symbol in question.
 	 * @return The symbol's primary category.

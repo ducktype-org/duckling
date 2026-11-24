@@ -393,6 +393,10 @@ DEF_MICRO_INSTR(fcmpLe_p32_imm, vm::low::opargs::Place32, vm::low::opargs::Immed
 // sets the flag if pointer is null
 DEF_MICRO_INSTR(cmpNull_pptr, vm::low::opargs::PlacePtr)
 
+// pointer equality, see `vm::Pointer::operator==`
+DEF_MICRO_INSTR(cmpEq_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(cmpNeq_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+
 // ========= VARIANT OPERATIONS ========
 
 
@@ -487,6 +491,13 @@ DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.
  */
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
+
+/**
+ * @brief Calls the function referenced by the function value in the first argument. The second
+ * argument is the local stack distance, see `call_func_off`.
+ * @note Unoptimizable by JIT, listed in non_jittable.def.hpp.
+ */
+DEF_MICRO_INSTR(call_p64_off, vm::low::opargs::Place64, vm::low::opargs::Offset)
 
 DEF_MICRO_INSTR(setThreadCtx_func, vm::low::opargs::FunctionID)
 
@@ -830,7 +841,7 @@ DEF_MICRO_INSTR(stepGil)
  * @arg0 - pointer to a VMValue.
  * @arg1 - byte offset of the initialized variable in the frame's local stack.
  */
-DEF_MICRO_INSTR(initFromVMValue)
+DEF_MICRO_INSTR(initFromVMValue_imm_off, vm::low::opargs::Immediate, vm::low::opargs::Offset)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
 #undef DEFAULT_HANDLE_MICRO_INSTR

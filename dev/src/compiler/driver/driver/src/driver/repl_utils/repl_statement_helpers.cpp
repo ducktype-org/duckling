@@ -10,7 +10,7 @@
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
@@ -178,9 +178,12 @@ namespace compiler::repl {
 	std::expected<VariableBuildResult, std::string> buildVariableWrapper(
 		query::Context& ctx, const VariableSingleStatementInfo& statement_info, u64 counter
 	) {
-		auto initializer_symbol
+		auto initializer_symbol_result
 			= queryReplGlobalInitializerWrapperSymbol(ctx, statement_info.variable_stmt, counter);
-		const auto& function_result = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
+		if (initializer_symbol_result.hasFailed())
+			return std::unexpected("Failed to build REPL variable wrapper.");
+		const auto  initializer_symbol = initializer_symbol_result.valueOrPanic();
+		const auto& function_result    = ctx.query<helios::QueryCodeOfFun>(initializer_symbol);
 		if (function_result->hasFailed())
 			return std::unexpected("Failed to build REPL variable wrapper.");
 

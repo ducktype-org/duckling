@@ -27,7 +27,7 @@ namespace pst::expr {
 	public:
 		ELEMENT_CLONE_DECL(PrefixOperator);
 
-		explicit PrefixOperator(const LangParserState& state, i64 precedence):
+		explicit PrefixOperator(LangElementConstructionData state, i64 precedence):
 			  ExprElement(state, precedence) {}
 
 		~PrefixOperator() override = default;

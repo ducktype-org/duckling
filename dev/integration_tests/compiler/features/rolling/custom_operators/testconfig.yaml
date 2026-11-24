@@ -35,3 +35,10 @@ Tests:
         Output:
           String: "42\n"
         ExitCode: 0
+
+  method_and_standalone_overloads:
+    Cases:
+      all:
+        Output:
+          String: "30\n-10\n1000\n32\n64\n"
+        ExitCode: 0

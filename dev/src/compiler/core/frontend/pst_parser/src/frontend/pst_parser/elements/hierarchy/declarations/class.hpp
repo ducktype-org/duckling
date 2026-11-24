@@ -64,11 +64,6 @@ namespace pst {
 			return "Class";
 		}
 
-		// [[nodiscard]]
-		// bool isStatementAggregate() const override {
-		// 	return true;
-		// }
-
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

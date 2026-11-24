@@ -18,11 +18,11 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
-		NAMED_CHILD(type, UniversalExprHolder);
+		NAMED_CHILD(type, UniversalNoBlockExprHolder);
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
-		explicit Param(const LangParserState& state): NotStmt(state) {
+		explicit Param(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::Param;
 		}
 

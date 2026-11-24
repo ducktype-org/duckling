@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../lists/parameter_list.hpp"
+#include "../not_statements/code_block_or_expr.hpp"
 #include "class_special.hpp"
 #include "preamble.hpp"
 
@@ -20,7 +21,7 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(body, CodeBlockOrStmt);
+		NAMED_CHILD(body, CodeBlockOrExpr);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(MoveConstructor);

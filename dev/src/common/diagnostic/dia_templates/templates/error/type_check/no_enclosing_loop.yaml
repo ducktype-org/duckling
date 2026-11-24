@@ -1,0 +1,34 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "no_enclosing_loop"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  action:
+    description: "The break or continue keyword."
+  code:
+    description: "The code snippet."
+  code_location:
+    description: "The location of the action."
+
+header_message:
+  - "`"
+  - param: "action"
+  - "` has no enclosing loop."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "Without an explicit target, the innermost enclosing `while` or `for` loop is selected."
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content: "no matching target in this function"

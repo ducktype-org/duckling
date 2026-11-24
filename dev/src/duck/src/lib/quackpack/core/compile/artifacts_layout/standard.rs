@@ -53,6 +53,10 @@ impl ArtifactsLayout for StandardArtifactsLayout {
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
+
+    fn name(&self) -> &'static str {
+        "standard"
+    }
 }
 
 #[derive(Debug, Clone)]

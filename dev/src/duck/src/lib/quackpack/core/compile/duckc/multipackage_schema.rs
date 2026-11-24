@@ -87,12 +87,18 @@ pub enum PackageCompilationStrategy {
     DvmExe {
         /// Path to the output file.
         output_file: PathBuf,
+        /// Bytecode libraries and shared objects to link in.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dvm_linking_options: Option<DvmLinkingOptions>,
     },
     /// Compile this task into a DVM library.
     // Serializes to "dvm_lib" (see the note on `DvmExe`).
     DvmLib {
         /// Path to the output file.
         output_file: PathBuf,
+        /// Bytecode libraries and shared objects to link in.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        dvm_linking_options: Option<DvmLinkingOptions>,
     },
     /// Compile this task into a native binary.
     #[serde(rename = "native")]
@@ -115,6 +121,17 @@ pub enum PackageCompilationStrategy {
     /// Compile to an LLVM object (`.o` file).
     #[serde(rename = "obj")]
     EmitLLVMObject {},
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Eq, PartialEq, Hash)]
+/// Linking options of a DVM task.
+pub struct DvmLinkingOptions {
+    /// Absolute paths of the shared libraries to load.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shared_libraries: Option<Vec<PathBuf>>,
+    /// Absolute paths of the `.dbc` outputs of the package's dependencies.
+    #[serde(rename = "link_libraries", skip_serializing_if = "Option::is_none")]
+    pub bytecode_dependencies: Option<Vec<PathBuf>>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -157,7 +174,10 @@ pub struct ComplexLinkerOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub linker: Option<PathBuf>,
     /// Pass additional linker arguments.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "additional_link_options",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub additional_linking_options: Option<Vec<String>>,
     #[serde(
         rename = "link_c_standard_library",
@@ -273,7 +293,7 @@ mod tests {
       "strategy": "native",
       "output_file": "out.exe",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "-lfoo"
         ],
         "link_c_standard_library": true
@@ -404,6 +424,7 @@ mod tests {
                 package_id: "dep-hash".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("out.dbc"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
@@ -624,7 +645,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app2",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a"
         ],
         "link_c_standard_library": true
@@ -635,7 +656,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a",
           "build/lib_b.a",
           "build/lib_c.a"
@@ -648,7 +669,7 @@ mod tests {
       "strategy": "native",
       "output_file": "app3_alias",
       "linking_options": {
-        "additional_linking_options": [
+        "additional_link_options": [
           "build/lib_a.a",
           "build/lib_b.a",
           "build/lib_c.a"
@@ -793,42 +814,49 @@ mod tests {
                 package_id: "lib_a".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_a_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_b".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_b_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_c".into(),
                 strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_c_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app1".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app1_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app2_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
                 strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_alias_dvm"),
+                    dvm_linking_options: None,
                 },
             },
             PackageCompilationTask {

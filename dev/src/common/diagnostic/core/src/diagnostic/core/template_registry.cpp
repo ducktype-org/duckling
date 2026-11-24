@@ -26,27 +26,29 @@ namespace dia {
 	// Helper Functions
 	// --------------------------------------------------------------------------------
 
-	static bool checkMetadataMatch(
-		const template_file::DiagnosticTemplate& tmpl, const dia_args::Metadata& metadata
-	) {
-		auto& template_metadata = tmpl.getMetadata();
+	namespace {
+		bool checkMetadataMatch(
+			const template_file::DiagnosticTemplate& tmpl, const dia_args::Metadata& metadata
+		) {
+			auto& template_metadata = tmpl.getMetadata();
 
-		if (template_metadata.type != metadata.type) return false;
-		if (template_metadata.family != metadata.family) return false;
-		if (template_metadata.name != metadata.name) return false;
+			if (template_metadata.type != metadata.type) return false;
+			if (template_metadata.family != metadata.family) return false;
+			if (template_metadata.name != metadata.name) return false;
 
-		variant_match(tmpl.content) {
-			variant_case_novalue(template_file::MessageTemplate) {
-				return metadata.template_type == "message";
+			variant_match(tmpl.content) {
+				variant_case_novalue(template_file::MessageTemplate) {
+					return metadata.template_type == "message";
+				}
+				variant_case_novalue(template_file::ComponentTemplate) {
+					return metadata.template_type == "component";
+				}
+				variant_case_novalue(template_file::PointerMessageTemplate) {
+					return metadata.template_type == "pointer_message";
+				}
 			}
-			variant_case_novalue(template_file::ComponentTemplate) {
-				return metadata.template_type == "component";
-			}
-			variant_case_novalue(template_file::PointerMessageTemplate) {
-				return metadata.template_type == "pointer_message";
-			}
+			return false;
 		}
-		return false;
 	}
 
 	// --------------------------------------------------------------------------------

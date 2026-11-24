@@ -12,10 +12,12 @@
 
 #include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
@@ -27,6 +29,8 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <type_traits>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -42,8 +46,10 @@ public:
 		TESTER_ADD_TEST(sliceTest);
 		TESTER_ADD_TEST(listsTest);
 		TESTER_ADD_TEST(staticArraysTest);
+		TESTER_ADD_TEST(forContinueTargetTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(boxesTest);
+		TESTER_ADD_TEST(optionalMetaTest);
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(generatedLocalShadowingTest);
 	}
@@ -55,6 +61,7 @@ protected:
 			{ fs::FilePath(path("modules/slices")), "slices" },
 			{ fs::FilePath(path("modules/lists")), "lists" },
 			{ fs::FilePath(path("modules/static_arrays")), "static_arrays" },
+			{ fs::FilePath(path("modules/for_continue")), "for_continue" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -70,8 +77,19 @@ private:
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
 			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
-			// This 4 blocks are from the conditions for the slice access bounds check
-			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 5);
+			// 4 blocks per slice access are from the conditions of its bounds check
+			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 9);
+
+			// `panic` never returns, so each failed bounds check must end the control flow
+			// instead of jumping back to the access.
+			usize unreachable_after_panic = 0;
+			for (const auto& [id, block]: mir_unit.mir_functions[0]->blocks) {
+				if (block.terminator.operation != compiler::mir::Operation::Unreachable) continue;
+				if (block.instructions.empty()) continue;
+				if (block.instructions.back().operation == compiler::mir::Operation::Call)
+					unreachable_after_panic++;
+			}
+			ASSERT_EQUAL_PRINT(unreachable_after_panic, usize(2));
 		});
 	}
 
@@ -149,6 +167,72 @@ private:
 		});
 	}
 
+	void forContinueTargetTest() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("for_continue");
+		withContextDo([&](query::Context& ctx) {
+			auto& unit
+				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
+			ASSERT_EQUAL(1u, unit.functions.size());
+			namespace hc = compiler::helios::code;
+			// The generated increment is an explicit step, not the last body statement.
+			const auto& hout_body = *unit.functions.at(0)->body;
+			const auto* for_block
+				= dynamic_cast<const hc::BlockStmt*>(hout_body.statements.at(2).get());
+			ASSERT_TRUE(for_block != nullptr);
+			const auto* loop
+				= dynamic_cast<const hc::WhileStmt*>(for_block->body.statements.back().get());
+			ASSERT_TRUE(loop != nullptr);
+			ASSERT_EQUAL(hc::ControlFlowKind::For, loop->control_flow_kind);
+			ASSERT_HAS_VALUE(loop->step);
+			ASSERT_TRUE(
+				dynamic_cast<const hc::AssignmentStmt*>(loop->step.value().get()) != nullptr
+			);
+			ASSERT_TRUE(
+				dynamic_cast<const hc::ContinueStmt*>(loop->body.statements.back().get()) != nullptr
+			);
+			auto        cloned_stmt = loop->clone();
+			const auto* cloned_loop = dynamic_cast<const hc::WhileStmt*>(cloned_stmt.get());
+			ASSERT_TRUE(cloned_loop != nullptr);
+			ASSERT_HAS_VALUE(cloned_loop->step);
+
+			usize assignment_count  = 0;
+			auto  count_assignments = [&](const auto& node) {
+                if constexpr (std::is_same_v<std::remove_cvref_t<decltype(node)>, hc::AssignmentStmt>)
+                    assignment_count++;
+			};
+			hc::HoutTreeWalker<decltype(count_assignments)> walker(count_assignments);
+			walker.walk(*loop);
+			ASSERT_EQUAL(2u, assignment_count);
+			auto function = compiler::mir::lowerToPreMIRFunction(ctx, unit.functions.at(0));
+			base::Optional<BlockID> continue_target;
+			usize                   continue_count = 0;
+			for (auto id: function.block_order) {
+				const auto& block = function.blocks[id];
+				if (!block.debug_name.has_value()) continue;
+				if (block.debug_name.value() != base::StrID("continue")) continue;
+				auto target = block.terminator.arguments.at(0).get<BlockID>();
+				if (continue_target.has_value()) ASSERT_EQUAL(continue_target.value(), target);
+				continue_target = target;
+				continue_count++;
+			}
+			ASSERT_EQUAL(2u, continue_count);
+			ASSERT_HAS_VALUE(continue_target);
+			const auto& target_block     = function.blocks[continue_target.value()];
+			bool        increments_index = false;
+			bool        writes_sum       = false;
+			for (const auto& instr: target_block.instructions) {
+				if (!instr.output.has_value() || !instr.output->isLocal()) continue;
+				auto local = instr.output->getBase<compiler::mir::MIRLocalRef>();
+				if (local->getName() == base::StrID("sum")) writes_sum = true;
+				if (instr.operation == compiler::mir::Operation::IntegerAdd
+				    && local->getName().strView().starts_with("__index"))
+					increments_index = true;
+			}
+			ASSERT_TRUE(increments_index);
+			ASSERT_TRUE(!writes_sum);
+		});
+	}
+
 	void testErrorLogging() {
 		compiler::mir::test_utils::checkForErrorOnCompileModule(
 			R"(fun shadowedVar() = {
@@ -169,6 +253,28 @@ private:
 			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
+	}
+
+	/**
+	 * `?t` on a runtime type value lowers to a single `CreateOptional` meta operation.
+	 */
+	void optionalMetaTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/optional_meta")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ unit.functions.at(0) })
+			                    ->valueOrThrow();
+
+			const auto& instr = mir_fun.blocks[mir_fun.block_order[0]].instructions[0];
+			ASSERT_TRUE(instr.operation == compiler::mir::Operation::MetaTypeOperation);
+			ASSERT_TRUE(
+				std::get<compiler::mir::MetaParameters>(instr.extra_params).kind
+				== compiler::mir::MetaKind::CreateOptional
+			);
+			ASSERT_EQUAL(instr.arguments.size(), 1);
+			ASSERT_TRUE(instr.arguments[0].isLocal());
+		});
 	}
 
 	void boxesTest() {

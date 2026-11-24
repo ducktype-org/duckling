@@ -8,6 +8,7 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -22,7 +23,7 @@ namespace compiler::mir {
 		base::StrID                                         name,
 		tsh::SymbolType<>                                   return_type,
 		std::vector<tsh::SymbolType<>>                      parameter_types,
-		base::StableHashMap<BlockID, Block>                 blocks,
+		base::HashMap<BlockID, Block>                       blocks,
 		std::vector<BlockID>                                block_order,
 		base::StableVector<const MIRLocal>                  local_list,
 		u64                                                 next_local_id,
@@ -152,20 +153,22 @@ namespace compiler::mir {
 		os << "}\n";
 	}
 
-	void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
-		os << " Params{";
-		variant_match(instr_params) {
-			variant_case_novalue(NoInstrParameters) { /* nothing */ }
-			variant_case(CastParameters, params) {
-				os << "from:" << params.source_type.toString()
-				   << ", to:" << params.target_type.toString();
+	namespace {
+		void debugPrintInstrParameters(std::ostream& os, const InstrParameters& instr_params) {
+			os << " Params{";
+			variant_match(instr_params) {
+				variant_case_novalue(NoInstrParameters) { /* nothing */ }
+				variant_case(CastParameters, params) {
+					os << "from:" << params.source_type.toString()
+					   << ", to:" << params.target_type.toString();
+				}
+				variant_case(VariantParameters, params) {
+					os << "alt:" << params.alternative_index << " ("
+					   << params.alternative_type.toString() << ")";
+				}
 			}
-			variant_case(VariantParameters, params) {
-				os << "alt:" << params.alternative_index << " ("
-				   << params.alternative_type.toString() << ")";
-			}
+			os << "}";
 		}
-		os << "}";
 	}
 
 	void Instruction::debugPrint(std::ostream& os) const {

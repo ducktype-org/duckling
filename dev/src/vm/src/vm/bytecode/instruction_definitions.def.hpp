@@ -372,6 +372,11 @@ DEF_INSTR(fcmpLe_p32_imm, (vm::opargs::Place32, lhs), (vm::opargs::Immediate, rh
 // sets the flag if pointer is null
 DEF_INSTR(cmpNull_pptr, (vm::opargs::PlacePtr, ptr))
 
+/// Pointer equality: `cmpEq` sets the flag if both pointers point into the same block at the same
+/// offset (or are both null), `cmpNeq` if they do not. Pointers have no order.
+DEF_INSTR(cmpEq_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+DEF_INSTR(cmpNeq_pptr_pptr, (vm::opargs::PlacePtr, lhs), (vm::opargs::PlacePtr, rhs))
+
 // ========= VARIANT OPERATIONS ========
 
 
@@ -425,6 +430,19 @@ DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
 DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
 DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
+
+/// Stores a reference to `function` in `dst`. The function's signature must match the function
+/// type of `dst`.
+DEF_INSTR(mov_pfun_func, (vm::opargs::PlaceFunc, dst), (vm::opargs::FunctionName, function))
+/// Copies a function value; source and destination must have the identical function type.
+DEF_INSTR(mov_pfun_pfun, (vm::opargs::PlaceFunc, dst), (vm::opargs::PlaceFunc, src))
+/**
+ * @brief Calls the function referenced by `callee`, with the same convention as `call_func`. The
+ * parameters and results are those of the function type of `callee`.
+ *
+ * Panics if `callee` is null or references no function.
+ */
+DEF_INSTR(call_pfun, (vm::opargs::PlaceFunc, callee))
 
 DEF_INSTR(setThreadCtx_func, (vm::opargs::FunctionName, function))
 
@@ -647,8 +665,17 @@ DEF_INSTR(cast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr
 
 DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
 
+/// Writes the native address held by a C pointer of any cpointer type into the 64-bit integer
+/// `dst`, which must be an `i64` (the analogue of a C pointer-to-integer cast).
+DEF_INSTR(cast_p64_pcptr, (vm::opargs::Place64, dst), (vm::opargs::PlaceCPtr, src))
+
 /// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
 DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
+
+/// C pointer equality: `cmpEq` sets the flag if both native addresses are equal, `cmpNeq` if they
+/// differ. Works with any two cpointer types. C pointers have no order.
+DEF_INSTR(cmpEq_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
+DEF_INSTR(cmpNeq_pcptr_pcptr, (vm::opargs::PlaceCPtr, lhs), (vm::opargs::PlaceCPtr, rhs))
 
 /// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
 /// arithmetic).`
@@ -770,11 +797,19 @@ DEF_INSTR(exit)
 
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
- * It is a helper for start functions.
- * @arg0 - pointer to a VMValue.
- * @arg1 - n/a.
+ * Initializes a new local variable with a copy of the data held by a VMValue of the same process.
+ * @arg0 - the initialized local variable.
+ * @arg1 - type of the local variable.
+ * @arg2 - address of the source `vm::IVMValue`.
+ * @TODO: #3750 The address is only valid, because the process owning the `vm::IVMValue` outlives
+ * every use of the bytecode. Replace the raw address once CTV is VMValue based.
  */
-DEF_INSTR(initFromVMValue)
+DEF_INSTR(
+	initFromVMValue_pany_type_imm,
+	(vm::opargs::PlaceAny, var),
+	(vm::opargs::Type, type),
+	(vm::opargs::Immediate, vm_value)
+)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR
