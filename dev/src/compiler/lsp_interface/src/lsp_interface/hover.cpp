@@ -19,6 +19,7 @@
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/utils/hout_walker_generic.hpp>
 #include <lsp_interface/hover.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -107,221 +108,53 @@ namespace duck_ls {
 		}
 
 		/**
-		 * @brief Finds the smallest HOUT expression under the cursor.
-		 *
-		 * Visits every expression in the HOUT of `PstPath::top_expression` and keeps the
-		 * smallest one whose source position contains the offset.
+		 * @brief The smallest HOUT expression in `root` whose source position covers `offset`,
+		 * or empty when there is none.
 		 *
 		 * HELIOS also adds expressions that are not written in the code, such as an implicit cast
 		 * or dereference, or a default argument copied into a call. Two rules keep them out:
-		 * - An added expression is never chosen itself, but the visit goes on into its children,
+		 * - An added expression is never chosen itself, but the walk still goes into its children,
 		 *   so hovering over `y` in an implicit cast of `y` shows `y`, not the cast.
-		 * - An expression counts only if its position is in the same file and inside the range of
-		 *   the top-level expression. A copied default argument keeps the position of the
-		 *   declaration it came from, which can be anywhere.
+		 * - An expression counts only if its position is in the same file and inside `bounds`,
+		 *   the range of `root`. A copied default argument keeps the position of the declaration
+		 *   it came from, which can be anywhere.
 		 */
-		class InnermostExpressionFinder final: public code::HoutExprVisitor {
-		public:
-			InnermostExpressionFinder(
-				query::Context& context, usize cursor_offset, dia::SourcePosition top_bounds
-			):
-				  ctx(context),
-				  offset(cursor_offset),
-				  bounds(top_bounds) {}
-
-			/// The best candidate so far, if any.
-			const code::Expr* found = nullptr;
-
-			// One method per kind of HOUT expression. `expr->acceptVisitor(*this)` calls the one
-			// matching the kind of `expr`, so no chain of casts is needed. Each method considers
-			// its own expression and then visits its subexpressions, parents before children.
-			// They all look alike; what differs is which subexpressions each kind has.
-
-			void visitLiteralUnitExpr(const code::LiteralUnitExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitLiteralNumericExpr(const code::LiteralNumericExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitLiteralBoolExpr(const code::LiteralBoolExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitLiteralCharExpr(const code::LiteralCharExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitIdentifierExpr(const code::IdentifierExpr& expr) override { consider(expr); }
-
-			void visitReusableExpr(const code::ReusableExpr& expr) override {
-				consider(expr);
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
-				consider(expr);
-				expr.lhs->acceptVisitor(*this);
-				expr.rhs->acceptVisitor(*this);
-			}
-
-			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
-				consider(expr);
-				expr.expr->acceptVisitor(*this);
-			}
-
-			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) override {
-				consider(expr);
-				expr.condition->acceptVisitor(*this);
-				expr.if_true->acceptVisitor(*this);
-				expr.if_false->acceptVisitor(*this);
-			}
-
-			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
-				consider(expr);
-				for (const auto& comparison: expr.comparisons) comparison->acceptVisitor(*this);
-			}
-
-			void visitTupleExpr(const code::TupleExpr& expr) override {
-				consider(expr);
-				for (const auto& element: expr.elements) element->acceptVisitor(*this);
-			}
-
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) override {
-				consider(expr);
-				for (const auto& subtype: expr.subtypes) subtype->acceptVisitor(*this);
-			}
-
-			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) override {
-				consider(expr);
-				for (const auto& parameter: expr.parameters) parameter->acceptVisitor(*this);
-				expr.result->acceptVisitor(*this);
-			}
-
-			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
-			) override {
-				consider(expr);
-				expr.value_type->acceptVisitor(*this);
-			}
-
-			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) override {
-				consider(expr);
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitMatchExpr(const code::MatchExpr& expr) override {
-				consider(expr);
-				expr.subject->acceptVisitor(*this);
-				for (const auto& match_case: expr.cases) match_case.result->acceptVisitor(*this);
-			}
-
-			void visitCallExpr(const code::CallExpr& expr) override {
-				consider(expr);
-				expr.callee->acceptVisitor(*this);
-				for (const auto& argument: expr.arguments) argument->acceptVisitor(*this);
-			}
-
-			void visitAccessExpr(const code::AccessExpr& expr) override {
-				consider(expr);
-				expr.base->acceptVisitor(*this);
-			}
-
-			void visitIndexExpr(const code::IndexExpr& expr) override {
-				consider(expr);
-				expr.base->acceptVisitor(*this);
-				expr.index->acceptVisitor(*this);
-			}
-
-			void visitSequenceExpr(const code::SequenceExpr& expr) override {
-				consider(expr);
-				for (const auto& item: expr.expressions) item->acceptVisitor(*this);
-			}
-
-			void visitMoveExpr(const code::MoveExpr& expr) override {
-				consider(expr);
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitRefOfExpr(const code::RefOfExpr& expr) override {
-				consider(expr);
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitPtrOfExpr(const code::PtrOfExpr& expr) override {
-				consider(expr);
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitDerefExpr(const code::DerefExpr& expr) override {
-				consider(expr);
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitDefaultValueExpr(const code::DefaultValueExpr& expr) override {
-				consider(expr);
-			}
-
-			void visitCreateAggregateExpr(const code::CreateAggregateExpr& expr) override {
-				consider(expr);
-				for (const auto& value: expr.values) value->acceptVisitor(*this);
-			}
-
-			void visitCastExpr(const code::CastExpr& expr) override {
-				consider(expr);
-				expr.source_expr->acceptVisitor(*this);
-			}
-
-			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
-				consider(expr);
-				expr.value_expr->acceptVisitor(*this);
-			}
-
-			// The statements inside a block are not visited: the language has no syntax for block
-			// expressions yet (#3292), so a hover can only reach the blocks HELIOS creates itself.
-			void visitBlockExpr(const code::BlockExpr& expr) override { consider(expr); }
-
-		private:
-			/// Used to ask HELIOS where each expression comes from in the source.
-			query::Context& ctx;
-			/// The cursor, in code points from the start of the file.
-			usize offset;
-			/// The range of `PstPath::top_expression` in the file. An expression outside it, or
-			/// from another file, is never chosen.
-			dia::SourcePosition bounds;
-			/// How long `found` is (end minus start), kept so that each new candidate can be
-			/// compared with it without asking HELIOS for its position again.
+		base::Optional<CRef<code::Expr>> findInnermostExpression(
+			query::Context& ctx, const code::Expr& root, usize offset, const dia::SourcePosition& bounds
+		) {
+			base::Optional<CRef<code::Expr>> found{};
+			// How long `found` is (end minus start), so that each new candidate can be compared
+			// with it without asking HELIOS for its position again.
 			usize found_size = 0;
 
-			void consider(const code::Expr& expr) {
-				if (expr.origin.isGenerated()) return;
+			auto consider = [&](const auto& node) {
+				// The walker hands over statements too; only an expression can be the answer.
+				if constexpr (std::derived_from<std::remove_cvref_t<decltype(node)>, code::Expr>) {
+					const code::Expr& expr = node;
+					if (expr.origin.isGenerated()) return;
 
-				auto position_opt = expr.origin.getSourcePosition(ctx);
-				if (!position_opt.has_value()) return;
-				const auto& position = position_opt.value();
+					auto position_opt = expr.origin.getSourcePosition(ctx);
+					if (!position_opt.has_value()) return;
+					const auto& position = position_opt.value();
 
-				if (position.getSource().get() != bounds.getSource().get()) return;
-				if (position.getStart() < bounds.getStart() || position.getEnd() > bounds.getEnd())
-					return;
-				if (!covers(position, offset)) return;
+					if (position.getSource().get() != bounds.getSource().get()) return;
+					if (position.getStart() < bounds.getStart() || position.getEnd() > bounds.getEnd())
+						return;
+					if (!covers(position, offset)) return;
 
-				// Children are visited after their parents, so on a tie the deeper one wins.
-				const usize size = position.getEnd() - position.getStart();
-				if (found == nullptr || size <= found_size) {
-					found      = &expr;
-					found_size = size;
+					// Children come after their parents, so on a tie the deeper one wins.
+					const usize size = position.getEnd() - position.getStart();
+					if (found.empty() || size <= found_size) {
+						found      = &expr;
+						found_size = size;
+					}
 				}
-			}
-		};
+			};
+
+			code::walkExprTree(root, consider);
+			return found;
+		}
+
 
 		/**
 		 * @brief Wraps `code` in a Markdown code block marked as Duckling, so the editor
@@ -384,13 +217,12 @@ namespace duck_ls {
 			if (!hout_result->hasValue()) return {};
 			const auto& hout = hout_result->valueOrPanic();
 
-			InnermostExpressionFinder finder(
-				ctx, offset, top_expression->getSourcePosition().illegalAccess()
+			auto found = findInnermostExpression(
+				ctx, *hout, offset, top_expression->getSourcePosition().illegalAccess()
 			);
-			hout->acceptVisitor(finder);
-			if (finder.found == nullptr) return {};
+			if (found.empty()) return {};
 
-			return describeExpression(ctx, *finder.found);
+			return describeExpression(ctx, *found.value());
 		}
 
 		/**
