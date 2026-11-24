@@ -23,8 +23,23 @@ fn main() {
     println!("cargo:rerun-if-changed={git_root}/.git/HEAD");
     println!("cargo:rerun-if-changed={git_root}/.git/refs");
     println!("cargo:rerun-if-changed=build.rs");
+    add_rpath_for_bundled_scip();
     let info = get_duck_version_info();
     emit_duck_version_info(info);
+}
+
+/// Adds an `rpath` to the bundled `libscip` DLL to the `duck` binary.
+///
+/// `cargo:rustc-link-arg` only applies to the binaries of the package whose build script emits it,
+/// so the one in `quackpack/build.rs` does not reach `duck`. The feature-combination checks live
+/// there and still run for every `duck` build.
+fn add_rpath_for_bundled_scip() {
+    if std::env::var("CARGO_FEATURE_BUNDLED_SCIP").is_ok() {
+        let libscip_dir = std::env::var("DEP_SCIP_LIBDIR")
+            .expect("`scip-sys` is not a direct dependency in Cargo.toml");
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{libscip_dir}");
+        println!("cargo:rerun-if-changed={libscip_dir}");
+    }
 }
 
 struct DuckVersionInfo {
