@@ -99,7 +99,7 @@ fun objectsByReference() -> () = {
 	performTransaction(&myWallet, -200);
 	runtime.dvm.builtin_output_i64(myWallet.balance); # 300
 
-	let ref_wallet = &myWallet;
+	let ref_wallet: ref mut Wallet = &myWallet;
 	ref_wallet.balance = 99;
 	runtime.dvm.builtin_output_i64(myWallet.balance); # 99
 

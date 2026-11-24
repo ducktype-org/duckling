@@ -13,7 +13,7 @@ fun main() -> i64 = {
 	var box_a: box i32 = new a;
 	builtin_output_i64(box_a);
 
-	var ref_ref_a = &ref_a;
+	var ref_ref_a: ref ref i32 = &ref_a;
 	builtin_output_i64(ref_ref_a);
 
 	var ref_ref_a_2: ref ref i32 = ref_a;
