@@ -36,4 +36,4 @@ Tests:
         Input:
           File: "multiple_calls/multiple_calls.rtf"
         Output:
-          String: "@{beginning}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans2}@{ans2}@{ans2small}@{ans2small}@{ans2small}@{end}"
+          String: "@{beginning}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans2}@{ans2small}@{end}"

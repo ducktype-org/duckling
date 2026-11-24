@@ -7,7 +7,7 @@ Tests:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output: 
-          String : "@{beginning}\n42\n=> 3\n25\n=> 3\n@{end}"
+          String : "@{beginning}\n42\n25\n@{end}"
 
   interactions:
     Cases:

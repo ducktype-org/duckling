@@ -1,0 +1,10 @@
+# The Jupyter kernel's protocol parser and REPL driver (src/JupyterKernel), against `duckc repl --framed`.
+
+Tests:
+  kernel-unittests:
+    TimeOut: 60
+    Cases:
+      framed-repl:
+        Run: "cd @{dev_dir}/src/JupyterKernel && PYTHONDONTWRITEBYTECODE=1 DUCKLING_KERNEL_COMMAND=\"@{duckc_path} repl --framed --custom-std-artifacts-path @{case_std_artifacts}\" python3 -m unittest discover -s tests -t . 2>&1 | tail -n 1"
+        Output:
+          String: "OK\n"

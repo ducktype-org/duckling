@@ -8,9 +8,9 @@ Tests:
     Cases:
       expression-result:
         Input:
-          File: "simple_numeric/simple_numeric1.rtf"
+          File: "simple_numeric/simple_numeric2.rtf"
         Output:
-          String: "4\n"
+          String: "17878\n"
       unit-result:
         Input:
           File: "standard_library/std.rtf"
@@ -31,11 +31,11 @@ Tests:
 
   simple_numeric:
     Cases:
-      with_semicolon:
+      with_semicolon:  # `expr;` discards the value
         Input: 
           File: "simple_numeric/simple_numeric1.rtf"
         Output:
-          String: "@{beginning}\n=> 4\n@{end}"
+          String: "@{beginning}\n@{end}"
       without_semicolon:
         Input:
           File: "simple_numeric/simple_numeric2.rtf"
@@ -60,4 +60,4 @@ Tests:
         Input:
           File: "standard_library/std.rtf"
         Output:
-          String: "@{beginning}\n42\nFunction executed.\n@{end}"
+          String: "@{beginning}\n42\n@{end}"
