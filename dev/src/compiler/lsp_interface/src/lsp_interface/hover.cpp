@@ -74,7 +74,8 @@ namespace duck_ls {
 		 * @brief The hover text for an expression.
 		 *
 		 * If the expression is a name, like `sum`, or a field access, like `p.x`, the text is
-		 * `<name>: <type>` of the variable, function or field it refers to. For any other
+		 * `<name>: <type>` of the variable, function or field it refers to. 
+		 * If it's a type, it returns `<type_name>: type`. For any other
 		 * expression, like `a + b`, the text is just the type of the expression.
 		 */
 		std::string describeExpression(query::Context& ctx, const code::Expr& expr) {
@@ -84,6 +85,10 @@ namespace duck_ls {
 				return describeSymbol(ctx, identifier->symbol, expression_type);
 			if (const auto* access = dynamic_cast<const code::AccessExpr*>(&expr))
 				return describeSymbol(ctx, access->field, expression_type);
+			if (const auto* literal_type = dynamic_cast<const code::LiteralTypeExpr*>(&expr))
+				return markdownCodeBlock(
+					std::string(literal_type->value_type.sourceTypeName(ctx)).append(": type")
+				);
 
 			return markdownCodeBlock(expression_type);
 		}
