@@ -122,26 +122,14 @@ impl QuackError {
         self.errors.insert(0, Box::new(hint));
         self
     }
-
-    /// Create a new note [`QuackError`].
-    #[inline]
-    pub fn note<C: Into<Cow<'static, str>>>(note: C) -> Self {
-        NoteMessage::new(note).into()
-    }
-
-    /// Create a new hint [`QuackError`].
-    #[inline]
-    pub fn hint<C: Into<Cow<'static, str>>>(hint: C) -> Self {
-        HintMessage::new(hint).into()
-    }
 }
 
 macro_rules! create_messages_errors {
-    ($($name:ident)*) => {
+    ($($struct_vis: vis $name:ident)*) => {
         $(
             #[derive(PartialEq, Eq)]
             /// A message wrapped in an [`Error`]-like struct.
-            pub struct $name(pub Cow<'static, str>);
+            $struct_vis struct $name(pub Cow<'static, str>);
 
             impl $name {
                 #[doc = concat!("Create a new [`", stringify!($name), "`] from a message.")]
@@ -167,7 +155,7 @@ macro_rules! create_messages_errors {
     };
 }
 
-create_messages_errors!(MessageError NoteMessage HintMessage BareMessage);
+create_messages_errors!(pub MessageError NoteMessage HintMessage);
 
 /// A message wrapped in an [`Error`]-like struct, which captures backtraces.
 pub struct InternalError {
@@ -288,7 +276,7 @@ macro_rules! qp_err {
     ($msg:literal $(,)?) => {{
         let args = format_args!($msg);
         if let Some(static_msg) = args.as_str() {
-            $crate::QuackError::new($crate::error::MessageError::new(static_msg))
+            $crate::QuackError::message(static_msg)
         } else {
             $crate::QuackError::message(format!($msg))
         }
@@ -461,8 +449,6 @@ impl ErrorExt for dyn Error + 'static {
         } else if let Some(clap_err) = self.downcast_ref::<clap::Error>()
             && !clap_err.use_stderr()
         {
-            ErrorType::BareMessage
-        } else if self.is::<BareMessage>() {
             ErrorType::BareMessage
         } else {
             ErrorType::Error

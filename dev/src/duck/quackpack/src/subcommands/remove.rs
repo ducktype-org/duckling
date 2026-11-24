@@ -8,7 +8,7 @@ use std::path::Path;
 
 use crate::core::editable_manifest::{DependencyRemoved, EditableManifest};
 use crate::core::{AllowGlobalPackage, DependencyKind, PackageLoader};
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Debug, Clone)]
 /// All options that can be passed to remove.
@@ -66,21 +66,17 @@ fn remove_dep(
             pkg_root.display()
         ),
         DependencyRemoved::NoDependencyButKindExists(other_kind) => {
-            let err = if matches!(other_kind, DependencyKind::Normal) {
-                Err(QuackError::hint(
-                    "if you want to remove a normal dependency don't use any flags",
-                ))
+            let mut err = QuackError::message(format!(
+                "there is no {kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
+                pkg_root.display()
+            ));
+
+            if matches!(other_kind, DependencyKind::Normal) {
+                err.add_hint("if you want to remove a normal dependency don't use any flags");
             } else {
-                Err(QuackError::hint(
-                    "if you want to remove a dev dependency use flag `--dev`",
-                ))
+                err.add_hint("if you want to remove a dev dependency use flag `--dev`");
             };
-            err.with_context(|| {
-                format!(
-                    "there is no {kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
-                    pkg_root.display()
-                )
-            })
+            Err(err)
         }
     }
 }
