@@ -72,6 +72,14 @@ namespace compiler::helios {
 				}
 			}
 
+			/**
+			 * @brief Whether a declaration initializer explicitly takes a reference (`&x`), so the
+			 * deduced type stays a `ref`.
+			 */
+			static bool isExplicitReference(const code::Expr& initializer) {
+				return dynamic_cast<const code::RefOfExpr*>(&initializer) != nullptr;
+			}
+
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
@@ -90,9 +98,11 @@ namespace compiler::helios {
 						setFailed();
 						return;
 					}
-					const auto& expr_type = parsed->valueOrThrow()->expression_type;
+					const auto& initializer = parsed->valueOrThrow();
 					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
-						expr_type, tsh::Mutability::Immutable
+						initializer->expression_type,
+						tsh::Mutability::Immutable,
+						isExplicitReference(*initializer)
 					));
 				} else {
 					CORE_PANIC(
@@ -115,10 +125,9 @@ namespace compiler::helios {
 					)
 					                   ->valueOrThrow();
 
-					const auto& expr_type = parsed->expression_type;
-					setTypeOfSymbol(
-						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
-					);
+					setTypeOfSymbol(tsh::deductions::declarationTypeFromInitializer(
+						parsed->expression_type, decl_mutability, isExplicitReference(*parsed)
+					));
 				} else {
 					CORE_PANIC(
 						"Variable declaration without type or value, this should not parse in the "
