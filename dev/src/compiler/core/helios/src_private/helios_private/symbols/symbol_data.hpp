@@ -80,6 +80,7 @@ namespace compiler::helios {
 			PstImplementedSemantics,
 			ClassMemberSemantics,
 			BuiltinSemantics,
+			TemplateInstanceSemantics,
 			GENERATED_SYMBOL_SEMANTICS_LIST>;
 
 		SymbolData(CommonSymbolData common, SymbolSemantics other);
@@ -98,6 +99,10 @@ namespace compiler::helios {
 
 		static SymbolData makeClassMemberSymbolData(
 			CommonSymbolData common_data, ClassMemberSemantics class_member_data
+		);
+
+		static SymbolData makeTemplateInstanceSymbolData(
+			CommonSymbolData common_data, TemplateInstanceSemantics template_instance_data
 		);
 
 		static SymbolData makeGeneratedSymbolData(
@@ -130,7 +135,7 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Whether the symbol was created from a PST element written by the user,
-		 * that is a plain PST symbol or a class member.
+		 * that is a plain PST symbol, a class member or a template instance.
 		 */
 		[[nodiscard]]
 		bool isPstImplemented() const;

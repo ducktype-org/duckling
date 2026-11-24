@@ -13,6 +13,8 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <vector>
+
 namespace compiler::helios {
 	/**
 	 * @brief Symbol data for all symbols that are created from PST elements.
@@ -66,6 +68,50 @@ namespace compiler::helios {
 			  scope(scope),
 			  pst_element_hash(pst_element_hash),
 			  owner_class(owner_class) {}
+
+		/**
+		 * Return associated pst_element.
+		 */
+		[[nodiscard]] pst::AccessLocked<pst::LangElement> getElement() const {
+			return pst::LangElement::getByStableHash(pst_element_hash);
+		}
+	};
+
+	/**
+	 * @brief Symbol data for the declaration of a baked template, i.e. the inner statement of a
+	 * template instantiated with concrete template arguments.
+	 */
+	struct TemplateInstanceSemantics final {
+		/**
+		 * Scope in which the symbol was defined.
+		 */
+		ScopeID scope;
+
+		/**
+		 * Hash of the PST element that the symbol was created from.
+		 */
+		pst::HashType pst_element_hash;
+
+		/**
+		 * The template the symbol was baked from.
+		 */
+		SymID template_symbol;
+
+		/**
+		 * The constants holding the template arguments, matching the template parameters 1-1.
+		 */
+		std::vector<SymID> template_arguments_symbols;
+
+		TemplateInstanceSemantics(
+			ScopeID            scope,
+			pst::HashType      pst_element_hash,
+			SymID              template_symbol,
+			std::vector<SymID> template_arguments_symbols
+		):
+			  scope(scope),
+			  pst_element_hash(pst_element_hash),
+			  template_symbol(template_symbol),
+			  template_arguments_symbols(std::move(template_arguments_symbols)) {}
 
 		/**
 		 * Return associated pst_element.
