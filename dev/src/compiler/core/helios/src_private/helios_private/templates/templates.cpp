@@ -186,16 +186,13 @@ namespace compiler::helios::templates {
 			auto args = bakeTemplateArgumentsSymbols(
 				ctx, signature, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
 			);
-			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
-
 
 			// @TODO: #3072 try to improve this.
 			// We atomically set postponed_data here,
 			// the reason we can't do it in the initial setAdditionalRootData call is because
-			// we can't call QueryPrimaryCodeScopeFor(baked_root) or
-			// QuerySymbolOfSTMT(baked_statement) without pst_parent_element set (it is needed for
-			// relevant scopes be created). At the same time this scope is needed to generate the
-			// template argument symbols, so we have to do it in two steps.
+			// we can't call QueryPrimaryCodeScopeFor(baked_root) without pst_parent_element set (it
+			// is needed for relevant scopes be created). At the same time this scope is needed to
+			// generate the template argument symbols, so we have to do it in two steps.
 			CRef<TemplateBakePSTLinkedData> baked_root_data_pointer
 				= std::any_cast<TemplateBakePSTLinkedData>(
 					&baked_root->getAdditionalRootData()
@@ -204,12 +201,16 @@ namespace compiler::helios::templates {
 				);
 			auto prev = baked_root_data_pointer->postponed_data->exchange(
 				new TemplateBakePSTLinkedData::PostponedData{
-					.baked_symbol = baked_sym_id, .template_arguments_symbols = std::move(args) },
+					.template_symbol            = key.template_sym_id,
+					.template_arguments_symbols = std::move(args),
+				},
 				std::memory_order_release
 			);
 			CORE_ASSERT(
 				prev == nullptr, "postponed_data should be null before it is set for the first time"
 			);
+
+			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
 
 			return TemplateBakeStorage{
 				.baked_template_sym_id = baked_sym_id,
@@ -230,4 +231,30 @@ namespace compiler::helios::templates {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBakeTemplateSymID);
+
+	base::Optional<TemplateBakePSTLinkedData::PostponedData> getTemplateInstanceData(
+		query::Context& ctx, pst::Access<pst::LangElement> element
+	) {
+		const auto parent = element->getParent();
+		if (not parent.has_value()) return {};
+
+		const auto parent_element = parent.value().unlock(ctx);
+		if (parent_element->getElementKind() != pst::ElementKind::TemplateStmt
+		    or not parent_element->hasAdditionalRootData())
+			return {};
+
+		const auto* baked_parent = std::get_if<pst::AdditionalRootData::BakedTemplateParent>(
+			&parent_element->getAdditionalRootData().pst_parent
+		);
+		if (baked_parent == nullptr) return {};
+
+		const auto& bake_data
+			= std::any_cast<const TemplateBakePSTLinkedData&>(baked_parent->template_bake_data);
+		const auto postponed = bake_data.postponed_data->load(std::memory_order_acquire);
+		CORE_ASSERT(
+			postponed != nullptr,
+			"postponed_data must be set before the symbol of the template instance is created"
+		);
+		return *postponed;
+	}
 }

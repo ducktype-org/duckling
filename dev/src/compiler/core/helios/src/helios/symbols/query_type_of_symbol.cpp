@@ -279,7 +279,10 @@ namespace compiler::helios {
 
 			variant_match(symbol_ref->other) {
 				variant_case_novalue(
-					PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+					PstImplementedSemantics,
+					ClassMemberSemantics,
+					BuiltinSemantics,
+					TemplateInstanceSemantics
 				) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (isFunctionLike(kind(key))) return handleFunction(ctx, key);

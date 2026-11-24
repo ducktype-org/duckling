@@ -62,9 +62,9 @@ namespace compiler::helios::templates {
 
 		struct PostponedData final {
 			/**
-			 * @brief The baked symbol ID of the template.
+			 * @brief The template symbol ID the template was baked from.
 			 */
-			SymID baked_symbol;
+			SymID template_symbol;
 
 			/**
 			 * @brief The symbols for the template arguments.
@@ -101,6 +101,14 @@ namespace compiler::helios::templates {
 	 * @return The baked symbol ID.
 	 */
 	DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));
+
+	/**
+	 * @brief The bake data of @p element, if it is the inner statement of a baked template, i.e.
+	 * the declaration of a template instance.
+	 */
+	base::Optional<TemplateBakePSTLinkedData::PostponedData> getTemplateInstanceData(
+		query::Context& ctx, pst::Access<pst::LangElement> element
+	);
 
 	/**
 	 * @brief Signature for a template declaration.

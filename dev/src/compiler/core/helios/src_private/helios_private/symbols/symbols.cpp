@@ -36,6 +36,7 @@
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/templates/templates.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/collections/optional.hpp>
@@ -55,7 +56,9 @@ namespace compiler::helios {
 		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
+			variant_case_novalue(
+				PstImplementedSemantics, ClassMemberSemantics, TemplateInstanceSemantics
+			) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
 			}
 			variant_case(BuiltinSemantics, data) {
@@ -95,6 +98,9 @@ namespace compiler::helios {
 			}
 			variant_case(ClassMemberSemantics, member_data) {
 				return pst_emission_policy(member_data.getElement());
+			}
+			variant_case(TemplateInstanceSemantics, instance_data) {
+				return pst_emission_policy(instance_data.getElement());
 			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if HOUT implements the builtin we want to replicate it.
@@ -670,10 +676,22 @@ namespace compiler::helios {
 			common.is_ignored_by_lookup = is_ignored_by_lookup;
 			common.attributes           = std::move(attributes);
 
-			if (not isClassMember(common.kind))
+			if (not isClassMember(common.kind)) {
+				if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
+					return SymbolData::makeTemplateInstanceSymbolData(
+						std::move(common),
+						TemplateInstanceSemantics(
+							scope,
+							stmt->getHash(),
+							instance.template_symbol,
+							instance.template_arguments_symbols
+						)
+					);
+				}
 				return SymbolData::makePSTSymbolData(
 					std::move(common), PstImplementedSemantics(scope, stmt->getHash())
 				);
+			}
 
 			auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
 			if_opt_none(owner_class_element) {
@@ -815,9 +833,9 @@ namespace compiler::helios {
 			variant_match(getSymRef(key)->other) {
 				variant_case(defgen::GeneratedConstant, const_data) { return const_data.value; }
 
-				variant_case(PstImplementedSemantics, pst_data) {
+				variant_case_novalue(PstImplementedSemantics, TemplateInstanceSemantics) {
 					const auto pst
-						= pst_data.getElement().unlock(ctx).dynamicCast<pst::Const>().value();
+						= maybeSymbolPst(key).value().unlock(ctx).dynamicCast<pst::Const>().value();
 					// The parser accepts `const x: T;`, but a const needs a value.
 					const auto value_holder = pst->getValue();
 					if (!value_holder.has_value()) {

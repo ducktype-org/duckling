@@ -179,6 +179,12 @@ namespace compiler::helios {
 		return { std::move(common_data), class_member_data };
 	}
 
+	SymbolData SymbolData::makeTemplateInstanceSymbolData(
+		CommonSymbolData common_data, TemplateInstanceSemantics template_instance_data
+	) {
+		return { std::move(common_data), std::move(template_instance_data) };
+	}
+
 	SymbolData SymbolData::makeGeneratedSymbolData(
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
@@ -236,6 +242,7 @@ namespace compiler::helios {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
 			variant_case(ClassMemberSemantics, member_data) { return member_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }
+			variant_case(TemplateInstanceSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
@@ -247,7 +254,8 @@ namespace compiler::helios {
 
 	bool SymbolData::isPstImplemented() const {
 		return std::holds_alternative<PstImplementedSemantics>(other)
-		    or std::holds_alternative<ClassMemberSemantics>(other);
+		    or std::holds_alternative<ClassMemberSemantics>(other)
+		    or std::holds_alternative<TemplateInstanceSemantics>(other);
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
@@ -255,6 +263,7 @@ namespace compiler::helios {
 			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
 			variant_case(ClassMemberSemantics, data) { return data.getElement(); }
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
+			variant_case(TemplateInstanceSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
 		}
 	}

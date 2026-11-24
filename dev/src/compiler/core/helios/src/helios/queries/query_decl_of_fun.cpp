@@ -756,7 +756,10 @@ namespace compiler::helios {
 			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(
-						PstImplementedSemantics, ClassMemberSemantics, BuiltinSemantics
+						PstImplementedSemantics,
+						ClassMemberSemantics,
+						BuiltinSemantics,
+						TemplateInstanceSemantics
 					) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
