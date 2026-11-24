@@ -403,6 +403,7 @@ private:
 			{ "FnNs.Number", "Type template: FnNs.Number" },
 		};
 		std::vector<SymbolType<>> template_types;
+		template_types.reserve(templates.size());
 		for (const auto& [chain, _]: templates)
 			template_types.push_back(getSymbolTypeOf(chain, root_scope));
 
