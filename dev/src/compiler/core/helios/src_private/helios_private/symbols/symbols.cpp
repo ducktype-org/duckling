@@ -677,16 +677,18 @@ namespace compiler::helios {
 			common.attributes           = std::move(attributes);
 
 			if (not isClassMember(common.kind)) {
-				if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
-					return SymbolData::makeTemplateInstanceSymbolData(
-						std::move(common),
-						TemplateInstanceSemantics(
-							scope,
-							stmt->getHash(),
-							instance.template_symbol,
-							instance.template_arguments_symbols
-						)
-					);
+				if (isTemplateInstanceRoot(scope)) {
+					if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
+						return SymbolData::makeTemplateInstanceSymbolData(
+							std::move(common),
+							TemplateInstanceSemantics(
+								scope,
+								stmt->getHash(),
+								instance.template_symbol,
+								instance.template_arguments_symbols
+							)
+						);
+					}
 				}
 				return SymbolData::makePSTSymbolData(
 					std::move(common), PstImplementedSemantics(scope, stmt->getHash())

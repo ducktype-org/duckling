@@ -71,6 +71,8 @@ namespace compiler::helios {
 
 	u64 scopeDepth(ScopeID id) { return getScopeRef(id)->depth; }
 
+	bool isTemplateInstanceRoot(ScopeID id) { return getScopeRef(id)->is_template_instance_root; }
+
 	ElementScopeKind getScopeKind(query::Context& ctx, pst::Access<pst::LangElement> element) {
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
@@ -213,7 +215,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryRootScopeOf, ScopeData) {
 		static auto provide(Context&, QKey key) -> PResult {
-			return ScopeData{ {}, true, {}, key, 0 };
+			return ScopeData{ {}, true, {}, key, 0, false };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
@@ -276,8 +278,20 @@ namespace compiler::helios {
 				return parent.ref->parent->ref->perfectClone();
 			}
 
+			const bool is_template_instance_root
+				= element->getElementKind() == pst::ElementKind::TemplateStmt
+			   && element->hasAdditionalRootData()
+			   && std::holds_alternative<pst::AdditionalRootData::BakedTemplateParent>(
+					  element->getAdditionalRootData().pst_parent
+			   );
+
 			return ScopeData{
-				parent, false, element->getHash(), module(parent), scopeDepth(parent) + 1,
+				parent,
+				false,
+				element->getHash(),
+				module(parent),
+				scopeDepth(parent) + 1,
+				is_template_instance_root,
 			};
 		}
 

@@ -8,7 +8,9 @@
 
 namespace compiler::helios {
 	ScopeData ScopeData::perfectClone() const {
-		ScopeData out(parent, is_root, related_pst_element_hash, parent_module, depth);
+		ScopeData out(
+			parent, is_root, related_pst_element_hash, parent_module, depth, is_template_instance_root
+		);
 
 		// copy unstable id as well (which is normally not possible):
 		out.unstable_id = unstable_id;
