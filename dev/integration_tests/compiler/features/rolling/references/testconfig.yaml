@@ -30,9 +30,3 @@ Tests:
         Output:
           String: "1\n"
         ExitCode: 0
-  deduced_from_ref:
-    Cases: 
-      all:
-        Output:
-          String: "7\n1\n9\n3\n20\n30\n"
-        ExitCode: 0

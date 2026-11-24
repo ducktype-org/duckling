@@ -28,11 +28,9 @@ namespace compiler::tsh::deductions {
 	 * This is commonly used when inferring the type of a variable declaration from
 	 * its initializer expression.
 	 *
-	 * A `ref` initializer is stripped to its value type, so `var x = list.at(0)` declares a copy
-	 * of the element, not an alias to it, even for an explicit `&x` initializer. The declaration is
-	 * a reference only when the type is written out (`var r: ref mut T = list.at(0)`, see
-	 * declarationTypeFromProvidedType()). A `box` initializer keeps its reference kind, as the box
-	 * owns its value.
+	 * The declaration gets the abstract type of the initializer with default symbol properties, so
+	 * `var x = list.at(0)` declares a copy of the element, not an alias to it. A `ref` or `box`
+	 * declaration needs the type written out (see declarationTypeFromProvidedType()).
 	 *
 	 * @param expr_type The expression type of the initializer value.
 	 * @param expected_mutability The mutability expected by the declaration context.

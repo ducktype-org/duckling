@@ -62,7 +62,7 @@ fun main() -> i64 = {
 	}
 
 	printSeparator();
-	var ref_sarr = &static_arr;
+	var ref_sarr: ref mut i64[2] = &static_arr;
 	for (x in ref_sarr) { # Works beautifully because of reference collapsing.
 		builtin_output_i64(x); # 1, 2
 	}

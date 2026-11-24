@@ -1,6 +1,6 @@
 fun simple_auto_deref() -> () = {
 	var x = 10i64;
-	let r = &x;
+	let r: ref i64 = &x;
 	builtin_output_i64(x); # 10
 
 	# Auto deref should get inserted.
@@ -23,8 +23,8 @@ fun assign_to_ref() -> () = {
 	var a: i64 = 123;
 	var b: i64 = 345;
 
-	var ref_a = &a;
-	var ref_b = &b;
+	var ref_a: ref mut i64 = &a;
+	var ref_b: ref mut i64 = &b;
 
 	# This auto derefs `ref_b` and assigns 345 to `a`.
 	# It doesn't rebind the references.
