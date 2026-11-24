@@ -255,10 +255,10 @@ namespace compiler::tsh {
 		 *
 		 * Unlike @ref toString, whose output may contain internal type-system terminology, the
 		 * returned representation follows canonical Duckling source syntax whenever the type has a
-		 * type-expression spelling. Compiler-level types which cannot currently be written as type
-		 * expressions use a human-readable representation instead, for example a function type is
-		 * rendered as `Function (i64) -> (bool)`. Function components are rendered
-		 * recursively using this method. Class and template names include enclosing namespaces and
+		 * type-expression spelling, for example `funptr(i64) -> bool | i64` or `(i64) -> bool`.
+		 * Compiler-level types which cannot currently be written as type expressions use a
+		 * human-readable representation instead, for example `Type template: Boxed`. Class and
+		 * template names include enclosing namespaces and
 		 * classes, but omit module paths and import aliases. Names therefore need not be unique
 		 * across modules or directly resolvable from the caller's scope.
 		 *

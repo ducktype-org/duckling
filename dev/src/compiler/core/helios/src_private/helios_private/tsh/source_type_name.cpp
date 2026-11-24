@@ -14,6 +14,7 @@
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/templates/templates.hpp>
+#include <helios_private/tsh/source_type_name.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/misc/anycast.hpp>
@@ -28,24 +29,6 @@
 
 namespace compiler::tsh {
 	namespace {
-		enum class TypeNamePrecedence {
-			Variant,
-			Prefix,
-			Postfix,
-			Atomic,
-		};
-
-		struct SourceTypeName final {
-			std::string        text;
-			TypeNamePrecedence precedence;
-
-			[[nodiscard]] std::string nestedIn(const TypeNamePrecedence parent_precedence) const {
-				return precedence < parent_precedence ? "(" + text + ")" : text;
-			}
-		};
-
-		SourceTypeName renderSymbolTypeName(query::Context& ctx, SymbolType<> type);
-
 		std::string renderCompileTimeValue(query::Context& ctx, const ctv::CompileTimeValue& value) {
 			if (const auto type = value.get<SymbolType<>>(); type.has_value())
 				return renderSymbolTypeName(ctx, type.value()).text;
@@ -142,7 +125,7 @@ namespace compiler::tsh {
 			query::Context&                  ctx,
 			const std::vector<SymbolType<>>& types,
 			std::string_view                 separator,
-			const TypeNamePrecedence         parent_precedence = TypeNamePrecedence::Variant
+			const TypeNamePrecedence         parent_precedence = TypeNamePrecedence::Function
 		) {
 			std::string result;
 			for (usize i = 0; i < types.size(); i++) {
@@ -151,189 +134,158 @@ namespace compiler::tsh {
 			}
 			return result;
 		}
+	}
 
-		SourceTypeName renderAbstractTypeName(query::Context& ctx, const AbstractType type) {
-			switch (type.getKind()) {
-			case Kind::Unit:
-				return { .text = "()", .precedence = TypeNamePrecedence::Atomic };
-			case Kind::Void:
-				return { .text = "void", .precedence = TypeNamePrecedence::Atomic };
-			case Kind::Byte:
-				return { .text = "byte", .precedence = TypeNamePrecedence::Atomic };
-			case Kind::Bool:
-				return { .text = "bool", .precedence = TypeNamePrecedence::Atomic };
-			case Kind::Char:
-				return { .text = "char", .precedence = TypeNamePrecedence::Atomic };
-			case Kind::Integral: {
-				const auto integral = type.as<IntegralAbstractType>();
-				return {
-					.text = base::strConcat(
-						integral.getSignedness() == IntegralAbstractType::Signedness::Signed ? "i"
-																							 : "u",
-						integral.getSize().asInt()
-					),
-					.precedence = TypeNamePrecedence::Atomic,
-				};
-			}
-			case Kind::Float:
-				return {
-					.text = base::strConcat("f", type.as<FloatAbstractType>().getSize().asInt()),
-					.precedence = TypeNamePrecedence::Atomic,
-				};
-			case Kind::Meta:
-				return { .text = "type", .precedence = TypeNamePrecedence::Atomic };
-			case Kind::Pointer:
-				return {
-					.text = "ptr "
-					      + renderSymbolTypeName(ctx, type.as<PointerAbstractType>().getPointee())
-					            .nestedIn(TypeNamePrecedence::Prefix),
-					.precedence = TypeNamePrecedence::Prefix,
-				};
-			case Kind::ManyPointer:
-				return {
-					.text
-					= "manyptr "
-					+ renderSymbolTypeName(ctx, type.as<ManyPointerAbstractType>().getPointee())
-					      .nestedIn(TypeNamePrecedence::Prefix),
-					.precedence = TypeNamePrecedence::Prefix,
-				};
-			case Kind::CPointer:
-				return {
-					.text = "cptr "
-					      + renderSymbolTypeName(ctx, type.as<CPointerAbstractType>().getPointee())
-					            .nestedIn(TypeNamePrecedence::Prefix),
-					.precedence = TypeNamePrecedence::Prefix,
-				};
-			case Kind::Slice: {
-				const auto element = type.as<SliceAbstractType>().getElementType();
-				if (element == SymbolType<>::withDefaultsMut(getCharType()))
-					return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
-				return {
-					.text = "slice "
-					      + renderSymbolTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
-					.precedence = TypeNamePrecedence::Prefix,
-				};
-			}
-			case Kind::StaticArray: {
-				auto        array   = type.as<StaticArrayAbstractType>();
-				std::string extents = base::strConcat("[", array.getSize(), "]");
-				auto        element = array.getElementType();
-				while (element.getType().getKind() == Kind::StaticArray
-				       && element.getRefKind() == ReferenceKind::Direct) {
-					array = element.getType().as<StaticArrayAbstractType>();
-					extents += base::strConcat("[", array.getSize(), "]");
-					element = array.getElementType();
-				}
-				return {
-					.text = renderSymbolTypeName(ctx, element).nestedIn(TypeNamePrecedence::Postfix)
-					      + extents,
-					.precedence = TypeNamePrecedence::Postfix,
-				};
-			}
-			case Kind::Tuple: {
-				const auto components = type.as<TupleAbstractType>().getComponents();
-				return {
-					.text = "(" + joinSourceTypeNames(ctx, components, ", ")
-					      + (components.size() == 1 ? ",)" : ")"),
-					.precedence = TypeNamePrecedence::Atomic,
-				};
-			}
-			case Kind::Variant:
-				return {
-					.text = joinSourceTypeNames(
-						ctx,
-						type.as<VariantAbstractType>().getUnderlyingTypes(),
-						" | ",
-						TypeNamePrecedence::Prefix
-					),
-					.precedence = TypeNamePrecedence::Variant,
-				};
-			case Kind::Class:
-				return {
-					.text = sourceDeclarationName(ctx, type.as<ClassAbstractType>().getSymbol()),
-					.precedence = TypeNamePrecedence::Atomic,
-				};
-			case Kind::Function: {
-				const auto function = type.as<FunctionAbstractType>();
-				return {
-					.text = "Function ("
-					      + joinSourceTypeNames(ctx, function.getParameterTypes(), ", ") + ") -> ("
-					      + renderSymbolTypeName(ctx, function.getResultType()).text + ")",
-					.precedence = TypeNamePrecedence::Atomic,
-				};
-			}
-			case Kind::TypeTemplate:
-				return {
-					.text
-					= "Type template: "
-					+ sourceDeclarationName(ctx, type.as<TypeTemplateAbstractType>().getSource()),
-					.precedence = TypeNamePrecedence::Atomic,
-				};
-			case Kind::RawPointer:
-			case Kind::Namespace:
-			case Kind::Module:
-			case Kind::Import:
-				// These compiler-level kinds do not currently have a Duckling type-expression
-				// spelling. Keep their existing human-readable representation until one is defined.
-				return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
-			case Kind::COUNT:
-				CORE_UNREACHABLE();
-			}
-			CORE_UNREACHABLE();
-		}
-
-		SourceTypeName renderSymbolTypeName(query::Context& ctx, const SymbolType<> type) {
-			using enum ReferenceKind;
-			const std::string prefix = base::strConcat(
-				type.getUniqueness() == Uniqueness::Unique ? "unique " : "",
-				type.getLeakage() == Leakage::Leaking ? "leaking " : "",
-				type.getMutability() == Mutability::Immutable ? "imm " : "",
-				type.getRefKind() == Direct ? ""
-				: type.getRefKind() == Box  ? "box "
-											: "ref "
-			);
-			auto inner = renderAbstractTypeName(ctx, type.getType());
-			if (prefix.empty()) return inner;
+	SourceTypeName renderAbstractTypeName(query::Context& ctx, const AbstractType type) {
+		switch (type.getKind()) {
+		case Kind::Unit:
+			return { .text = "()", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::Void:
+			return { .text = "void", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::Byte:
+			return { .text = "byte", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::Bool:
+			return { .text = "bool", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::Char:
+			return { .text = "char", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::Integral: {
+			const auto integral = type.as<IntegralAbstractType>();
 			return {
-				.text       = prefix + inner.nestedIn(TypeNamePrecedence::Prefix),
+				.text = base::strConcat(
+					integral.getSignedness() == IntegralAbstractType::Signedness::Signed ? "i" : "u",
+					integral.getSize().asInt()
+				),
+				.precedence = TypeNamePrecedence::Atomic,
+			};
+		}
+		case Kind::Float:
+			return {
+				.text       = base::strConcat("f", type.as<FloatAbstractType>().getSize().asInt()),
+				.precedence = TypeNamePrecedence::Atomic,
+			};
+		case Kind::Meta:
+			return { .text = "type", .precedence = TypeNamePrecedence::Atomic };
+		case Kind::Pointer:
+			return {
+				.text = "ptr "
+				      + renderSymbolTypeName(ctx, type.as<PointerAbstractType>().getPointee())
+				            .nestedIn(TypeNamePrecedence::Prefix),
+				.precedence = TypeNamePrecedence::Prefix,
+			};
+		case Kind::ManyPointer:
+			return {
+				.text = "manyptr "
+				      + renderSymbolTypeName(ctx, type.as<ManyPointerAbstractType>().getPointee())
+				            .nestedIn(TypeNamePrecedence::Prefix),
+				.precedence = TypeNamePrecedence::Prefix,
+			};
+		case Kind::CPointer:
+			return {
+				.text = "cptr "
+				      + renderSymbolTypeName(ctx, type.as<CPointerAbstractType>().getPointee())
+				            .nestedIn(TypeNamePrecedence::Prefix),
+				.precedence = TypeNamePrecedence::Prefix,
+			};
+		case Kind::Slice: {
+			const auto element = type.as<SliceAbstractType>().getElementType();
+			if (element == SymbolType<>::withDefaultsMut(getCharType()))
+				return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
+			return {
+				.text = "slice "
+				      + renderSymbolTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
 				.precedence = TypeNamePrecedence::Prefix,
 			};
 		}
+		case Kind::StaticArray: {
+			auto        array   = type.as<StaticArrayAbstractType>();
+			std::string extents = base::strConcat("[", array.getSize(), "]");
+			auto        element = array.getElementType();
+			while (element.getType().getKind() == Kind::StaticArray
+			       && element.getRefKind() == ReferenceKind::Direct) {
+				array = element.getType().as<StaticArrayAbstractType>();
+				extents += base::strConcat("[", array.getSize(), "]");
+				element = array.getElementType();
+			}
+			return {
+				.text = renderSymbolTypeName(ctx, element).nestedIn(TypeNamePrecedence::Postfix)
+				      + extents,
+				.precedence = TypeNamePrecedence::Postfix,
+			};
+		}
+		case Kind::Tuple: {
+			const auto components = type.as<TupleAbstractType>().getComponents();
+			return {
+				.text = "(" + joinSourceTypeNames(ctx, components, ", ")
+				      + (components.size() == 1 ? ",)" : ")"),
+				.precedence = TypeNamePrecedence::Atomic,
+			};
+		}
+		case Kind::Variant:
+			return {
+				.text = joinSourceTypeNames(
+					ctx,
+					type.as<VariantAbstractType>().getUnderlyingTypes(),
+					" | ",
+					TypeNamePrecedence::Prefix
+				),
+				.precedence = TypeNamePrecedence::Variant,
+			};
+		case Kind::Class:
+			return {
+				.text       = sourceDeclarationName(ctx, type.as<ClassAbstractType>().getSymbol()),
+				.precedence = TypeNamePrecedence::Atomic,
+			};
+		case Kind::Function: {
+			const auto function = type.as<FunctionAbstractType>();
+			return {
+				.text = base::strConcat(
+					function.getFunctionKind() == FunctionKind::Raw ? "funptr(" : "(",
+					joinSourceTypeNames(ctx, function.getParameterTypes(), ", "),
+					") -> ",
+					renderSymbolTypeName(ctx, function.getResultType())
+						.nestedIn(TypeNamePrecedence::Function)
+				),
+				.precedence = TypeNamePrecedence::Function,
+			};
+		}
+		case Kind::TypeTemplate:
+			return {
+				.text = "Type template: "
+				      + sourceDeclarationName(ctx, type.as<TypeTemplateAbstractType>().getSource()),
+				.precedence = TypeNamePrecedence::Atomic,
+			};
+		case Kind::RawPointer:
+		case Kind::Namespace:
+		case Kind::Module:
+		case Kind::Import:
+			// These compiler-level kinds do not currently have a Duckling type-expression
+			// spelling. Keep their existing human-readable representation until one is defined.
+			return { .text = type.toString(), .precedence = TypeNamePrecedence::Atomic };
+		case Kind::COUNT:
+			CORE_UNREACHABLE();
+		}
+		CORE_UNREACHABLE();
+	}
+
+	SourceTypeName renderSymbolTypeName(query::Context& ctx, const SymbolType<> type) {
+		using enum ReferenceKind;
+		const std::string prefix = base::strConcat(
+			type.getUniqueness() == Uniqueness::Unique ? "unique " : "",
+			type.getLeakage() == Leakage::Leaking ? "leaking " : "",
+			type.getMutability() == Mutability::Immutable ? "imm " : "",
+			type.getRefKind() == Direct ? ""
+			: type.getRefKind() == Box  ? "box "
+										: "ref "
+		);
+		auto inner = renderAbstractTypeName(ctx, type.getType());
+		if (prefix.empty()) return inner;
+		return {
+			.text       = prefix + inner.nestedIn(TypeNamePrecedence::Prefix),
+			.precedence = TypeNamePrecedence::Prefix,
+		};
 	}
 
 	std::string AbstractType::sourceTypeName(query::Context& ctx) const {
 		return renderAbstractTypeName(ctx, *this).text;
 	}
-
-	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
-	std::string SymbolType<ABSTRACT_TYPE>::sourceTypeName(query::Context& ctx) const {
-		return renderSymbolTypeName(ctx, SymbolType<AbstractType>(*this)).text;
-	}
-
-#define INSTANTIATE_SOURCE_TYPE_NAME(TYPE) \
-	template std::string SymbolType<TYPE>::sourceTypeName(query::Context&) const;
-	INSTANTIATE_SOURCE_TYPE_NAME(AbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(UnitAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(VoidAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(ByteAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(BoolAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(CharAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(IntegralAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(FloatAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(RawPointerAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(PointerAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(ManyPointerAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(CPointerAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(SliceAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(TupleAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(FunctionAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(StaticArrayAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(VariantAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(ClassAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(NamespaceAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(ModuleAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(MetaAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(ImportAbstractType)
-	INSTANTIATE_SOURCE_TYPE_NAME(TypeTemplateAbstractType)
-#undef INSTANTIATE_SOURCE_TYPE_NAME
 }

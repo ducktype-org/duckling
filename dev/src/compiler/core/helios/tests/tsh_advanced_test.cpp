@@ -287,121 +287,106 @@ private:
 	}
 
 	void sourceTypeNameTest() {
-		const auto package_id  = base::StrID(base::generateRandomString(32));
-		const auto make_module = [&](std::string_view name, std::string_view contents) {
-			auto builder = compiler::frontend::ModuleTreeBuilder::create();
-			builder->setPackageID(package_id);
-			builder->setName(base::StrID(name));
-			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(contents, ".dk"));
-			return builder;
-		};
-		auto module = make_module("source_type_names", R"(
+		constexpr std::string_view PERSON    = "class Person {}";
+		constexpr std::string_view TYPES_NS  = R"(
 			class Person {}
 			namespace Types {
 				class Inner {}
 				template(T: type)
 				class Boxed { value: T; }
 			}
-			template(T: type)
-			class Boxed { value: T; }
-			template(N: i64, T: type)
-			class Sized { value: T; }
+		)";
+		constexpr std::string_view BOXED     = "template(T: type) class Boxed { value: T; }";
+		constexpr std::string_view FLOAT_T   = R"(
 			template(F: f64)
 			class FloatT {}
 			template(F: f32)
 			class Float32T {}
-			template(T: type)
-			fun topFn(x: T) -> T = x;
-			namespace FnNs {
-				template(T: type)
-				fun ident(x: T) -> T = x;
-				template(T: type)
-				fun other(x: T) -> T = x;
-				template(N: i64)
-				namespace Number { const value = N; }
-			}
-			import other_mod as om;
-			var primitive: i64;
-			var string: str;
-			var immutable_slice: slice imm char;
-			var pointer: ptr Types.Inner;
-			var many_pointer: manyptr i64;
-			var c_pointer: cptr i64;
-			var pointer_array: (ptr i64)[3];
-			var array_pointer: ptr (i64[3]);
-			var nested_array: i64[3][2];
-			var qualified_nested_array: (imm i64)[3][2];
-			var variant_array: (i64 | bool)[3];
-			var tuple: (i64, bool);
-			var variant: i64 | bool;
-			var class_value: Person;
-			var template_value: Boxed[i64];
-			var namespaced_template: Types.Boxed[Person];
-			var value_template: Sized[3i64, bool];
-			var tiny_float: FloatT[0.000000001];
-			var another_tiny_float: FloatT[0.000000002];
-			var simple_float: FloatT[1.5];
-			var single_precision_float: Float32T[0.1f32];
-			var round_trip_tiny_float: FloatT[1e-09f64];
-			var other_class: om.Person;
-			var other_nested_class: om.NS.Deep;
-			var other_template_argument: Boxed[om.Person];
-		)");
-		module->addSubmodule(make_module("other_mod", R"(
+		)";
+		constexpr std::string_view OTHER_MOD = R"(
 			class Person {}
 			namespace NS { class Deep {} }
-		)")
-		                         ->finalize());
-		const auto root_scope = getModuleScope(module->finalize()->getModuleID());
+		)";
 
-		struct TypeNameCase final {
-			TypeNameCase(std::string_view symbol_name, std::string_view expected):
-				  symbol_name(symbol_name),
-				  expected(expected) {}
+		checkSourceName("i64", "i64");
+		checkSourceName("str", "str");
+		checkSourceName("slice imm char", "slice imm char");
+		checkSourceName("ptr Types.Inner", "ptr Types.Inner", TYPES_NS);
+		checkSourceName("manyptr i64", "manyptr i64");
+		checkSourceName("cptr i64", "cptr i64");
+		checkSourceName("(ptr i64)[3]", "(ptr i64)[3]");
+		checkSourceName("ptr (i64[3])", "ptr i64[3]");
+		checkSourceName("i64[3][2]", "i64[3][2]");
+		checkSourceName("(imm i64)[3][2]", "(imm i64)[3][2]");
+		checkSourceName("(i64 | bool)[3]", "(bool | i64)[3]");
+		checkSourceName("(i64, bool)", "(i64, bool)");
+		checkSourceName("i64 | bool", "bool | i64");
+		checkSourceName("(i64) -> bool", "(i64) -> bool");
+		checkSourceName("funptr(i64, bool) -> ()", "funptr(i64, bool) -> ()");
+		checkSourceName("funptr() -> i64", "funptr() -> i64");
+		checkSourceName("(i64) -> bool | i64", "(i64) -> bool | i64");
+		checkSourceName("(i64 | bool) -> i64", "(bool | i64) -> i64");
+		checkSourceName("(imm i64) -> ptr i64", "(imm i64) -> ptr i64");
+		checkSourceName("(i64) -> (i64) -> bool", "(i64) -> (i64) -> bool");
+		checkSourceName("((i64) -> bool) -> i64", "((i64) -> bool) -> i64");
+		checkSourceName("ptr ((i64) -> bool)", "ptr ((i64) -> bool)");
+		checkSourceName("((i64) -> bool)[3]", "((i64) -> bool)[3]");
+		checkSourceName("i64 | ((i64) -> bool)", "((i64) -> bool) | i64");
+		checkSourceName("((i64) -> bool, i64)", "((i64) -> bool, i64)");
+		checkSourceName("((i64) -> bool, i64) -> i64", "((i64) -> bool, i64) -> i64");
+		checkSourceName("((i64) -> bool,)", "((i64) -> bool,)");
+		checkSourceName("Person", "Person", PERSON);
+		checkSourceName("Boxed[i64]", "Boxed[i64]", BOXED);
+		checkSourceName("Types.Boxed[Person]", "Types.Boxed[Person]", TYPES_NS);
+		checkSourceName(
+			"Sized[3i64, bool]",
+			"Sized[3, bool]",
+			"template(N: i64, T: type) class Sized { value: T; }"
+		);
+		checkSourceName("FloatT[0.000000001]", "FloatT[1e-09f64]", FLOAT_T);
+		checkSourceName("FloatT[0.000000002]", "FloatT[2e-09f64]", FLOAT_T);
+		checkSourceName("FloatT[1.5]", "FloatT[1.5f64]", FLOAT_T);
+		checkSourceName("Float32T[0.1f32]", "Float32T[0.1f32]", FLOAT_T);
+		checkSourceName("FloatT[1e-09f64]", "FloatT[1e-09f64]", FLOAT_T);
+		checkSourceName("om.Person", "Person", "import other_mod as om;", OTHER_MOD);
+		checkSourceName("om.NS.Deep", "NS.Deep", "import other_mod as om;", OTHER_MOD);
+		checkSourceName(
+			"Boxed[om.Person]",
+			"Boxed[Person]",
+			base::strConcat("import other_mod as om;", BOXED),
+			OTHER_MOD
+		);
 
-			std::string_view symbol_name;
-			std::string_view expected;
-		};
-
-		const std::vector cases{
-			TypeNameCase{ "primitive", "i64" },
-			TypeNameCase{ "string", "str" },
-			TypeNameCase{ "immutable_slice", "slice imm char" },
-			TypeNameCase{ "pointer", "ptr Types.Inner" },
-			TypeNameCase{ "many_pointer", "manyptr i64" },
-			TypeNameCase{ "c_pointer", "cptr i64" },
-			TypeNameCase{ "pointer_array", "(ptr i64)[3]" },
-			TypeNameCase{ "array_pointer", "ptr i64[3]" },
-			TypeNameCase{ "nested_array", "i64[3][2]" },
-			TypeNameCase{ "qualified_nested_array", "(imm i64)[3][2]" },
-			TypeNameCase{ "variant_array", "(bool | i64)[3]" },
-			TypeNameCase{ "tuple", "(i64, bool)" },
-			TypeNameCase{ "variant", "bool | i64" },
-			TypeNameCase{ "class_value", "Person" },
-			TypeNameCase{ "template_value", "Boxed[i64]" },
-			TypeNameCase{ "namespaced_template", "Types.Boxed[Person]" },
-			TypeNameCase{ "value_template", "Sized[3, bool]" },
-			TypeNameCase{ "tiny_float", "FloatT[1e-09f64]" },
-			TypeNameCase{ "another_tiny_float", "FloatT[2e-09f64]" },
-			TypeNameCase{ "simple_float", "FloatT[1.5f64]" },
-			TypeNameCase{ "single_precision_float", "Float32T[0.1f32]" },
-			TypeNameCase{ "round_trip_tiny_float", "FloatT[1e-09f64]" },
-			TypeNameCase{ "other_class", "Person" },
-			TypeNameCase{ "other_nested_class", "NS.Deep" },
-			TypeNameCase{ "other_template_argument", "Boxed[Person]" },
-			TypeNameCase{ "Boxed", "Type template: Boxed" },
-			TypeNameCase{ "Types.Boxed", "Type template: Types.Boxed" },
-			TypeNameCase{ "topFn", "Type template: topFn" },
-			TypeNameCase{ "FnNs.ident", "Type template: FnNs.ident" },
-			TypeNameCase{ "FnNs.other", "Type template: FnNs.other" },
-			TypeNameCase{ "FnNs.Number", "Type template: FnNs.Number" },
-		};
-		std::vector<SymbolType<>> types;
-		types.reserve(cases.size());
-		for (const auto& test_case: cases)
-			types.push_back(getSymbolTypeOf(test_case.symbol_name, root_scope));
-		const auto person_type = getSymbolTypeOf("class_value", root_scope);
-		ASSERT_TRUE(person_type != getSymbolTypeOf("other_class", root_scope));
+		const auto root_scope = buildSourceModule(
+			R"(
+				import other_mod as om;
+				class Person {}
+				namespace Types {
+					template(T: type)
+					class Boxed { value: T; }
+				}
+				template(T: type)
+				class Boxed { value: T; }
+				template(F: f64)
+				class FloatT {}
+				template(T: type)
+				fun topFn(x: T) -> T = x;
+				namespace FnNs {
+					template(T: type)
+					fun ident(x: T) -> T = x;
+					template(N: i64)
+					namespace Number { const value = N; }
+				}
+				var person: Person;
+				var other_person: om.Person;
+				var tiny_float: FloatT[0.000000001];
+				var another_tiny_float: FloatT[0.000000002];
+				var round_trip_tiny_float: FloatT[1e-09f64];
+			)",
+			OTHER_MOD
+		);
+		const auto person_type = getSymbolTypeOf("person", root_scope);
+		ASSERT_TRUE(person_type != getSymbolTypeOf("other_person", root_scope));
 		ASSERT_TRUE(
 			getSymbolTypeOf("tiny_float", root_scope)
 			!= getSymbolTypeOf("another_tiny_float", root_scope)
@@ -410,8 +395,24 @@ private:
 			getSymbolTypeOf("tiny_float", root_scope),
 			getSymbolTypeOf("round_trip_tiny_float", root_scope)
 		);
+		const std::vector<std::pair<std::string_view, std::string_view>> templates{
+			{ "Boxed", "Type template: Boxed" },
+			{ "Types.Boxed", "Type template: Types.Boxed" },
+			{ "topFn", "Type template: topFn" },
+			{ "FnNs.ident", "Type template: FnNs.ident" },
+			{ "FnNs.Number", "Type template: FnNs.Number" },
+		};
+		std::vector<SymbolType<>> template_types;
+		for (const auto& [chain, _]: templates)
+			template_types.push_back(getSymbolTypeOf(chain, root_scope));
 
 		withContextDo([&](query::Context& ctx) {
+			for (usize i = 0; i < templates.size(); ++i)
+				assertEqual(
+					std::string(templates[i].second),
+					template_types[i].sourceTypeName(ctx),
+					base::strConcat("Incorrect source type name for `", templates[i].first, "`")
+				);
 			const auto i64_type
 				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
 			for (const auto bits: { 8u, 16u, 32u, 64u, 128u }) {
@@ -425,10 +426,7 @@ private:
 					);
 					ASSERT_EQUAL(expected, integral.sourceTypeName(ctx));
 					ASSERT_EQUAL(
-						expected,
-						SymbolType<IntegralAbstractType>::withDefaultsMut(integral).sourceTypeName(
-							ctx
-						)
+						expected, SymbolType<>::withDefaultsMut(integral).sourceTypeName(ctx)
 					);
 				}
 			}
@@ -437,7 +435,7 @@ private:
 				ASSERT_EQUAL(base::strConcat("f", bits), floating.sourceTypeName(ctx));
 				ASSERT_EQUAL(
 					base::strConcat("f", bits),
-					SymbolType<FloatAbstractType>::withDefaultsMut(floating).sourceTypeName(ctx)
+					SymbolType<>::withDefaultsMut(floating).sourceTypeName(ctx)
 				);
 			}
 			ASSERT_EQUAL(std::string("()"), getUnitType().sourceTypeName(ctx));
@@ -453,25 +451,14 @@ private:
 				single_tuple.sourceTypeName(ctx),
 				"Incorrect source type name for a single-element tuple"
 			);
-			for (usize index = 0; index < cases.size(); ++index) {
-				const auto& test_case = cases[index];
-				const auto  rendered  = types[index].sourceTypeName(ctx);
-				assertEqual(
-					std::string(test_case.expected),
-					rendered,
-					base::strConcat(
-						"Incorrect source type name for `", test_case.symbol_name, "`: ", rendered
-					)
-				);
-			}
 
 			assertEqual(
 				std::string("i64"),
-				types.front().getType().sourceTypeName(ctx),
+				i64_type.sourceTypeName(ctx),
 				"AbstractType should expose the source-level type name too"
 			);
 
-			const SymbolType qualified_type(
+			const SymbolType<> qualified_type(
 				i64_type,
 				ReferenceKind::Ref,
 				Mutability::Immutable,
@@ -505,9 +492,9 @@ private:
 				.result_type     = SymbolType<>::withDefaultsMut(getBoolType()),
 			});
 			assertEqual(
-				std::string("Function (i64) -> (bool)"),
+				std::string("funptr(i64) -> bool"),
 				function_type.sourceTypeName(ctx),
-				"Function types should use a human-readable label"
+				"Function types should use their Duckling source spelling"
 			);
 			const auto variant_type = ctx.query<QueryVariantType>({
 				.underlying_types = {
@@ -520,13 +507,58 @@ private:
 				.result_type     = SymbolType<>::withDefaultsMut(variant_type),
 			});
 			assertEqual(
-				std::string("Function (Person) -> (bool | i64)"),
+				std::string("funptr(Person) -> bool | i64"),
 				composite_function_type.sourceTypeName(ctx),
 				"Function components should use source-oriented names"
 			);
 		});
 	}
 
+	/**
+	 * @brief Builds a module from @p source, with an optional `other_mod` submodule built from
+	 * @p other_module, and returns its root scope.
+	 */
+	compiler::helios::ScopeID buildSourceModule(
+		std::string_view source, std::string_view other_module
+	) {
+		const auto package_id  = base::StrID(base::generateRandomString(32));
+		const auto make_module = [&](std::string_view name, std::string_view contents) {
+			auto builder = compiler::frontend::ModuleTreeBuilder::create();
+			builder->setPackageID(package_id);
+			builder->setName(base::StrID(name));
+			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(contents, ".dk"));
+			return builder;
+		};
+		auto module = make_module("source_type_names", source);
+		if (!other_module.empty())
+			module->addSubmodule(make_module("other_mod", other_module)->finalize());
+		return getModuleScope(module->finalize()->getModuleID());
+	}
+
+	/**
+	 * @brief Checks that a variable of type @p type_expression, declared after @p declarations,
+	 * renders as @p expected.
+	 */
+	void checkSourceName(
+		std::string_view type_expression,
+		std::string_view expected,
+		std::string_view declarations = "",
+		std::string_view other_module = ""
+	) {
+		const auto type = getSymbolTypeOf(
+			"checked",
+			buildSourceModule(
+				base::strConcat(declarations, "\nvar checked: ", type_expression, ";"), other_module
+			)
+		);
+		withContextDo([&](query::Context& ctx) {
+			assertEqual(
+				std::string(expected),
+				type.sourceTypeName(ctx),
+				base::strConcat("Incorrect source type name for `", type_expression, "`")
+			);
+		});
+	}
 
 public:
 	~TypeSystemClassFieldsTest() override = default;
