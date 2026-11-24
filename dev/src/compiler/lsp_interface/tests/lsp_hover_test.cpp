@@ -344,7 +344,7 @@ private:
 		assertHoverContains(under_test, uri, 8, 18, { "type" });      // funptr(i64) -> i64
 		assertHoverContains(under_test, uri, 9, 11, { "type" });      // ?i64
 		assertHoverContains(under_test, uri, 9, 18, { "n", "i64" });  // n lifted to ?i64
-		assertHoverContains(under_test, uri, 10, 13, { "i64" });      // move n: the move itself0
+		assertHoverContains(under_test, uri, 10, 13, { "i64" });      // move n: the move itself
 		assertHoverContains(under_test, uri, 10, 17, { "n", "i64" });  // move n
 	}
 };
