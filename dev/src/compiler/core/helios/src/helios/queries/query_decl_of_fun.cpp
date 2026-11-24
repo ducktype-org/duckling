@@ -345,6 +345,10 @@ namespace compiler::helios {
 		 * @brief Determines whether a user-declared function or method is an operator and validates
 		 * its fixity.
 		 *
+		 * Symbolic names are always operators: binary ones are infix (`infix` is optional and
+		 * redundant), unary ones need `prefix` or `suffix`. Identifier names are operators only
+		 * when marked `infix`; they then remain callable as ordinary functions too.
+		 *
 		 * @param arity Parameter count, including the implicit `self` parameter of non-static
 		 * methods.
 		 */
@@ -357,12 +361,20 @@ namespace compiler::helios {
 		) {
 			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
-			const bool is_operator = lexer::isOperatorSymbolString(name.strView());
-			if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
+			if (fixity == pst::OperatorFixity::Infix) {
+				if (arity != 2) {
+					ctx.log<InvalidInfixOperatorArityError>(source_position);
+					query::throwFailed();
+				}
+				return Operatoriness::Infix;
+			}
+
+			const bool is_symbolic = lexer::isOperatorSymbolString(name.strView());
+			if (fixity != pst::OperatorFixity::None && !(is_symbolic && arity == 1)) {
 				ctx.log<InvalidOperatorFixityError>(source_position);
 				query::throwFailed();
 			}
-			if (!is_operator) return Operatoriness::None;
+			if (!is_symbolic) return Operatoriness::None;
 
 			switch (arity) {
 			case 1:
@@ -374,6 +386,8 @@ namespace compiler::helios {
 				case pst::OperatorFixity::None:
 					ctx.log<MissingUnaryOperatorFixityError>(source_position);
 					query::throwFailed();
+				case pst::OperatorFixity::Infix:
+					break;  // Handled above.
 				}
 				CORE_UNREACHABLE();
 			case 2:

@@ -66,6 +66,12 @@ namespace lexer {
 		[[nodiscard]]
 		bool isGenBinOp() const;
 
+		/**
+		 * @brief Precedence of a general binary operator; a lower value binds tighter.
+		 *
+		 * Builtin operators have fixed values, other symbolic operators share one default, and
+		 * identifier operators (e.g. `contains`) bind the loosest of all general binary operators.
+		 */
 		[[nodiscard]]
 		i64 getGenBinOpPrecedence() const;
 

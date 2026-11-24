@@ -19,6 +19,8 @@
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 
+#include <string_view>
+
 namespace pst {
 
 	using TokenStreamCondition = bool(const tpc::TokenStream&, i64);
@@ -62,11 +64,37 @@ namespace pst {
 		Transparent,
 	};
 
+	/**
+	 * @brief Operator fixity specifier written between `fun`/`fundecl` and the function name.
+	 *
+	 * `prefix` and `suffix` apply to unary operators with symbolic names. `infix` applies to binary
+	 * operators and is required for identifier names (e.g. `fun infix contains(...)`), while being
+	 * optional and redundant for symbolic names.
+	 */
 	enum class OperatorFixity {
 		None,
 		Prefix,
 		Suffix,
+		Infix,
 	};
+
+	/**
+	 * @brief The source spelling of a fixity specifier, or an empty string for `None`.
+	 */
+	[[nodiscard]]
+	constexpr std::string_view operatorFixityToStr(OperatorFixity fixity) {
+		switch (fixity) {
+		case OperatorFixity::None:
+			return "";
+		case OperatorFixity::Prefix:
+			return "prefix";
+		case OperatorFixity::Suffix:
+			return "suffix";
+		case OperatorFixity::Infix:
+			return "infix";
+		}
+		return "";
+	}
 
 	enum class StmtKind : int {
 		Import,

@@ -6,11 +6,13 @@
 
 #include "operators.hpp"
 
+#include "errors.hpp"
 #include "function_calls/call_processing.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -25,9 +27,12 @@
 
 #include <base/collections/maps.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
+#include <iterator>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -174,6 +179,60 @@ namespace {
 		base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
 			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
 		});
+	}
+
+	/**
+	 * @brief Position of the name in the declaration of function @p symbol (e.g. `foo` in
+	 * `fun foo(...)`), falling back to the position stored in its function declaration.
+	 */
+	base::Optional<dia::StablePosition> declaredNamePosition(query::Context& ctx, SymID symbol) {
+		if_opt_some(maybeSymbolPst(symbol), element) {
+			if_opt_some(element.unlock(ctx).dynamicCast<pst::Stmt>(), stmt) {
+				if_opt_some(stmt->getDeclSymbolIdentifier(), identifier) {
+					return identifier.unlock(ctx)->getStablePosition();
+				}
+			}
+		}
+		return ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow().origin.getStablePosition();
+	}
+
+	/**
+	 * @brief Logs that the identifier operator @p op is used infix, while none of the functions
+	 * named by it (@p non_infix_candidates) is declared `infix`. Each of them gets a note.
+	 */
+	void reportOperatorNotDeclaredInfix(
+		query::Context&           ctx,
+		const lexer::Operator     op,
+		const ElementOrigin&      op_origin,
+		const std::vector<SymID>& non_infix_candidates
+	) {
+		if_opt_none(op_origin.getStablePosition()) {
+			ctx.log<dia::PlaceholderError>(base::strConcat(
+				"`",
+				op.str(),
+				"` cannot be used as an infix operator because no matching ",
+				"declaration is marked `infix`."
+			));
+			return;
+		}
+		auto error = makeBox<OperatorNotDeclaredInfixError>(
+			op_origin.getStablePosition().value(), op.str()
+		);
+		for (const auto candidate: non_infix_candidates) {
+			const auto position = declaredNamePosition(ctx, candidate);
+			if_opt_none(position) continue;
+			error->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+				base::strConcat(
+					"Declared here without `infix`; write `fun infix ",
+					op.str(),
+					"(...)` to allow `a ",
+					op.str(),
+					" b`."
+				),
+				position.value()
+			));
+		}
+		ctx.log(std::move(error));
 	}
 }
 
@@ -327,6 +386,8 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
+		// Functions dropped by the filters below, to explain a missing `infix` modifier.
+		std::vector<SymID> non_infix_candidates = all_candidates;
 		filterFunctionsByOperatoriness(
 			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 		);
@@ -339,6 +400,7 @@ namespace compiler::helios::code {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			std::ranges::copy(method_candidates, std::back_inserter(non_infix_candidates));
 			filterFunctionsByOperatoriness(
 				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 			);
@@ -346,6 +408,19 @@ namespace compiler::helios::code {
 			for (const auto method_candidate: method_candidates)
 				if (not std::ranges::contains(all_candidates, method_candidate))
 					all_candidates.push_back(method_candidate);
+		}
+
+		// Step 2c. — An identifier operator (`a foo b`) only considers functions declared `infix`.
+		// If there are none, but there are functions of that name, the modifier is most likely
+		// missing.
+		if (all_candidates.empty() && !lexer::isOperatorSymbolString(op.value.strView())) {
+			filterFunctionsByOperatoriness(
+				ctx, non_infix_candidates, HOUTFunctionDeclaration::Operatoriness::None
+			);
+			if (!non_infix_candidates.empty()) {
+				reportOperatorNotDeclaredInfix(ctx, op, op_origin, non_infix_candidates);
+				query::throwFailed();
+			}
 		}
 
 		return processBinaryOperatorCall(

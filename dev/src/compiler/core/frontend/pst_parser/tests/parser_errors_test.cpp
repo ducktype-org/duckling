@@ -220,6 +220,19 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Fun, false> special_operator_function1{ "fun ->(a: i64) = {}" };
 	Example<pst::Fun, false> special_operator_function2{ "fun .?(a: i64) = {}" };
 
+	Example<pst::Fun, true> infix_identifier_function{
+		"fun infix contains(a: i64, b: i64) -> bool = {}"
+	};
+	Example<pst::Fun, true> infix_symbolic_function{ "fun infix +*(a: i64, b: i64) -> i64 = {}" };
+	Example<pst::FunDecl, true> infix_identifier_fundecl{
+		"fundecl infix contains(a: i64, b: i64) -> bool"
+	};
+	Example<pst::Class, true> infix_identifier_method{
+		"class Foo { fun infix contains(a: u64) -> bool = {} }"
+	};
+	Example<pst::Fun, true>  contextual_infix_name{ "fun infix(infix: i64) -> i64 = infix;" };
+	Example<pst::Fun, false> suffix_on_plain_name{ "fun suffix square(n: i64) -> i64 = n;" };
+
 	Example<pst::Fun, true> ternary_simple_expr{
 		"fun foo(t: type) -> type = if x then {return b;} else 2;"
 	};

@@ -14,6 +14,14 @@ fun suffix ++(a: i64) -> i64 = {
 	return a;
 }
 
+fun infix contains(a: i64, b: i64) -> i64 = {
+	return a;
+}
+
+fun infix -+(a: i64, b: i64) -> i64 = {
+	return a;
+}
+
 class Foo {
 	x: i64 = 0;
 
@@ -27,5 +35,9 @@ class Foo {
 
 	fun suffix ++() -> i64 = {
 		return x;
+	}
+
+	fun infix has(a: i64) -> i64 = {
+		return a;
 	}
 }

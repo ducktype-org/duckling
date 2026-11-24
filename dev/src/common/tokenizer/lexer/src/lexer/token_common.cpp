@@ -82,10 +82,14 @@ namespace lexer {
 			    { NamedOperator::Remainder, 560 },  { NamedOperator::Plus, 570 },
 			    { NamedOperator::Minus, 570 },      { NamedOperator::SingleArrow, 580 },
 			    { NamedOperator::As, 400 } };
-		if (precedences.contains(asNamed()))
-			return precedences.at(asNamed());
-		else
-			return 500;
+		// Identifier operators (e.g. `a contains b`) bind looser than every symbolic general binary
+		// operator, following Scala: `xs contains a + 1` is `xs contains (a + 1)`.
+		static constexpr i64 identifier_operator_precedence = 600;
+		static constexpr i64 custom_operator_precedence     = 500;
+
+		if (precedences.contains(asNamed())) return precedences.at(asNamed());
+		if (!isOperatorSymbolString(value.strView())) return identifier_operator_precedence;
+		return custom_operator_precedence;
 	}
 
 	bool Operator::isGenBinOpRightAssociative() const {

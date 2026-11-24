@@ -289,6 +289,67 @@ private:
 				{ "Only unary operator declarations may use `prefix` or `suffix`." },
 				1
 			);
+			checkForErrorOnCompileModule(
+				R"(fun infix contains(a: i64) -> bool = true;)",
+				{ "Operator declarations marked `infix` must take exactly two parameters." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun infix +*(a: i64, b: i64, c: i64) -> i64 = a;)",
+				{ "Operator declarations marked `infix` must take exactly two parameters." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun infix has(a: i64, b: i64) -> bool = true;
+					}
+				)",
+				{ "Operator declarations marked `infix` must take exactly two parameters." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					fun contains(a: i64, b: i64) -> bool = true;
+					fun main() -> i64 = {
+						let x = 1 contains 2;
+						return 0;
+					}
+				)",
+				{ "`contains` cannot be used as an infix operator because no matching declaration "
+			      "is "
+			      "marked `infix`.",
+			      "Declared here without `infix`" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun has(a: i64) -> bool = true;
+					}
+					fun main() -> i64 = {
+						let n = Number(1);
+						let x = n has 2;
+						return 0;
+					}
+				)",
+				{ "`has` cannot be used as an infix operator because no matching declaration is "
+			      "marked `infix`.",
+			      "Declared here without `infix`" },
+				1
+			);
+			// An identifier operator is still an ordinary function, so it collides with a plain
+			// function of the same signature.
+			checkForErrorOnCompileModule(
+				R"(
+					fun foo(a: i64, b: i64) -> i64 = a;
+					fun infix foo(a: i64, b: i64) -> i64 = b;
+				)",
+				{ "Symbol 'foo' is already defined.", "Previous declaration here." },
+				1
+			);
 		}
 
 		// ============================ Function calls ============================

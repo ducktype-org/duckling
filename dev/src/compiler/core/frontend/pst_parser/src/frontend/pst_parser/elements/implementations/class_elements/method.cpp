@@ -36,10 +36,8 @@ namespace pst {
 	void Method::dprint(std::ostream& out) const {
 		out << "{";
 		if (is_mut) out << R"("is_mut":true,)";
-		if (operator_fixity != OperatorFixity::None) {
-			out << R"("operator_fixity":")"
-				<< (operator_fixity == OperatorFixity::Prefix ? "prefix" : "suffix") << "\",";
-		}
+		if (operator_fixity != OperatorFixity::None)
+			out << R"("operator_fixity":")" << operatorFixityToStr(operator_fixity) << "\",";
 		out << "\"name\":";
 		nullAwareDprint(name, out);
 		out << ",\"parameters\":";

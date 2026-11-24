@@ -2608,6 +2608,10 @@ private:
 		const auto prefix_free  = mangle({ .symbol_key = getChain("-*", root_scope).back() });
 		const auto suffix_free  = mangle({ .symbol_key = getChain("++", root_scope).back() });
 		const auto unicode_free = mangle({ .symbol_key = getChain("+×", root_scope).back() });
+		const auto identifier_infix_free
+			= mangle({ .symbol_key = getChain("contains", root_scope).back() });
+		const auto explicit_infix_free
+			= mangle({ .symbol_key = getChain("-+", root_scope).back() });
 
 		const auto foo_class = getChain("Foo", root_scope).back();
 		const auto foo_class_info
@@ -2616,7 +2620,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(3, foo_methods.size());
+		ASSERT_EQUAL(4, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -2625,14 +2629,19 @@ private:
 			return foo_methods.at(0);
 		};
 
-		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
-		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
-		const auto suffix_method = mangle({ .symbol_key = find_method("++") });
+		const auto infix_method            = mangle({ .symbol_key = find_method("+*") });
+		const auto prefix_method           = mangle({ .symbol_key = find_method("-*") });
+		const auto suffix_method           = mangle({ .symbol_key = find_method("++") });
+		const auto identifier_infix_method = mangle({ .symbol_key = find_method("has") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOs4plplFiqiqE1aE", suffix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_FiqiqiqE1a1bE", unicode_free.str());
+		// Identifier operators are mangled like ordinary functions; an explicit `infix` on a
+		// symbolic operator changes nothing.
+		ASSERT_EQUAL("_Q_M18mangling_operatorsG8containsFiqiqiqE1a1bE", identifier_infix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4miplFiqiqiqE1a1bE", explicit_infix_free.str());
 		ASSERT_EQUAL(
 			"_Q_M18mangling_operatorsN3FooOi4plmlEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
 			infix_method.str()
@@ -2644,6 +2653,10 @@ private:
 		ASSERT_EQUAL(
 			"_Q_M18mangling_operatorsN3FooOs4plplEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
 			suffix_method.str()
+		);
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3Foo3hasEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
+			identifier_infix_method.str()
 		);
 	}
 
@@ -3600,6 +3613,22 @@ private:
 				.operatoriness
 		);
 
+		// `infix` makes an identifier an infix operator, and is redundant on a symbolic one.
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(
+				getChain("contains", root_scope).back()
+			)
+				->valueOrThrow()
+				.operatoriness
+		);
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("-+", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
 		// Operator methods: 1 explicit param + implicit `self` = infix; 0 explicit params +
 		// implicit `self` = unary with its declared fixity.
 		auto foo_class = getChain("Foo", root_scope).back();
@@ -3609,7 +3638,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(3, foo_methods.size());
+		ASSERT_EQUAL(4, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -3633,6 +3662,12 @@ private:
 		ASSERT_EQUAL(
 			Operatoriness::Suffix,
 			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("++"))
+				->valueOrThrow()
+				.operatoriness
+		);
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("has"))
 				->valueOrThrow()
 				.operatoriness
 		);

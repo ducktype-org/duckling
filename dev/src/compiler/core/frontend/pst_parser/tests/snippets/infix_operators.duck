@@ -1,0 +1,17 @@
+fun infix contains(xs: i64, x: i64) -> bool = {
+	return xs contains x + 1;
+}
+
+fundecl infix divides(a: i64, b: i64) -> bool;
+
+fun infix +*(a: i64, b: i64) -> i64 = {
+	return a +* b contains a == b divides a contains b;
+}
+
+class Foo {
+	fun infix contains(x: i64) -> bool = {
+		return self contains x as i64;
+	}
+}
+
+fun infix(infix: i64) -> i64 = infix;

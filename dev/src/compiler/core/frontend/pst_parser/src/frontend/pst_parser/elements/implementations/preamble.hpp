@@ -61,19 +61,29 @@ namespace pst {
 	/**
 	 * @brief Consumes a contextual operator fixity specifier when it precedes an operator name.
 	 *
-	 * `prefix` and `suffix` remain regular identifiers everywhere else, including as function names.
+	 * `prefix` and `suffix` must be followed by a symbolic operator name. `infix` may also be
+	 * followed by an identifier, which declares an identifier operator (`fun infix contains(...)`).
+	 *
+	 * `prefix`, `suffix` and `infix` remain regular identifiers everywhere else, including as
+	 * function names.
 	 */
 	inline OperatorFixity parseOperatorFixity(LangParserState& state) {
-		if (!state[0].isIdentifier() || !state[1].isOperatorSymbol()) return OperatorFixity::None;
+		if (!state[0].isIdentifier()) return OperatorFixity::None;
 
 		const auto fixity = state[0].getStrValue();
-		if (fixity == "prefix") {
-			state.tokens().next();
-			return OperatorFixity::Prefix;
+		if (state[1].isOperatorSymbol()) {
+			if (fixity == "prefix") {
+				state.tokens().next();
+				return OperatorFixity::Prefix;
+			}
+			if (fixity == "suffix") {
+				state.tokens().next();
+				return OperatorFixity::Suffix;
+			}
 		}
-		if (fixity == "suffix") {
+		if (fixity == "infix" && (state[1].isOperatorSymbol() || state[1].isIdentifier())) {
 			state.tokens().next();
-			return OperatorFixity::Suffix;
+			return OperatorFixity::Infix;
 		}
 		return OperatorFixity::None;
 	}
