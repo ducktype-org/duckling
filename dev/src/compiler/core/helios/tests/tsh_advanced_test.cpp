@@ -310,14 +310,13 @@ private:
 
 		checkSourceName("i64", "i64");
 		checkSourceName("str", "str");
-		checkSourceName("slice imm char", "slice imm char");
 		checkSourceName("ptr Types.Inner", "ptr Types.Inner", TYPES_NS);
 		checkSourceName("manyptr i64", "manyptr i64");
 		checkSourceName("cptr i64", "cptr i64");
 		checkSourceName("(ptr i64)[3]", "(ptr i64)[3]");
 		checkSourceName("ptr (i64[3])", "ptr i64[3]");
 		checkSourceName("i64[3][2]", "i64[3][2]");
-		checkSourceName("(imm i64)[3][2]", "(imm i64)[3][2]");
+		checkSourceName("(ptr i64)[3][2]", "(ptr i64)[3][2]");
 		checkSourceName("(i64 | bool)[3]", "(bool | i64)[3]");
 		checkSourceName("(i64, bool)", "(i64, bool)");
 		checkSourceName("i64 | bool", "bool | i64");
@@ -326,7 +325,7 @@ private:
 		checkSourceName("funptr() -> i64", "funptr() -> i64");
 		checkSourceName("(i64) -> bool | i64", "(i64) -> bool | i64");
 		checkSourceName("(i64 | bool) -> i64", "(bool | i64) -> i64");
-		checkSourceName("(imm i64) -> ptr i64", "(imm i64) -> ptr i64");
+		checkSourceName("(ptr i64) -> ptr i64", "(ptr i64) -> ptr i64");
 		checkSourceName("(i64) -> (i64) -> bool", "(i64) -> (i64) -> bool");
 		checkSourceName("((i64) -> bool) -> i64", "((i64) -> bool) -> i64");
 		checkSourceName("ptr ((i64) -> bool)", "ptr ((i64) -> bool)");

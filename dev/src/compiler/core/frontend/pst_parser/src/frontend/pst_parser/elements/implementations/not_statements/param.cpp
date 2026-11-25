@@ -14,6 +14,8 @@ namespace pst {
 	MBox<Param> Param::parse(LangParserState& state) {
 		auto out = makeBox<Param>(state);
 
+		out->is_let = parseLetPrefix(state);
+
 		PARSE().all(&out->name, NamedOperator::Colon);
 
 		PARSE().one(&out->type);
@@ -30,6 +32,7 @@ namespace pst {
 	void Param::dprint(std::ostream& out) const {
 		out << "{\"Parameter\": {";
 
+		if (is_let) out << R"("is_let": true,)";
 		out << R"("name": )";
 		nullAwareDprint(name, out);
 		out << R"(,"type": )";
@@ -44,6 +47,7 @@ namespace pst {
 
 	HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, initial.has_value());
+		addToHash(partial_hash, is_let);
 		return partial_hash;
 	}
 

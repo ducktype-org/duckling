@@ -10,7 +10,7 @@
 
 namespace pst::error {
 	class BlockStartError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -22,7 +22,7 @@ namespace pst::error {
 	};
 
 	class DuplicateSemicolon final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "warning",
 				     .family        = "parser",
@@ -31,5 +31,17 @@ namespace pst::error {
 
 	public:
 		DuplicateSemicolon(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class MisplacedMutError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "misplaced_mut" };
+		}
+
+	public:
+		MisplacedMutError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 }

@@ -19,6 +19,12 @@ namespace pst {
 		return true;
 	}
 
+	bool ExprElement::isPrefixOperatorPart(const LangParserState& state, const i64 fwd) {
+		if (state[fwd].isPrefixOperator()) return true;
+		return fwd > 0 && state[fwd].is(lang_def::Keyword::Mut) && state[fwd - 1].isKeyword()
+		    && lang_def::writableViewOperator(state[fwd - 1].asKeyword()).has_value();
+	}
+
 	bool ExprElement::isStandaloneKeywordOperator(const LangParserState& state) {
 		return state.ctokens().size() == 1 && state[0].isKeyword() && state[0].isPrefixOperator();
 	}

@@ -11,6 +11,17 @@
 namespace pst {
 
 	MBox<OperatorWrapper> OperatorWrapper::parse(LangParserState& state) {
+		// A writable view is one operator with two keywords, like `ref mut`.
+		if (state[0].isKeyword() && state[1].is(Keyword::Mut)) {
+			const auto writable_view = lang_def::writableViewOperator(state[0].asKeyword());
+			if (writable_view.has_value()) {
+				Box<OperatorWrapper> out = makeBox<OperatorWrapper>(state, writable_view.value());
+				state.tokens().skip();
+				state.tokens().skip();
+				PST_RETURN out;
+			}
+		}
+
 		// For now we use binary operator as it's the least restrictive.
 		auto opt = state[0].asBinaryOperator();
 

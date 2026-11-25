@@ -31,10 +31,7 @@ namespace pst {
 		} else {
 			PARSE().goDown();
 
-			if (PARSE().tryEat(Keyword::Var))
-				out->is_const = false;
-			else if (PARSE().tryEat(Keyword::Let))
-				out->is_const = true;
+			out->is_let = parseLetPrefix(state);
 
 			PARSE().one(&out->iterator);
 
@@ -68,8 +65,7 @@ namespace pst {
 		out << R"("identifier": )";
 		nullAwareDprint(iterator, out);
 
-		if (is_const.has_value())
-			out << R"(, "is_const": )" << (is_const.value() ? "true" : "false");
+		if (is_let) out << R"(, "is_let": true)";
 
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
@@ -81,8 +77,7 @@ namespace pst {
 	}
 
 	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, is_const.has_value());
-		if (is_const.has_value()) addToHash(partial_hash, is_const.value());
+		addToHash(partial_hash, is_let);
 		return partial_hash;
 	}
 

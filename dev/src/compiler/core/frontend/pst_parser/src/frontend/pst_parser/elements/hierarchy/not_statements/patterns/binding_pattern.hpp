@@ -12,11 +12,12 @@ namespace pst {
 	 * @brief Represents an binding pattern, which binds a value to a new variable.
 	 */
 	class BindingPattern final: public AnalysisPattern {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(BindingPattern, AnalysisPattern);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(BindingPattern, AnalysisPattern, is_let);
 		CLONE_SUBELEMENTS();
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
+		bool is_let = false;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
@@ -34,6 +35,14 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<IdentifierWrapper> getName() const {
 			return name.give();
+		}
+
+		/**
+		 * @brief Whether the binding is declared with `let`.
+		 */
+		[[nodiscard]]
+		bool isLet() const {
+			return is_let;
 		}
 
 		[[nodiscard]]

@@ -13,6 +13,13 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralPrefix::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
+		// `mut` is only a part of a writable view (`ref mut T`)
+		if (state[0].is(Keyword::Mut)) {
+			state.logSafeError(makeBox<error::MisplacedMutError>(state.getPosition()));
+			state.tokens().skip();
+			return parse(state);
+		}
+
 		if (!state[0].isPrefixOperator() || isStandaloneKeywordOperator(state))
 			return Lower::parse(state);
 

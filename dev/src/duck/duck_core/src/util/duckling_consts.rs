@@ -59,7 +59,6 @@ pub const DUCKLING_KEYWORDS: &[&str] = &[
     "i64",
     "i8",
     "if",
-    "imm",
     "implements",
     "import",
     "in",

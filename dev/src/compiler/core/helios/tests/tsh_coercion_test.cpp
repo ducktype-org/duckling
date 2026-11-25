@@ -155,7 +155,6 @@ private:
 
 		plan("i32", "i32").succeeds().ranks(Identity);
 		plan("box i32", "box i32").succeeds().ranks(Identity);
-		plan("(imm i32, i32)", "(i32, i32)").succeeds().ranks(MutabilityChange);
 		plan(mutable_pointer, immutable_pointer).succeeds().ranks(MutabilityChange);
 		plan("i32", "ref i32", CoercionMode::ImplicitRefOf).succeeds().ranks(RefOf);
 		plan("box i32", "i32").succeeds().ranks(Deref);
@@ -331,9 +330,6 @@ private:
 			.succeeds()
 			.doesNothing()
 			.steps({ MUTABILITY_CHANGE });
-		plan("(imm box i32, i32)", "(box i32, i32)")
-			.succeeds()
-			.steps({ HAND_OVER, MUTABILITY_CHANGE });
 		plan("box i32", "box i32").succeeds().steps({ HAND_OVER });
 		plan("Owner", "Owner").succeeds().steps({ HAND_OVER });
 
@@ -357,12 +353,6 @@ private:
 			.steps({ DEREF, ELEMENTWISE })
 			.part(0)
 			.steps({ HAND_OVER });
-
-		// A tuple none of whose parts does anything is not taken apart.
-		plan("(imm i32, i32)", "(i32, i32)").succeeds().doesNothing().steps({ MUTABILITY_CHANGE });
-		plan("(box i32, imm i32)", "(box i32, i32)")
-			.succeeds()
-			.steps({ HAND_OVER, MUTABILITY_CHANGE });
 	}
 
 	void typeCoercionErrors() {
@@ -404,7 +394,6 @@ private:
 		plan("ref i32", "box i32").refuses().because<IncompatibleTypes>();
 		plan("box i32", "ref i32").refuses().because<IncompatibleTypes>();
 		plan("ref i32", "ref i64").refuses().because<IncompatibleTypes>();
-		plan("ref (i32, i32)", "ref (imm i32, i32)").refuses().because<IncompatibleTypes>();
 
 		// Every component that refuses is a cause, as deep as the types go.
 		plan("(i32, i32)", "(i64, f64)")
@@ -503,15 +492,6 @@ private:
 			.component(0)
 			.because<RequiresExplicitCopyMove>();
 
-		// A tuple that only changes mutability is not taken apart, so it is handed over whole.
-		coerce("makeBoxAndConstInt()", "(box i32, i32)")
-			.succeeds()
-			.steps({ IMPLICIT_MOVE, MUTABILITY_CHANGE });
-		coerce("c", "(box i32, i32)")
-			.refuses()
-			.because<RequiresExplicitCopyMove>()
-			.aboutTheWholeCoercion();
-
 		// A value is handed over right before it is packed, and a refusal names what was asked.
 		coerce("makeBoxAndInt()", "bool | (box i32, i32)")
 			.succeeds()
@@ -554,11 +534,6 @@ private:
 			= coerce("(makeBox(), 1i64)", "(box i32, i64)").succeeds().steps({ ELEMENTWISE });
 		built.part(0).steps({ IMPLICIT_MOVE });
 		built.part(1).steps({});
-		coerce("(makeBox(), 1i64)", "(box i32, imm i64)")
-			.succeeds()
-			.steps({ ELEMENTWISE, MUTABILITY_CHANGE })
-			.part(0)
-			.steps({ IMPLICIT_MOVE });
 		coerce("(move b, 1i64)", "(box i32, i64)").succeeds().part(0).steps({});
 
 		const NodeCheck mixed

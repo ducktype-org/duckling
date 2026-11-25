@@ -17,6 +17,7 @@
  */
 #pragma once
 
+#include <base/collections/optional.hpp>
 #include <base/extend_cpp/flag.hpp>
 
 #include <init/init.hpp>
@@ -139,9 +140,10 @@ namespace lang_def {
 		Or,
 		Xor,
 
-		// General text prefix operators (Not doesn't count)
+		// Only a part of a view (`{ref, ptr, manyptr} mut T`) and of a `mut fun`.
 		Mut,
-		Imm,
+
+		// General text prefix operators (Not doesn't count)
 		Ref,
 		Box,
 		New,
@@ -340,6 +342,13 @@ namespace lang_def {
 	base::StrID numericLiteralTypeSpecifierToStr(NumericLiteralTypeSpecifier oper);
 
 	KeywordFlags keywordFlags(Keyword key);
+
+	/**
+	 * @brief The operator of a writeble view (`ref mut`, `ptr mut`, `manyptr mut`, `cptr mut` and
+	 * `slice mut`).
+	 * @return Nothing when @p view is not one of `ref`, `ptr`, `manyptr`, `cptr` and `slice`.
+	 */
+	base::Optional<base::StrID> writableViewOperator(Keyword view);
 
 	std::vector<Keyword>                     getKeywords();
 	std::vector<Special>                     getSpecials();

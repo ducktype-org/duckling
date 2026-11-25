@@ -28,8 +28,10 @@ namespace pst {
 			return ValuePattern::parse(state);
 		}
 
-		// Binding pattern. Identifier which is not a destructor.
+		// Binding pattern. Identifier which is not a destructor, maybe declared with `let` or `var`.
 		if (state[0].isIdentifier()) return BindingPattern::parse(state);
+		if ((state[0].is(Keyword::Let) || state[0].is(Keyword::Var)) && state[1].isIdentifier())
+			return BindingPattern::parse(state);
 
 		state.logInt(makeBox<UnrecognizedPatternInCaseError>(state.getPosition()));
 		return nullptr;

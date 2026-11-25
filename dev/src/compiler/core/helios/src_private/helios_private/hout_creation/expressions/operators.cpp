@@ -517,14 +517,26 @@ namespace compiler::helios::code {
 			/// Meta constructions ///
 			const auto meta_t = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
 
+			// Immutable view constructors.
 			builtin_op(keywordToStr(Keyword::Ref), { meta_t }, meta_t, Ref, Prefix);
 			builtin_op(keywordToStr(Keyword::Box), { meta_t }, meta_t, Box, Prefix);
 			builtin_op(keywordToStr(Keyword::Ptr), { meta_t }, meta_t, Ptr, Prefix);
 			builtin_op(keywordToStr(Keyword::ManyPtr), { meta_t }, meta_t, ManyPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::CPtr), { meta_t }, meta_t, CPtr, Prefix);
 			builtin_op(keywordToStr(Keyword::Slice), { meta_t }, meta_t, Slice, Prefix);
-			builtin_op(keywordToStr(Keyword::Mut), { meta_t }, meta_t, Mut, Prefix);
-			builtin_op(keywordToStr(Keyword::Imm), { meta_t }, meta_t, Imm, Prefix);
+
+			// Mutable view constructors.
+			// @TODO: #2040 These do nothing yet.
+			const auto writable_view = [&](const Keyword view, const BuiltinUnary op) {
+				builtin_op(
+					lang_def::writableViewOperator(view).value(), { meta_t }, meta_t, op, Prefix
+				);
+			};
+			writable_view(Keyword::Ref, Ref);
+			writable_view(Keyword::Ptr, Ptr);
+			writable_view(Keyword::ManyPtr, ManyPtr);
+			writable_view(Keyword::CPtr, CPtr);
+			writable_view(Keyword::Slice, Slice);
 
 			/// Meta comparisons ///
 			builtin_op(base::StrID("=="), { meta_t, meta_t }, bool_t, MetaEq, Infix);

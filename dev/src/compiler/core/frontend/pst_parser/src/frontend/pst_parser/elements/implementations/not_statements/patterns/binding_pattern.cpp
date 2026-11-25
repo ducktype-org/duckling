@@ -12,7 +12,8 @@ namespace pst {
 	CLONE_SUB_ELEMENTS_DEF(BindingPattern, name);
 
 	MBox<BindingPattern> BindingPattern::parse(LangParserState& state) {
-		auto out = makeBox<BindingPattern>(state);
+		auto out    = makeBox<BindingPattern>(state);
+		out->is_let = parseLetPrefix(state);
 		PARSE().one(&out->name);
 		PST_RETURN out;
 	}
@@ -20,12 +21,14 @@ namespace pst {
 	void BindingPattern::dprint(std::ostream& out) const {
 		out << "{";
 		out << R"("pattern_type": "binding",)";
+		if (is_let) out << R"("is_let": true,)";
 		out << R"("name": )";
 		nullAwareDprint(name, out);
 		out << "}";
 	}
 
 	HashAlg& BindingPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, is_let);
 		return partial_hash;
 	}
 

@@ -13,13 +13,14 @@ namespace pst {
 	 * @brief Declaration of a single function or pattern argument.
 	 */
 	class Param final: public NotStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Param, NotStmt);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Param, NotStmt, is_let);
 		CLONE_SUBELEMENTS();
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, UniversalNoBlockExprHolder);
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
+		bool is_let = false;
 
 	public:
 		explicit Param(LangElementConstructionData state): NotStmt(state) {
@@ -44,6 +45,14 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<IdentifierWrapper> getName() const {
 			return name.give();
+		}
+
+		/**
+		 * @brief Whether the parameter is declared with `let`.
+		 */
+		[[nodiscard]]
+		bool isLet() const {
+			return is_let;
 		}
 
 		[[nodiscard]]

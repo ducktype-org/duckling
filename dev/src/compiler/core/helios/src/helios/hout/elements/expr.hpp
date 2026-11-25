@@ -378,8 +378,6 @@ namespace compiler::helios::code {
 		CPtr,
 		Slice,
 		Box,
-		Mut,
-		Imm,
 		SizeOf,
 		AlignOf
 	};
