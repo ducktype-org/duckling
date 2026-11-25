@@ -9,6 +9,7 @@
 //! The most notable members are [`Manifest`] and [`Dependency`].
 //!
 //! Parsing is implemented in the [`parse`] module.
+mod build_metadata;
 mod build_options;
 mod dependency;
 mod features;
@@ -19,6 +20,7 @@ mod profiles;
 mod source;
 mod venv_config;
 
+pub use build_metadata::BuildMetadata;
 pub use build_options::BuildOptions;
 pub use dependency::*;
 pub use features::*;
@@ -46,6 +48,7 @@ pub struct Manifest {
     profiles: Profiles,
     venv: VenvConfig,
     build_options: BuildOptions,
+    build_metadata: BuildMetadata,
     lints: Lints,
 }
 
@@ -61,6 +64,7 @@ impl Manifest {
         profiles: Profiles,
         venv: VenvConfig,
         build_options: BuildOptions,
+        build_metadata: BuildMetadata,
         lints: Lints,
     ) -> Self {
         Self {
@@ -72,6 +76,7 @@ impl Manifest {
             profiles,
             venv,
             build_options,
+            build_metadata,
             lints,
         }
     }
@@ -139,6 +144,11 @@ impl Manifest {
         &self.build_options
     }
 
+    /// Get the [`BuildMetadata`] of this manifest.
+    pub fn build_metadata(&self) -> BuildMetadata {
+        self.build_metadata
+    }
+
     /// Get the [`Lints`] of this manifest.
     pub fn lints(&self) -> &Lints {
         &self.lints
@@ -185,6 +195,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
                 external_libs: external_libs.into_iter().map(Into::into).collect(),
                 external_lib_paths,
             },
+            // @TODO: #3253 The registry does not store `build-metadata` yet.
+            BuildMetadata::default(),
             lints,
         ))
     }
@@ -203,6 +215,7 @@ impl TryFrom<Manifest> for registry::Manifest {
             profiles,
             venv: _,
             build_options,
+            build_metadata: _,
             lints: _,
         } = value;
         let license = metadata.license.unwrap_or_default();

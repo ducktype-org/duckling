@@ -129,6 +129,14 @@ impl DuckcProcessBuilder {
         self
     }
 
+    /// Set whether the compiled packages use the standard library.
+    pub fn set_use_std(&mut self, value: bool) -> &mut Self {
+        if !value {
+            self.inner.arg("--no-std");
+        }
+        self
+    }
+
     /// Ask for the version of `duckc`.
     pub fn ask_for_verbose_version(&mut self) -> &mut Self {
         self.inner.arg("--version-verbose");

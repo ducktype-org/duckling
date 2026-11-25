@@ -1,7 +1,9 @@
 SubDirs:
+  - always-dep-root
   - duplicate-libs
   - external-libs-on-dvm
   - invalid-external-lib
+  - no-std-depends-on-std
   - nonexistent-feature
   - nonexistent-profile
   - renamed-links

@@ -4,7 +4,8 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Various errors created when parsing the [`manifest`].
+//! Various errors created when parsing the [`manifest`], or when checking the dependency graph
+//! before a build.
 //!
 //! They are simple diagnostics, not associated with any lint, and are not checked when running
 //! [`run_lint_passes`].
@@ -14,7 +15,7 @@
 
 use super::{Diagnostic, macros};
 use crate::util::Pluralize;
-use crate::{DuckContext, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, StrId, qp_bail};
 
 #[derive(Debug, Default)]
 /// Errors encountered when parsing the manifest.
@@ -57,4 +58,15 @@ macros::make_diagnostic! {
         pub key: String,
     }
     display("the key `{}` is unused", key)
+}
+
+macros::make_diagnostic! {
+    pub struct NoStdPackageDependsOnStdPackage {
+        pub package: StrId,
+        pub dependency: StrId,
+    }
+    display(
+        "package `{}` does not use the standard library, so it cannot depend on `{}`, which does",
+        package, dependency
+    )
 }

@@ -1,0 +1,20 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "build-metadata:
+    use-std: false
+    always-dep: true" >> foo/quackconfig.yaml
+Tests:
+  always-dep-root:
+    Description: errors when building a package that can only be a dependency
+    Cases:
+      always-dep-root:
+        test-cmd: duck -C foo build
+        ExitCode: 1
+        Err:
+          String: |+
+            info: loaded source code of 1 package, 0 were downloaded, 1 was already present
+            info: successfully synchronized venv \`foo\`
+            error: package \`foo\` cannot be compiled directly, because its \`build-metadata.always-dep\` is \`true\`
+
+            note: such a package can only be compiled as a dependency of another package

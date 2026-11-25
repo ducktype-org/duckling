@@ -237,8 +237,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             let unit_layout = self
                 .profile_layout
                 .for_dependency(unit_id_in_graph, &self.graph)?;
-            let builder =
-                self.finished_builder_for_layout_and_profile(&*unit_layout, self.bcx.profile);
+            let builder = self.finished_builder_for_unit(unit, &*unit_layout, self.bcx.profile);
             let _lock = unit_layout.acquire_lock(self.ctx())?;
             let locked_manifest_file = unit_layout
                 .dependency_json(self.ctx())
@@ -257,12 +256,14 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         Ok(())
     }
 
-    /// Create a basic and reusable [`process_builder::DuckcProcessBuilder`].
-    fn finished_builder_for_layout_and_profile(
+    /// Create a [`process_builder::DuckcProcessBuilder`] compiling the given [`Unit`].
+    fn finished_builder_for_unit(
         &self,
+        unit: &Unit,
         layout: &dyn DependencyLayout,
         profile: Profile,
     ) -> process_builder::DuckcProcessBuilder {
+        let use_std = unit.package().manifest().build_metadata().use_std;
         let mut builder = Duckc::new(self.ctx()).process_builder();
         builder
             .set_subcommand(DuckcSubcommand::CompilePackages)
@@ -270,6 +271,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
             .set_artifacts_dir(&layout.compiler_artifacts())
             .set_opt_level(profile.opt_level)
             .set_incremental(profile.incremental)
+            .set_use_std(use_std)
             .set_workers_count(self.bcx.jobs);
         builder
     }

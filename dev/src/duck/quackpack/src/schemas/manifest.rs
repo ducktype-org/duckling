@@ -39,6 +39,8 @@ pub struct Manifest {
     pub venv: Option<VenvConfig>,
     /// Lints configuration.
     pub lints: Option<Lints>,
+    /// `build-metadata:` root field.
+    pub build_metadata: Option<BuildMetadata>,
 }
 
 impl Manifest {
@@ -50,6 +52,7 @@ impl Manifest {
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
             && self.lints.is_none()
+            && self.build_metadata.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -66,6 +69,9 @@ impl Manifest {
         }
         if self.venv.is_some() {
             result.push("venv");
+        }
+        if self.build_metadata.is_some() {
+            result.push("build-metadata");
         }
         result
     }
@@ -93,6 +99,16 @@ pub struct Metadata {
     /// The old name of `external-libs`; only kept to report a helpful error.
     // @TODO: #3999 remove this field in a future release.
     pub links: Option<de::IgnoredAny>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+/// Schema of the `build-metadata:` table.
+pub struct BuildMetadata {
+    /// Whether the package is compiled with the standard library (`true` when omitted).
+    pub use_std: Option<bool>,
+    /// Whether the package can only be compiled as a dependency (`false` when omitted).
+    pub always_dep: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

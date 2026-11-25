@@ -2067,3 +2067,169 @@ dependencies:
         )
     );
 }
+
+#[test]
+fn build_metadata_defaults() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_metadata = manifest.manifest().build_metadata();
+    assert!(build_metadata.use_std);
+    assert!(!build_metadata.always_dep);
+}
+
+#[test]
+fn build_metadata_empty_section_uses_defaults() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+build-metadata: {}
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_metadata = manifest.manifest().build_metadata();
+    assert!(build_metadata.use_std);
+    assert!(!build_metadata.always_dep);
+}
+
+#[test]
+fn build_metadata_without_std() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+build-metadata:
+  use-std: false
+
+dependencies:
+  bar:
+    version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_metadata = manifest.manifest().build_metadata();
+    assert!(!build_metadata.use_std);
+    assert!(!build_metadata.always_dep);
+}
+
+#[test]
+fn build_metadata_always_dep_without_dependencies() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+build-metadata:
+  use-std: false
+  always-dep: true
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_metadata = manifest.manifest().build_metadata();
+    assert!(!build_metadata.use_std);
+    assert!(build_metadata.always_dep);
+}
+
+#[test]
+fn build_metadata_always_dep_with_dependencies_is_an_error() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+build-metadata:
+  always-dep: true
+
+dependencies:
+  bar:
+    version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `build-metadata`",
+                "failed to parse the field `build-metadata.always-dep`",
+                "a package with `always-dep` set to `true` cannot have dependencies",
+                "remove the `dependencies` and `dev-dependencies` of this package",
+            ]
+        )
+    );
+}
+
+#[test]
+fn build_metadata_always_dep_with_dev_dependencies_is_an_error() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+build-metadata:
+  always-dep: true
+
+dev-dependencies:
+  bar:
+    version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "failed to parse the field `build-metadata`",
+                "failed to parse the field `build-metadata.always-dep`",
+                "a package with `always-dep` set to `true` cannot have dependencies",
+                "remove the `dependencies` and `dev-dependencies` of this package",
+            ]
+        )
+    );
+}
+
+#[test]
+fn fail_frontmatter_with_build_metadata() {
+    let (dir, frontmatter_path) = prepare_frontmatter(
+        r#"
+build-metadata:
+  use-std: false
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message_frontmatter(
+            &dir,
+            [
+                &format!(
+                    "illegal field `build-metadata` in the frontmatter at `{}`",
+                    frontmatter_path.display()
+                ),
+                "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
+            ]
+        )
+    );
+}
