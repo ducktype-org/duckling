@@ -114,4 +114,17 @@ namespace duck_ls {
 			units += i < chars.size() && chars[i].value > LAST_SINGLE_UNIT_CODE_POINT ? 2 : 1;
 		return units;
 	}
+
+	lsp::Range toLspRange(const dia::SourcePosition& position) {
+		const auto& source = *position.getSource();
+		const auto [start_line, start_column] = position.getStartLineColumn();
+		const auto [end_line, end_column]     = position.getEndLineColumn();
+
+		return {
+			.start = { .line      = static_cast<lsp::Uint>(start_line - 1),
+			           .character = codePointsToUtf16Units(source, start_line, start_column - 1) },
+			.end   = { .line      = static_cast<lsp::Uint>(end_line - 1),
+			           .character = codePointsToUtf16Units(source, end_line, end_column) },
+		};
+	}
 }

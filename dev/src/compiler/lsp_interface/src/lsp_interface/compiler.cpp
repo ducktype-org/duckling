@@ -456,15 +456,19 @@ namespace duck_ls {
 		auto       offset  = toCodePointOffset(content.view().stringView(), position);
 		if (offset.empty()) return nullptr;
 
-		auto markdown = hoverMarkdownAt(source_file, offset.value());
-		if (markdown.empty()) return nullptr;
+		auto hover = hoverAt(source_file, offset.value());
+		if (hover.empty()) return nullptr;
 
-		return lsp::Hover{
+		lsp::Hover result{
 			.contents = lsp::MarkupContent{
 				.kind  = lsp::MarkupKind::Markdown,
-				.value = std::move(markdown.value()),
+				.value = std::move(hover.value().markdown),
 			},
 		};
+		if (hover.value().position.has_value())
+			result.range = toLspRange(hover.value().position.value());
+		
+		return result;
 	}
 
 	bool Compiler::stdActive() const { return options.stdlib_options.stdActive(); }

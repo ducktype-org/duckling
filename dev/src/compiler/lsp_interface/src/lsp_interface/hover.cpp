@@ -96,7 +96,7 @@ namespace duck_ls {
 		/**
 		 * @brief The hover for the smallest expression under the cursor inside `top_expression`.
 		 */
-		base::Optional<std::string> hoverForExpression(
+		base::Optional<HoverContent> hoverForExpression(
 			query::Context& ctx, pst::Access<pst::ExprElement> top_expression, usize offset
 		) {
 			auto hout_result = ls::getHoutExpr(ctx, top_expression);
@@ -108,35 +108,39 @@ namespace duck_ls {
 			);
 			if (found.empty()) return {};
 
-			return describeExpression(ctx, *found.value());
+			const code::Expr& expr = *found.value();
+			HoverContent content{ .markdown = describeExpression(ctx, expr) };
+			if (auto position = expr.origin.getSourcePosition(ctx); position.has_value())
+				content.position.emplace(position.value());
+			return content;
 		}
 
 		/**
 		 * @brief The hover for the symbol that `declaration` declares.
 		 */
-		base::Optional<std::string> hoverForDeclaration(
+		base::Optional<HoverContent> hoverForDeclaration(
 			query::Context& ctx, pst::Access<pst::Stmt> declaration
 		) {
 			auto symbol = ls::getSymbolOfStmt(ctx, declaration);
 			if (!symbol.hasValue()) return {};
-			return describeSymbol(ctx, symbol.valueOrPanic(), {});
+			return HoverContent{ .markdown = describeSymbol(ctx, symbol.valueOrPanic(), {}) };
 		}
 	}
 
-	base::Optional<std::string> hoverMarkdownAt(
+	base::Optional<HoverContent> hoverAt(
 		base::Ref<compiler::frontend::SourceFile> file, usize offset
 	) {
 		try {
 			const PstPath path = getPstPath(file, offset);
 
-			base::Optional<std::string> markdown;
+			base::Optional<HoverContent> hover;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				if (path.top_expression.has_value())
-					markdown = hoverForExpression(ctx, path.top_expression.value(), offset);
-				if (markdown.empty() && path.declaration.has_value())
-					markdown = hoverForDeclaration(ctx, path.declaration.value());
+					hover = hoverForExpression(ctx, path.top_expression.value(), offset);
+				if (hover.empty() && path.declaration.has_value())
+					hover = hoverForDeclaration(ctx, path.declaration.value());
 			});
-			return markdown;
+			return hover;
 		} catch (const std::exception& e) {
 			std::cerr << "duck_ls: hover failed: " << e.what() << "\n";
 			return {};
