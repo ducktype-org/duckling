@@ -662,12 +662,35 @@ entry:
 			std::regex_search(ir, std::regex{ R"(call i64 %\S+\(i64 %\S+, i64 %\S+\))" }),
 			"Expected an indirect call returning i64"
 		);
+		std::smatch aggregate_call;
 		assertTrue(
 			std::regex_search(
 				ir,
-				std::regex{ R"(call void %\S+\(ptr sret\(%\S+\) %\S+, ptr byval\(%\S+\) %\S+\))" }
+				aggregate_call,
+				std::regex{ R"(call void %\S+\(ptr sret\(%\S+\) %\S+, ptr\b([^%\n]*)%\S+\))" }
 			),
 			"Expected an indirect call passing and returning an aggregate in memory"
+		);
+		const std::string argument_attributes = aggregate_call[1].str();
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\bnoalias\b)" }),
+			"Expected noalias on the indirect aggregate argument"
+		);
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\bnonnull\b)" }),
+			"Expected nonnull on the indirect aggregate argument"
+		);
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\balign\s+8\b)" }),
+			"Expected indirect aggregate argument alignment of 8 bytes"
+		);
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\bdereferenceable\(24\))" }),
+			"Expected 24 dereferenceable bytes for the three-i64 tuple"
+		);
+		assertFalse(
+			std::regex_search(argument_attributes, std::regex{ R"(\bbyval\b)" }),
+			"Default ABI indirect aggregate argument must not use byval"
 		);
 	}
 
