@@ -42,6 +42,14 @@ pub struct PackageFormatter {
     options: FormatOptions,
 }
 
+/// Struct responsible for formatting an arbitrary list of files given [`FormatOptions`].
+pub struct FilesFormatter {
+    /// Files to format.
+    files: Vec<PathBuf>,
+    /// [`FormatOptions`] to be used.
+    options: FormatOptions,
+}
+
 impl PackageFormatter {
     /// Create a new [`PackageFormatter`].
     /// This searches for the package's root with [`find_package_root`].
@@ -52,7 +60,7 @@ impl PackageFormatter {
 
     /// Formats the package.
     /// Creates the right instance of `duckfmt` and runs it.
-    pub fn format_package(self) -> QuackResult<()> {
+    pub fn format(self) -> QuackResult<()> {
         let mut duckfmt_command = DuckFmt::new().process_builder();
         duckfmt_command.set_check(self.options.check);
         duckfmt_command.set_print(self.options.print);
@@ -94,5 +102,23 @@ impl PackageFormatter {
     /// Get the potential localization of the `duckfmt` config file.
     fn fmt_config_path(&self) -> PathBuf {
         package_fmt_config_path(&self.root)
+    }
+}
+
+impl FilesFormatter {
+    /// Create a new [`FilesFormatter`].
+    pub fn new(files: Vec<PathBuf>, options: FormatOptions) -> FilesFormatter {
+        Self { files, options }
+    }
+
+    /// Formats the files.
+    /// Creates the right instance of `duckfmt` and runs it.
+    pub fn format(self) -> QuackResult<()> {
+        let mut duckfmt_command = DuckFmt::new().process_builder();
+        duckfmt_command.set_check(self.options.check);
+        duckfmt_command.set_print(self.options.print);
+        duckfmt_command.add_files_to_format(&self.files);
+        duckfmt_command.execute_and_replace()?;
+        Ok(())
     }
 }

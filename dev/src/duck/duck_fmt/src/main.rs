@@ -33,5 +33,5 @@ fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let matches = cli.try_get_matches()?;
     let options = FormatOptions::from_matches(&matches);
     let formatter = PackageFormatter::new(ctx, options)?;
-    formatter.format_package()
+    formatter.format()
 }
