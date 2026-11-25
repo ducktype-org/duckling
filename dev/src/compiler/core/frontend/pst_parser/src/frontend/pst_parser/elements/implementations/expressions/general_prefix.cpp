@@ -15,7 +15,18 @@ namespace pst::expr {
 
 		// `mut` is only a part of a writable view (`ref mut T`)
 		if (state[0].is(Keyword::Mut)) {
-			state.logSafeError(makeBox<error::MisplacedMutError>(state.getPosition()));
+			// `mut ref T` is most likely a swapped `ref mut T` and may be a common mistake, so we
+			// log a more specific error.
+			if (state[1].isKeyword()
+			    && lang_def::writableViewOperator(state[1].asKeyword()).has_value()) {
+				state.logSafeError(
+					makeBox<error::MutBeforeViewError>(
+						state.getPosition(), lang_def::keywordToStr(state[1].asKeyword()).str()
+					)
+				);
+			} else {
+				state.logSafeError(makeBox<error::MisplacedMutError>(state.getPosition()));
+			}
 			state.tokens().skip();
 			return parse(state);
 		}

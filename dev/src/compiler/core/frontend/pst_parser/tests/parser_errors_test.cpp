@@ -740,6 +740,9 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::error::MisplacedMutError>(
 			ss, dia::SourcePosition::fakePosition()
 		);
+		testDiagnosticMessage<pst::error::MutBeforeViewError>(
+			ss, dia::SourcePosition::fakePosition(), "ref"
+		);
 		testDiagnosticMessage<pst::BadStatementChoice<pst::Using>>(
 			ss, dia::SourcePosition::fakePosition()
 		);
