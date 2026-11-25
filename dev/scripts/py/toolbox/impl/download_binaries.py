@@ -4,6 +4,8 @@
 # Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 # of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+import json
+import pathlib
 import platform
 
 from .helpers import (
@@ -19,20 +21,25 @@ from .internet_file import (
     callback_unTAR,
 )
 
-CCACHE_VERSION = "4.9.1"
+# Also read by CMake, which rejects any other ccache version.
+SHIPPED_BINARIES_FILE = (
+    pathlib.Path(__file__).resolve().parents[3] / "shipped_binaries.json"
+)
+SHIPPED_VERSIONS: dict[str, str] = json.loads(SHIPPED_BINARIES_FILE.read_text())
+CCACHE_VERSION = SHIPPED_VERSIONS["ccache"]
 
 
 def ccache_file() -> InternetFile | None:
     """
     The ccache download for the platform this is running on, or None when
-    upstream publishes no binary for it (Linux aarch64, for instance) -- in
-    which case ccache has to come from the system package manager.
+    upstream publishes no binary for it.
     """
     # The upstream release asset for each platform we can build on, keyed by
     # (platform.system(), platform.machine()).
     # macOS ships one universal asset, hence the two entries pointing at it.
     assets: dict[tuple[str, str], str] = {
-        ("Linux", "x86_64"): f"ccache-{CCACHE_VERSION}-linux-x86_64.tar.xz",
+        ("Linux", "x86_64"): f"ccache-{CCACHE_VERSION}-linux-x86_64-glibc.tar.xz",
+        ("Linux", "aarch64"): f"ccache-{CCACHE_VERSION}-linux-aarch64-glibc.tar.xz",
         ("Darwin", "arm64"): f"ccache-{CCACHE_VERSION}-darwin.tar.gz",
         ("Darwin", "x86_64"): f"ccache-{CCACHE_VERSION}-darwin.tar.gz",
     }
