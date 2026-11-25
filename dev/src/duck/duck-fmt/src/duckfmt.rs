@@ -7,6 +7,7 @@
 //! Low-level creator of `duckfmt` instance.
 
 use std::convert::Infallible;
+use std::ffi::OsStr;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -74,6 +75,12 @@ impl DuckFmtProcessBuilder {
     /// Add files to format for `duckfmt`.
     pub fn add_files_to_format(&mut self, paths: &[PathBuf]) -> &mut Self {
         self.inner.args(paths);
+        self
+    }
+
+    /// Adds raw args to `duckfmt` instance.
+    pub fn raw_args(&mut self, args: &[&OsStr]) -> &mut Self {
+        self.inner.args(args);
         self
     }
 

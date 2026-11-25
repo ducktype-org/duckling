@@ -7,6 +7,7 @@
 //! Main logic for formatting a package.
 
 use std::convert::Infallible;
+use std::ffi::OsStr;
 use std::ops::ControlFlow;
 use std::path::PathBuf;
 
@@ -42,15 +43,6 @@ impl FormatOptions {
 pub struct PackageFormatter {
     /// Root of the package.
     root: PathBuf,
-    /// [`FormatOptions`] to be used.
-    options: FormatOptions,
-}
-
-#[derive(Debug)]
-/// Struct responsible for formatting an arbitrary list of files given [`FormatOptions`].
-pub struct FilesFormatter {
-    /// Files to format.
-    files: Vec<PathBuf>,
     /// [`FormatOptions`] to be used.
     options: FormatOptions,
 }
@@ -114,25 +106,10 @@ impl PackageFormatter {
     }
 }
 
-impl FilesFormatter {
-    /// Create a new [`FilesFormatter`].
-    pub fn new(files: Vec<PathBuf>, options: FormatOptions) -> FilesFormatter {
-        Self { files, options }
-    }
-
-    /// Formats the files.
-    /// Creates the right instance of `duckfmt` and runs it.
-    pub fn format(self) -> QuackResult<()> {
-        let mut duckfmt_command = DuckFmt::new().process_builder();
-        duckfmt_command.set_check(self.options.check);
-        duckfmt_command.set_print(self.options.print);
-        duckfmt_command.add_files_to_format(&self.files);
-
-        if let Some(config_path) = self.options.config_path {
-            duckfmt_command.set_fmt_config_path(&config_path);
-        }
-
-        duckfmt_command.execute_and_replace()?;
-        Ok(())
-    }
+/// Runs `duckfmt` with the supplied `args`.
+pub fn run_raw_duckfmt_with_args(args: &[&OsStr]) -> QuackResult<()> {
+    let mut duckfmt_command = DuckFmt::new().process_builder();
+    duckfmt_command.raw_args(args);
+    duckfmt_command.execute_and_replace()?;
+    Ok(())
 }

@@ -6,6 +6,7 @@
 
 //! Command line interface of `duck-fmt`.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use clap::{Arg, Command, value_parser};
@@ -30,11 +31,12 @@ pub(super) fn cli() -> Command {
             .value_parser(value_parser!(PathBuf))
         )
         .arg(
-            Arg::new("files")
-                .help("Files to format")
+            Arg::new("args")
+                .help("Arguments passed to `duckfmt`")
                 .trailing_var_arg(true)
                 .num_args(0..)
-                .value_parser(value_parser!(PathBuf))
+                .value_parser(value_parser!(OsString))
+                .conflicts_with_all(["check", "print", "config"]),
         )
         .styles(get_styles())
         .about("Formats all Duckling files inside the current package using `duckfmt`")
