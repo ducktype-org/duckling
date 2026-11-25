@@ -225,7 +225,12 @@ namespace compiler::helios::code {
 		if (found_match) return cast_expr(std::move(value));
 
 		ctx.log<dia::PlaceholderError>(
-			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
+			base::strConcat(
+				"Invalid cast from type ",
+				from.sourceTypeName(ctx),
+				" to type ",
+				to.sourceTypeName(ctx)
+			),
 			stmt->getStablePosition()
 		);
 		query::throwFailed();

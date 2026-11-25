@@ -78,12 +78,18 @@ namespace compiler::helios::desugaring {
 			auto type = expr->expression_type.getSymbolType();
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				logError(
-					ctx, pos, "`match` cannot look through a box. Got `", type.toString(), "`."
+					ctx,
+					pos,
+					"`match` cannot look through a box. Got `",
+					type.sourceTypeName(ctx),
+					"`."
 				);
 				return query::Failed();
 			}
 			if (type.getType().getKind() != tsh::Kind::Variant) {
-				logNYI(ctx, pos, "`match` on a non-variant type. Got `", type.toString(), "`.");
+				logNYI(
+					ctx, pos, "`match` on a non-variant type. Got `", type.sourceTypeName(ctx), "`."
+				);
 				return query::Failed();
 			}
 			// The coercion into the subject's own type looks like a no-op, but it is the check that
@@ -144,7 +150,7 @@ namespace compiler::helios::desugaring {
 					auto error_msg = makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Failed to find the alternative of the variant for `",
-							constraint.toString(),
+							constraint.sourceTypeName(ctx),
 							"`. The type has to match exactly the variant alternative."
 						),
 						pos
@@ -160,7 +166,7 @@ namespace compiler::helios::desugaring {
 						ctx,
 						pos,
 						"Failed to find the alternative of the variant for `",
-						constraint.toString(),
+						constraint.sourceTypeName(ctx),
 						"`."
 					);
 				}
@@ -307,7 +313,7 @@ namespace compiler::helios::desugaring {
 						ctx,
 						case_position,
 						"Alternative `",
-						constraint_type.value().toString(),
+						constraint_type.value().sourceTypeName(ctx),
 						"` is matched by more than one case."
 
 					);
@@ -333,13 +339,13 @@ namespace compiler::helios::desugaring {
 							base::strConcat(
 								"A bare `case _` binds nothing, so the payload it covers would "
 								"never be destroyed, and the alternative `",
-								alternative.toString(),
+								alternative.sourceTypeName(ctx),
 								"` it covers has a destructor."
 							),
 							case_position,
 							base::strConcat(
 								"Give it its own case, or constrain this one with `case _ : ",
-								alternative.toString(),
+								alternative.sourceTypeName(ctx),
 								"`."
 							)
 						);
@@ -364,9 +370,9 @@ namespace compiler::helios::desugaring {
 						ctx,
 						case_position,
 						"All `match` cases have to be of the same type, but this one is `",
-						result_type.toString(),
+						result_type.sourceTypeName(ctx),
 						"` while an earlier one is `",
-						common_type.value().toString(),
+						common_type.value().sourceTypeName(ctx),
 						"`."
 					);
 					return query::Failed();

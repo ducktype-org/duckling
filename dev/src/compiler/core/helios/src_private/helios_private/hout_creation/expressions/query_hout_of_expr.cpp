@@ -503,7 +503,7 @@ namespace compiler::helios::code {
 						ctx.log<dia::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
-								copied_type.toString(),
+								copied_type.sourceTypeName(ctx),
 								"` is trivially copyable. No need to use the explicit `copy` "
 								"keyword."
 							),
@@ -518,7 +518,9 @@ namespace compiler::helios::code {
 					}
 					if (not copied_type.getType().isCopyable(ctx)) {
 						ctx.log<dia::PlaceholderError>(
-							base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
+							base::strConcat(
+								"Type `", copied_type.sourceTypeName(ctx), "` cannot be copied."
+							),
 							stmt->getStablePosition()
 						);
 						return;
@@ -553,7 +555,9 @@ namespace compiler::helios::code {
 					// always copyable (the reference is copied), while a `box` follows its pointee.
 					if (not inner_type.isCopyable(ctx)) {
 						ctx.log<dia::PlaceholderError>(
-							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							base::strConcat(
+								"Type `", inner_type.sourceTypeName(ctx), "` cannot be copied."
+							),
 							stmt->getStablePosition()
 						);
 						return;
@@ -874,9 +878,9 @@ namespace compiler::helios::code {
 						base::strConcat(
 							"Both branches of an `if ... then ... else ...` expression have to be "
 							"of the same type, but the `then` branch is `",
-							true_type.withMutability(tsh::Mutability::Mutable).toString(),
+							true_type.withMutability(tsh::Mutability::Mutable).sourceTypeName(ctx),
 							"` and the `else` branch is `",
-							false_type.withMutability(tsh::Mutability::Mutable).toString(),
+							false_type.withMutability(tsh::Mutability::Mutable).sourceTypeName(ctx),
 							"`."
 						),
 						stmt->getStablePosition(),
@@ -969,7 +973,11 @@ namespace compiler::helios::code {
 
 				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
-						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
+						"'",
+						op.str(),
+						"' assignment for type: '",
+						location_type.sourceTypeName(ctx),
+						"'."
 					),
 					stmt->getStablePosition()
 				);
@@ -991,9 +999,9 @@ namespace compiler::helios::code {
 						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
 								"Invalid array element type. Expected `",
-								elem_type->toString(),
+								elem_type->sourceTypeName(ctx),
 								"`, but got `",
-								curr_elem_type.toString(),
+								curr_elem_type.sourceTypeName(ctx),
 								"`. All array elements must be of the same type."
 							),
 							elem_pst_expr.unlock(ctx)->getStablePosition()

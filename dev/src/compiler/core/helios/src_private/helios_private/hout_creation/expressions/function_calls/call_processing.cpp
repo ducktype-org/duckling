@@ -466,7 +466,8 @@ namespace compiler::helios::code {
 						return makeBox<dia::PlaceholderError>(
 							"Found exact candidate.",
 							base::strConcat(
-								"Candidate is compiler-generated, with type " + type.toString() + "."
+								"Candidate is compiler-generated, with type "
+								+ type.sourceTypeName(ctx) + "."
 							)
 						);
 					}
@@ -507,7 +508,8 @@ namespace compiler::helios::code {
 							= ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
 						return makeBox<dia::PlaceholderNote>(
 							"Found coercible candidate.",
-							"Candidate is compiler-generated, with type " + type.toString() + "."
+							"Candidate is compiler-generated, with type " + type.sourceTypeName(ctx)
+								+ "."
 						);
 					}
 
@@ -522,8 +524,8 @@ namespace compiler::helios::code {
 							auto param_pos = decl.parameters[i].origin.getStablePosition().value();
 
 							auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
-								coercion.getTarget().toString(),
-								coercion.getSource().getSymbolType().toString()
+								coercion.getTarget().sourceTypeName(ctx),
+								coercion.getSource().getSymbolType().sourceTypeName(ctx)
 							);
 							auto pm_message_id = dia::MessageBase::getUniqueID();
 							result->addLinkedMessage(pm_message_id, std::move(pm));
@@ -568,7 +570,8 @@ namespace compiler::helios::code {
 						const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
 						return makeBox<dia::PlaceholderNote>(
 							"Candidate failed to match.",
-							"Candidate is compiler-generated, with type " + type.toString() + "."
+							"Candidate is compiler-generated, with type " + type.sourceTypeName(ctx)
+								+ "."
 						);
 					}
 

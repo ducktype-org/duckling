@@ -32,9 +32,9 @@ namespace compiler::helios {
 				auto err = makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Return type `",
-						a.return_type.toString(),
+						a.return_type.sourceTypeName(ctx),
 						"` does not match `",
-						b.return_type.toString(),
+						b.return_type.sourceTypeName(ctx),
 						"`."
 					),
 					a.origin.getStablePosition(),
@@ -43,7 +43,7 @@ namespace compiler::helios {
 				err->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 					"Other function declared here",
 					b.origin.getStablePosition(),
-					base::strConcat("Return type is `", b.return_type.toString(), "`.")
+					base::strConcat("Return type is `", b.return_type.sourceTypeName(ctx), "`.")
 				));
 				ctx.log(std::move(err));
 			}
@@ -80,9 +80,9 @@ namespace compiler::helios {
 					auto err = makeBox<dia::PlaceholderError>(
 						base::strConcat(
 							"Parameter type `",
-							pa.type.toString(),
+							pa.type.sourceTypeName(ctx),
 							"` does not match `",
-							pb.type.toString(),
+							pb.type.sourceTypeName(ctx),
 							"`."
 						),
 						pa.origin.getStablePosition(),
@@ -91,7 +91,7 @@ namespace compiler::helios {
 					err->addAttachedMessage(makeBox<dia::PlaceholderNote>(
 						"Corresponding parameter declared here",
 						pb.origin.getStablePosition(),
-						base::strConcat("Parameter type is `", pb.type.toString(), "`.")
+						base::strConcat("Parameter type is `", pb.type.sourceTypeName(ctx), "`.")
 					));
 					ctx.log(std::move(err));
 				}

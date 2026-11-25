@@ -162,7 +162,7 @@ namespace compiler::helios {
 			);  // Here we should use illegalAccess, maybe serialize the PST
 			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
-			this->displayed_name = symbol_type.toString();
+			this->displayed_name = symbol_type.sourceTypeName(ctx);
 	}
 
 	Box<dia_args::Component> InteractiveType::getValue(MessageBase& msg) {

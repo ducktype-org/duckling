@@ -283,7 +283,10 @@ namespace compiler::helios::defgen {
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
 			ctx.log<dia::PlaceholderError>(
-				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
+				base::strConcat(
+					"Type `", type.sourceTypeName(ctx), "` cannot be default initialized"
+				),
+				pos
 			);
 			return query::Failed();
 		}

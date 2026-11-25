@@ -698,7 +698,7 @@ namespace compiler::tsl {
 			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(
 					"Lowering of the closure function type `",
-					function_type.toString(),
+					function_type.sourceTypeName(ctx),
 					"` is not supported yet."
 				),
 				"Use a raw function type, for example `funptr(i64) -> i64` instead of `(i64) -> "

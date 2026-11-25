@@ -137,7 +137,9 @@ namespace compiler::mir {
 		) const {
 			if (position.has_value())
 				function.getContext().log<ReturnTypeMismatchError>(
-					position.value(), given_type, function.getResultType().toString()
+					position.value(),
+					given_type,
+					function.getResultType().sourceTypeName(function.getContext())
 				);
 			query::throwFailed();
 		}
@@ -145,7 +147,7 @@ namespace compiler::mir {
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
 			const auto value_type = stmt.value->expression_type.getSymbolType();
 			if (!returnTypeMatches(value_type, function.getResultType()))
-				failReturnType(stmt.getPosition(), value_type.toString());
+				failReturnType(stmt.getPosition(), value_type.sourceTypeName(function.getContext()));
 
 			auto return_block = function.newBlock("return");
 			auto return_scope = function.newScope(parent_scope);
