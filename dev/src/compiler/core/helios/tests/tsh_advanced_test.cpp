@@ -474,7 +474,7 @@ private:
 			assertEqual(
 				std::string("unique leaking ref i64"),
 				qualified_type.withMutability(Mutability::Mutable).sourceTypeName(ctx),
-				"Mutable symbol types should omit the imm qualifier"
+				"Mutable ValueTypes should omit the imm qualifier"
 			);
 
 			assertEqual(

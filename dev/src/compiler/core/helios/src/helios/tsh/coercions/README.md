@@ -60,7 +60,7 @@ CoercionTree<Source>
    │  ├─ rank: CoercionRank            the worst thing done in this node, parts included
    │  └─ steps: [CoercionStep]         in the order they happen
    │     ├─ kind: Deref | HandOver | ... | Elementwise { parts: [CoercionNode] }
-   │     └─ result: ValueType         the type of the value once the step is done
+   │     └─ result: ValueType          the type of the value once the step is done
    └─ CoercionError                    the coercion was refused
       ├─ reason: IncompatibleTypes | SubPartRefused | ...
       ├─ source, target: ValueType
@@ -78,7 +78,7 @@ They are declared in the order of their ranks:
 
 | Step               | Printed as              | Rank                   | Produced by                                                                   |
 | ------------------ | ----------------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| `HandOver`         | `hand over`             | `Identity`             | `ValueType` coercions only, `handOver()` in `rules.cpp`                      |
+| `HandOver`         | `hand over`             | `Identity`             | `ValueType` coercions only, `handOver()` in `rules.cpp`                       |
 | `ImplicitMove`     | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`     |
 | `MutabilityChange` | `mutability change`     | `MutabilityChange`     | `keepReference`, raw pointers, and a tuple whose parts only change mutability |
 | `RefOf`            | `ref of`                | `RefOf`                | `takeByRef`, only in the `CoercionMode::ImplicitRefOf` mode                   |

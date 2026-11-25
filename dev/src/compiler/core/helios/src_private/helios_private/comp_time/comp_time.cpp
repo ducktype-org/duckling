@@ -827,7 +827,7 @@ namespace compiler::helios {
 				query::Context& ctx, const CompileTimeValue& ctv
 			) {
 				variant_match(ctv.getStorage()) {
-					variant_case(tsh::ValueType<>, symbol_type) { return symbol_type; }
+					variant_case(tsh::ValueType<>, value_type) { return value_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
 						return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 					}

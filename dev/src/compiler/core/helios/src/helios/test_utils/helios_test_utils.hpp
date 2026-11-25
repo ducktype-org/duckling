@@ -93,7 +93,7 @@ namespace compiler::helios::test_utils {
 	 * Use this to get the type of the variable `a` in `var a : i32`.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
-	 * @return The symbol type of the last symbol in the chain.
+	 * @return The ValueType of the last symbol in the chain.
 	 */
 	tsh::ValueType<> getValueTypeOf(const std::string_view chain, ScopeID scope);
 

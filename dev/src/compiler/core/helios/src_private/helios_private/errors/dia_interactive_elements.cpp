@@ -152,17 +152,17 @@ namespace compiler::helios {
 
 	InteractiveType::InteractiveType(
 		query::Context&                               ctx,
-		tsh::ValueType<>                              symbol_type,
+		tsh::ValueType<>                              value_type,
 		base::Optional<pst::Access<pst::LangElement>> pst_expr
 	):
-		  symbol_type(symbol_type),
+		  value_type(value_type),
 		  pst_expr(std::move(pst_expr)) {
 		if (pst_expr.has_value()) {
 			this->displayed_name = pst_expr.value()->getSourcePosition().illegalAccess().content(
 			);  // Here we should use illegalAccess, maybe serialize the PST
 			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
-			this->displayed_name = symbol_type.toString();
+			this->displayed_name = value_type.toString();
 	}
 
 	Box<dia_args::Component> InteractiveType::getValue(MessageBase& msg) {

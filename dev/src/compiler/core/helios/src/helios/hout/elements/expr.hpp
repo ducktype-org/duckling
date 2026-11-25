@@ -875,7 +875,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a pointer creation expression (`ptrof`).
-	 * It takes a place holding a value of symbol type `S` and produces a value of type `ptr S`.
+	 * It takes a place holding a value of ValueType `S` and produces a value of type `ptr S`.
 	 *
 	 * Unlike `RefOfExpr`, the reference kind of the operand is kept instead of being collapsed into
 	 * `Ref`: `ptrof` on a place of type `box T` yields `ptr box T`, the address of the box itself,

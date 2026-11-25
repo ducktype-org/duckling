@@ -631,12 +631,12 @@ namespace compiler::helios {
 			}
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
-			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
-					   .name = ctor_name,
-					   .generated_symbol_data
+			const SymID ctor_symbol       = ctx.query<defgen::QueryGeneratedSymbol>({
+					  .name = ctor_name,
+					  .generated_symbol_data
                 = Constructor{ .type = target_type, .kind = Constructor::Kind::Implicit },
             });
-			const auto  result_symbol_type = tsh::ValueType<>::withDefaultsMut(target_type);
+			const auto  result_value_type = tsh::ValueType<>::withDefaultsMut(target_type);
 
 			std::vector<code::Parameter> parameters;
 			parameters.reserve(num_fields);
@@ -692,7 +692,7 @@ namespace compiler::helios {
 			                                        .getType()
 			                                        .as<tsh::FunctionAbstractType>();
 			CORE_ASSERT(
-				result_symbol_type == expected_function_type.getResultType(),
+				result_value_type == expected_function_type.getResultType(),
 				"Generated constructor return type mismatch"
 			);
 			for (u64 i = 0; i < num_fields; i++) {
@@ -706,7 +706,7 @@ namespace compiler::helios {
 			return HOUTFunctionDeclaration{
 				ctor_symbol,
 				HOUTFunctionDeclaration::Operatoriness::None,
-				result_symbol_type,
+				result_value_type,
 				std::move(parameters),
 				code::generatedOrigin(),
 			};

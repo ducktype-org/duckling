@@ -214,8 +214,8 @@ namespace compiler::tsh {
 		SETUP_TYPE_WITH_BASE(PointerAbstractType, AbstractType)
 
 		/**
-		 * @brief Gets the underlying symbol type of the Pointer type.
-		 * @return The underlying symbol type of the Pointer type.
+		 * @brief Gets the underlying ValueType of the Pointer type.
+		 * @return The underlying ValueType of the Pointer type.
 		 */
 		[[nodiscard]]
 		ValueType<> getPointee() const;

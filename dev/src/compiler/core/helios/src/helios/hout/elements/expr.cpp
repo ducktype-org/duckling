@@ -559,7 +559,7 @@ namespace compiler::helios::code {
 
 	namespace {
 		/**
-		 * Map a vector of HOUT expressions to their symbol types.
+		 * Map a vector of HOUT expressions to their ValueTypes.
 		 */
 		std::vector<tsh::ValueType<>> extractTypesFromExprs(const std::vector<Box<Expr>>& exprs) {
 			std::vector<tsh::ValueType<>> types;
@@ -1337,7 +1337,7 @@ namespace compiler::helios::code {
 	PtrOfExpr::PtrOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  // The whole symbol type of the operand becomes the pointee, so its reference kind
+				  // The whole ValueType of the operand becomes the pointee, so its reference kind
 	              // survives: `ptrof` on a `box T` place gives `ptr box T`.
 				  tsh::ValueType<>::withDefaultsMut(
 					  ctx.query<tsh::QueryPointerType>({ inner->expression_type.getValueType() })

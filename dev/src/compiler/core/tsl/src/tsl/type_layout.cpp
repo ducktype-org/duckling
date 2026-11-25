@@ -38,7 +38,7 @@ using base::bytes2bits;
 namespace compiler::tsl {
 	namespace {
 		/**
-		 * @brief Get a vector of TypeLayouts for a vector of ValueType.
+		 * @brief Get a vector of TypeLayouts for a vector of ValueTypes.
 		 * @param types The input ValueType vector.
 		 * @param ctx The query context.
 		 * @return The output TypeLayout vector.
@@ -674,13 +674,13 @@ namespace compiler::tsl {
 		}
 	}
 
-	PointerTypeLayout::PointerTypeLayout(const tsh::ValueType<> symbol_type, query::Context& ctx):
-		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee_type(tsh::ValueType<>::withDefaultsMut(symbol_type.getType())),
+	PointerTypeLayout::PointerTypeLayout(const tsh::ValueType<> value_type, query::Context& ctx):
+		  TypeLayoutABC(POINTER_SIZE, value_type, ctx),
+		  pointee_type(tsh::ValueType<>::withDefaultsMut(value_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
-			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
-			"Construction of pointer layout from symbol type "
+			value_type.getRefKind() != tsh::ReferenceKind::Direct,
+			"Construction of pointer layout from ValueType "
 			"without reference indirection is forbidden."
 		);
 	}

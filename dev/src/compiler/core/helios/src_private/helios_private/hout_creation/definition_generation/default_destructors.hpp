@@ -23,7 +23,7 @@ namespace compiler::helios::defgen {
 
 
 	/**
-	 * @brief Get the symbol of the proper destructor for a given symbol type (not the optional user
+	 * @brief Get the symbol of the proper destructor for a given ValueType (not the optional user
 	 * one). Returns empty value when the type doesn't have a destructor (trivial destructor).
 	 */
 	base::Optional<SymID> destructSymForValueType(query::Context& ctx, tsh::ValueType<> type);

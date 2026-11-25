@@ -199,7 +199,7 @@ private:
 				{ directOf(tuple), "tuple" },
 				{ directOf(function), "function" },
 			};
-			for (const auto& [symbol_type, what]: rejected) expectRejected(ctx, symbol_type, what);
+			for (const auto& [value_type, what]: rejected) expectRejected(ctx, value_type, what);
 		});
 	}
 

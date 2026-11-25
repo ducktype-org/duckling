@@ -28,7 +28,7 @@ namespace compiler::tsh {
 	 *
 	 * An ExpressionType object describes the value of an expression. That value has a type, as well
 	 * as mutability, referential access, uniqueness, and leakage specifiers. These are specified
-	 * in the symbol_type field. However, the value of an expression is also described by its
+	 * in the value_type field. However, the value of an expression is also described by its
 	 * value category and associated semantics, like copy and move capability — these are specified
 	 * in the value_category field.
 	 *
@@ -40,7 +40,7 @@ namespace compiler::tsh {
 		/**
 		 * @brief Constructs the ExpressionType from another ExpressionType.
 		 *
-		 * The source ExpressionType must hold a symbol type (and by extension an abstract type)
+		 * The source ExpressionType must hold a ValueType (and by extension an abstract type)
 		 * which is dynamically convertible to the one expected by the target ExpressionType.
 		 * Otherwise, the dynamic cast, and then the constructor, will fail.
 		 *
@@ -50,18 +50,16 @@ namespace compiler::tsh {
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		ExpressionType(ExpressionType<OTHER_ABSTRACT_TYPE> other):
-			  symbol_type(other.getValueType()),
+			  value_type(other.getValueType()),
 			  value_category(other.getValueCategory()) {}
 
 		/**
 		 * @brief Constructs the ExpressionType directly from its contents.
-		 * @param symbol_type The source symbol type.
+		 * @param value_type The source ValueType.
 		 * @param value_category The value category of the described value.
 		 */
-		ExpressionType(
-			const ValueType<ABSTRACT_TYPE> symbol_type, const ValueCategory value_category
-		):
-			  symbol_type(symbol_type),
+		ExpressionType(const ValueType<ABSTRACT_TYPE> value_type, const ValueCategory value_category):
+			  value_type(value_type),
 			  value_category(value_category) {}
 
 		ExpressionType(const ExpressionType& other) = default;
@@ -72,16 +70,16 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		ABSTRACT_TYPE getType() const {
-			return symbol_type.getType();
+			return value_type.getType();
 		}
 
 		/**
-		 * @brief Gets the underlying symbol type.
-		 * @return The underlying symbol type.
+		 * @brief Gets the underlying ValueType.
+		 * @return The underlying ValueType.
 		 */
 		[[nodiscard]]
 		const ValueType<ABSTRACT_TYPE>& getValueType() const {
-			return symbol_type;
+			return value_type;
 		}
 
 		/**
@@ -108,7 +106,7 @@ namespace compiler::tsh {
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		[[nodiscard]]
 		auto operator<=>(const ExpressionType<OTHER_ABSTRACT_TYPE>& other) const {
-			if (auto symbol_cmp = symbol_type <=> other.getValueType(); symbol_cmp != 0)
+			if (auto symbol_cmp = value_type <=> other.getValueType(); symbol_cmp != 0)
 				return symbol_cmp;
 			return value_category <=> other.getValueCategory();
 		}
@@ -129,7 +127,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(symbol_type, value_category);
+			return hashing::justHash<hashing::SHA256>(value_type, value_category);
 		}
 
 		friend constexpr void addToHash(
@@ -139,7 +137,7 @@ namespace compiler::tsh {
 		}
 
 	private:
-		ValueType<ABSTRACT_TYPE> symbol_type;
+		ValueType<ABSTRACT_TYPE> value_type;
 		ValueCategory            value_category;
 	};
 }

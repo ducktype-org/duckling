@@ -470,7 +470,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::ValueType<> symbol_type) {
-		return defgen::destructSymForValueType(ctx, symbol_type);
+	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::ValueType<> value_type) {
+		return defgen::destructSymForValueType(ctx, value_type);
 	}
 }

@@ -171,20 +171,20 @@ private:
 	}
 
 	/**
-	 * Shorthand to create a mutable symbol type from an abstract type.
+	 * Shorthand to create a mutable ValueType from an abstract type.
 	 */
-	static compiler::tsh::ValueType<> st(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::ValueType<> vt(const compiler::tsh::AbstractType abstract_type) {
 		return compiler::tsh::ValueType<>::withDefaultsMut(abstract_type);
 	}
 
-	static compiler::tsh::ValueType<> stImm(const compiler::tsh::AbstractType abstract_type) {
-		return st(abstract_type).withMutability(Immutable);
+	static compiler::tsh::ValueType<> vtImm(const compiler::tsh::AbstractType abstract_type) {
+		return vt(abstract_type).withMutability(Immutable);
 	}
 
 	/**
-	 * Shorthand to create a reference to mutable symbol type from an abstract type.
+	 * Shorthand to create a reference to mutable ValueType from an abstract type.
 	 */
-	static compiler::tsh::ValueType<> refst(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::ValueType<> refvt(const compiler::tsh::AbstractType abstract_type) {
 		return compiler::tsh::ValueType{
 			abstract_type,
 			compiler::tsh::ReferenceKind::Ref,
@@ -228,35 +228,35 @@ private:
 			{
 				auto simple_ref
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_REF", root_scope);
-				auto expected = st(i64_type).toRef();
+				auto expected = vt(i64_type).toRef();
 				ASSERT_EQUAL(expected, simple_ref);
 			}
 			{
 				auto simple_box
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_BOX", root_scope);
-				auto expected = st(i64_type).toBox();
+				auto expected = vt(i64_type).toBox();
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
 				auto simple_imm
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_IMM", root_scope);
-				auto expected = stImm(i64_type);
+				auto expected = vtImm(i64_type);
 				ASSERT_EQUAL(expected, simple_imm);
 			}
 			{
 				auto simple_variant
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_VARIANT", root_scope);
 				auto expected
-					= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
-				                                                                st(f64_type) } }));
+					= vt(query::entryPoint<compiler::tsh::QueryVariantType>({ { vt(i32_type),
+				                                                                vt(f64_type) } }));
 				ASSERT_EQUAL(expected, simple_variant);
 			}
 			{
 				auto simple_tuple
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_TUPLE", root_scope);
 				auto expected
-					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
-				                                                              st(f64_type) } }));
+					= vt(query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(i32_type),
+				                                                              vt(f64_type) } }));
 				ASSERT_EQUAL(expected, simple_tuple);
 			}
 			{
@@ -275,35 +275,35 @@ private:
 		{
 			{
 				auto a_type   = getConstValueAs<compiler::tsh::ValueType<>>("A", root_scope);
-				auto expected = st(unit_type);
+				auto expected = vt(unit_type);
 				ASSERT_EQUAL(expected, a_type);
 			}
 			{
 				auto b_type   = getConstValueAs<compiler::tsh::ValueType<>>("B", root_scope);
-				auto expected = st(i32_type).toBox();
+				auto expected = vt(i32_type).toBox();
 				ASSERT_EQUAL(expected, b_type);
 			}
 			{
 				auto c_type   = getConstValueAs<compiler::tsh::ValueType<>>("C", root_scope);
-				auto expected = st(i32_type).toRef();
+				auto expected = vt(i32_type).toRef();
 				ASSERT_EQUAL(expected, c_type);
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::ValueType<>>("D", root_scope);
-				auto expected = stImm(i32_type);
+				auto expected = vtImm(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
 				auto e_type   = getConstValueAs<compiler::tsh::ValueType<>>("E", root_scope);
 				auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
-					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+					{ { vt(i16_type), vt(i32_type), vt(i64_type), vt(i128_type) } }
 				);
-				ASSERT_EQUAL(st(expected), e_type);
+				ASSERT_EQUAL(vt(expected), e_type);
 			}
 			{
 				auto f_type   = getConstValueAs<compiler::tsh::ValueType<>>("F", root_scope);
-				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
-					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
+				auto expected = vt(query::entryPoint<compiler::tsh::QueryTupleType>(
+					{ { vt(i16_type), vt(i32_type), vt(i64_type), vt(i128_type) } }
 				));
 				ASSERT_EQUAL(expected, f_type);
 			}
@@ -311,20 +311,20 @@ private:
 				auto mega_type
 					= getConstValueAs<compiler::tsh::ValueType<>>("megaGigaType", root_scope);
 
-				auto first  = st(unit_type);
-				auto second = st(i128_type).toBox();
-				auto third  = st(i32_type);
+				auto first  = vt(unit_type);
+				auto second = vt(i128_type).toBox();
+				auto third  = vt(i32_type);
 				auto fourth
-					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i16_type),
-				                                                              st(f16_type) } }));
+					= vt(query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(i16_type),
+				                                                              vt(f16_type) } }));
 				auto fifth_inner_tuple
-					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(f64_type),
-				                                                              st(f128_type) } }));
-				auto fifth = st(query::entryPoint<compiler::tsh::QueryVariantType>(
-					{ { st(i64_type), fifth_inner_tuple } }
+					= vt(query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(f64_type),
+				                                                              vt(f128_type) } }));
+				auto fifth = vt(query::entryPoint<compiler::tsh::QueryVariantType>(
+					{ { vt(i64_type), fifth_inner_tuple } }
 				));
 
-				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
+				auto expected = vt(query::entryPoint<compiler::tsh::QueryTupleType>(
 					{ { first, second, third, fourth, fifth } }
 				));
 
@@ -332,13 +332,13 @@ private:
 			}
 			{
 				auto first_type = getConstValueAs<compiler::tsh::ValueType<>>("FIRST", root_scope);
-				auto expected   = st(i16_type).toBox();
+				auto expected   = vt(i16_type).toBox();
 				ASSERT_EQUAL(expected, first_type);
 			}
 			{
 				auto second_type
 					= getConstValueAs<compiler::tsh::ValueType<>>("SECOND", root_scope);
-				auto expected = st(i64_type).toRef();
+				auto expected = vt(i64_type).toRef();
 				ASSERT_EQUAL(expected, second_type);
 			}
 			{  // Type Comparisons
@@ -356,8 +356,8 @@ private:
 		// Variant comp-time logic.
 		{
 			auto i32_or_f32
-				= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
-			                                                                st(f32_type) } }));
+				= vt(query::entryPoint<compiler::tsh::QueryVariantType>({ { vt(i32_type),
+			                                                                vt(f32_type) } }));
 
 			auto picked_variant
 				= getConstValueAs<compiler::tsh::ValueType<>>("PICKED_VARIANT", root_scope);
@@ -365,7 +365,7 @@ private:
 
 			auto picked_plain
 				= getConstValueAs<compiler::tsh::ValueType<>>("PICKED_PLAIN", root_scope);
-			ASSERT_EQUAL(st(i32_type), picked_plain);
+			ASSERT_EQUAL(vt(i32_type), picked_plain);
 
 			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_IS_VARIANT", root_scope));
 			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_ORDER_INSENSITIVE", root_scope));
@@ -414,11 +414,11 @@ private:
 			                .get<CompileTimeValue::VMValue>()
 			                .has_value());
 
-			auto i32_pair = st(
-				query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type), st(i32_type) } })
+			auto i32_pair = vt(
+				query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(i32_type), vt(i32_type) } })
 			);
 			auto expected_nested
-				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } }));
+				= vt(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } }));
 			ASSERT_EQUAL(
 				expected_nested,
 				getConstValueAs<compiler::tsh::ValueType<>>("NESTED_TYPE_TUPLE", root_scope)
@@ -428,7 +428,7 @@ private:
 				= getConstValueAs<CompileTimeValue::TypeTuple>("SINGLE_TYPE_TUPLE", root_scope);
 			ASSERT_EQUAL(single_tuple.getElements().size(), 1);
 			ASSERT_EQUAL(
-				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::ValueType<>)
+				vt(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::ValueType<>)
 			);
 		}
 
@@ -437,48 +437,48 @@ private:
 			using compiler::tsh::FunctionKind;
 			using compiler::tsh::QueryFunctionType;
 
-			auto i32_st      = st(i32_type);
-			auto bool_st     = st(compiler::tsh::getBoolType());
+			auto i32_vt      = vt(i32_type);
+			auto bool_vt     = vt(compiler::tsh::getBoolType());
 			auto function_of = [&](std::vector<compiler::tsh::ValueType<>> parameters,
 			                       compiler::tsh::ValueType<>              result,
 			                       FunctionKind                            kind) {
-				return st(query::entryPoint<QueryFunctionType>(
+				return vt(query::entryPoint<QueryFunctionType>(
 					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
 				));
 			};
 
 			ASSERT_EQUAL(
-				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw),
+				function_of({ i32_vt, i32_vt }, bool_vt, FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_PAIR", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
+				function_of({ i32_vt, i32_vt }, bool_vt, FunctionKind::Closure),
 				getConstValueAs<compiler::tsh::ValueType<>>("CLOSURE_PAIR", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				function_of({ i32_vt }, bool_vt, FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_SINGLE", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({}, bool_st, FunctionKind::Raw),
+				function_of({}, bool_vt, FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_NO_PARAMS", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
+				function_of({ i32_vt }, vt(compiler::tsh::getUnitType()), FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_UNIT_RESULT", root_scope)
 			);
 			auto i32_pair
-				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
+				= vt(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_vt, i32_vt } }));
 			ASSERT_EQUAL(
-				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				function_of({ i32_pair }, bool_vt, FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_TUPLE_PARAM", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_st }, bool_st, FunctionKind::Raw),
+				function_of({ i32_vt }, bool_vt, FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
 			);
 			ASSERT_EQUAL(
-				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
+				function_of({ i32_pair }, bool_vt, FunctionKind::Raw),
 				getConstValueAs<compiler::tsh::ValueType<>>("RAW_FROM_ALIAS", root_scope)
 			);
 		}
@@ -545,10 +545,10 @@ private:
 		                                      std::string_view            type_suffix,
 		                                      compiler::tsh::AbstractType expected_type,
 		                                      compiler::tsh::Mutability   expected_mutability) {
-			auto var_name    = base::strConcat(keyword, "_", type_suffix);
-			auto symbol_type = getValueTypeOf(var_name, root_scope);
-			ASSERT_EQUAL(expected_type, symbol_type.getType());
-			ASSERT_EQUAL(expected_mutability, symbol_type.getMutability());
+			auto var_name   = base::strConcat(keyword, "_", type_suffix);
+			auto value_type = getValueTypeOf(var_name, root_scope);
+			ASSERT_EQUAL(expected_type, value_type.getType());
+			ASSERT_EQUAL(expected_mutability, value_type.getMutability());
 		};
 
 		verify_type_and_mutability("const", "i16", i16_type, Immutable);
@@ -809,19 +809,19 @@ private:
 		auto c_symbol = getChain("c", root_scope).back();
 		auto c_type
 			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_symbol)->valueOrThrow();
-		ASSERT_EQUAL(c_type, st(class_with_member_abstract_type));
+		ASSERT_EQUAL(c_type, vt(class_with_member_abstract_type));
 
 		auto c_member_symbol = getChain("c_member", root_scope).back();
 		auto c_member_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_symbol)
 		                         ->valueOrThrow();
 
-		ASSERT_EQUAL(c_member_type, st(first_class_abstract_type));
+		ASSERT_EQUAL(c_member_type, vt(first_class_abstract_type));
 
 		auto c_member_a_symbol = getChain("c_member_pub", root_scope).back();
 		auto c_member_a_type
 			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
 		          ->valueOrThrow();
-		auto expected_type = st(getIntegralTypeNoContext(64, Signed));
+		auto expected_type = vt(getIntegralTypeNoContext(64, Signed));
 		ASSERT_EQUAL(c_member_a_type, expected_type);
 
 		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
@@ -876,11 +876,11 @@ private:
 
 		const auto h_interface = compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
 
-		auto i32 = st(getIntegralTypeNoContext(32, Signed));
-		auto f32 = st(getFloatTypeNoContext(32));
+		auto i32 = vt(getIntegralTypeNoContext(32, Signed));
+		auto f32 = vt(getFloatTypeNoContext(32));
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
-			auto str = st(compiler::tsh::getCharSliceType(ctx));
+			auto str = vt(compiler::tsh::getCharSliceType(ctx));
 
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
@@ -929,32 +929,32 @@ private:
 		const auto bool_type  = compiler::tsh::getBoolType();
 		const auto meta_type  = compiler::tsh::getMetaType();
 
-		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = stImm(int32_type);
+		const auto int32_mut_value_type   = vt(int32_type).withMutability(Mutable);
+		const auto int32_immut_value_type = vtImm(int32_type);
 
-		ASSERT_EQUAL(int32_immut_symbol_type, getValueTypeOf("SimpleIntConst", root_scope));
-		ASSERT_EQUAL(int32_immut_symbol_type, getValueTypeOf("SimpleIntLet", root_scope));
-		ASSERT_EQUAL(int32_mut_symbol_type, getValueTypeOf("SimpleIntVar", root_scope));
+		ASSERT_EQUAL(int32_immut_value_type, getValueTypeOf("SimpleIntConst", root_scope));
+		ASSERT_EQUAL(int32_immut_value_type, getValueTypeOf("SimpleIntLet", root_scope));
+		ASSERT_EQUAL(int32_mut_value_type, getValueTypeOf("SimpleIntVar", root_scope));
 
 		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 
 		const auto tuple_int_int               = getTypeOf("TupleII", root_scope);
 		const auto tuple_int_int_abstract_type = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { st(int32_type), st(int32_type) } }
+			{ { vt(int32_type), vt(int32_type) } }
 		);
 		ASSERT_EQUAL(tuple_int_int, tuple_int_int_abstract_type);
 
 		const auto first_variant               = getTypeOf("first_variant", root_scope);
 		const auto first_variant_abstract_type = query::entryPoint<compiler::tsh::QueryVariantType>(
-			{ { st(int32_type), st(f32_type) } }
+			{ { vt(int32_type), vt(f32_type) } }
 		);
 		ASSERT_EQUAL(first_variant, first_variant_abstract_type);
 
 		const auto second_variant = getTypeOf("second_variant", root_scope);
 		const auto second_variant_abstract_type
 			= query::entryPoint<compiler::tsh::QueryVariantType>(
-				{ { st(int32_type), st(f32_type), st(bool_type) } }
+				{ { vt(int32_type), vt(f32_type), vt(bool_type) } }
 			);
 		ASSERT_EQUAL(second_variant, second_variant_abstract_type);
 
@@ -966,11 +966,11 @@ private:
 
 		auto right_tuple = query::entryPoint<compiler::tsh::QueryTupleType>({ {
 			class_a,
-			st(query::entryPoint<compiler::tsh::QueryVariantType>({ { class_b, class_c } })),
+			vt(query::entryPoint<compiler::tsh::QueryVariantType>({ { class_b, class_c } })),
 		} });
 
 		const auto weird_variant_type
-			= query::entryPoint<compiler::tsh::QueryVariantType>({ { class_a, st(right_tuple) } });
+			= query::entryPoint<compiler::tsh::QueryVariantType>({ { class_a, vt(right_tuple) } });
 
 		ASSERT_EQUAL(weird_variant, weird_variant_type);
 
@@ -982,13 +982,13 @@ private:
 		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
 
 		const auto tuple_f16_f32
-			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(f16_type), st(f32_type) } });
+			= query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(f16_type), vt(f32_type) } });
 		const auto tuple_i16_i32 = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { st(int16_type), st(int32_type) } }
+			{ { vt(int16_type), vt(int32_type) } }
 		);
 
 		const auto tuple_ii_ff_abstract_type = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { st(tuple_i16_i32), st(tuple_f16_f32) } }
+			{ { vt(tuple_i16_i32), vt(tuple_f16_f32) } }
 		);
 
 		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_abstract_type);
@@ -1452,7 +1452,7 @@ private:
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
 		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-		const auto int32ref_type = st(int32_type).toRef().withMutability(Immutable);
+		const auto int32ref_type = vt(int32_type).toRef().withMutability(Immutable);
 		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
@@ -1461,7 +1461,7 @@ private:
 		// is covered by `helios_with_std_test`.
 		auto       sym_vbox    = getChain("VBOX", root_scope).back();
 		const auto f32_type    = getFloatTypeNoContext(32);
-		const auto f32box_type = st(f32_type).toBox().withMutability(Immutable);
+		const auto f32box_type = vt(f32_type).toBox().withMutability(Immutable);
 		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
@@ -1470,7 +1470,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = stImm(bool_type);
+		const auto const_bool_type = vtImm(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -1511,25 +1511,25 @@ private:
 		auto i32_type = getIntegralTypeNoContext(32, Signed);
 		auto f32_type = getFloatTypeNoContext(32);
 		auto i32_or_f32
-			= query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
+			= query::entryPoint<compiler::tsh::QueryVariantType>({ { vt(i32_type), vt(f32_type) } });
 
 
 		{
 			auto& var = get_var_ref(0);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
-			ASSERT_EQUAL(var.type, st(i32_type));
+			ASSERT_EQUAL(var.type, vt(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(1);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "b");
-			ASSERT_EQUAL(var.type, st(i32_type));
+			ASSERT_EQUAL(var.type, vt(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(2);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			ASSERT_EQUAL(var.type, st(i32_or_f32));
+			ASSERT_EQUAL(var.type, vt(i32_or_f32));
 		}
 
 		{
@@ -1543,16 +1543,16 @@ private:
 			{
 				auto& var1 = get_var_block(0, if_stmt.then_body);
 				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
-				ASSERT_EQUAL(var1.type, st(i32_type));
+				ASSERT_EQUAL(var1.type, vt(i32_type));
 
 				auto& var2 = get_var_block(1, if_stmt.then_body);
 				ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
-				ASSERT_EQUAL(var2.type, st(i32_or_f32));
+				ASSERT_EQUAL(var2.type, vt(i32_or_f32));
 			}
 			{
 				auto& var = get_var_block(0, if_stmt.else_body);
 				ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "z");
-				ASSERT_EQUAL(var.type, st(i32_type));
+				ASSERT_EQUAL(var.type, vt(i32_type));
 			}
 		}
 
@@ -1561,11 +1561,11 @@ private:
 				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
 			auto& var = get_var_block(0, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
-			ASSERT_EQUAL(var.type, st(i32_type));
+			ASSERT_EQUAL(var.type, vt(i32_type));
 
 			auto& var_y = get_var_block(2, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var_y.helios_symbol), "y");
-			ASSERT_EQUAL(var_y.type, st(i32_or_f32));
+			ASSERT_EQUAL(var_y.type, vt(i32_or_f32));
 		}
 
 		{
@@ -1593,7 +1593,7 @@ private:
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
 			auto i32_type              = getIntegralTypeNoContext(32, Signed);
-			auto expected_type         = st(i32_type).toRef();
+			auto expected_type         = vt(i32_type).toRef();
 			ASSERT_EQUAL(expected_type, getValueTypeOf("r", test_simple_ref_scope));
 		}
 		{
@@ -1738,9 +1738,9 @@ private:
 		{
 			auto scope = getFunctionBodyScope(getChain("test_deduced_from_ref", top_scope).back());
 			auto i32_type = getIntegralTypeNoContext(32, Signed);
-			ASSERT_EQUAL(st(i32_type), getValueTypeOf("copied", scope));
+			ASSERT_EQUAL(vt(i32_type), getValueTypeOf("copied", scope));
 			ASSERT_EQUAL(
-				st(i32_type).withMutability(Immutable), getValueTypeOf("copied_let", scope)
+				vt(i32_type).withMutability(Immutable), getValueTypeOf("copied_let", scope)
 			);
 		}
 	}
@@ -1831,7 +1831,7 @@ private:
 
 				auto& a_param = function->declaration->parameters.at(0);
 				ASSERT_EQUAL("a", a_param.name);
-				ASSERT_EQUAL(st(int32_type), a_param.type);
+				ASSERT_EQUAL(vt(int32_type), a_param.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
 
 				// get "a" thru return:
@@ -1853,7 +1853,7 @@ private:
 
 				ASSERT_EQUAL(int32_type, a_type.getType());
 				ASSERT_EQUAL(
-					st(int32_type),
+					vt(int32_type),
 					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->valueOrThrow()
 				);
 
@@ -1869,8 +1869,8 @@ private:
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
 
-				ASSERT_EQUAL(abc_param.type, st(int32_type));
-				ASSERT_EQUAL(second_param.type, st(int64_type));
+				ASSERT_EQUAL(abc_param.type, vt(int32_type));
+				ASSERT_EQUAL(second_param.type, vt(int64_type));
 
 				ASSERT_HAS_VALUE(abc_param.initial_value, "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
@@ -2254,8 +2254,8 @@ private:
 		for (auto& function: hout.functions) {
 			if (function->declaration->original_name == base::StrID("tuples")) {
 				ASSERT_EQUAL(
-					query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
-				                                                         st(i64_type) } }),
+					query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(i32_type),
+				                                                         vt(i64_type) } }),
 					function->declaration->return_type.getType()
 				);
 
@@ -2454,7 +2454,7 @@ private:
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
 			          ->valueOrPanic();
 			ASSERT_EQUAL(
-				refst(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				refvt(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -2472,7 +2472,7 @@ private:
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
 			          ->valueOrPanic();
 			ASSERT_EQUAL(
-				refst(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				refvt(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -2489,7 +2489,7 @@ private:
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
 			          ->valueOrPanic();
 			ASSERT_EQUAL(
-				refst(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				refvt(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -2730,11 +2730,11 @@ private:
 
 			constexpr auto VAL42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
 			constexpr auto VAL_F         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
-			const auto&    i64_type      = st(compiler::tsh::getIntegralType(
+			const auto&    i64_type      = vt(compiler::tsh::getIntegralType(
                 ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
             ));
-			const auto&    cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
-			const auto&    glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
+			const auto&    cls_type      = vt(ctx.query<compiler::tsh::QueryClassType>(cls));
+			const auto&    glob_cls_type = vt(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
 
 			const auto bake = [&](const auto& tmpl, const auto&... t_params) {
 				tmpl::TemplateBakeKey key{ .template_sym_id    = tmpl,
@@ -2750,7 +2750,7 @@ private:
 			const auto name_foo_2  = getSimpleMangledName(ctx, baked_foo_2).strView();
 
 			const auto baked_tcls      = bake(tmpl_tcls, VAL_F);
-			const auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
+			const auto baked_tcls_type = vt(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
 			const auto baked_foo_3     = bake(tmpl_foo, VAL42, baked_tcls_type);
 			const auto name_foo_3      = getSimpleMangledName(ctx, baked_foo_3).strView();
 
@@ -2887,10 +2887,10 @@ private:
 			));
 
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
-			{ { st(int32_type), st(int32_type) } }
+			{ { vt(int32_type), vt(int32_type) } }
 		);
 		const auto tuple_si_type
-			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
+			= query::entryPoint<compiler::tsh::QueryTupleType>({ { vt(str_type), vt(int32_type) } });
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
@@ -3284,7 +3284,7 @@ private:
 				);
 			};
 			auto cast = [&](const AbstractType from, const AbstractType to) {
-				return castAs(ctx, literal(from), st(to), as_stmt);
+				return castAs(ctx, literal(from), vt(to), as_stmt);
 			};
 			// Asserts that the cast produced a `CastExpr` onto `to`.
 			auto assert_cast_to = [&](const AbstractType from, const AbstractType to) {
@@ -3361,35 +3361,35 @@ private:
 				);
 			};
 
-			const auto meta_st     = stImm(compiler::tsh::getMetaType());
-			const auto unit_st     = stImm(compiler::tsh::getUnitType());
-			const auto int_st      = stImm(compiler::tsh::getIntegralType(ctx, 32, Signed));
-			const auto tuple_ii_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
-				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+			const auto meta_vt     = vtImm(compiler::tsh::getMetaType());
+			const auto unit_vt     = vtImm(compiler::tsh::getUnitType());
+			const auto int_vt      = vtImm(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_vt = vtImm(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { int_vt.withMutability(Mutable), int_vt.withMutability(Mutable) } }
 			));
-			const auto tuple_tt_st = stImm(ctx.query<compiler::tsh::QueryTupleType>(
-				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+			const auto tuple_tt_vt = vtImm(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { meta_vt.withMutability(Mutable), meta_vt.withMutability(Mutable) } }
 			));
 
-			check_types(unit1, unit_st, "Unit1 should be of unit type.");
-			check_types(unit2, unit_st, "Unit2 should be of unit type.");
-			check_types(unit_type, meta_st, "UnitType should be of meta type.");
+			check_types(unit1, unit_vt, "Unit1 should be of unit type.");
+			check_types(unit2, unit_vt, "Unit2 should be of unit type.");
+			check_types(unit_type, meta_vt, "UnitType should be of meta type.");
 
-			check_types(int1, int_st, "Int1 should be of integer type.");
-			check_types(int2, int_st, "Int2 should be of integer type.");
-			check_types(int_type, meta_st, "IntType should be of meta type.");
+			check_types(int1, int_vt, "Int1 should be of integer type.");
+			check_types(int2, int_vt, "Int2 should be of integer type.");
+			check_types(int_type, meta_vt, "IntType should be of meta type.");
 
-			check_types(int_type1, meta_st, "IntType1 should be of integer type.");
-			check_types(int_type2, meta_st, "IntType2 should be of integer type.");
-			check_types(int_type_type, meta_st, "IntTypeType should be of integer type.");
+			check_types(int_type1, meta_vt, "IntType1 should be of integer type.");
+			check_types(int_type2, meta_vt, "IntType2 should be of integer type.");
+			check_types(int_type_type, meta_vt, "IntTypeType should be of integer type.");
 
-			check_types(tuple_ii1, tuple_ii_st, "TupleII1 should be of tuple type.");
-			check_types(tuple_ii2, tuple_ii_st, "TupleII2 should be of tuple type.");
-			check_types(tuple_ii_type, meta_st, "TupleIIType should be of meta type.");
+			check_types(tuple_ii1, tuple_ii_vt, "TupleII1 should be of tuple type.");
+			check_types(tuple_ii2, tuple_ii_vt, "TupleII2 should be of tuple type.");
+			check_types(tuple_ii_type, meta_vt, "TupleIIType should be of meta type.");
 
-			check_types(tuple_tt1, tuple_tt_st, "TupleTT1 should be of tuple type.");
-			check_types(tuple_tt2, tuple_tt_st, "TupleTT2 should be of tuple type.");
-			check_types(tuple_tt_type, meta_st, "TupleTTType should be of meta type.");
+			check_types(tuple_tt1, tuple_tt_vt, "TupleTT1 should be of tuple type.");
+			check_types(tuple_tt2, tuple_tt_vt, "TupleTT2 should be of tuple type.");
+			check_types(tuple_tt_type, meta_vt, "TupleTTType should be of meta type.");
 
 			assertTrue(
 				ctx.query<compiler::helios::QueryConstValueOf>(tuple_lift_error).hasFailed(),
@@ -3528,7 +3528,7 @@ private:
 			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
 			ASSERT_EQUAL(
 				number_signature.parameters.at(0).type,
-				stImm(compiler::tsh::getIntegralType(ctx, 64, Signed))
+				vtImm(compiler::tsh::getIntegralType(ctx, 64, Signed))
 			);
 
 			// Baking the same template symbol with equal arguments must return

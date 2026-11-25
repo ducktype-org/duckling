@@ -229,8 +229,8 @@ namespace compiler::mir {
 			return tmp;
 		}
 
-		const auto symbol_type = reusable_expr.expression_type.getValueType();
-		auto       tmp         = addTmp(symbol_type, scope);
+		const auto value_type = reusable_expr.expression_type.getValueType();
+		auto       tmp        = addTmp(value_type, scope);
 		reusable_expr_locals.put(expr_id, tmp);
 		return tmp;
 	}

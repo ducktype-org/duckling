@@ -51,7 +51,7 @@ namespace compiler::tsl {
 		 * @brief The source type of a memory layout.
 		 *
 		 * @note Most layouts are created from abstract type wrapped with default values. But
-		 * pointer types might be created directly from symbol type. This is important, because it
+		 * pointer types might be created directly from ValueType. This is important, because it
 		 * allows to distinguish `T` from `ref T` from `box T` even at the memory layout level.
 		 */
 		tsh::ValueType<> source_type;
@@ -566,10 +566,10 @@ namespace compiler::tsl {
 
 		/**
 		 * @brief Construct a PointerLayout from a ValueType, provided that it is not DIRECT.
-		 * @param symbol_type A type with reference indirection, i.e. not DIRECT reference kind.
+		 * @param value_type A type with reference indirection, i.e. not DIRECT reference kind.
 		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
 		 */
-		PointerTypeLayout(tsh::ValueType<> symbol_type, query::Context& ctx);
+		PointerTypeLayout(tsh::ValueType<> value_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 		friend struct ImplementationOf_QueryValueTypeLayout;

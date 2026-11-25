@@ -210,9 +210,9 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Creates a human-readable string representation of a vector of symbol types.
-		 * @param types Vector of symbol types to stringify.
-		 * @return A human-readable string representing a sequence of symbol types.
+		 * @brief Creates a human-readable string representation of a vector of ValueTypes.
+		 * @param types Vector of ValueTypes to stringify.
+		 * @return A human-readable string representing a sequence of ValueTypes.
 		 */
 		std::string stringifyTypeVector(const std::vector<ValueType<>>& types) {
 			std::stringstream res;

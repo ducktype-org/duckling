@@ -85,7 +85,7 @@ namespace compiler::helios::defgen {
 			const tsh::VariantAbstractType& variant_type,
 			const SymID                     copy_sym,
 			const SymID                     source_symbol,
-			const tsh::ValueType<>&         result_symbol_type
+			const tsh::ValueType<>&         result_value_type
 		) {
 			using Variable = GeneratedFunctionVariable;
 
@@ -138,7 +138,7 @@ namespace compiler::helios::defgen {
 					payload_type,
 					payload_sym,
 					makeBox<code::VariantConstructExpr>(
-						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i
+						ctx, code::generatedOrigin(), std::move(payload_value), result_value_type, i
 					)
 				));
 			}
@@ -209,10 +209,10 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultCopyConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const SymID copy_sym           = copyConstructorSymForType(ctx, owner_type);
-			const auto& cctor_decl         = ctx.query<QueryDeclOfFun>(copy_sym)->valueOrThrow();
-			const SymID source_symbol      = cctor_decl.parameters.at(0).helios_symbol;
-			const auto  result_symbol_type = cctor_decl.return_type;
+			const SymID copy_sym          = copyConstructorSymForType(ctx, owner_type);
+			const auto& cctor_decl        = ctx.query<QueryDeclOfFun>(copy_sym)->valueOrThrow();
+			const SymID source_symbol     = cctor_decl.parameters.at(0).helios_symbol;
+			const auto  result_value_type = cctor_decl.return_type;
 
 			std::vector<Box<code::Stmt>> body;
 			switch (owner_type.getKind()) {
@@ -231,7 +231,7 @@ namespace compiler::helios::defgen {
 					owner_type.as<tsh::VariantAbstractType>(),
 					copy_sym,
 					source_symbol,
-					result_symbol_type
+					result_value_type
 				);
 				break;
 			default:

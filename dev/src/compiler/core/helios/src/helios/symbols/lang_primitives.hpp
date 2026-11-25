@@ -102,7 +102,7 @@ namespace compiler::helios {
 	);
 
 	/**
-	 * @brief Helper overload tha accepts the symbol types.
+	 * @brief Helper overload tha accepts the ValueTypes.
 	 */
 	SymID bakeLanguagePrimitiveWithTypes(
 		query::Context&               ctx,

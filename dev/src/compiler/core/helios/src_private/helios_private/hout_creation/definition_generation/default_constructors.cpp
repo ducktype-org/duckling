@@ -226,19 +226,19 @@ namespace compiler::helios::defgen {
 	//                      TOP LEVEL QUERY
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
-		static PResult provide(Context& ctx, const QKey sym_type) {
+		static PResult provide(Context& ctx, const QKey value_type) {
 			CORE_ASSERT(
-				sym_type.isDefaultConstructible(ctx),
+				value_type.isDefaultConstructible(ctx),
 				"QueryDefaultInitializerExpr called on non default constructible type"
 			);
 			const Shorthand s{ ctx };
 
 			// For types that are trivially zero initializable, we just insert a default value expr
 			// which will map to ZeroInitialize.
-			if (sym_type.isTriviallyZeroInitializable(ctx))
-				return s.defaultValue(sym_type.getType());
+			if (value_type.isTriviallyZeroInitializable(ctx))
+				return s.defaultValue(value_type.getType());
 
-			const auto& type = sym_type.getType();
+			const auto& type = value_type.getType();
 			switch (type.getKind()) {
 			case tsh::Kind::StaticArray: {
 				auto array_type = type.as<tsh::StaticArrayAbstractType>();

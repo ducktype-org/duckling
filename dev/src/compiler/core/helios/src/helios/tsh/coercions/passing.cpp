@@ -12,7 +12,7 @@
 
 namespace compiler::tsh::coercions {
 	PassingMethod passingMethod(query::Context& ctx, const ExpressionType<>& value) {
-		const ValueType<> symbol_type = value.getValueType();
+		const ValueType<> value_type = value.getValueType();
 
 		// A value that is being moved already is handed over as it is.
 		if (value.getValueCategory().mustMove()) return PassingMethod::ByteCopy;
@@ -22,7 +22,7 @@ namespace compiler::tsh::coercions {
 			// Purely an optimization, which keeps the generated code free of `implicit_move` on
 			// everything. A trivially destructible temporary owns nothing to hand over, and moving
 			// out of it would produce exactly the same code as copying its bytes.
-			if (isCopiedByBytes(ctx, symbol_type)) return PassingMethod::ByteCopy;
+			if (isCopiedByBytes(ctx, value_type)) return PassingMethod::ByteCopy;
 			if (value.getValueCategory().isMovableFrom()) return PassingMethod::ImplicitMove;
 			return PassingMethod::ExplicitCopyOrMove;
 		case PrimaryCategory::Literal:
@@ -30,9 +30,9 @@ namespace compiler::tsh::coercions {
 		case PrimaryCategory::Local:
 		case PrimaryCategory::Global:
 		case PrimaryCategory::Dereferenced:
-			if (symbol_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
-			return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
-			                                   : PassingMethod::NotCopyable;
+			if (value_type.isTriviallyCopyable(ctx)) return PassingMethod::ByteCopy;
+			return value_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
+			                                  : PassingMethod::NotCopyable;
 		default:
 			CORE_UNREACHABLE();
 		}

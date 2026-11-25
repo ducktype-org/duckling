@@ -339,7 +339,7 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Utility to get the pointee type from the current symbol type.
+		 * @brief Utility to get the pointee type from the current ValueType.
 		 * Works both with reference RefKind and pointer abstract types.
 		 * The RefKind of this symbol is considered first and the abstract type is only considered
 		 * if the RefKind is Direct.
@@ -410,7 +410,7 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Returns a source-oriented representation of this symbol type.
+		 * @brief Returns a source-oriented representation of this ValueType.
 		 *
 		 * The returned representation includes all applicable symbol qualifiers, such as `imm`,
 		 * `ref`, `box`, `unique` and `leaking`, in the same order as @ref toString. The qualifiers
@@ -422,7 +422,7 @@ namespace compiler::tsh {
 		 *
 		 * @param ctx Query context used to resolve namespace-qualified class names and baked
 		 * template arguments.
-		 * @return A string containing the source-oriented representation of this symbol type.
+		 * @return A string containing the source-oriented representation of this ValueType.
 		 */
 		[[nodiscard]]
 		std::string sourceTypeName(query::Context& ctx) const;

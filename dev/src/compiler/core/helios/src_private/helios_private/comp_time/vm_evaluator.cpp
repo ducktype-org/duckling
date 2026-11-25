@@ -55,7 +55,7 @@ namespace compiler::helios {
 	 * DVM-backend lowering.
 	 *
 	 * It has to be a query to keep the LIR function (and the CTV inside of it) in the cache,
-	 * because the CTV may contain symbol types, that are taken address of when comp-time.
+	 * because the CTV may contain ValueTypes, that are taken address of when comp-time.
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(

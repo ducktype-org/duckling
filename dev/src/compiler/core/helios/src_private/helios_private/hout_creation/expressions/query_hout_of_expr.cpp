@@ -542,7 +542,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
+				// `copyof x` copies `x` while keeping its full ValueType (including reference kind).
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
 					const Shorthand s{ ctx };
 
@@ -596,10 +596,10 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::As) {
 					auto value_expr = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getLeftOperand()))
 					                      .valueOrThrow();
-					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
-					auto symbol_type = type_ctv.valueOrThrow().get<tsh::ValueType<>>().value();
+					auto type_ctv   = getTypeCTVFromPST(ctx, stmt->getRightOperand());
+					auto value_type = type_ctv.valueOrThrow().get<tsh::ValueType<>>().value();
 
-					node = castAs(ctx, std::move(value_expr), symbol_type, stmt);
+					node = castAs(ctx, std::move(value_expr), value_type, stmt);
 					return;
 				}
 

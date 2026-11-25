@@ -147,7 +147,7 @@ namespace compiler::numeric_value {
 		/**
 		 * @brief Performs a safe cast of this NumericValue to a new type specified by target_type.
 		 * Checks for overflows and underflows.
-		 * @param target_type The target symbol type for the cast.
+		 * @param target_type The target ValueType for the cast.
 		 * @return A new NumericValue with the casted value, or an empty optional if the
 		 *         cast failed (e.g., overflow).
 		 */

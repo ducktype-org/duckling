@@ -24,7 +24,7 @@ namespace compiler::helios {
 	 * i.e. the same way the user wrote it in the source code.
 	 */
 	class InteractiveType: public dia::InteractiveElement {
-		tsh::ValueType<>                                  symbol_type;
+		tsh::ValueType<>                                  value_type;
 		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
 		base::HashMap<std::string, Box<dia::MessageBase>> linked_messages;
 		std::string                                       displayed_name;
@@ -34,7 +34,7 @@ namespace compiler::helios {
 	public:
 		InteractiveType(
 			query::Context&                               ctx,
-			tsh::ValueType<>                              symbol_type,
+			tsh::ValueType<>                              value_type,
 			base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
 		);
 	};
