@@ -11,6 +11,7 @@
 
 #include <concepts>
 #include <mutex>
+#include <ranges>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -622,8 +623,8 @@ namespace compiler::backend_llvm {
 			}
 
 			void end() {
-				for (auto it = allocations.rbegin(); it != allocations.rend(); ++it)
-					builder.CreateLifetimeEnd(it->first, it->second);
+				for (const auto& [allocation, size]: allocations | std::views::reverse)
+					builder.CreateLifetimeEnd(allocation, size);
 				allocations.clear();
 			}
 		};
