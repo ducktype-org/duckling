@@ -53,6 +53,31 @@ def ere_escape(text: str) -> str:
     return re.sub(r"([.^$|()\[\]*+?{}\\])", r"\\\1", text)
 
 
+def drop_lines_past_eof(tracefile: str) -> str:
+    """llvm-cov maps X-macro .def.hpp files one line past their end, which genhtml rejects."""
+    out = []
+    line_count = None
+    found = hit = 0
+    for record in tracefile.splitlines():
+        if record.startswith("SF:"):
+            with open(record[3:], "rb") as source:
+                line_count = len(source.read().splitlines())
+            found = hit = 0
+        elif record.startswith(("DA:", "BRDA:")):
+            number = int(record.split(":", 1)[1].split(",", 1)[0])
+            if number > line_count:
+                continue
+            if record.startswith("DA:"):
+                found += 1
+                hit += int(record.split(",")[1]) > 0
+        elif record.startswith("LF:"):
+            record = f"LF:{found}"
+        elif record.startswith("LH:"):
+            record = f"LH:{hit}"
+        out.append(record)
+    return "\n".join(out) + "\n"
+
+
 def main() -> int:
     args = parse_args()
 
@@ -77,19 +102,20 @@ def main() -> int:
     for binary in binaries[1:]:
         objects += ["-object", str(binary)]
 
-    with open(args.output, "w") as out:
-        subprocess.run(
-            [
-                args.llvm_cov,
-                "export",
-                "-format=lcov",
-                f"-instr-profile={profdata}",
-                f"-ignore-filename-regex={'|'.join(ignored)}",
-                *objects,
-            ],
-            stdout=out,
-            check=True,
-        )
+    exported = subprocess.run(
+        [
+            args.llvm_cov,
+            "export",
+            "-format=lcov",
+            f"-instr-profile={profdata}",
+            f"-ignore-filename-regex={'|'.join(ignored)}",
+            *objects,
+        ],
+        stdout=subprocess.PIPE,
+        text=True,
+        check=True,
+    ).stdout
+    args.output.write_text(drop_lines_past_eof(exported))
     return 0
 
 

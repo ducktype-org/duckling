@@ -95,8 +95,7 @@ elseif(ENABLE_COVERAGE AND COVERAGE_BACKEND STREQUAL "llvm")
 		--exclude ${COVERAGE_EXCLUDED_PATHS}
 		-o coverage.info
 
-		# range: llvm-cov maps the X-macro .def.hpp files one line past their end.
-		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info --ignore-errors inconsistent,range
+		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info --ignore-errors inconsistent
 
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM
