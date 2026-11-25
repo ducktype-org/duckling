@@ -3,8 +3,8 @@ option(USE_CCACHE "Use ccache" OFF)
 if(USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
-	# 4.10 is the first version that caches -fprofile-update (coverage) compiles.
-	set(CCACHE_MIN_VERSION "4.10")
+	# 4.14: caches -fprofile-update (coverage) compiles and hashes #embed-ed files.
+	set(CCACHE_MIN_VERSION "4.14")
 	set(CCACHE_FIX_HINT "Run `./toolbox.py download-binaries -s ccache` to get the latest ccache.")
 
 	find_program(CCACHE_PROGRAM "ccache" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts/downloads/" NO_CACHE)

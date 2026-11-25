@@ -253,12 +253,6 @@ if (JIT_ENABLED)
 
     # For compilers whose depfile does not list the #embed-ed bitcode.
     set_property(SOURCE ${opcodes_bitcode_source} APPEND PROPERTY OBJECT_DEPENDS ${common_sc_bc})
-    # ccache < 4.14 does not hash #embed-ed files.
-    if (USE_CCACHE)
-        set_property(TARGET JitDep APPEND PROPERTY CXX_COMPILER_LAUNCHER
-            "extra_files_to_hash=${common_sc_bc}"
-        )
-    endif()
 endif()
 
 # Default alias to "sc"
