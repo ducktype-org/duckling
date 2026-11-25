@@ -145,7 +145,7 @@ runs:
         ln -sfn "$venv" .venv
         echo "$venv/bin" >> "$GITHUB_PATH"
 
-    # CMake requires the exact ccache version the toolbox ships, so Homebrew's won't do.
+    # CMake requires the exact version from scripts/downloaded_binaries.json.
     - name: Install ccache
       shell: bash
       working-directory: ${{ inputs.dev-dir }}

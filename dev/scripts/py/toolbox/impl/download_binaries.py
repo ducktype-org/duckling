@@ -22,11 +22,11 @@ from .internet_file import (
 )
 
 # Also read by CMake, which rejects any other ccache version.
-SHIPPED_BINARIES_FILE = (
-    pathlib.Path(__file__).resolve().parents[3] / "shipped_binaries.json"
+DOWNLOADED_BINARIES_FILE = (
+    pathlib.Path(__file__).resolve().parents[3] / "downloaded_binaries.json"
 )
-SHIPPED_VERSIONS: dict[str, str] = json.loads(SHIPPED_BINARIES_FILE.read_text())
-CCACHE_VERSION = SHIPPED_VERSIONS["ccache"]
+BINARY_VERSIONS: dict[str, str] = json.loads(DOWNLOADED_BINARIES_FILE.read_text())
+CCACHE_VERSION = BINARY_VERSIONS["ccache"]
 
 
 def ccache_file() -> InternetFile | None:
@@ -52,7 +52,7 @@ def ccache_file() -> InternetFile | None:
     suffix = asset[len(unpacked) :]
 
     return InternetFile(
-        f"scripts/downloads/ccache{suffix}",
+        f"scripts/downloads/ccache-{CCACHE_VERSION}{suffix}",
         f"https://github.com/ccache/ccache/releases/download/v{CCACHE_VERSION}/{asset}",
         after_download=[
             (callback_unTAR,),
@@ -75,8 +75,8 @@ def download_binaries_impl(force=False, single=False):
     if not FILES_TO_DOWNLOAD:
         log_warning(
             f"No prebuilt ccache binary is published for {platform.system()} "
-            f"{platform.machine()}; install ccache from your package manager "
-            "instead (the build finds it on PATH). Nothing to download."
+            f"{platform.machine()}; install ccache {CCACHE_VERSION} on PATH "
+            "yourself. Nothing to download."
         )
         return
 
