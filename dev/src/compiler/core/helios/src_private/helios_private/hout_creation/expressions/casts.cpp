@@ -14,23 +14,175 @@
 
 #include <diagnostic/stable_position.hpp>
 
+#include <algorithm>
+#include <vector>
+
 namespace compiler::helios::code {
 
 	namespace {
+		using tsh::Kind;
+		using tsh::ReferenceKind;
+
+		/// The result of one cast layer: the converted expression, or empty when the layer has no
+		/// rule for the cast. A layer moves from its `value` only when it returns a result.
+		using CastResult = base::Optional<Box<Expr>>;
+
 		/**
 		 * @brief Checks whether the type is a primitive scalar which may take part in an
 		 * explicit `as` conversion (integers, floats, `char` and `byte`).
 		 */
 		bool isScalarCastableType(const tsh::AbstractType type) {
 			switch (type.getKind()) {
-			case tsh::Kind::Integral:
-			case tsh::Kind::Float:
-			case tsh::Kind::Byte:
-			case tsh::Kind::Char:
+			case Kind::Integral:
+			case Kind::Float:
+			case Kind::Byte:
+			case Kind::Char:
 				return true;
 			default:
 				return false;
 			}
+		}
+
+		/// One allowed pointer cast. The target side is always a `Direct` value.
+		struct CastPattern {
+			/// The cast must have this reference kind on the source side.
+			tsh::ReferenceKind from_ref_kind;
+			/// If specified, the cast must have this kind on the source side. If not
+			/// specified, any kind matches.
+			base::Optional<tsh::Kind> from_kind;
+			/// The cast must have this kind on the target side.
+			tsh::Kind to_kind;
+			/// If true, the cast is only valid if the symbol pointee types are the same.
+			bool same_pointee_type;
+		};
+
+		/// Checks whether any of @p patterns allows the cast from @p from to @p to.
+		bool matchesAny(
+			const std::vector<CastPattern>& patterns,
+			const tsh::SymbolType<>&        from,
+			const tsh::SymbolType<>&        to
+		) {
+			if (to.getRefKind() != ReferenceKind::Direct) return false;
+			return std::ranges::any_of(patterns, [&](const CastPattern& pattern) {
+				if (pattern.from_ref_kind != from.getRefKind()) return false;
+				if (pattern.from_kind
+				        .map([&](Kind kind) { return kind != from.getType().getKind(); })
+				        .copyValueOr(false))
+					return false;
+				if (pattern.to_kind != to.getType().getKind()) return false;
+				// To check the pointee we have to be sure that we have ref or pointer.
+				return !pattern.same_pointee_type
+				    || from.getPointeeSymbolType() == to.getPointeeSymbolType();
+			});
+		}
+
+		/**
+		 * @brief Casts of a `ref`/`box` itself into a pointer to the same place.
+		 *
+		 * The value behind the reference is never read. Returns empty when no rule applies.
+		 */
+		CastResult tryReferenceCast(
+			query::Context&                        ctx,
+			Box<Expr>&                             value,
+			const tsh::SymbolType<>&               to,
+			pst::Access<pst::expr::BinaryOperator> stmt
+		) {
+			static const std::vector<CastPattern> reference_casts = {
+				{ .from_ref_kind     = ReferenceKind::Ref,
+				  .from_kind         = {},
+				  .to_kind           = Kind::Pointer,
+				  .same_pointee_type = true },
+				{ .from_ref_kind     = ReferenceKind::Ref,
+				  .from_kind         = {},
+				  .to_kind           = Kind::CPointer,
+				  .same_pointee_type = false },
+				{ .from_ref_kind     = ReferenceKind::Box,
+				  .from_kind         = {},
+				  .to_kind           = Kind::Pointer,
+				  .same_pointee_type = true },
+			};
+
+			const auto from = value->expression_type.getSymbolType();
+			CORE_ASSERT(from.getRefKind() != ReferenceKind::Direct, "Expected a ref or a box");
+			if (!matchesAny(reference_casts, from, to)) return {};
+			return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(value), to);
+		}
+
+		/**
+		 * @brief Casts of a plain (`Direct`) value: number to `bool`, scalar to scalar and
+		 * pointer to pointer or integer.
+		 *
+		 * `castAs` also applies these to the value read out of a `ref`/`box`. Returns empty when
+		 * no rule applies.
+		 */
+		CastResult tryValueCast(
+			query::Context&                        ctx,
+			Box<Expr>&                             value,
+			const tsh::SymbolType<>&               to,
+			pst::Access<pst::expr::BinaryOperator> stmt
+		) {
+			static const std::vector<CastPattern> pointer_casts = {
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::Pointer,
+				  .to_kind           = Kind::CPointer,
+				  .same_pointee_type = false },
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::ManyPointer,
+				  .to_kind           = Kind::CPointer,
+				  .same_pointee_type = false },
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::ManyPointer,
+				  .to_kind           = Kind::Pointer,
+				  .same_pointee_type = true },
+				// From CPointer to Pointer and ManyPointer is temporary. I do not like this syntax
+				// "as" to work on some targets and not work on others. I would like to have some
+				// syntax, so that the user has to write `native_cptr_cast<ptr T>(original_ctype)`
+				// or `@native v as ptr T` to make it explicit that this cast is only supported on
+				// native target.
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::CPointer,
+				  .to_kind           = Kind::Pointer,
+				  .same_pointee_type = false },
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::CPointer,
+				  .to_kind           = Kind::ManyPointer,
+				  .same_pointee_type = false },
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::CPointer,
+				  .to_kind           = Kind::CPointer,
+				  .same_pointee_type = false },
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::CPointer,
+				  .to_kind           = Kind::Integral,
+				  .same_pointee_type = false },
+				// From Pointer to Integral (LLVM only friendly)
+				{ .from_ref_kind     = ReferenceKind::Direct,
+				  .from_kind         = Kind::Pointer,
+				  .to_kind           = Kind::Integral,
+				  .same_pointee_type = false },
+			};
+
+			const auto from = value->expression_type.getSymbolType();
+			CORE_ASSERT(from.getRefKind() == ReferenceKind::Direct, "Expected a plain value");
+
+			// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
+			// Casting to bool needs custom handling.
+			if ((from.getType().getKind() == Kind::Integral
+			     || from.getType().getKind() == Kind::Float)
+			    && to.getType().getKind() == Kind::Bool) {
+				const tsh::coercions::Coercion to_direct
+					= coercions::coercionOf(ctx, value.ref(), from.toDirect());
+				CORE_ASSERT(to_direct.isValid(), "Should always be valid");
+				return coercions::buildZeroCheck(
+					ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
+				);
+			}
+
+			if ((isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
+			     && to.getRefKind() == ReferenceKind::Direct)
+			    || matchesAny(pointer_casts, from, to))
+				return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(value), to);
+			return {};
 		}
 	}
 
@@ -40,194 +192,44 @@ namespace compiler::helios::code {
 		tsh::SymbolType<>                      as_type,
 		pst::Access<pst::expr::BinaryOperator> stmt
 	) {
-		auto from = value->expression_type.getSymbolType();
-		auto to   = as_type;
+		const auto from = value->expression_type.getSymbolType();
+		const auto to   = as_type;
 		if (from == to) return value;  // trivial cast, always valid
 
-		using tsh::Kind;
-		using tsh::Mutability;
-		using tsh::ReferenceKind;
-
-		auto cast_expr = [&](Box<Expr> val) {
-			return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(val), to);
-		};
-
-		// We first check if we can cover the case by the coercion logic (from bool or to bool for
-		// example).
+		// Layer 1: anything the implicit coercion covers (from bool or to bool for example). It
+		// handles references on its own, e.g. `ref i32 as i64`.
 		const tsh::coercions::Coercion coercion = coercions::coercionOf(ctx, value.ref(), to);
 		if (coercion.isValid()) {
 			auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
 
 			// @TODO: #3853 go back to this once defined
 			if (coerced->expression_type.getSymbolType() != to)
-				return cast_expr(std::move(coerced));
+				return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(coerced), to);
 			return coerced;
 		}
 
-		// @TODO: #3631 Numeric coercions to bool are temporarily disabled.
-		// Casting to bool needs custom handling.
-		//
-		// We use coercion logic here because it's surprisingly complex and handles references
-		// (e.g. ref i64 -> bool).
-		if (auto value_type = value->expression_type.getType();
-		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
-		    && to.getType().getKind() == Kind::Bool) {
-			const tsh::coercions::Coercion to_direct
-				= coercions::coercionOf(ctx, value.ref(), from.toDirect());
-			CORE_ASSERT(to_direct.isValid(), "Should always be valid");
-			return coercions::buildZeroCheck(
-				ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
-			);
-		}
-
-		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
-		    && from.getRefKind() == ReferenceKind::Direct
-		    && to.getRefKind() == ReferenceKind::Direct)
-			return cast_expr(std::move(value));
-
-		// E.g. `list.at(i) as i32`: the value is read out of the reference, then cast.
-		if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
-		    && from.getRefKind() == ReferenceKind::Ref && to.getRefKind() == ReferenceKind::Direct)
-			return cast_expr(makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(value)));
-
+		// Layer 2: only the mutability changes, for a value and a reference alike.
 		if (from.getRefKind() == to.getRefKind() && from.getType() == to.getType())
-			return cast_expr(std::move(value));
+			return makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(value), to);
 
-		struct CastPattern {
-			/// If specified, the cast must have this reference kind on the source side. If
-			/// not specified, any reference kind matches.
-			base::Optional<tsh::ReferenceKind> from_ref_kind;
-			/// If specified, the cast must have this kind on the source side. If not
-			/// specified, any kind matches.
-			base::Optional<tsh::Kind> from_kind;
-			/// If specified, the cast must have this reference kind on the target side. If
-			/// not specified, any reference kind matches.
-			base::Optional<tsh::ReferenceKind> to_ref_kind;
-			/// If specified, the cast must have this kind on the target side. If not
-			/// specified, any kind matches.
-			base::Optional<tsh::Kind> to_kind;
-			/// If true, the cast is only valid if the symbol pointee types are the same.
-			bool same_pointee_type;
-		};
-
-		static const std::vector<CastPattern> valid_pointer_casts = {
-			{
-				.from_ref_kind     = ReferenceKind::Ref,
-				.from_kind         = {},
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = tsh::Kind::Pointer,
-				.same_pointee_type = true,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Ref,
-				.from_kind         = {},
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = tsh::Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Box,
-				.from_kind         = {},
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = tsh::Kind::Pointer,
-				.same_pointee_type = true,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::Pointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::ManyPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::ManyPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Pointer,
-				.same_pointee_type = true,
-			},
-			// From CPointer to Pointer is temporary
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Pointer,
-				.same_pointee_type = false,
-			},
-			// From CPointer to ManypPointer is temporary
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::ManyPointer,
-				.same_pointee_type = false,
-			},
-			// From CPointer to CPointer
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::CPointer,
-				.same_pointee_type = false,
-			},
-			// From CPointer to Integral
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::CPointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Integral,
-				.same_pointee_type = false,
-			},
-			// From Pointer to Integral (LLVM only friendly)
-			{
-				.from_ref_kind     = ReferenceKind::Direct,
-				.from_kind         = Kind::Pointer,
-				.to_ref_kind       = ReferenceKind::Direct,
-				.to_kind           = Kind::Integral,
-				.same_pointee_type = false,
-			},
-		};
-
-		bool found_match = false;
-		for (auto& pattern: valid_pointer_casts) {
-			auto equals = [](auto expected) {
-				return [v = std::move(expected)](auto other) { return other == v; };
-			};
-			bool from_ref_match
-				= pattern.from_ref_kind.map(equals(from.getRefKind())).copyValueOr(true);
-			bool from_kind_match
-				= pattern.from_kind.map(equals(from.getType().getKind())).copyValueOr(true);
-			bool to_ref_match = pattern.to_ref_kind.map(equals(to.getRefKind())).copyValueOr(true);
-			bool to_kind_match
-				= pattern.to_kind.map(equals(to.getType().getKind())).copyValueOr(true);
-			if (!from_ref_match || !from_kind_match || !to_ref_match || !to_kind_match) continue;
-			// To check the pointee we have to be sure that we have ref or pointer.
-			bool pointee_match = pattern.same_pointee_type
-			                       ? from.getPointeeSymbolType() == to.getPointeeSymbolType()
-			                       : true;
-			if (from_ref_match && from_kind_match && to_ref_match && to_kind_match
-			    && pointee_match) {
-				found_match = true;
-				break;
+		// Layer 3: the explicit rules. They are split by what the source is, so every rule is
+		// written for exactly one kind of source and says nothing about the others.
+		switch (from.getRefKind()) {
+		case ReferenceKind::Direct:
+			if (auto cast = tryValueCast(ctx, value, to, stmt)) return std::move(*cast);
+			break;
+		case ReferenceKind::Ref:
+		case ReferenceKind::Box:
+			// A cast of the reference itself (`ref T as ptr T`) keeps its meaning...
+			if (auto cast = tryReferenceCast(ctx, value, to, stmt)) return std::move(*cast);
+			// ...otherwise a `ref`/`box` casts to a plain value like the value it points to:
+			// the value is read once, then only the value casts apply to it.
+			if (to.getRefKind() == ReferenceKind::Direct) {
+				value = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(value));
+				if (auto cast = tryValueCast(ctx, value, to, stmt)) return std::move(*cast);
 			}
+			break;
 		}
-		// Temporarily allow casts from CPointer to Pointer and ManyPointer.
-		if (found_match && from.getRefKind() == ReferenceKind::Direct
-		    && from.getType().getKind() == tsh::Kind::CPointer) {
-			// I do not like this syntax "as" to work on some targets and not work on
-			// others. I would like to have some syntax, so that the user has to write
-			// `native_cptr_cast<ptr T>(original_ctype)` or `@native v as ptr T`
-			// to make it explicit that this cast is only supported on native target.
-			return cast_expr(std::move(value));
-		}
-		if (found_match) return cast_expr(std::move(value));
 
 		ctx.log<dia::PlaceholderError>(
 			base::strConcat("Invalid cast from type ", from.toString(), " to type ", to.toString()),
