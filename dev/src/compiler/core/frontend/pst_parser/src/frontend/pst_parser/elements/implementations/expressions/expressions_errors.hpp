@@ -8,6 +8,9 @@
 
 #include <diagnostic/message.hpp>
 
+#include <string>
+#include <utility>
+
 namespace pst {
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
@@ -173,6 +176,28 @@ namespace pst {
 
 	public:
 		OnlyPrefixError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	/**
+	 * @brief A prefix operator right after a binary one, e.g. `x * -1`. The operand has to be put
+	 * in parentheses: `x * (-1)`.
+	 */
+	class PrefixAfterBinaryOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "prefix_after_binary_operator" };
+		}
+
+	public:
+		PrefixAfterBinaryOperatorError(
+			dia::SourcePosition pos, std::string binary_operator, std::string prefix_operator
+		):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("binary_operator", std::move(binary_operator));
+			addArgument<dia::TextArgument>("prefix_operator", std::move(prefix_operator));
+		}
 	};
 
 	/**

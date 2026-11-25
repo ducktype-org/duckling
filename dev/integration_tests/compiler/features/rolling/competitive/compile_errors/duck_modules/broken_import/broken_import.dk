@@ -1,0 +1,6 @@
+import exp exp.io.*;
+
+fun main() -> i64 = {
+	print(1);
+	return 0;
+}

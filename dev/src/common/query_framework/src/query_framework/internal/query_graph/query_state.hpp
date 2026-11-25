@@ -23,6 +23,8 @@
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 #include <query_framework/internal/task_pool/task_pool.hpp>
 
+#include <atomic>
+
 namespace query {
 	// Forward declaration
 	struct Context;
@@ -50,6 +52,11 @@ namespace query::internal {
 		 * computed/in progress.
 		 */
 		struct NodeData final {};
+
+		/**
+		 * @brief Whether a query cycle was found in this compilation, see markCycleDetected().
+		 */
+		std::atomic<bool> cycle_detected = false;
 
 		/**
 		 * @brief Holds data from the previous compilation: the immutable graph and per-node colors.
@@ -154,6 +161,20 @@ namespace query::internal {
 		 *  @note Note that all active graph operations are thread safe.
 		 */
 		Ref<ActiveGraph> getActiveGraph() noexcept;
+
+		/**
+		 * @brief Records that a query cycle was found in this compilation. Such a compilation
+		 * fails, and its graph contains the cycle, so it must not be reused by the next
+		 * compilation, see wasCycleDetected().
+		 */
+		void markCycleDetected() noexcept { cycle_detected = true; }
+
+		/**
+		 * @brief Whether a query cycle was found in this compilation. Its graph then contains the
+		 * cycle: reduceOptimizeGraph() cannot reduce it, and the red-green sweep of the next
+		 * compilation expects an acyclic previous graph.
+		 */
+		[[nodiscard]] bool wasCycleDetected() const noexcept { return cycle_detected; }
 
 		/**
 		 * @brief Returns the amount of currently active queries.

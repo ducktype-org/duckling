@@ -9,6 +9,9 @@
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/hout.hpp>
@@ -18,6 +21,7 @@
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/hout_walker_generic.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -180,7 +184,24 @@ namespace compiler::mir {
 		 * * if block is reachable and function returns value, throws missing return error
 		 * @note It is assumed that the last block is the last in the block order.
 		 */
-		query::QResult<Function> finalizeFunctionEnd(query::Context& ctx, Function function) {
+		/**
+		 * @brief Where an error about a whole function points: at its name, or at the whole
+		 * function when it has no name in the code.
+		 */
+		base::Optional<dia::StablePosition> functionNamePosition(
+			query::Context& ctx, const helios::HOUTFunction& function
+		) {
+			// A generated function has no statement of its own.
+			if (function.origin.isGenerated()) return function.origin.getStablePosition();
+			if (auto pst_stmt = helios::stmt(ctx, function.declaration->original_symbol))
+				if (auto name = pst_stmt.value()->getDeclSymbolIdentifier())
+					return name.value().unlock(ctx)->getStablePosition();
+			return function.origin.getStablePosition();
+		}
+
+		query::QResult<Function> finalizeFunctionEnd(
+			query::Context& ctx, Function function, const helios::HOUTFunction& hout_function
+		) {
 			CORE_ASSERT(
 				function.blocks.size() > 0, "Function should have at least one block after lowering"
 			);
@@ -209,6 +230,7 @@ namespace compiler::mir {
 						"end "
 						"of its body."
 					),
+					functionNamePosition(ctx, hout_function),
 					"Provide an explicit `-> ()` return type if it is meant to return."
 				);
 				return query::Failed();
@@ -219,7 +241,7 @@ namespace compiler::mir {
 						function.name,
 						"` is missing a return statement or does not always return."
 					),
-					""
+					functionNamePosition(ctx, hout_function)
 				);
 				return query::Failed();
 			}
@@ -240,7 +262,8 @@ namespace compiler::mir {
 
 			// change FunctionEnd to proper return
 			UNPACK_QRESULT_MOVE(
-				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
+				auto function_no_func_end =,
+				finalizeFunctionEnd(ctx, std::move(function_reachable), *key.function)
 			);
 
 			if (validateFunction(ctx, function_no_func_end).isBad()) return query::Failed();

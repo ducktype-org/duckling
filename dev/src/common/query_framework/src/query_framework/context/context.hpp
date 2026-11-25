@@ -18,12 +18,16 @@
 #include <diagnostic/logger_fwd.hpp>
 #include <diagnostic/placeholder.hpp>  // @TODO: #1887 move to outer query-invocation layer
 #include <query_framework/internal/cycle_handling/cycle_exception.hpp>
+#include <query_framework/internal/cycle_handling/cycle_hint.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
 #include <atomic>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace query {
 
@@ -131,6 +135,7 @@ namespace query {
 
 					if (maybe_cycle.has_value()) {
 						// We hit a cycle!
+						main_query_state.markCycleDetected();
 
 						for (const auto& node_info: maybe_cycle.value().cycle_nodes) {
 							// This is a critical part of the cycle handling.
@@ -164,6 +169,12 @@ namespace query {
 										);
 									}
 									return result;
+								}(),
+								[&maybe_cycle]() -> std::string {
+									std::vector<std::string_view> query_names;
+									for (const auto& node_info: maybe_cycle.value().cycle_nodes)
+										query_names.push_back(node_info.node_id.q_id.getData().name);
+									return internal::cycleHint(query_names);
 								}()
 							)
 						);

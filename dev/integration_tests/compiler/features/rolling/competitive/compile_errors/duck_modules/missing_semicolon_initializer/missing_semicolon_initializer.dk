@@ -1,0 +1,5 @@
+fun main() -> i64 = {
+	var x = 1i64 # The missing `;` makes the next line part of the initializer.
+	print(x);
+	return 0;
+}

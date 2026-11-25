@@ -102,6 +102,8 @@ namespace query::external {
 
 	/**
 	 * @brief Optimize and serialize the current query graph for persistence on disk.
+	 * @note After a query cycle it serializes an empty graph, so the next compilation doesn't reuse
+	 * anything.
 	 */
 	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
 

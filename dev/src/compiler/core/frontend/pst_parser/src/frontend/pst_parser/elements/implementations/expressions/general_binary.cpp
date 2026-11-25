@@ -75,10 +75,24 @@ namespace pst::expr {
 		i64              next = 0;
 		PST_WHILE(fwd < reduced_length) {
 			next = skipAtom(state, fwd, reduced_length);
-			if (fwd == next)
-				state.logInt(
-					makeBox<tpc::NoIdentifierError>(state.getPosition(fwd), state[fwd].describe())
-				);
+			if (fwd == next) {
+				// E.g. `x * -1`: the operand after `*` starts with an operator. Only an operand at
+				// the start of the expression may have prefix operators, so this says to put it
+				// in parentheses.
+				const bool prefix_after_binary = not operators.empty()
+				                              && state[operators.back()].isOperatorSymbol()
+				                              && state[fwd].isPrefixOperator();
+				if (prefix_after_binary)
+					state.logInt(makeBox<PrefixAfterBinaryOperatorError>(
+						state.getPosition(fwd),
+						state[operators.back()].asBinaryOperator().value().str(),
+						state[fwd].asBinaryOperator().value().str()
+					));
+				else
+					state.logInt(makeBox<tpc::NoIdentifierError>(
+						state.getPosition(fwd), state[fwd].describe()
+					));
+			}
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
 			fwd = std::min(next + 1, reduced_length);

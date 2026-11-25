@@ -48,7 +48,14 @@ namespace query::external {
 	}
 
 	std::vector<byte> optAndSerializeQueryGraph() {
-		auto state         = ::query::internal::ContextAccess::getState();
+		auto state = ::query::internal::ContextAccess::getState();
+
+		// A graph with a query cycle can't be reused (see `QueryState::wasCycleDetected`). An empty
+		// graph is saved instead, also replacing the graph of an earlier compilation, so the next
+		// compilation starts from scratch. The compilation with the cycle has failed anyway.
+		if (state->wasCycleDetected())
+			return ::query::internal::QueryGraph::serializeReducedGraph({});
+
 		auto reduced_graph = state->reduceOptimizeGraph(state->getGraph());
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
 	}

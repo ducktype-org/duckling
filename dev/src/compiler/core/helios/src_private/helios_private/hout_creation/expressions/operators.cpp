@@ -25,9 +25,12 @@
 
 #include <base/collections/maps.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <lang_definitions/key_spec_op.hpp>
+#include <lexer/token_common.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -166,12 +169,40 @@ namespace {
 	 * @param function_syms The list of function symbols to filter
 	 * @param opiness The operatoriness to filter by
 	 */
+	/**
+	 * @brief A name between two values, as in `res MOD` or `x y + 1`, is read as an operator. When
+	 * the name only finds things that are not functions, the code most likely misses an operator,
+	 * a `,` or a `;` there, so this says so instead of reporting a failed operator call.
+	 */
+	void failOnNameUsedAsOperator(
+		query::Context&           ctx,
+		const lexer::Operator     op,
+		const ElementOrigin&      op_origin,
+		const std::vector<SymID>& found_symbols
+	) {
+		if (lexer::isOperatorSymbolString(op.value.strView()) or found_symbols.empty()) return;
+		if (std::ranges::any_of(found_symbols, [](SymID sym) { return isFunctionLike(kind(sym)); }))
+			return;
+		ctx.log<dia::PlaceholderError>(
+			base::strConcat(
+				"`",
+				op.value.strView(),
+				"` stands between two values, so it is read as an operator, but it is not a "
+				"function. Is an operator, a `,` or a `;` missing next to it?"
+			),
+			op_origin.getStablePosition()
+		);
+		query::throwFailed();
+	}
+
 	void filterFunctionsByOperatoriness(
 		query::Context&                              ctx,
 		std::vector<SymID>&                          function_syms,
 		const HOUTFunctionDeclaration::Operatoriness opiness
 	) {
 		base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
+			// A name used as an operator can find a variable too, e.g. `MOD` in `res MOD`.
+			if (not isFunctionLike(kind(sym))) return false;
 			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
 		});
 	}
@@ -327,6 +358,7 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
+		failOnNameUsedAsOperator(ctx, op, op_origin, all_candidates);
 		filterFunctionsByOperatoriness(
 			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 		);
@@ -400,6 +432,7 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
+		failOnNameUsedAsOperator(ctx, op, op_origin, all_candidates);
 		filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
 
 		// Step 2b. — Look for operator methods declared on the operand's own type (classes only)

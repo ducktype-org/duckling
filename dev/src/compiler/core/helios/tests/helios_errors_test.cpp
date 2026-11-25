@@ -74,6 +74,7 @@ public:
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
 		TESTER_ADD_TEST(testUnsupportedAccessErrors);
+		TESTER_ADD_TEST(testModuleAsValueErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
@@ -2281,7 +2282,7 @@ private:
 					return foo();
 				}
 			)",
-			{ "cycle" },
+			{ "Hint: maybe a function without a declared return type calls itself" },
 			1
 		);
 
@@ -3019,6 +3020,20 @@ private:
 			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
 			{ "Feature not implemented", "The `::` access operator is not supported yet." },
 			1
+		);
+	}
+
+	void testModuleAsValueErrors() {
+		query::Context::dumpToOneLoggerAndClear();
+
+		// A module has no type, so naming it where a value is expected is an error, not a panic.
+		auto [module_id, _] = helios::test_utils::getModule(
+			fs::File(path("test_modules/error_generating/module_as_value"))
+		);
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+		assertTrue(result->hasFailed(), "Expected HOUT query to fail for a module used as a value.");
+		checkForError(
+			{ "A module cannot be used as a value.", "A module cannot be used as a value." }, 2
 		);
 	}
 

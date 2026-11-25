@@ -1,0 +1,9 @@
+import other as other;
+
+# `other.%%(1)` is lexed as `other .%% (1)`, so `other` is used as a value.
+fun callOperator() -> i64 = other .%% (1);
+
+fun bindModule() -> i64 = {
+	let x = other;
+	return 0;
+}

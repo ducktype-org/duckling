@@ -1,11 +1,17 @@
-# Invalid programs that used to crash the compiler, or to compile with exit code 0 despite the
-# reported error. Each one only has to be rejected with exit code 1.
+# Invalid programs that used to crash the compiler, to compile with exit code 0 despite the
+# reported error, or to get an unclear message. Each one has to be rejected with exit code 1.
 
 enable_conc_deterministic_tests: "false"
 
 PreCase: "mkdir -p @{case_build}"
 
-Run: "@{compile_llvm_backend_cmd}"
+# The compiler output has to contain `expected_message`, when a test sets one, otherwise the exit
+# code is 99. Else it is the compiler's own, so a crash still fails the test. The output is kept
+# outside of the artifacts folder, which duckc only accepts empty or as its own cache.
+expected_message: ""
+Run: "{ @{compile_llvm_backend_cmd}; } > $DIT_TMP_DIR/compile_output.txt 2>&1; code=$?;
+  cat $DIT_TMP_DIR/compile_output.txt;
+  grep -qF -- '@{expected_message}' $DIT_TMP_DIR/compile_output.txt || exit 99; exit $code"
 
 Tests:
   template_with_bad_less: # The error is inside an instantiation of `exp.algorithms.sort`.
@@ -21,6 +27,54 @@ Tests:
       llvm:
         ExitCode: 1
   single_stmt_body: # An `if` statement as the body of a `fun f() = ...` function.
+    Cases:
+      llvm:
+        ExitCode: 1
+  recursive_no_return_type:
+    expected_message: "Hint: maybe a function without a declared return type calls itself"
+    Cases:
+      llvm:
+        ExitCode: 1
+  template_call_without_args:
+    expected_message: "`sort` is a template, so its template arguments have to be given"
+    Cases:
+      llvm:
+        ExitCode: 1
+  missing_semicolon_initializer:
+    expected_message: "This also happens when a `;` is missing"
+    Cases:
+      llvm:
+        ExitCode: 1
+  name_used_as_operator:
+    expected_message: "`MOD` stands between two values, so it is read as an operator"
+    Cases:
+      llvm:
+        ExitCode: 1
+  module_called: # Used to crash the compiler.
+    Cases:
+      llvm:
+        ExitCode: 1
+  broken_import: # A selector that failed to parse used to crash the compiler.
+    Cases:
+      llvm:
+        ExitCode: 1
+  missing_return:
+    expected_message: "The function `sign` is missing a return statement"
+    Cases:
+      llvm:
+        ExitCode: 1
+  method_without_call:
+    expected_message: "`length` is a method, so it has to be called"
+    Cases:
+      llvm:
+        ExitCode: 1
+  member_of_function: # Used to crash the compiler.
+    expected_message: "A function has no member `x`"
+    Cases:
+      llvm:
+        ExitCode: 1
+  prefix_after_binary_operator: # `x * -1` needs parentheses: `x * (-1)`.
+    expected_message: "The prefix operator `-` cannot come right after the binary operator `*`"
     Cases:
       llvm:
         ExitCode: 1

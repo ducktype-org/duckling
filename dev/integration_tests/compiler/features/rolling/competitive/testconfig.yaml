@@ -43,5 +43,12 @@ Tests:
           String: "before\n"
         ExitCode: 134
 
+  cp_tuples_from_let: # Used to crash LLVM verification or to fail with "does not match the result type".
+    Cases:
+      all:
+        Output:
+          String: "3\n3\n2\n2\n2\n3\n5\n5\n2\n1\n"
+        ExitCode: 0
+
 SubDirs:
   - compile_errors

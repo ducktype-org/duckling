@@ -1,0 +1,6 @@
+fun f() -> i64 = 1;
+
+fun main() -> i64 = {
+	let s = f.x; # A function has no members.
+	return 0;
+}

@@ -457,9 +457,12 @@ namespace compiler::helios::code {
 					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
 				);
 				for (const auto& candidate: looked_up_callees) {
-					error->addAttachedMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
-						stmt(query_ctx, candidate).value()->getStablePosition()
-					));
+					// A module, for example, has no statement to point at.
+					if (kind(candidate) == SymbolKind::Module) continue;
+					if (auto candidate_stmt = stmt(query_ctx, candidate))
+						error->addAttachedMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
+							candidate_stmt.value()->getStablePosition()
+						));
 				}
 				query_ctx.log(std::move(error));
 				return query::Failed();
@@ -483,10 +486,40 @@ namespace compiler::helios::code {
 			case SymbolKind::Field: {
 				return std::vector{ symbol };
 			}
+			case SymbolKind::Template: {
+				// E.g. `sort(&v)` instead of `sort[i64](&v)`.
+				query_ctx.log<dia::PlaceholderError>(
+					base::strConcat(
+						"`",
+						name(symbol),
+						"` is a template, so its template arguments have to be given in `[...]` "
+						"before the call, e.g. `",
+						name(symbol),
+						"[i64](...)`. They are not deduced from the call arguments yet."
+					),
+					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
+				);
+				return query::Failed();
+			}
+			case SymbolKind::Module:
+			case SymbolKind::Import: {
+				// E.g. `io()` after `import exp.io as io;`.
+				query_ctx.log<dia::PlaceholderError>(
+					base::strConcat(
+						"This is the module `",
+						name(symbol),
+						"`, so it cannot be called. Call a function from it instead, e.g. "
+						"`module.function(...)`."
+					),
+					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
+				);
+				return query::Failed();
+			}
 			default: {
+				// A module, for example, has no statement of its own, so this points at the call.
 				query_ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
-					stmt(query_ctx, symbol).value()->getStablePosition()
+					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
 				);
 				return query::Failed();
 			}
@@ -699,6 +732,18 @@ namespace compiler::helios::code {
 			base::Box<Expr> current_expr, pst::Access<pst::expr::AccessExpr> expr_access
 		) -> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
+			// A function has no members yet. E.g. `f.x` where `f().x` was meant.
+			if (current_expr_type.getKind() == tsh::Kind::Function) {
+				query_ctx.log<dia::PlaceholderError>(
+					base::strConcat(
+						"A function has no member `",
+						expr_access->getName().unlock(query_ctx)->unwrap(),
+						"`. Was it meant to be called first, as in `f().member`?"
+					),
+					expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
+				);
+				return query::Failed();
+			}
 			auto lookup_qresult
 				= HInterface::ofTypeInstance(current_expr_type)
 			          .lookup(
@@ -745,10 +790,18 @@ namespace compiler::helios::code {
 						result_sequence.push_back(std::move(current_expr));
 						return ChainState::ofNamespaceLike(sym, pstOrigin(expr_access));
 					} else if (kind(sym) == SymbolKind::Method) {
-						query_ctx.log<dia::NotYetImplementedCodeError>(
-							"Handling of access to method without a call is not implemented yet"
-							"argument at compile time",
-							current_expr->origin.getStablePosition()
+						// E.g. `s.length` where `s.length()` was meant.
+						query_ctx.log<dia::PlaceholderError>(
+							base::strConcat(
+								"`",
+								name(sym),
+								"` is a method, so it has to be called: `.",
+								name(sym),
+								"(...)`. A method cannot be used as a value yet."
+							),
+							expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+								query_ctx
+							)
 						);
 						return query::Failed();
 					}
@@ -1462,6 +1515,15 @@ namespace compiler::helios::code {
 				);
 			}
 			if (this->current_state.isNamespaceLike()) {
+				// A module has no type, so it cannot become an `IdentifierExpr` (asking for the
+				// type of its symbol panics), e.g. `let x = m;` or `m.%%(1)` (lexed as `m .%% (1)`).
+				if (kind(this->current_state.getNamespaceLikeSymbol()) == SymbolKind::Module) {
+					query_ctx.log<dia::PlaceholderError>(
+						"A module cannot be used as a value.",
+						chain_elements.back().unlock(query_ctx)->getStablePosition()
+					);
+					return query::Failed();
+				}
 				auto namespace_expr = makeBox<IdentifierExpr>(
 					query_ctx,
 					this->current_state.getNamespaceLikePstOrigin(),

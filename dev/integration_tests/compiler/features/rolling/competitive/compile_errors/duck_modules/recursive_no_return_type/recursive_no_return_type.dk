@@ -1,0 +1,10 @@
+# The return type of a recursive function cannot be deduced.
+fun fib(n: i64) = {
+	if (n < 2) return n;
+	return fib(n - 1) + fib(n - 2);
+}
+
+fun main() -> i64 = {
+	print(fib(10));
+	return 0;
+}

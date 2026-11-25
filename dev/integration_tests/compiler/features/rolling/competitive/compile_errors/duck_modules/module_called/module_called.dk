@@ -1,0 +1,6 @@
+import exp.io as io;
+
+fun main() -> i64 = {
+	let n = io();
+	return 0;
+}

@@ -1,0 +1,39 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "prefix_after_binary_operator"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+  binary_operator:
+    description: "The binary operator before the prefix operator."
+  prefix_operator:
+    description: "The prefix operator right after the binary operator."
+
+header_message:
+  - "The prefix operator `"
+  - param: "prefix_operator"
+  - "` cannot come right after the binary operator `"
+  - param: "binary_operator"
+  - "`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "Put the operand with the prefix operator in parentheses, e.g. `x * (-1)` or `&a ++ (&b)`."
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "this operand needs parentheses"

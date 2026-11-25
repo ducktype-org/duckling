@@ -1,0 +1,8 @@
+import exp.algorithms.*;
+
+fun main() -> i64 = {
+	var v: List[i64];
+	v.push(3);
+	sort(&v); # Template arguments are not deduced, it has to be `sort[i64](&v)`.
+	return 0;
+}

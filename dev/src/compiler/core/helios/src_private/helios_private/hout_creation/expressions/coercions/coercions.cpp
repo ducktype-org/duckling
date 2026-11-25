@@ -167,9 +167,19 @@ namespace compiler::helios::coercions {
 		}
 
 		Box<Expr> applyStep(
-			query::Context&, const step::MutabilityChange&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context&,
+			const step::MutabilityChange&,
+			const tsh::SymbolType<>& result,
+			Box<Expr>                from
 		) {
-			// Only what may be done with the value changes, the value itself does not.
+			// Only what may be done with the value changes, the value itself does not. The type
+			// still has to follow. E.g. `(a, b)` with `let a` is a `(imm i64, i64)`, and when it is
+			// returned or passed as a `(i64, i64)` it has to have that type, which is a different
+			// tuple type. The bytes are the same, so only the expression is retyped.
+			if (result.getRefKind() == tsh::ReferenceKind::Direct
+			    && from->expression_type.getSymbolType().getRefKind() == tsh::ReferenceKind::Direct)
+				from->expression_type
+					= tsh::ExpressionType<>(result, from->expression_type.getValueCategory());
 			return from;
 		}
 
@@ -338,7 +348,11 @@ namespace compiler::helios::coercions {
 	BoxOrCRef<Expr> applyCoercionFromRef(
 		query::Context& ctx, const Coercion& coercion, CRef<Expr> from
 	) {
-		if (coercion.isNoOp()) return from;
+		// A no-op that changes the type, e.g. `(imm i64, i64)` into `(i64, i64)`, still needs a
+		// copy of the expression with the new type.
+		if (coercion.isNoOp()
+		    && from->expression_type.getType() == coercion.getRoot().current().getType())
+			return from;
 		return applyCoercion(ctx, coercion, from->clone());
 	}
 

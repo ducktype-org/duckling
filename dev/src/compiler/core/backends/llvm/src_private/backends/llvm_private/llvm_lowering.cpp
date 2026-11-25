@@ -27,6 +27,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
@@ -39,6 +40,7 @@ LLVM_INCLUDE_END()
 #include "type_from_layout.hpp"
 
 #include <ctv/numeric_value.hpp>
+#include <helios/tsh/kind.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
@@ -303,6 +305,22 @@ namespace compiler::backend_llvm {
 			return llvm::Type::getInt1Ty(context);
 		}
 
+		/**
+		 * @brief The name of a named struct, or the printed form of any other type, without spaces.
+		 */
+		std::string llvmTypeName(llvm::Type* type) {
+			if (auto* struct_type = llvm::dyn_cast<llvm::StructType>(type);
+			    struct_type != nullptr && struct_type->hasName())
+				return struct_type->getName().str();
+
+			std::string              printed;
+			llvm::raw_string_ostream stream(printed);
+			type->print(stream);
+			stream.flush();
+			std::erase(printed, ' ');
+			return printed;
+		}
+
 		llvm::IntegerType* variantTagType(
 			llvm::LLVMContext& context, const tsl::VariantTypeLayout& layout
 		) {
@@ -349,29 +367,54 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
-				const auto class_name = class_layout.getMangledName().strView();
+				const auto  class_name      = class_layout.getMangledName().strView();
+				const usize num_sub_layouts = class_layout.getNumSubLayouts();
+				auto        memberTypes     = [&] {
+                    std::vector<llvm::Type*> member_types;
+                    member_types.reserve(num_sub_layouts);
+                    for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+                        const CRef<tsl::TypeLayout> field_layout
+                            = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
+                        member_types.push_back(typeFromLayout(module, field_layout));
+                    }
+                    return member_types;
+				};
 
-				// Get the struct from the context, if it has been previously defined.
-				if (llvm::StructType* struct_type
-				    = llvm::StructType::getTypeByName(llvm_context, class_name);
-				    struct_type) {
-					return struct_type;
-				}
+				llvm::StructType* struct_type = nullptr;
+				if (class_layout.getSourceType().getType().getKind() == tsh::Kind::Tuple) {
+					// A tuple is named after the LLVM types of its members, not its mangled name.
+					// The mangled name tells `(imm i64, i64)` from `(i64, i64)`, but a value of one
+					// is passed where the other is expected, so they must be the same LLVM type.
+					// The DVM backend names tuples by their layout for the same reason.
+					auto        member_types = memberTypes();
+					std::string tuple_name   = "T";
+					for (llvm::Type* member_type: member_types) {
+						tuple_name += '.';
+						tuple_name += llvmTypeName(member_type);
+					}
+					tuple_name += ".E";
 
-				// Otherwise, define the struct in LLVM.
-				// - First, create an opaque type.
-				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
-				// - Then, collect the member types.
-				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
-				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_sub_layouts);
-				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
-					const CRef<tsl::TypeLayout> field_layout
-						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
-					member_types.push_back(typeFromLayout(module, field_layout));
+					if (llvm::StructType* defined
+					    = llvm::StructType::getTypeByName(llvm_context, tuple_name);
+					    defined) {
+						return defined;
+					}
+					struct_type = llvm::StructType::create(
+						llvm_context, member_types, tuple_name, /*isPacked=*/false
+					);
+				} else {
+					// Get the struct from the context, if it has been previously defined.
+					if (llvm::StructType* defined
+					    = llvm::StructType::getTypeByName(llvm_context, class_name);
+					    defined) {
+						return defined;
+					}
+
+					// Otherwise, define the struct in LLVM. It is created opaque first, so a
+					// member can refer back to it.
+					struct_type = llvm::StructType::create(llvm_context, class_name);
+					struct_type->setBody(memberTypes(), /*is_packed=*/false);
 				}
-				// - Finally, set the body of the struct and return it.
-				struct_type->setBody(member_types, /*is_packed=*/false);
 
 				// Now, confirm that the LLVM struct layout matches the TSL type layout.
 				// - First, get the LLVM struct layout.

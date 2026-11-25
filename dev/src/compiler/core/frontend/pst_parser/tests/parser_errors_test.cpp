@@ -489,6 +489,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 	Example<pst::ExprStmt, false> bad_operator{ "x = y z + 3" };
+	// A prefix operator only starts the whole expression, otherwise it needs parentheses.
+	Example<pst::UniversalExprHolder, false> prefix_right_after_binary{ "x * -1" };
+	Example<pst::UniversalExprHolder, true>  prefix_after_binary_in_parentheses{ "x * (-1)" };
 
 	Example<pst::UniversalExprHolder, true> simple_operators{ "++ ++ 3 + 5 ++" };
 	Example<pst::UniversalExprHolder, true> text_operator{ "++ ++ 3 + 5 kg ++" };
@@ -749,6 +752,9 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::NotACaseExpression>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::MatchCurlyBracketError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::OnlyPrefixError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::PrefixAfterBinaryOperatorError>(
+			ss, dia::SourcePosition::fakePosition(), "*", "-"
+		);
 		testDiagnosticMessage<pst::BadCharValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::MoreThanCharValueError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::BadChainExprError>(ss, dia::SourcePosition::fakePosition());

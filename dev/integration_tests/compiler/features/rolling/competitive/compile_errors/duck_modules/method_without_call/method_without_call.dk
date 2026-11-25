@@ -1,0 +1,5 @@
+fun main() -> i64 = {
+	var s = f"abc";
+	print(s.length); # `s.length()` was meant.
+	return 0;
+}

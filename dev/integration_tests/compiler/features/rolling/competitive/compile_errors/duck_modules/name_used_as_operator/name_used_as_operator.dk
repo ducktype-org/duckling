@@ -1,0 +1,6 @@
+fun main() -> i64 = {
+	var res = 0i64;
+	let MOD = 7i64;
+	print(res MOD); # A name between two values is read as an operator.
+	return 0;
+}

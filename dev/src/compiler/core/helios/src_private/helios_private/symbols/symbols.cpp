@@ -740,7 +740,10 @@ namespace compiler::helios {
 	}
 
 	pst::Access<pst::Selector> usingImportSelector(query::Context& ctx, pst::Access<pst::Stmt> stmt) {
-		return (*selectorsOf(stmt).unlock(ctx)->begin()).unlock(ctx);
+		auto selectors = selectorsOf(stmt).unlock(ctx);
+		// E.g. `import exp exp.io.*;`: the parser has reported the error and kept no selector.
+		if (selectors->size() == 0) query::throwFailed();
+		return (*selectors->begin()).unlock(ctx);
 	}
 
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {

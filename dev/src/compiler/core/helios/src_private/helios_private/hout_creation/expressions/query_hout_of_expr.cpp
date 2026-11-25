@@ -395,8 +395,19 @@ namespace compiler::helios::code {
 					}
 					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
 					if (not inner->expression_type.getValueCategory().addressable()) {
+						// E.g. `&words.at(0)`: `at` already returns a `ref`, which is passed on
+						// as it is.
+						const bool is_reference
+							= inner_type.getRefKind() != tsh::ReferenceKind::Direct;
 						ctx.log<dia::PlaceholderError>(
-							"Tried to reference a temporary", stmt->getStablePosition()
+							"Tried to reference a temporary",
+							stmt->getStablePosition(),
+							is_reference ? base::strConcat(
+											   "The value is a `",
+											   inner_type.toString(),
+											   "` already, so it can be passed without the `&`."
+										   )
+										 : ""
 						);
 						return;
 					}
