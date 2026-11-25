@@ -80,16 +80,21 @@ namespace compiler::helios::code {
 		= std::variant<PositionalAfterNamedArgument, RepeatedNamedArgument, FunctionMatchFailure>;
 
 	class AmbiguousMatchesError final: public dia::MessageWithCodeFragmentAndCause {
+		/** No candidate matched at all, so the call is not ambiguous, just wrong. */
+		bool none_matched;
+
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "type_check",
-				     .name          = "call_ambiguous_matches" };
+				     .name
+				     = none_matched ? "call_no_matching_candidate" : "call_ambiguous_matches" };
 		}
 
 	public:
-		AmbiguousMatchesError(dia::StablePosition source_position):
-			  MessageWithCodeFragmentAndCause(source_position) {}
+		AmbiguousMatchesError(dia::StablePosition source_position, bool none_matched = false):
+			  MessageWithCodeFragmentAndCause(source_position),
+			  none_matched(none_matched) {}
 
 		// void addExplore
 

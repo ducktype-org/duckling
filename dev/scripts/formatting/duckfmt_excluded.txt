@@ -4,3 +4,6 @@
 # duckfmt's own itest fixtures: an unformatted input and a file with a lexer error
 integration_tests/tools/formatter/format_unformatted.dk
 integration_tests/tools/formatter/format_lexer_error.dk
+
+# A compile_errors fixture whose missing `;` the formatter would join into one line
+integration_tests/compiler/features/rolling/competitive/compile_errors/duck_modules/missing_semicolon/missing_semicolon.dk

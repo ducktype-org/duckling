@@ -32,3 +32,4 @@ SubDirs:
   - generated_comparisons
   - standard_library
   - conditional_compilation
+  - competitive

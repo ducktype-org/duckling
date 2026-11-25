@@ -229,13 +229,13 @@ private:
 		{
 			checkForErrorOnCompileModule(
 				R"(fun a() = true + false;)",
-				{ "Call failed due to ambiguous overload resolution" },
+				{ "Call failed because none of the candidates accepts the given arguments" },
 				1
 			);
 			checkForErrorOnCompileModule(
 				R"(fun a() = 'c' + 1i64;)",
 				{
-					"Call failed due to ambiguous overload resolution",
+					"Call failed because none of the candidates accepts the given arguments",
 					"type imm Function (imm u8, imm char) -> (imm char).",
 					"given argument type `char` cannot be converted to the expected type `imm "
 					"u8`.",
@@ -471,7 +471,7 @@ private:
 					return obj.method("abc");
 				}
 			)",
-				{ "Call failed due to ambiguous overload resolution." },
+				{ "Call failed because none of the candidates accepts the given arguments." },
 				1
 			);
 
@@ -1273,7 +1273,7 @@ private:
 					for (i in 0) { }
 				}
 			)",
-				{ "Feature not implemented", "for", "for non-array type: i32" },
+				{ "Feature not implemented", "for", "over type: i32" },
 				1
 			);
 
@@ -2095,7 +2095,7 @@ private:
 				var b = o.valueOr(L(2i32));
 				return 0;
 			} )",
-			{ "Call failed due to ambiguous overload resolution",
+			{ "Call failed because none of the candidates accepts the given arguments",
 		      "Cannot implicitly copy a value of non-trivially-copyable type `?Class L`",
 		      "The given argument type `Class L` cannot be converted to the expected type `ref "
 		      "Class L`" },
