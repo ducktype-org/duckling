@@ -6,12 +6,13 @@
 
 #pragma once
 
-#include <diagnostic/source_position.hpp>
 #include <frontend/module_tree/source_file.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
+
+#include <diagnostic/source_position.hpp>
 
 #include <string>
 

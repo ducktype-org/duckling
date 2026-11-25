@@ -116,7 +116,7 @@ namespace duck_ls {
 	}
 
 	lsp::Range toLspRange(const dia::SourcePosition& position) {
-		const auto& source = *position.getSource();
+		const auto& source                    = *position.getSource();
 		const auto [start_line, start_column] = position.getStartLineColumn();
 		const auto [end_line, end_column]     = position.getEndLineColumn();
 

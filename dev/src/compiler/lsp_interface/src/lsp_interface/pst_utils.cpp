@@ -4,11 +4,11 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/meta.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/wrapper_elements/identifier_wrapper.hpp> 
-#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/wrapper_elements/identifier_wrapper.hpp>
 #include <frontend/pst_parser/pst/parsed_pst.hpp>
 #include <lsp_interface/pst_utils.hpp>
 
@@ -56,7 +56,7 @@ namespace duck_ls {
 				if (auto expression = element.dynamicCast<pst::ExprElement>())
 					path.top_expression.emplace(expression.value());
 			}
-	
+
 			for (auto child_locked: element->viewChildren()) {
 				auto child = child_locked.illegalAccess();
 				if (!child.has_value()) continue;

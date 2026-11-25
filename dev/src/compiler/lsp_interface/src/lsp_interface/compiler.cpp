@@ -467,7 +467,7 @@ namespace duck_ls {
 		};
 		if (hover.value().position.has_value())
 			result.range = toLspRange(hover.value().position.value());
-		
+
 		return result;
 	}
 

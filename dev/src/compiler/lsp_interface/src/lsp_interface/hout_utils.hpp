@@ -17,18 +17,18 @@
 
 namespace duck_ls {
 
-    /**
-    * @brief The smallest HOUT expression in `root` whose source position covers `offset`,
-    * or empty when there is none.
-    *
-    * HELIOS also adds expressions that are not written in the code, such as an implicit cast
-    * or dereference, or a default argument copied into a call. Two rules keep them out:
-    * - An added expression is never chosen itself, but the walk still goes into its children,
-    *   so hovering over `y` in an implicit cast of `y` shows `y`, not the cast.
-    * - An expression counts only if its position is in the same file and inside `bounds`,
-    *   the range of `root`. A copied default argument keeps the position of the declaration
-    *   it came from, which can be anywhere.
-    */
+	/**
+	 * @brief The smallest HOUT expression in `root` whose source position covers `offset`,
+	 * or empty when there is none.
+	 *
+	 * HELIOS also adds expressions that are not written in the code, such as an implicit cast
+	 * or dereference, or a default argument copied into a call. Two rules keep them out:
+	 * - An added expression is never chosen itself, but the walk still goes into its children,
+	 *   so hovering over `y` in an implicit cast of `y` shows `y`, not the cast.
+	 * - An expression counts only if its position is in the same file and inside `bounds`,
+	 *   the range of `root`. A copied default argument keeps the position of the declaration
+	 *   it came from, which can be anywhere.
+	 */
 	base::Optional<CRef<compiler::helios::code::Expr>> findInnermostExpression(
 		query::Context&                     ctx,
 		const compiler::helios::code::Expr& root,

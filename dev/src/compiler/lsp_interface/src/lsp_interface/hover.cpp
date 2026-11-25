@@ -13,17 +13,17 @@
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <lsp_interface/hover.hpp>
 #include <lsp_interface/hout_utils.hpp>
+#include <lsp_interface/hover.hpp>
 #include <lsp_interface/pst_utils.hpp>
-
-#include <diagnostic/source_position.hpp>
-#include <query_framework/context/context.hpp>
-#include <query_framework/entry/with_context_do.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
+
+#include <diagnostic/source_position.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 #include <exception>
 #include <iostream>
@@ -74,7 +74,7 @@ namespace duck_ls {
 		 * @brief The hover text for an expression.
 		 *
 		 * If the expression is a name, like `sum`, or a field access, like `p.x`, the text is
-		 * `<name>: <type>` of the variable, function or field it refers to. 
+		 * `<name>: <type>` of the variable, function or field it refers to.
 		 * If it's a type, it returns `<type_name>: type`. For any other
 		 * expression, like `a + b`, the text is just the type of the expression.
 		 */
@@ -109,7 +109,7 @@ namespace duck_ls {
 			if (found.empty()) return {};
 
 			const code::Expr& expr = *found.value();
-			HoverContent content{ .markdown = describeExpression(ctx, expr) };
+			HoverContent      content{ .markdown = describeExpression(ctx, expr) };
 			if (auto position = expr.origin.getSourcePosition(ctx); position.has_value())
 				content.position.emplace(position.value());
 			return content;

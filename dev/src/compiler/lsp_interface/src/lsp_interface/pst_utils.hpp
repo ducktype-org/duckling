@@ -18,7 +18,7 @@
 #include <diagnostic/source_position.hpp>
 
 namespace duck_ls {
-	
+
 	/**
 	 * @brief Whether `position`, the range a node takes in the file, covers `offset`. The end
 	 * of a source position is the offset of its last character.
