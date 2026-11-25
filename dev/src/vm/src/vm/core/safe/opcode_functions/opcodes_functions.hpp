@@ -144,7 +144,9 @@ namespace vm {
 		/// so it must not bloat the opfuns.
 		[[gnu::noinline]]
 		static Ref<Block> createLocalBlock(Frame* frame, SafeVMThread& thread, u64 slot_index) {
-			return createLocalSlotBlock(*frame, thread.process_memory, slot_index);
+			return createLocalSlotBlock(
+				frame->local_slot_stack_base[slot_index], thread.process_memory
+			);
 		}
 
 		/**

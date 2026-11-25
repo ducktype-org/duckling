@@ -57,19 +57,44 @@ private:
 		ASSERT_EQUAL(exported, 42);
 		ASSERT_TRUE(number_slot.block == nullptr);
 
-		// A variant keeps its set alternative in a child block of its block.
+		// A variant keeps its set alternative in a child view block of its block, which the
+		// variable it is copied into needs too.
+		auto&       memory       = process.getMemory();
+		const auto  variant_type = types.at(base::StrID("IntOrPtr"));
+		const usize tag_size     = variant_type->getTypeTagSizeBytes().value().asInt();
+
+		std::array<byte, 64> source_bytes{};
+		vm::LocalSlot        source_slot{ .type  = variant_type.get(),
+			                              .data  = source_bytes.data(),
+			                              .block = nullptr };
+		memory.setNestedViewBlock(
+			vm::createLocalSlotBlock(source_slot, memory), tag_size, types.at(base::StrID("i64"))
+		);
+		source_bytes.at(0) = byte{ 1 };  // The `i64` alternative, as tags start at 1.
+		const i64 payload  = 42;
+		std::memcpy(source_bytes.data() + tag_size, &payload, sizeof(payload));
+		auto variant = process.createOwnedVMValue(source_slot);
+
 		std::array<byte, 64> variant_bytes{};
-		vm::LocalSlot        variant_slot{ .type  = types.at(base::StrID("IntOrPtr")).get(),
+		vm::LocalSlot        variant_slot{ .type  = variant_type.get(),
 			                               .data  = variant_bytes.data(),
 			                               .block = nullptr };
-		auto                 variant = process.createOwnedVMValue(variant_slot);
-		ASSERT_TRUE(variant_slot.block == nullptr);
 		variant->exportToSlot(variant_slot);
 		ASSERT_TRUE(variant_slot.block != nullptr);
 
-		for (auto* value: { &number, &variant })
+		auto                read_back       = process.createOwnedVMValue(variant_slot);
+		const vm::IVMValue& read_back_value = *read_back;
+		const auto          decoded
+			= read_back_value.readData<vm::interpreted_data_variant::Variant>().value();
+		ASSERT_EQUAL(decoded.alternative_index, 0);
+		ASSERT_EQUAL(
+			decoded.referenced->readData<vm::interpreted_data_variant::Primitive>().value().value, 42
+		);
+
+		for (auto* value: { &number, &variant, &read_back })
 			ASSERT_HAS_VALUE(process.doRequest(vm::api::request::FreeVMValue{ value->refMut() }));
-		vm::releaseLocalSlot(variant_slot, process.getMemory());
+		vm::releaseLocalSlot(source_slot, memory);
+		vm::releaseLocalSlot(variant_slot, memory);
 		ASSERT_TRUE(process.getMemory().validateMemoryState());
 	}
 

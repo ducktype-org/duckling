@@ -231,6 +231,13 @@ namespace vm {
 		}
 
 		/**
+		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
+		 */
+		void runDataCopyConstructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectCopyConstructor);
+		}
+
+		/**
 		 * @brief Frees the child blocks and runs the destructors of the data `dst` points to, so
 		 * it can be overwritten.
 		 */
@@ -411,13 +418,6 @@ namespace vm {
 		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type)
 			requires std::is_same_v<EntryT, byte> {
 			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
-		}
-
-		/**
-		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
-		 */
-		void runDataCopyConstructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectCopyConstructor);
 		}
 
 		GenericMemory() = default;

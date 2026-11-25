@@ -29,10 +29,6 @@ namespace vm {
 		return block;
 	}
 
-	inline auto createLocalSlotBlock(Frame& frame, Memory& memory, u64 slot_index) -> Ref<Block> {
-		return createLocalSlotBlock(frame.local_slot_stack_base[slot_index], memory);
-	}
-
 	/**
 	 * @brief Releases what a local variable owns, without popping its slot. A variable with a
 	 * block frees the block; one that never needed a block has the destructors of its data run

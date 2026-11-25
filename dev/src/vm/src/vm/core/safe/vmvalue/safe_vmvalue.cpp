@@ -54,6 +54,7 @@ void vm::SafeVMValue::exportData(Pointer dst) const { memory->copyPointedData(ds
 void vm::SafeVMValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
 void vm::SafeVMValue::exportToSlot(LocalSlot& slot) const {
+	CORE_ASSERT(slot.type == type.get(), "Exporting a VMValue into a variable of another type!");
 	if (slot.block == nullptr && type->needsBlock()) createLocalSlotBlock(slot, *memory);
 	if (slot.block != nullptr) {
 		exportData({ Ref(slot.block), 0 });
@@ -64,6 +65,7 @@ void vm::SafeVMValue::exportToSlot(LocalSlot& slot) const {
 }
 
 void vm::SafeVMValue::importFromSlot(const LocalSlot& slot) {
+	CORE_ASSERT(slot.type == type.get(), "Importing a VMValue from a variable of another type!");
 	if (slot.block != nullptr) {
 		importData({ Ref(slot.block), 0 });
 		return;
