@@ -1,5 +1,19 @@
 # Tests for static array types
 Tests:
+  aggregate_call_copies:
+    Cases:
+      all:
+        backend: all
+        compile_llvm_options: "-O 0"
+        Output:
+          String: "30\n99\n14\n7\n10\n20\n30\n"
+        ExitCode: 0
+      llvm:
+        compile_llvm_options: "-O 3"
+        Output:
+          String: "30\n99\n14\n7\n10\n20\n30\n"
+        ExitCode: 0
+
   aggregate_values:
     Cases:
       all:
