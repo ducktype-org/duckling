@@ -237,7 +237,7 @@ namespace compiler::helios::defgen {
 			default:
 				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
-						"Default copy constructor for type `", owner_type.toString(), "`."
+						"Default copy constructor for type `", owner_type.sourceTypeName(ctx), "`."
 					),
 					""
 				);

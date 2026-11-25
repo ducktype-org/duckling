@@ -113,7 +113,7 @@ namespace compiler::helios::coercions {
 						ctx,
 						base::strConcat(
 							"Taking a component of type `",
-							part.source.toString(),
+							part.source.sourceTypeName(ctx),
 							"` out of an existing tuple is not supported yet."
 						),
 						*whole
@@ -378,7 +378,7 @@ namespace compiler::helios::coercions {
 				ctx,
 				base::strConcat(
 					"Checking a value of type `",
-					value->expression_type.getValueType().toString(),
+					value->expression_type.getValueType().sourceTypeName(ctx),
 					"` against zero is not supported yet."
 				),
 				*value

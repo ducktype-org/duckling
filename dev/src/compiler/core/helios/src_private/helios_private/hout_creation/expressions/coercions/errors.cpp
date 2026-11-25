@@ -49,7 +49,7 @@ namespace compiler::helios::coercions {
 		 * refusal.
 		 */
 		std::string tiedAlternatives(
-			const CoercionError& refusal, const std::vector<usize>& candidates
+			query::Context& ctx, const CoercionError& refusal, const std::vector<usize>& candidates
 		) {
 			CORE_ASSERT(
 				refusal.target.getType().getKind() == tsh::Kind::Variant,
@@ -60,7 +60,7 @@ namespace compiler::helios::coercions {
 			return base::strJoin(
 				candidates | std::views::transform([&](const usize candidate) {
 					return base::strConcat(
-						"`", variant.getUnderlyingTypes().at(candidate).toString(), "`"
+						"`", variant.getUnderlyingTypes().at(candidate).sourceTypeName(ctx), "`"
 					);
 				}),
 				", "
@@ -154,9 +154,9 @@ namespace compiler::helios::coercions {
 				return makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Cannot hand a value of type `",
-						cause.source.toString(),
+						cause.source.sourceTypeName(ctx),
 						"` over to `",
-						cause.target.toString(),
+						cause.target.sourceTypeName(ctx),
 						"`, it would allow modifying an immutable value."
 					),
 					source_position
@@ -169,9 +169,9 @@ namespace compiler::helios::coercions {
 				return makeBox<dia::NotYetImplementedCodeError>(
 					base::strConcat(
 						"Coercing `",
-						cause.source.toString(),
+						cause.source.sourceTypeName(ctx),
 						"` to `",
-						cause.target.toString(),
+						cause.target.sourceTypeName(ctx),
 						"`."
 					),
 					source_position
@@ -181,11 +181,11 @@ namespace compiler::helios::coercions {
 				return makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"A value of type `",
-						cause.source.toString(),
+						cause.source.sourceTypeName(ctx),
 						"` fits equally well into many alternatives of `",
-						cause.target.toString(),
+						cause.target.sourceTypeName(ctx),
 						"`: ",
-						tiedAlternatives(cause, ambiguous.candidates),
+						tiedAlternatives(ctx, cause, ambiguous.candidates),
 						"."
 					),
 					source_position
@@ -194,7 +194,7 @@ namespace compiler::helios::coercions {
 			[&](const TypeNotCopyable& not_copyable) -> Message {
 				return makeBox<dia::PlaceholderError>(
 					base::strConcat(
-						"Type `", not_copyable.copied.type.toString(), "` cannot be copied."
+						"Type `", not_copyable.copied.type.sourceTypeName(ctx), "` cannot be copied."
 					),
 					source_position
 				);
@@ -206,7 +206,7 @@ namespace compiler::helios::coercions {
 					= explicit_copy.copied.is_pointee
 			            ? base::strConcat(
 							  "` out of `",
-							  cause.source.toString(),
+							  cause.source.sourceTypeName(ctx),
 							  "`. Use `copy` to copy it out, `move` cannot move a value out of a "
 							  "reference."
 						  )
@@ -215,7 +215,7 @@ namespace compiler::helios::coercions {
 				return makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Cannot implicitly copy a value of non-trivially-copyable type `",
-						explicit_copy.copied.type.toString(),
+						explicit_copy.copied.type.sourceTypeName(ctx),
 						advice
 					),
 					source_position
@@ -252,7 +252,8 @@ namespace compiler::helios::coercions {
 		// explaining why the coercion to it failed.
 		for (const Coercion& coercion: failed_coercions)
 			error->addExploreAcceptedType(
-				coercion.getTarget().toString(), getCoercionError(ctx, coercion, source_position)
+				coercion.getTarget().sourceTypeName(ctx),
+				getCoercionError(ctx, coercion, source_position)
 			);
 
 		ctx.log(std::move(error));

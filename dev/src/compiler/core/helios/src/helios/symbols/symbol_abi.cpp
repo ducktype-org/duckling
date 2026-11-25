@@ -132,9 +132,9 @@ namespace compiler::helios {
 						base::strConcat(
 							"Variadic function parameter has to be promoted. Got ",
 							"`",
-							param.type.toString(),
+							param.type.sourceTypeName(ctx),
 							"`, expected `",
-							param_result.error().toString(),
+							param_result.error().sourceTypeName(ctx),
 							"`."
 						),
 						param.origin
