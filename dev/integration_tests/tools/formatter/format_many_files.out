@@ -1,0 +1,17 @@
+==> format_unformatted.dk <==
+fun f() = { # body comment
+	x = 1;
+	y = 2; # trailing
+
+
+	z = 3;
+}
+
+==> format_formatted.dk <==
+fun f() = { # body comment
+	x = 1;
+	y = 2; # trailing
+
+
+	z = 3;
+}

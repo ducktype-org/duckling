@@ -604,6 +604,13 @@ namespace compiler::tsh {
 		});
 	}
 
+	bool TupleAbstractTypeImpl::carriesInformation(query::Context& ctx) const {
+		return std::ranges::any_of(components, [&](const auto& component) {
+			return component.getRefKind() != ReferenceKind::Direct
+			    || component.getType().carriesInformation(ctx);
+		});
+	}
+
 	bool VariantAbstractTypeImpl::isDefaultConstructible(query::Context&) const {
 		// Variant must be explicitly initialized with one of it's alternatives.
 		return false;

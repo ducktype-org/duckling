@@ -153,8 +153,8 @@ namespace lang_def {
 		Copy,
 		Copyof,
 		Move,
-		Refof,
 		Ptrof,
+		FRef,
 
 		Destroy,
 
@@ -296,7 +296,7 @@ namespace lang_def {
 	};
 }
 
-MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp, IsStmtStart, IsSpecifier, IsType)
+MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp, IsStmtStart, IsSpecifier, IsType, IsIdentifierLike)
 
 namespace lang_def {
 	namespace key_spec_op {

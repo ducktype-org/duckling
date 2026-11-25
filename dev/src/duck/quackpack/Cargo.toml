@@ -1,0 +1,46 @@
+[package]
+name = "quackpack"
+version = "0.3.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+base64 = "0.22.1"
+chrono = { workspace = true }
+clap = { workspace = true }
+curl = { workspace = true }
+duck_core = { workspace = true }
+flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
+futures = "0.3.33"
+git2 = { workspace = true }
+hmac = "0.12.0"
+http = "1.4.2"
+itertools = { workspace = true }
+libc = { workspace = true }
+percent-encoding = { version = "2.3.2", default-features = false }
+regex = { version = "1.13.1", default-features = false, features = ["perf", "std"] }
+rusqlite = { workspace = true }
+russcip = { workspace = true }
+serde = { workspace = true }
+serde-untagged = { workspace = true }
+serde_ignored = "0.1.14"
+serde_json = "1.0.151"
+serde_yaml_ng = { workspace = true }
+sha1 = "0.10.0"
+sha2 = { workspace = true }
+tar = { version = "0.4.46", default-features = false }
+tempfile = { workspace = true }
+thiserror = "2.0.19"
+tracing = { workspace = true }
+url = { workspace = true }
+yaml-edit = { version = "0.3.2" }
+
+[dev-dependencies]
+httpmock = { workspace = true }
+
+[features]
+# Hack around https://github.com/scipopt/scip-sys/issues/39
+default = ["bundled-scip"]
+# NOTE: These two should not be enabled at the same time.
+bundled-scip = ["russcip/bundled"]
+static-scip = ["russcip/from-source"]

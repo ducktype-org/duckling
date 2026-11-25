@@ -16,7 +16,12 @@
 #include <base/pointers/box_or_ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <string_id/string_id.hpp>
+
+#include <variant>
 #include <vector>
+
+MAKE_STRINGIFYABLE_ENUM(compiler::helios::code, u32, ControlFlowKind, If, While, For, Block)
 
 namespace compiler::helios::defgen {
 	struct ImplementationOf_QueryImplicitClassConstructor;
@@ -24,6 +29,18 @@ namespace compiler::helios::defgen {
 
 namespace compiler::helios::code {
 	class HoutStmtVisitor;
+
+	struct NearestLoop {};
+
+	struct NamedTarget {
+		base::StrID name;
+	};
+
+	struct KindTarget {
+		ControlFlowKind kind;
+	};
+
+	using ControlFlowTargetSelector = std::variant<NearestLoop, NamedTarget, KindTarget>;
 
 	/**
 	 * @brief Base class for all HOUT statements
@@ -161,23 +178,35 @@ namespace compiler::helios::code {
 	 * @brief Represents if statement in HOUT
 	 */
 	struct IfStmt final: public Stmt {
-		BoxOrCRef<Expr> condition;
-		CodeBlock       then_body;
-		CodeBlock       else_body;
+		BoxOrCRef<Expr>       condition;
+		CodeBlock             then_body;
+		CodeBlock             else_body;
+		base::Optional<SymID> control_flow_id;
 
 		IfStmt(
-			ElementOrigin origin, BoxOrCRef<Expr> condition, CodeBlock then_body, CodeBlock else_body
+			ElementOrigin         origin,
+			BoxOrCRef<Expr>       condition,
+			CodeBlock             then_body,
+			CodeBlock             else_body,
+			base::Optional<SymID> control_flow_id = {}
 		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
 			  then_body(std::move(then_body)),
-			  else_body(std::move(else_body)) {}
+			  else_body(std::move(else_body)),
+			  control_flow_id(control_flow_id) {}
 
-		IfStmt(ElementOrigin origin, BoxOrCRef<Expr> condition, CodeBlock then_body):
+		IfStmt(
+			ElementOrigin         origin,
+			BoxOrCRef<Expr>       condition,
+			CodeBlock             then_body,
+			base::Optional<SymID> control_flow_id = {}
+		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
 			  then_body(std::move(then_body)),
-			  else_body({}) {}
+			  else_body({}),
+			  control_flow_id(control_flow_id) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
@@ -188,13 +217,57 @@ namespace compiler::helios::code {
 	 * @brief Represents While statement in HOUT
 	 */
 	struct WhileStmt final: public Stmt {
-		BoxOrCRef<Expr> condition;
-		CodeBlock       body;
+		BoxOrCRef<Expr>       condition;
+		CodeBlock             body;
+		base::Optional<SymID> control_flow_id;
+		ControlFlowKind       control_flow_kind;
+		// Runs after the body on both normal fallthrough and continue (desugared for loops).
+		base::Optional<Box<Stmt>> step;
 
-		WhileStmt(ElementOrigin origin, BoxOrCRef<Expr> condition, CodeBlock body):
+		WhileStmt(
+			ElementOrigin             origin,
+			BoxOrCRef<Expr>           condition,
+			CodeBlock                 body,
+			base::Optional<SymID>     control_flow_id   = {},
+			ControlFlowKind           control_flow_kind = ControlFlowKind::While,
+			base::Optional<Box<Stmt>> step              = {}
+		):
 			  Stmt(origin),
 			  condition(std::move(condition)),
-			  body(std::move(body)) {}
+			  body(std::move(body)),
+			  control_flow_id(control_flow_id),
+			  control_flow_kind(control_flow_kind),
+			  step(std::move(step)) {}
+
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
+	};
+
+	/**
+	 * @brief Represents break statement in HOUT
+	 */
+	struct BreakStmt final: public Stmt {
+		ControlFlowTargetSelector target_selector;
+
+		BreakStmt(ElementOrigin origin, ControlFlowTargetSelector target_selector = NearestLoop{}):
+			  Stmt(origin),
+			  target_selector(target_selector) {}
+
+		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
+		void                    acceptVisitor(HoutStmtVisitor&) const override;
+		[[nodiscard]] Box<Stmt> clone() const final;
+	};
+
+	/**
+	 * @brief Represents continue statement in HOUT
+	 */
+	struct ContinueStmt final: public Stmt {
+		ControlFlowTargetSelector target_selector;
+
+		ContinueStmt(ElementOrigin origin, ControlFlowTargetSelector target_selector = NearestLoop{}):
+			  Stmt(origin),
+			  target_selector(target_selector) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
@@ -202,13 +275,27 @@ namespace compiler::helios::code {
 	};
 
 	struct BlockStmt final: public Stmt {
-		CodeBlock body;
+		CodeBlock             body;
+		base::Optional<SymID> control_flow_id;
+		// Preserves the original control-flow kind after lowering to a block.
+		// For example, `if const` becomes a BlockStmt
+		// but must remain an `If` target for `break if` and `continue if`.
+		// Empty for blocks that do not introduce a control-flow target.
+		base::Optional<ControlFlowKind> control_flow_kind;
 
-		BlockStmt(ElementOrigin origin, CodeBlock body): Stmt(origin), body(std::move(body)) {}
+		BlockStmt(
+			ElementOrigin                   origin,
+			CodeBlock                       body,
+			base::Optional<SymID>           control_flow_id   = {},
+			base::Optional<ControlFlowKind> control_flow_kind = {}
+		):
+			  Stmt(origin),
+			  body(std::move(body)),
+			  control_flow_id(control_flow_id),
+			  control_flow_kind(control_flow_kind) {}
 
 		void                    debugPrint(std::ostream& out, usize indent = 0) const final;
 		void                    acceptVisitor(HoutStmtVisitor&) const override;
 		[[nodiscard]] Box<Stmt> clone() const final;
 	};
-
 }

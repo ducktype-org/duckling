@@ -15,13 +15,13 @@ Tests:
     Cases:
       sync:
         test-cmd: duck -C foo sync
-        Output:
+        Err:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
       sync-verbose:
         test-cmd: duck --verbose -C foo sync
-        Output:
+        Err:
           Run: |+
             echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
             info: starting solving the dependency graph

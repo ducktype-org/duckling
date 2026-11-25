@@ -1134,7 +1134,6 @@ private:
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
 				makeBox<BlockExpr>(
-					ctx,
 					generatedOrigin(),
 					makeBox<BlockStmt>(generatedOrigin(), CodeBlock{ std::move(block_statements) })
 				)
@@ -1365,6 +1364,8 @@ private:
 		test_value("sm1_through_sm11", 123'123);
 		test_value("sm2_v", 777'666);
 		test_value("cyclic_final", 6);
+		test_value("cyclic_wildcard_final", 13);
+		test_value("cyclic_wildcard_through", 11);
 
 		test_value("imported_ns_v", 500);
 		test_value("imported_inner_v", 600);
@@ -1733,6 +1734,14 @@ private:
 				stripImplicitMove(ret_stmt.value.get())
 			);
 			ASSERT_TRUE(deref_expr != nullptr);
+		}
+		{
+			auto scope = getFunctionBodyScope(getChain("test_deduced_from_ref", top_scope).back());
+			auto i32_type = getIntegralTypeNoContext(32, Signed);
+			ASSERT_EQUAL(st(i32_type), getSymbolTypeOf("copied", scope));
+			ASSERT_EQUAL(
+				st(i32_type).withMutability(Immutable), getSymbolTypeOf("copied_let", scope)
+			);
 		}
 	}
 
@@ -3476,6 +3485,12 @@ private:
 		// `using x as a;`, which points at the constant itself.
 		ASSERT_EQUAL(getChain("x", root_scope).back(), getChain("b", root_scope).back());
 		ASSERT_EQUAL(1'235, getConstValueAs<i32>("b", root_scope));
+
+		ASSERT_EQUAL(10, getConstValueAs<i32>("ra_through_rb", root_scope));
+		ASSERT_EQUAL(20, getConstValueAs<i32>("rb_through_ra", root_scope));
+		ASSERT_EQUAL(21, getConstValueAs<i32>("ra_from_rb_v", root_scope));
+		ASSERT_EQUAL(12, getConstValueAs<i32>("rb_from_ra_v", root_scope));
+		ASSERT_EQUAL(31, getConstValueAs<i32>("self_using_v", root_scope));
 	}
 
 	void testBackendDependentCompTime() {

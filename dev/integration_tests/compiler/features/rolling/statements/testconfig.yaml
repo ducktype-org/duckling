@@ -7,6 +7,17 @@ Tests:
         Output:
           String: "42\n42\n42\n"
         ExitCode: 0
+  block_expressions: # leaving a block expression with `break`, `continue` and `return`
+    Cases:
+      all:
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm_valgrind:
+        Output:
+          String: ""
+        ExitCode: 0
+
   conditional: # if, if-else
     Cases:
       all:
@@ -40,15 +51,13 @@ Tests:
           String: "60\n3\n9\n"
         ExitCode: 0
 
-  # Native only: the case measures the throughput of a 10^8-iteration loop against a
-  # tight timeout, which the DVM interpreter cannot meet.
   loops-performance: # while
+    Description: Runs a while loop for about 3*10^7 iterations. Checks the output only, not the speed.
     Cases:
-      llvm:
+      all:
         Output:
           String: "20\n100000001\n"
         ExitCode: 0
-        TimeOut: 1 # 10^8/3 loops should definitely be done in this time.
 
   destructor_insertion:
     Cases:

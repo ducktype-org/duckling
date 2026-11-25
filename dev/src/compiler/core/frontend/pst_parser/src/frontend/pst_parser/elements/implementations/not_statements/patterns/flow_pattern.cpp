@@ -44,7 +44,7 @@ namespace pst {
 		out << "}";
 	}
 
-	base::Optional<AccessLocked<UniversalExprHolder>> FlowPattern::getTypeConstraint() const {
+	base::Optional<AccessLocked<UniversalNoBlockExprHolder>> FlowPattern::getTypeConstraint() const {
 		return type_constraint.map([](const auto& value) { return value.give(); });
 	}
 

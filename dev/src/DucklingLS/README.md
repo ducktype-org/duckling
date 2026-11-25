@@ -7,6 +7,8 @@ The extension starts the `duck_ls` binary and talks to it over stdio. Syntax hig
 bracket matching and the rest of the editor configuration are contributed by the extension
 itself, so they keep working with the server turned off or missing.
 
+The extension also provides Duckling bytecode (`.dbc`) syntax highlighting.
+
 ## Configuration
 
 The extension looks for the `duck_ls` binary at `~/.local/bin/duck_ls` by default.

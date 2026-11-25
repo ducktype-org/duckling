@@ -22,7 +22,7 @@ namespace pst {
 	private:
 		struct CaseBranch {
 			NAMED_CHILD_OPT(condition, UniversalExprHolder);
-			NAMED_CHILD(result, UniversalAllowBlockExprHolder);
+			NAMED_CHILD(result, UniversalExprHolder);
 
 			/**
 			 * @note This method doesn't add all the data from CaseBranch, just the readable data
@@ -39,7 +39,7 @@ namespace pst {
 
 		struct CaseBranchView {
 			base::Optional<AccessLocked<UniversalExprHolder>> condition;
-			AccessLocked<UniversalAllowBlockExprHolder>       result;
+			AccessLocked<UniversalExprHolder>                 result;
 		};
 
 		NAMED_CHILD(pattern, FlowPattern);

@@ -138,6 +138,10 @@ namespace compiler::mir {
 		  ctx(ctx),
 		  helios_symbol(helios_symbol) {}
 
+	tsh::SymbolType<> FunctionBuilder::getResultType() const {
+		return function_type.getResultType();
+	}
+
 	[[nodiscard]]
 	Function FunctionBuilder::build() {
 		CORE_ASSERT(entry_block.has_value(), "Entry block not set");

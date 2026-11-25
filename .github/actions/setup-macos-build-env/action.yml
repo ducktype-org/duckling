@@ -33,7 +33,7 @@ runs:
     # toolchain. A self-hosted mac already has it, so nothing is installed there.
     - name: Setup Python (GitHub-hosted only)
       if: runner.environment == 'github-hosted'
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: "3.14"
 

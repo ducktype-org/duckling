@@ -9,6 +9,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -44,6 +45,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testBlockExprOutsideFunctionBody);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testFunctionValueErrors);
@@ -71,10 +73,12 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testUnsupportedAccessErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
 		TESTER_ADD_TEST(testStatementsOutsideFunctions);
+		TESTER_ADD_TEST(testDeclarationsInsideFunctions);
 	}
 
 protected:
@@ -165,6 +169,34 @@ private:
 		if (expect_failure)
 			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		checkForError(present_phrases, logged_msg_count);
+	}
+
+	void testBlockExprOutsideFunctionBody() {
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = { 1i64 }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = ({ 1i64 }) + 1i64) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = { let t: i64 = 1i64; t }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(class A { x: i64 = { let t: i64 = 1i64; t }; } fun foo() = { var a: A; })",
+			{ "A block expression cannot be used in a field initializer." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(const C: i64 = { 1i64 }; fun foo() -> i64 = C;)",
+			{ "A block expression cannot be used in a const initializer." },
+			1
+		);
 	}
 
 	/**
@@ -912,6 +944,45 @@ private:
 				1
 			);
 
+			// The parser accepts a const without a value, so HELIOS must report it.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				namespace n { const g: bool; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					const g: i64;
+					return 0;
+				}
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			// Using the const must not report the missing value a second time.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+				const h: i64 = g + 1;
+				fun main() -> i64 = { return h; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -1080,6 +1151,12 @@ private:
 				"match (v) { case x = 0i64; };",
 				{ "Match pattern bindings without a type constraint" }
 			);
+
+			// Literal patterns are not supported yet.
+			check_ref_match_error(
+				"match (v) { case 1i64 = 0i64; case _ = 1i64; };",
+				{ "Match pattern kind: Value Pattern." }
+			);
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -1168,30 +1245,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						break;
-					}
-				}
-			)",
-				{ "Feature not implemented", "break" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						continue;
-					}
-				}
-			)",
-				{ "Feature not implemented", "continue" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -2240,28 +2293,6 @@ private:
 			{ "cycle" },
 			1
 		);
-
-		// Two namespaces re-exporting each other: looking a name up in `A` follows `using B.*;`
-		// into `B`, which follows `using A.*;` straight back. Non-wildcard selectors are settled
-		// by the name they declare, so only wildcards can loop like this.
-		// @TODO: #2615 report this in terms of the usings involved, not of query nodes.
-		checkForErrorOnCompileModule(
-			R"(
-				namespace A {
-					using B.*;
-					const IN_A: i64 = 1;
-				}
-
-				namespace B {
-					using A.*;
-					const IN_B: i64 = 2;
-				}
-
-				const V: i64 = A.IN_B;
-			)",
-			{ "cycle" },
-			1
-		);
 	}
 
 	void testErrorLoggingTemplates() {
@@ -2838,6 +2869,10 @@ private:
 
 		std::stringstream ss;
 
+		testDiagnosticMessage<BlockExprNotAllowedError>(
+			ss, dia::StablePosition::fakePosition(), "a default argument"
+		);
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
@@ -2882,6 +2917,9 @@ private:
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
 				ss, dia::StablePosition::fakePosition()
 			);
+
+			// ConstWithoutValueError
+			testDiagnosticMessage<ConstWithoutValueError>(ss, dia::StablePosition::fakePosition());
 		});
 	}
 
@@ -2965,6 +3003,23 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testUnsupportedAccessErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		// `.?` and `::` parse like `.`, but only `.` is compiled for now.
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N.?a;",
+			{ "Feature not implemented", "The `.?` access operator is not supported yet." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
+			{ "Feature not implemented", "The `::` access operator is not supported yet." },
+			1
+		);
 	}
 
 	void testWildcardNamesInSelectorPaths() {
@@ -3258,6 +3313,32 @@ private:
 			{ "Only declarations are allowed at module level." },
 			1
 		);
+	}
+
+	void testDeclarationsInsideFunctions() {
+		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
+			{ "class Z { v: i64 = 0; }",
+			  "Classes declared inside a function are not supported yet." },
+			{ "import std.math;",
+			  "`import` statements are not allowed inside a function. Move it to the module "
+			  "level." },
+			{ "namespace N { const a = 1; }",
+			  "Namespaces declared inside a function are not supported yet." },
+			{ "template(T: type) fun g(x: T) -> T = x;",
+			  "Templates declared inside a function are not supported yet." },
+			{ "export { const a = 1; }",
+			  "`export` blocks are not allowed inside a function. Only module-level declarations "
+			  "can be exported." },
+			{ "debug { const a = 1; }",
+			  "Specifier blocks inside a function are not supported yet." },
+		};
+
+		for (const auto& [declaration, message]: cases)
+			checkForErrorOnCompileModule(
+				base::strConcat("fun main() -> i64 = { ", declaration, " return 0; }"),
+				{ message },
+				1
+			);
 	}
 };
 

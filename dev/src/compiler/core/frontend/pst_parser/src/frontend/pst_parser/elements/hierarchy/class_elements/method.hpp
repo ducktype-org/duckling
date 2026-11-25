@@ -22,7 +22,7 @@ namespace pst {
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD_OPT(ret, CommaExprHolder);
+		NAMED_CHILD_OPT(ret, CommaNoBlockExprHolder);
 		NAMED_CHILD(body, CodeBlockOrExpr);
 		OperatorFixity operator_fixity = OperatorFixity::None;
 		bool           is_mut          = false;

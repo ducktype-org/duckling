@@ -60,4 +60,21 @@ namespace pst {
 	public:
 		ForBracketError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
+	/**
+	 * @brief Error for a template statement followed by something that does not declare a single
+	 * named symbol, e.g. an expression statement.
+	 */
+	class TemplateNotDeclarationError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "template_not_declaration_error" };
+		}
+
+	public:
+		TemplateNotDeclarationError(dia::SourcePosition pos):
+			  dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
 }

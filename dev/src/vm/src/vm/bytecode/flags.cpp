@@ -612,6 +612,10 @@ namespace vm::code {
 				wr(i.dst);
 				rd(i.src);
 			}
+			instr_case(ins::Op_cast_p64_pcptr, i) {
+				wr(i.dst);
+				rd(i.src);
+			}
 			// Taking an address only reads the pointer operand, like the ref/lea ops above.
 			instr_case(ins::Op_cast_pcptr_pptr, i) {
 				wr(i.dst);
