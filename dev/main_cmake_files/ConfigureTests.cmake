@@ -15,7 +15,9 @@ if(ENABLE_COVERAGE)
 	# drops them anyway, and their shared atomic counters make the instrumented binaries much slower.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-		# ccache refuses to cache with -fprofile-exclude-files, so GCC gets it from a specs file.
+		# ccache won't cache a compile with -fprofile-exclude-files on its command line, but it
+		# hashes a specs file's contents. Specs files are GCC-only, so other compilers get the
+		# flag directly and their coverage compiles are not cached.
 		# Regexes are ;-separated, since | is a pipe in specs.
 		set(COVERAGE_SPECS_FILE "${CMAKE_BINARY_DIR}/coverage.specs")
 		file(CONFIGURE OUTPUT "${COVERAGE_SPECS_FILE}"
