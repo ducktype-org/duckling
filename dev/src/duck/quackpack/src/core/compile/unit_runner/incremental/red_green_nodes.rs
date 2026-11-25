@@ -30,7 +30,7 @@
 
 use std::convert::Infallible;
 use std::ops::ControlFlow;
-use std::path::Path;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use duck_core::util::filesystem::{TryFileVisitor, visit_duckling_source_files};
@@ -128,15 +128,14 @@ impl CompilationInput {
             .package()
             .src()
             .expect("always package"); // @TODO: #2900 make script-units work.
-        visit_duckling_source_files(src_path, &mut check_visitor)?;
+        visit_duckling_source_files(src_path.to_path_buf(), &mut check_visitor)?;
         current_build_data
             .add_number_of_source_files(*identity, check_visitor.number_of_source_files);
         Ok(check_visitor.all_mtimes_ok
             && incremental_data
                 .prev_number_of_source_files()
                 .get(identity)
-                .copied()
-                == Some(check_visitor.number_of_source_files))
+                .is_some_and(|n| *n == check_visitor.number_of_source_files))
     }
 }
 
@@ -163,9 +162,9 @@ impl InputCheckVisitor {
 impl TryFileVisitor for InputCheckVisitor {
     type Break = Infallible;
 
-    fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
-        let mtime = modification_time(path)?;
-        let ctime = change_time(path)?;
+    fn visit(&mut self, path: PathBuf) -> QuackResult<ControlFlow<Self::Break>> {
+        let mtime = modification_time(&path)?;
+        let ctime = change_time(&path)?;
         let mtime_ok = mtime < self.timestamp && ctime < self.timestamp;
         self.all_mtimes_ok &= mtime_ok;
         self.number_of_source_files += 1;

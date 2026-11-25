@@ -16,16 +16,16 @@ use duck_core::cli::{flag, optional};
 pub(super) fn cli() -> Command {
     Command::new("duck-fmt")
         .arg(
-            flag("check", "Do not rewrite the files; report each unformatted file on stderr and exit non-zero if any of them is not already formatted.")
+            flag("check", "Do not rewrite the files; report each unformatted file on stderr and exit non-zero if any of them is not already formatted")
             .short('k')
         )
         .arg(
-            flag("print", "Do not rewrite the files; print each formatted file on stdout.")
+            flag("print", "Do not rewrite the files; print each formatted file on stdout")
             .short('p')
             .conflicts_with("check")
         )
         .arg(
-            optional("config", "Path to a JSON formatter configuration file.")
+            optional("config", "Path to a JSON formatter configuration file")
             .short('c')
             .value_parser(value_parser!(PathBuf))
         )

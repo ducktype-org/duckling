@@ -4,17 +4,17 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-//! Utilities for visiting Duckling source files inside a [`Path`].
+//! Utilities for visiting Duckling source files inside a [`PathBuf`].
 
 use std::collections::VecDeque;
 use std::ops::ControlFlow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::QuackResult;
 use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
 use crate::util::filesystem::create_dir_iterator;
 
-/// A visitor of [`Path`].
+/// A visitor of [`PathBuf`].
 ///
 /// Its implementors can be used by [visit_duckling_source_files].
 pub trait TryFileVisitor {
@@ -22,24 +22,24 @@ pub trait TryFileVisitor {
     type Break;
 
     /// Visits one Duckling source file at `path`.
-    fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>>;
+    fn visit(&mut self, path: PathBuf) -> QuackResult<ControlFlow<Self::Break>>;
 }
 
 impl<V: TryFileVisitor + ?Sized> TryFileVisitor for &mut V {
     type Break = V::Break;
-    fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
+    fn visit(&mut self, path: PathBuf) -> QuackResult<ControlFlow<Self::Break>> {
         (*self).visit(path)
     }
 }
 
 impl<V: TryFileVisitor + ?Sized> TryFileVisitor for Box<V> {
     type Break = V::Break;
-    fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
+    fn visit(&mut self, path: PathBuf) -> QuackResult<ControlFlow<Self::Break>> {
         (**self).visit(path)
     }
 }
 
-/// Visit all Duckling source inside a [`Path`].
+/// Visit all Duckling source inside a [`PathBuf`].
 ///
 /// If visitor returns an `Err(e)`, we short circuit to `Err(e)`
 ///
@@ -47,10 +47,10 @@ impl<V: TryFileVisitor + ?Sized> TryFileVisitor for Box<V> {
 ///
 /// Otherwise (no errors + no breaks), we return `Ok(None)`
 pub fn visit_duckling_source_files<V: TryFileVisitor>(
-    path: &Path,
+    path: PathBuf,
     visitor: &mut V,
 ) -> QuackResult<Option<V::Break>> {
-    let mut paths_to_visit: VecDeque<PathBuf> = [path.to_path_buf()].into();
+    let mut paths_to_visit: VecDeque<PathBuf> = [path].into();
     while let Some(path) = paths_to_visit.pop_front() {
         if path.is_file() {
             // Check if Duckling file, if so visit it.
@@ -58,7 +58,7 @@ pub fn visit_duckling_source_files<V: TryFileVisitor>(
                 && [DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT]
                     .iter()
                     .any(|&e| e == extention)
-                && let ControlFlow::Break(b) = visitor.visit(&path)?
+                && let ControlFlow::Break(b) = visitor.visit(path)?
             {
                 return Ok(Some(b));
             }

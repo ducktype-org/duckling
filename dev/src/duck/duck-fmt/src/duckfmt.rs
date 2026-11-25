@@ -73,9 +73,7 @@ impl DuckFmtProcessBuilder {
 
     /// Add files to format for `duckfmt`.
     pub fn add_files_to_format(&mut self, paths: &[PathBuf]) -> &mut Self {
-        for path in paths {
-            self.inner.arg(path);
-        }
+        self.inner.args(paths);
         self
     }
 

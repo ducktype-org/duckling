@@ -8,7 +8,7 @@
 
 use std::convert::Infallible;
 use std::ops::ControlFlow;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::ArgMatches;
 
@@ -18,6 +18,7 @@ use crate::package_root::find_package_root;
 use crate::util::filesystem::{TryFileVisitor, visit_duckling_source_files};
 use crate::{DuckContext, QuackResult};
 
+#[derive(Debug)]
 /// Options of `duck-fmt`.
 pub struct FormatOptions {
     pub check: bool,
@@ -36,6 +37,7 @@ impl FormatOptions {
     }
 }
 
+#[derive(Debug)]
 /// Struct responsible for formatting a single package, given [`FormatOptions`].
 pub struct PackageFormatter {
     /// Root of the package.
@@ -44,6 +46,7 @@ pub struct PackageFormatter {
     options: FormatOptions,
 }
 
+#[derive(Debug)]
 /// Struct responsible for formatting an arbitrary list of files given [`FormatOptions`].
 pub struct FilesFormatter {
     /// Files to format.
@@ -72,8 +75,9 @@ impl PackageFormatter {
             // Nothing to do.
             return Ok(());
         }
+        duckfmt_command.add_files_to_format(&files);
 
-        // Config from [`FormatOptions`] is more important that package's config.
+        // Config from [`FormatOptions`] is more important than package's config.
         let config_path = self.options.config_path.or_else(|| {
             let pkg_config_path = package_fmt_config_path(&self.root);
             if pkg_config_path.exists() {
@@ -85,7 +89,6 @@ impl PackageFormatter {
         if let Some(config_path) = config_path {
             duckfmt_command.set_fmt_config_path(&config_path);
         }
-        duckfmt_command.add_files_to_format(&files);
         duckfmt_command.execute_and_replace()?;
         Ok(())
     }
@@ -98,15 +101,15 @@ impl PackageFormatter {
         impl TryFileVisitor for SourceFilesCollector {
             type Break = Infallible;
 
-            fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
-                self.inner.push(path.to_path_buf());
+            fn visit(&mut self, path: PathBuf) -> QuackResult<ControlFlow<Self::Break>> {
+                self.inner.push(path);
                 Ok(ControlFlow::Continue(()))
             }
         }
 
         let src = self.root.join("src");
         let mut collector = SourceFilesCollector { inner: vec![] };
-        visit_duckling_source_files(&src, &mut collector)?;
+        visit_duckling_source_files(src, &mut collector)?;
         Ok(collector.inner)
     }
 }
