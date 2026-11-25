@@ -300,6 +300,18 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+#define DEFINE_POINTER_COMPARISON_OP(NAME, OP)                            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_pptr_pptr)(FUNCTION_ARGS) {    \
+		{                                                                 \
+			frame->flags.flag = READ_FROM_PLACE_ARG(Pointer, instr->arg0) \
+				OP READ_FROM_PLACE_ARG(Pointer, instr->arg1);             \
+		}                                                                 \
+		FUNCTION_CONT(1);                                                 \
+	}
+
+	DEFINE_POINTER_COMPARISON_OP(cmpEq, ==)
+	DEFINE_POINTER_COMPARISON_OP(cmpNeq, !=)
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
 		FUNCTION_CONT(1);
@@ -334,6 +346,15 @@ namespace vm {
 		// instructions. For future returns, the first instruction that should be executed after
 		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
 		// restoring `instr` from frame.
+		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_p64_off)(FUNCTION_ARGS) {
+		{
+			const auto function_id = static_cast<usize>(READ_FROM_PLACE_ARG(u64, instr->arg0));
+			checkCallee(thread, function_id);
+			performFunctionCall(instr, local_stack, frame, thread, function_id, instr->arg1, 1);
+		}
 		FUNCTION_CONT(0);
 	}
 
@@ -788,18 +809,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinitDtor)(FUNCTION_ARGS) {
-		{
-			if (frame->local_slot_stack_end[-1].block == nullptr) {
-				// Without a block there is nothing to run the destructors off, so they are run
-				// over the variable's bytes directly.
-				const LocalSlot& slot = topLocalSlot(frame);
-				thread.process_memory.runDataDestructors(
-					{ slot.data, slot.type->getSize().asInt() }, slot.type
-				);
-			}
-
-			performDeinit(frame, thread);
-		}
+		{ performDeinitDtor(frame, thread); }
 		FUNCTION_CONT(1);
 	}
 
@@ -1527,7 +1537,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue_imm_off)(FUNCTION_ARGS) {
 		{
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
 			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);

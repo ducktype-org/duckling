@@ -44,7 +44,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 		);
 
 	CRef<FunctionInfo>        func_info = program->functions.at(base::StrID(func_name.data()));
-	const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
+	const exec::ExecFunction& func = functions->at(exec::execFunctionIndex(func_info->id.asInt()));
 
 	exit_value = createStartAndExecuteFunction(func, args);
 	applyEvent(thread_event::Finish{ exit_value });
@@ -61,8 +61,6 @@ bool vm::fast::FastVMThread::isAtExecutionEnd() const {
 void vm::fast::FastVMThread::execGlobalDestructors() {
 	throw vm::VMNotImplemented("Method `execGlobalDestructors` is not implemented.");
 }
-
-[[nodiscard]] i64 vm::fast::FastVMThread::getExitValue() const { return exit_value; }
 
 vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	const exec::ExecFunction& function, const RunArguments& run_arguments

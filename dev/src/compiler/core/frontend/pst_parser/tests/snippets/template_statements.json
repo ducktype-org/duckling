@@ -21,7 +21,7 @@
                                 "sourceStart": 47,
                                 "sourceEnd": 54
                             },
-                            "function parameter list": [
+                            "parameter list": [
                                 {
                                     "position": {
                                         "sourceStart": 48,
@@ -113,7 +113,7 @@
                                 "sourceStart": 81,
                                 "sourceEnd": 92
                             },
-                            "function parameter list": [
+                            "parameter list": [
                                 {
                                     "position": {
                                         "sourceStart": 82,
@@ -222,7 +222,7 @@
                                 "sourceStart": 119,
                                 "sourceEnd": 120
                             },
-                            "function parameter list": []
+                            "parameter list": []
                         }
                     }
                 },
@@ -271,7 +271,7 @@
                                 "sourceStart": 142,
                                 "sourceEnd": 174
                             },
-                            "function parameter list": [
+                            "parameter list": [
                                 {
                                     "position": {
                                         "sourceStart": 143,
@@ -460,7 +460,7 @@
                                 "sourceStart": 196,
                                 "sourceEnd": 213
                             },
-                            "function parameter list": [
+                            "parameter list": [
                                 {
                                     "position": {
                                         "sourceStart": 197,
@@ -617,7 +617,7 @@
                                 "sourceStart": 220,
                                 "sourceEnd": 221
                             },
-                            "function parameter list": []
+                            "parameter list": []
                         },
                         "return": "unit",
                         "body": {

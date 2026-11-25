@@ -30,6 +30,12 @@ namespace pst::expr {
 		PST_RETURN out;
 	}
 
+	lang_def::NumericLiteralTypeSpecifier ExprNumericValue::getTypeSpecifier() const {
+		return lang_def::strAsNumericLiteralTypeSpecifier(
+			value.type_specifier.copyValueOr(base::StrID(""))
+		);
+	}
+
 	void ExprNumericValue::dprint(std::ostream& out) const {
 		out << "{";
 

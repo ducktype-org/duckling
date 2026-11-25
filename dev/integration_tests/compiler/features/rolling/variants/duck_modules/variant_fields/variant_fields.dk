@@ -1,0 +1,109 @@
+import core.builtins.*;
+
+# A variant field sits at an offset aligned for its payload, even when a smaller field comes before
+# it. Every check is silent while it holds, so a passing run prints nothing at all.
+fun check(actual: i64, expected: i64, id: i64) -> () = {
+	if (actual != expected) builtin_output_i64(id);
+}
+
+fun asI64(v: i64 | f64) -> i64 = {
+	return match (v) {
+		case x: i64 = x;
+		case y: f64 = y as i64;
+	};
+}
+
+fun asI32(v: i8 | i32) -> i64 = {
+	return match (v) {
+		case x: i8 = x as i64;
+		case y: i32 = y as i64;
+	};
+}
+
+class AfterBool {
+	b: bool;
+	v: i64 | f64;
+}
+
+class AfterI32 {
+	a: i32;
+	v: i8 | i32;
+	c: i8;
+}
+
+fun asSum(v: i8 | (i8, i8, i8, i8, i8)) -> i64 = {
+	return match (v) {
+		case x: i8 = x as i64;
+		case t: (i8, i8, i8, i8, i8) = (t._1 + t._2 + t._3 + t._4 + t._5) as i64;
+	};
+}
+
+# The payload ends at byte 13, but the variant is 8-aligned, so it takes 16 bytes.
+class BeforeI8 {
+	v: i8 | (i8, i8, i8, i8, i8);
+	c: i8;
+}
+
+# `?box i64` is the variant `box i64 | ()`, so it is 8-aligned too.
+class OptionalBoxAfterBool {
+	b: bool;
+	v: ?box i64;
+}
+
+# A class holding a variant, after a small field of the outer class.
+class Nested {
+	flag: bool;
+	inner: AfterBool;
+	tail: i32;
+}
+
+fun main() -> i64 = {
+	var a = AfterBool(true, 7 as i64);
+	check(a.b as i64, 1i64, 1i64);
+	check(asI64(a.v), 7i64, 2i64);
+	a.v = 2.0;
+	check(asI64(a.v), 2i64, 3i64);
+	check(a.b as i64, 1i64, 4i64);
+
+	var b = AfterI32(5i32, 6i32, 7i8);
+	check(b.a as i64, 5i64, 10i64);
+	check(asI32(b.v), 6i64, 11i64);
+	check(b.c as i64, 7i64, 12i64);
+
+	var n = Nested(true, AfterBool(false, 11 as i64), 12i32);
+	check(n.flag as i64, 1i64, 20i64);
+	check(n.inner.b as i64, 0i64, 21i64);
+	check(asI64(n.inner.v), 11i64, 22i64);
+	check(n.tail as i64, 12i64, 23i64);
+
+	# Arrays step over each element by its full size, padding included.
+	var arr: AfterBool[3] = [
+		AfterBool(true, 1 as i64),
+		AfterBool(false, 2 as i64),
+		AfterBool(true, 3 as i64)
+	];
+	check(asI64(arr[0].v) + asI64(arr[1].v) * 10i64 + asI64(arr[2].v) * 100i64, 321i64, 30i64);
+	check(arr[2].b as i64, 1i64, 31i64);
+
+	var t: (bool, i64 | f64, i8) = (true, 4 as i64, 9i8);
+	check(asI64(t._2), 4i64, 40i64);
+	check(t._3 as i64, 9i64, 41i64);
+
+	var o = BeforeI8((1i8, 2i8, 3i8, 4i8, 5i8), 6i8);
+	check(asSum(o.v), 15i64, 50i64);
+	check(o.c as i64, 6i64, 51i64);
+	var odd: BeforeI8[2] = [BeforeI8(3i8, 7i8), BeforeI8((1i8, 1i8, 1i8, 1i8, 1i8), 8i8)];
+	check(asSum(odd[0].v) * 10i64 + asSum(odd[1].v), 35i64, 52i64);
+	check(odd[0].c as i64 * 10i64 + odd[1].c as i64, 78i64, 53i64);
+
+	var p = OptionalBoxAfterBool(true, new (5 as i64));
+	check(p.b as i64, 1i64, 60i64);
+	check(p.v.value(), 5i64, 61i64);
+	p.v = none;
+	check(p.v.isEmpty() as i64, 1i64, 62i64);
+	check(p.b as i64, 1i64, 63i64);
+	p.v = new (8 as i64);
+	check(p.v.value(), 8i64, 64i64);
+
+	return 0i64;
+}

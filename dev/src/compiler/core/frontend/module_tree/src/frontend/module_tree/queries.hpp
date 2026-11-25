@@ -11,8 +11,9 @@
 #include "module_id.hpp"
 
 #include <frontend/packages/access.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst/parsed_pst.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
@@ -127,7 +128,7 @@ namespace compiler::frontend {
 	 * @brief Returns the parse tree of a source file.
 	 * \parallel reads file content and creates PST; PST creation must be thread-safe;
 	 */
-	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id);
+	CRef<pst::ParsedPST<>> getFilePST(::query::Context& ctx, FileID file_id);
 
 
 	/**

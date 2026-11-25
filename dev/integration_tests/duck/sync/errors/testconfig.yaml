@@ -1,7 +1,13 @@
 SubDirs:
   - absent-flag
+  - always_false_conditions
+  - frozen-unsatisfied-root
   - gatherer-checks-self-dependence
   - illegal-packages-names
+  - lints-overrides-work
   - nonexistent-dep-feature
   - nonexistent-local-dep
+  - nonexistent_features
   - overwrite
+  - unused-keys
+  - same-source

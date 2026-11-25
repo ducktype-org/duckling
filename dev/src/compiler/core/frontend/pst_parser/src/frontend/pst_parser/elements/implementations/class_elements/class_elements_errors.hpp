@@ -23,6 +23,21 @@ namespace pst {
 		NonEmptyError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
+	class FieldBindingKeywordError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "field_binding_keyword" };
+		}
+
+	public:
+		FieldBindingKeywordError(dia::SourcePosition pos, std::string keyword):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("keyword", std::move(keyword));
+		}
+	};
+
 	class NoSpecifierError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

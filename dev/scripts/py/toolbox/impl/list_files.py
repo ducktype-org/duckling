@@ -20,6 +20,7 @@ def list_files_impl(
     no_merge_base: bool = False,
     lines: bool = False,
     include_untracked: bool = False,
+    filter_deleted: bool = False,
 ) -> list[str] | dict[str, list[tuple[int, int]]]:
     """
     List files in the repository based on the specified criteria.
@@ -34,13 +35,14 @@ def list_files_impl(
         include_untracked: If True, also list untracked files (counted as fully modified
                    when lines=True); if False, and with only_modified=True, only warn
                    that they were left out
+        filter_deleted: If True, exclude deleted files from the listing
 
     Returns:
         List of file paths relative to the current working directory when lines=False,
         or Dict mapping file paths to list of (start_line, end_line) tuples when lines=True
     """
     if not only_modified:
-        files = _get_all_tracked_files(extensions)
+        files = _get_all_tracked_files(extensions, filter_deleted)
         if include_untracked:
             files += _get_untracked_files(extensions)
         if lines:
@@ -51,23 +53,30 @@ def list_files_impl(
     else:
         if lines:
             return _get_modified_files_and_lines(
-                extensions, branch, no_merge_base, include_untracked
+                extensions, branch, no_merge_base, include_untracked, filter_deleted
             )
         else:
             return _get_modified_files(
-                extensions, branch, no_merge_base, include_untracked
+                extensions, branch, no_merge_base, include_untracked, filter_deleted
             )
 
 
-def _get_all_tracked_files(extensions: list[str] | None = None) -> list[str]:
+def _get_all_tracked_files(
+    extensions: list[str] | None = None, filter_deleted: bool = False
+) -> list[str]:
     """
     Get all tracked files below the current directory, relative to it.
 
     The index, not HEAD: a file that is staged but not committed yet is tracked, and a
     "format/lint everything" caller wants it.
     """
-    files_str, _ = bash_command_get_output("git ls-files --cached")
-    files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
+    files_str, _ = bash_command_get_output("git ls-files -z --cached")
+    files = _split_nul_listing(files_str)
+
+    if filter_deleted:
+        deleted_str, _ = bash_command_get_output("git ls-files -z --deleted")
+        deleted_files = set(_split_nul_listing(deleted_str))
+        files = [file for file in files if file not in deleted_files]
 
     return _filter_by_extensions(files, extensions)
 
@@ -77,13 +86,14 @@ def _get_modified_files(
     branch: str = "origin/main",
     no_merge_base: bool = False,
     include_untracked: bool = False,
+    filter_deleted: bool = False,
 ) -> list[str]:
     """Get modified files compared to the specified branch."""
     # Get the diff
     diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative"
+        f"git diff -z {'' if no_merge_base else '--merge-base'} {branch} --name-only --relative {'--diff-filter=d' if filter_deleted else ''}"
     )
-    files = [f.strip() for f in diff_out.strip().split("\n") if f.strip()]
+    files = _split_nul_listing(diff_out)
 
     return _filter_by_extensions(files, extensions) + _get_untracked_files_to_list(
         extensions, include_untracked
@@ -97,10 +107,62 @@ def _get_untracked_files(extensions: list[str] | None = None) -> list[str]:
     The paths are relative to the current working directory, just like the ones
     `git diff --relative` reports, so both listings can be concatenated.
     """
-    files_str, _ = bash_command_get_output("git ls-files --others --exclude-standard")
-    files = [f.strip() for f in files_str.strip().split("\n") if f.strip()]
+    files_str, _ = bash_command_get_output(
+        "git ls-files -z --others --exclude-standard"
+    )
+    files = _split_nul_listing(files_str)
 
     return _filter_by_extensions(files, extensions)
+
+
+def _split_nul_listing(listing: str) -> list[str]:
+    """
+    Split a `git … -z` listing into paths.
+
+    Without `-z`, git wraps a path holding a control character in quotes and escapes it
+    (`"mod_\\177_.dk"`), and that string names no file on disk.
+    """
+    return [f for f in listing.split("\0") if f]
+
+
+# The C-style escapes git uses in a quoted path, besides the octal `\NNN` bytes
+_GIT_PATH_ESCAPES = {
+    "a": 0x07,
+    "b": 0x08,
+    "t": 0x09,
+    "n": 0x0A,
+    "v": 0x0B,
+    "f": 0x0C,
+    "r": 0x0D,
+    '"': 0x22,
+    "\\": 0x5C,
+}
+
+
+def _unquote_git_path(path: str) -> str:
+    """
+    Undo the quoting git applies to a path holding a control character, e.g. in the
+    `+++ "b/mod_\\177_.dk"` header of a diff, which has no `-z` form.
+
+    A path without the surrounding quotes is returned unchanged.
+    """
+    if len(path) < 2 or path[0] != '"' or path[-1] != '"':
+        return path
+
+    raw = bytearray()
+    i, end = 1, len(path) - 1
+    while i < end:
+        if path[i] != "\\":
+            raw += path[i].encode("UTF-8")
+            i += 1
+        elif path[i + 1] in "01234567":
+            # An octal escape is one byte of the UTF-8 encoded path
+            raw.append(int(path[i + 1 : i + 4], 8))
+            i += 4
+        else:
+            raw.append(_GIT_PATH_ESCAPES[path[i + 1]])
+            i += 2
+    return raw.decode("UTF-8")
 
 
 def _get_untracked_files_to_list(
@@ -155,11 +217,12 @@ def _get_modified_files_and_lines(
     branch: str = "origin/main",
     no_merge_base: bool = False,
     include_untracked: bool = False,
+    filter_deleted: bool = False,
 ) -> dict[str, list[tuple[int, int]]]:
     """Get modified files and their line ranges compared to the specified branch."""
     # Get the diff with line ranges
     diff_out, _ = bash_command_get_output(
-        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative"
+        f"git diff {'' if no_merge_base else '--merge-base'} {branch} -U0 --relative {'--diff-filter=d' if filter_deleted else ''}"
     )
     diff_lines = diff_out.splitlines()
 
@@ -172,9 +235,11 @@ def _get_modified_files_and_lines(
 
         if line.startswith("@@") and not file_deleted:
             # Check if this diff is for a new file...
-            if prev_line and prev_line.startswith("+++ b/"):
-                # File has changed
-                filename = prev_line[len("+++ b/") :].rstrip()
+            if prev_line and prev_line.startswith("+++ "):
+                # File has changed. Every `+++` header names the new file, so a quoted one
+                # must not be skipped, or its hunks would be credited to the previous file.
+                path = _unquote_git_path(prev_line[len("+++ ") :].rstrip())
+                filename = path[len("b/") :] if path.startswith("b/") else None
 
             if filename is None:
                 continue

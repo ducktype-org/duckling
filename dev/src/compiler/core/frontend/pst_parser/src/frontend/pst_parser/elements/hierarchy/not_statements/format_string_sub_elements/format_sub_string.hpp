@@ -24,7 +24,7 @@ namespace pst {
 			return string;
 		}
 
-		explicit FormatSubString(const LangParserState& state): FormatSubElement(state) {
+		explicit FormatSubString(LangElementConstructionData state): FormatSubElement(state) {
 			this->element_kind = ElementKind::FormatSubString;
 		}
 

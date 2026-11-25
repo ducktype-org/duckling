@@ -77,14 +77,16 @@ namespace vm::jit {
 		mpm.run(m, mam);
 	}
 
-	static void printModule(Ref<llvm::Module> module, std::string_view filename) {
-		std::error_code      error_code;
-		llvm::raw_fd_ostream file(filename, error_code, llvm::sys::fs::OF_Text);
+	namespace {
+		void printModule(Ref<llvm::Module> module, std::string_view filename) {
+			std::error_code      error_code;
+			llvm::raw_fd_ostream file(filename, error_code, llvm::sys::fs::OF_Text);
 
-		if (error_code)
-			llvm::errs() << "Error opening file: " << error_code.message() << "\n";
-		else
-			module->print(file, nullptr);
+			if (error_code)
+				llvm::errs() << "Error opening file: " << error_code.message() << "\n";
+			else
+				module->print(file, nullptr);
+		}
 	}
 
 	MRef<JitLLVMFunc> compileLLVM(

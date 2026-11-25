@@ -1,0 +1,21 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} init baz
+  @{duck-exe} -C foo add --local ../bar bar
+  # The freezefile now has `bar` only.
+  @{duck-exe} -C foo sync
+  # `add` does not sync, so the freezefile still lacks `baz`.
+  @{duck-exe} -C foo add --local ../baz baz
+
+Tests:
+  frozen-unsatisfied-root:
+    Description: "`--frozen` fails when the freezefile no longer covers the main package's dependencies"
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync --frozen
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: Solver activated with the \`--frozen\` option but the main package dependencies were not satisfied inside the found freeze"

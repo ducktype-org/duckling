@@ -122,12 +122,12 @@ process_to_binary(
     "${opcodes_json}"
     $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
-add_files(
+set_files(
     memory/memory.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
-add_files(
+set_files(
     copy-and-patch.cpp
 )
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
@@ -135,7 +135,7 @@ set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_S
 # jit_dependency holds the C++ translation units that embed the generated stencil data and
 # instructions (via #embed / generated headers), so they must be rebuilt when the binary
 # artifacts above change.
-add_files(
+set_files(
     stencil_holder.cpp
 )
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)

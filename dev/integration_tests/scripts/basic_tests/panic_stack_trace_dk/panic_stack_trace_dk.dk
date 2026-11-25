@@ -1,0 +1,14 @@
+fun readPastEnd(index: i64) -> i64 = {
+	var arr: i64[3];
+	return arr[index];
+}
+
+fun store(index: i64) -> i64 = {
+	var value: i64 = readPastEnd(index);
+	return value;
+}
+
+fun main() -> i64 = {
+	store(4);
+	return 0;
+}

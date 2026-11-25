@@ -38,6 +38,20 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
+	/** @brief A `const` declared without a value, e.g. `const x: i64;`. */
+	class ConstWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "const_without_value" };
+		}
+
+	public:
+		ConstWithoutValueError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
 	class DuplicateVariantAlternativeError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -52,6 +66,21 @@ namespace compiler::helios {
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("duplicated_type", std::move(duplicated_type));
+		}
+	};
+
+	class CallNotCallableError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "call_not_callable" };
+		}
+
+	public:
+		CallNotCallableError(dia::StablePosition source_position, Box<InteractiveType> callee_type):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::InteractiveArgument>("callee_type", std::move(callee_type));
 		}
 	};
 
@@ -113,5 +142,22 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia::InteractiveArgument>("expected_type", std::move(expected_type));
 		}
+	};
+
+	/**
+	 * @brief Error for a statement that only makes sense inside a function body (an expression,
+	 * `return`, `if`, ...) but appears at module level.
+	 */
+	class StatementOutsideFunctionError final: public dia::MessageWithCodeFragmentAndCause {
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "statement_outside_function" };
+		}
+
+	public:
+		explicit StatementOutsideFunctionError(dia::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

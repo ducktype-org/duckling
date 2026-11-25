@@ -29,7 +29,7 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the compiler-generated HOUT representation of a type's default copy constructor.
 	 *
-	 * The default copy constructor takes a `const ref T` to the source object and returns a new
+	 * The default copy constructor takes a read-only `ref T` to the source object and returns a new
 	 * copied `T`. Trivially-copyable members are byte-copied by the surrounding assignment
 	 * Non-trivially-copyable members are copied by recursively invoking their own copy
 	 * constructor.

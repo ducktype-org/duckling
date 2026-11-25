@@ -41,7 +41,6 @@ def tester_impl(
     sequential: bool = False,
     deterministic_output: bool = False,
     core_dumps: bool = False,
-    timeout_scale: float = 1.0,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -86,7 +85,6 @@ def tester_impl(
         jobs=jobs,
         sequential=sequential,
         core_dumps=core_dumps,
-        timeout_scale=timeout_scale,
         output=CompletionOutput(),
     )
 
@@ -122,9 +120,10 @@ def tester_impl(
 
     if len(failed):
         failed_tests = map(lambda x: " - " + x, failed)
+        failed_tests_text = "\n".join(failed_tests)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
-            + f"Please see log file '{log_file.absolute()}' for more info."
+            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{failed_tests_text}\n"
+            f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean:
         print_success(f"All tests have run successfully!")

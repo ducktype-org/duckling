@@ -1,0 +1,25 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "  links: sqlite" >> foo/quackconfig.yaml
+Tests:
+  renamed-links:
+    Description: errors on the old `links` field and points at `external-libs`
+    Cases:
+      renamed-links:
+        test-cmd: duck -C foo build
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: failed to parse the user manifest at \`${DIT_TMP_DIR}/foo/quackconfig.yaml\`
+
+              Caused by:
+                failed to parse the field \`metadata\`
+
+              Caused by:
+                failed to parse the field \`metadata.links\`
+
+              Caused by:
+                \`metadata.links\` is no longer supported
+
+            hint: list the library names in \`metadata.external-libs\` instead"

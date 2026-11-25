@@ -1,0 +1,42 @@
+# Scripts that must fail to compile cleanly: a diagnostic and exit code 1, never a compiler crash
+# (a crash exits with SIGABRT, i.e. 134). An empty stdout shows the script never started running.
+# Only the direct mode applies: there is nothing to run in the compiled modes.
+
+# A copy of the std that no longer parses: a keyword is used as a variable name, the way an older
+# duckc sees `let none` in `core/optional.dk`.
+broken_std: "$DIT_TMP_DIR/broken_std"
+run_with_broken_std: "
+  cp -r @{dev_dir}/src/lib @{broken_std} &&
+  printf '\\nlet true: i32 = 0i32;\\n' >> @{broken_std}/core/optional.dk &&
+  @{duckc_path} run @{script} --custom-std-path @{broken_std}
+    --custom-std-artifacts-path $DIT_TMP_DIR/broken_std_artifacts"
+
+Tests:
+  failed_call_lookup:
+    folder: "failed_call_lookup"
+    Cases:
+      direct:
+        mode: direct
+        ExitCode: 1
+        Output:
+          String: ""
+
+  # Prints "Hello" on a working std, so this only passes if the broken std stops the run.
+  std_fails_to_parse:
+    script: "std_fails_to_parse/std_fails_to_parse.dks"
+    Cases:
+      direct:
+        Run: "@{run_with_broken_std}"
+        ExitCode: 1
+        Output:
+          String: ""
+
+  # Both errors at once: this combination used to end in an unhandled query failure.
+  std_fails_to_parse_and_failed_call_lookup:
+    script: "failed_call_lookup/failed_call_lookup.dks"
+    Cases:
+      direct:
+        Run: "@{run_with_broken_std}"
+        ExitCode: 1
+        Output:
+          String: ""

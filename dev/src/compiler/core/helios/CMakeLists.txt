@@ -24,12 +24,12 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/expressions/numeric_literals.cpp
 	src_private/helios_private/hout_creation/expressions/coercions/coercions.cpp
 	src_private/helios_private/hout_creation/expressions/coercions/errors.cpp
-	src_private/helios_private/hout_creation/expressions/coercions/passing.cpp
 	src_private/helios_private/hout_creation/expressions/casts.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/comparison_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/copy_constructors.cpp
@@ -42,10 +42,12 @@ add_library(HELIOS STATIC
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
+	src_private/helios_private/tsh/source_type_name.cpp
 	src_private/helios_private/tsh/queries.cpp
 	src_private/helios_private/templates/templates.cpp
 	src/helios/utils/main_return_type.cpp
 
+	src/helios/errors/block_expr_not_allowed.cpp
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
 	src/helios/queries/queries.cpp
@@ -73,7 +75,6 @@ add_library(HELIOS STATIC
 	src/helios/repl_utils/repl_symbols.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
-	src/helios/tsh/queries/implicit_coercibility.cpp
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
@@ -129,7 +130,9 @@ duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES HELIOS)
-duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp USES HELIOS)
+duck_add_test(compiler tsh_coercion tests/tsh_coercion_test.cpp
+	USES HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES HELIOS)
 

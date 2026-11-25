@@ -176,7 +176,7 @@ namespace compiler::frontend {
 		auto  parent     = module->m_parent.value();
 		auto& submodules = parent->m_submodules;
 		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-            return pair.second == module;
+            return pair.value == module;
         });
 		CORE_ASSERT(
 			it != submodules.end(),
@@ -187,7 +187,7 @@ namespace compiler::frontend {
 				parent->getName().strView()
 			)
 		);
-		submodules.erase(it);
+		submodules.erase(base::StrID(it->key));
 
 		module->m_parent = {};
 
@@ -233,7 +233,7 @@ namespace compiler::frontend {
 			// Remove the submodule from the parent's submodules
 			auto& submodules = parent.value()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
+                return pair.value == module;
             });
 			CORE_ASSERT(
 				it != submodules.end(),
@@ -246,7 +246,7 @@ namespace compiler::frontend {
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(base::StrID(it->key));
 		}
 
 		// Change the parent of all submodules to the parent of the removed module
@@ -277,7 +277,7 @@ namespace compiler::frontend {
 		if (parent.has_value()) {
 			auto& submodules = parent.value()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
+                return pair.value == module;
             });
 			CORE_ASSERT(
 				it != submodules.end(),
@@ -290,7 +290,7 @@ namespace compiler::frontend {
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(base::StrID(it->key));
 		}
 
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {

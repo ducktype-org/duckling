@@ -1,0 +1,34 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+use duck_core::QuackError;
+
+use crate::core::PackageContext;
+use crate::core::storage::venv_id::ToVenvId;
+use crate::core::storage::{display_venv_info, venv_info};
+use crate::{QuackResult, QuackResultContext};
+
+/// Logic for executing the `info` subcommand.
+pub fn info(pcx: PackageContext) -> QuackResult<()> {
+    let ctx = pcx.ctx();
+    let storage_localization = pcx.storage_path();
+    let venv_id = pcx.to_venv_id();
+    let Some((mut venv, previous_access)) = venv_info(storage_localization, venv_id, ctx)
+        .context("failed to get information about the venv")?
+    else {
+        let mut err = QuackError::message(format!(
+            "did not find a venv for the package at `{}`",
+            pcx.package().root().display()
+        ));
+        err.add_hint("make sure that the package is synchronized");
+        return Err(err);
+    };
+    // This info operation counts as access to the venv, modyfying the last_access to now.
+    // To display a meaningful value of the last_access, we substitute the last_access field
+    // with the last_access prior to this ongoing info operation.
+    venv.data_mut().set_last_access(previous_access);
+    display_venv_info(ctx, venv)
+}

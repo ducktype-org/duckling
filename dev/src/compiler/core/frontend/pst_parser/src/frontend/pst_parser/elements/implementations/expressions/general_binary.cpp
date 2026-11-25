@@ -20,10 +20,7 @@ namespace pst::expr {
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
 		PST_WHILE(
 			fwd < length
-			&& !(
-				state[fwd].isOperatorSymbol()
-				&& state[fwd].asBinaryOperator().value().isNotReserved()
-			)
+			&& !(state[fwd].isOperatorSymbol() && state[fwd].asBinaryOperator().value().isGenBinOp())
 			&& !(
 				state[fwd].isIdentifier()
 				&& !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
@@ -71,7 +68,8 @@ namespace pst::expr {
 		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol()) {
 			reduced_length--;
 		}
-		if (fwd == reduced_length) state.logInt(makeBox<OnlyPrefixError>(pos));
+		if (fwd == reduced_length && !isStandaloneKeywordOperator(state))
+			state.logInt(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
 		i64              next = 0;
@@ -100,9 +98,14 @@ namespace pst::expr {
 
 		for (u64 i = 1; i < operators.size(); i++) {
 			fwd                   = operators[i];
-			i64         curr_prec = state[fwd].asBinaryOperator().value().getGenBinOpPrecedence();
+			const auto  curr_op   = state[fwd].asBinaryOperator().value();
+			i64         curr_prec = curr_op.getGenBinOpPrecedence();
 			BuilderExpr lhs       = operators[i] - operators[i - 1] - 1;
-			PST_WHILE(!stack.empty() && stack.top().op_prec <= curr_prec) {
+			PST_WHILE(
+				!stack.empty()
+				&& (stack.top().op_prec < curr_prec
+			        || (stack.top().op_prec == curr_prec && !curr_op.isGenBinOpRightAssociative()))
+			) {
 				Partial partial = std::move(stack.top());
 				stack.pop();
 				lhs = makeBox<OperatorBuilder>(

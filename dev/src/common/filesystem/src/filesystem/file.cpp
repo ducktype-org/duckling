@@ -33,16 +33,11 @@ namespace {
 	}
 
 	void requirePhysicalPath(const fs::FilePath& path) {
-		// @TODO: #3398 make this work in tmp/
 		if (!path.isPhysical()) CORE_PANIC("Path is not a physical file: " + path.string());
 	}
 
 	void requireVirtualPath(const fs::FilePath& path) {
 		if (!path.isVirtual()) CORE_PANIC("Path is not a virtual path: " + path.string());
-	}
-
-	void requireTempPath(const fs::FilePath& path) {
-		if (!path.isTemporary()) CORE_PANIC("Path is not a temporary path: " + path.string());
 	}
 
 	fs::FilePath randomName(const fs::FilePath& prefix_path, const size_t name_len = 16) {
@@ -112,7 +107,7 @@ namespace fs {
 				= vfsOf(path)->isDirectory(path) ? FileCategory::Directory : FileCategory::File;
 		} else {
 			this->path     = path.canonical();
-			this->type     = path.isTemporary() ? FileType::Temporary : FileType::Physical;
+			this->type     = FileType::Physical;
 			this->category = std::filesystem::is_directory(path.getPath()) ? FileCategory::Directory
 			                                                               : FileCategory::File;
 		}
@@ -182,37 +177,10 @@ namespace fs {
 		return path;
 	}
 
-	File FileManager::createTempFile(
-		const FilePath& path, std::string_view content, bool allow_overwrite
-	) {
-		requireTempPath(path);
-
-		if (std::filesystem::exists(path.getPath())) {
-			if (!allow_overwrite) CORE_PANIC("Temp file already exists: " + path.string());
-		}
-		std::ofstream ofs(path.getPath(), allow_overwrite ? std::ios::trunc : std::ios::out);
-		if (!ofs) CORE_PANIC("Failed to create temp file: " + path.string());
-		ofs << content;
-		ofs.close();
-		return path;
-	}
-
-	File FileManager::createTempFolder(const FilePath& path, bool allow_overwrite) {
-		requireTempPath(path);
-
-		if (std::filesystem::exists(path.getPath())) {
-			if (!allow_overwrite) CORE_PANIC("Temp folder already exists: " + path.string());
-			std::filesystem::remove_all(path.getPath());
-		}
-		std::filesystem::create_directories(path.getPath());
-		return path;
-	}
-
 	File FileManager::createRandomTempDirectory() {
-		FilePath tmp_dir   = std::filesystem::temp_directory_path();
+		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
 		auto     rand_path = randomName(tmp_dir);
-		std::filesystem::create_directory(rand_path.getPath());
-		return rand_path;
+		return createPhysicalFolder(rand_path);
 	}
 
 	File FileManager::createRandomVirtualDirectory(base::Ref<VFS> vfs) {
@@ -233,9 +201,9 @@ namespace fs {
 	}
 
 	File FileManager::createRandomTempFile(std::string_view content) {
-		FilePath tmp_dir   = std::filesystem::temp_directory_path();
+		FilePath tmp_dir   = FilePath::getDefaultTempDirectoryPath();
 		auto     rand_path = randomName(tmp_dir);
-		return createTempFile(rand_path, content);
+		return createPhysicalFile(rand_path, content);
 	}
 
 	bool FileManager::deleteFile(const File& file) {
@@ -258,6 +226,10 @@ namespace fs {
 	// --- File methods (non-static, formerly FilePath) ---
 
 	base::SharedView File::getContent() const {
+		// A directory opens fine as a stream, but has no content to read.
+		if (isDirectory())
+			CORE_PANIC(base::strConcat("Cannot read `", path.string(), "`: it is a directory"));
+
 		if (type == FileType::Virtual) {
 			auto content = vfsOf(path)->readFile(path);
 
@@ -267,7 +239,7 @@ namespace fs {
 			return { r_array, content.size() };
 		} else {
 			std::ifstream file(path.getPath(), std::ios::in | std::ios::binary);
-			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string() + ", error: ");
+			if (file.fail()) CORE_PANIC("Failed to open file: " + path.string());
 
 			file.unsetf(std::ios::skipws);
 
@@ -292,6 +264,11 @@ namespace fs {
 				"Error: cannot get content of file `", path.native(), "` - file does not exist"
 			));
 		}
+		if (isDirectory()) {
+			return std::unexpected(base::strConcat(
+				"Error: cannot get content of file `", path.native(), "` - it is a directory"
+			));
+		}
 		return getContent();
 	}
 
@@ -300,6 +277,8 @@ namespace fs {
 	std::string File::name() const { return path.name(); }
 
 	std::string File::stem() const { return path.stem(); }
+
+	bool File::isTemporary() const { return path.isTemporary(); }
 
 	bool File::isDirectory() const noexcept { return category == FileCategory::Directory; }
 
@@ -315,7 +294,6 @@ namespace fs {
 				CORE_PANIC("Virtual file does not exist: " + path.string());
 			vfsOf(path)->writeFile(path, new_content, append);
 		} else {
-			// Physical or Temporary file
 			std::ios::openmode mode = append ? (std::ios::out | std::ios::app) : std::ios::out;
 			std::ofstream      ofs(path.getPath(), mode);
 			if (!ofs) CORE_PANIC("Failed to open file for writing: " + path.string());
@@ -331,9 +309,6 @@ namespace fs {
 		switch (type) {
 		case FileType::Virtual:
 			FileManager::createVirtualFile(file_path, new_file_content);
-			break;
-		case FileType::Temporary:
-			FileManager::createTempFile(file_path, new_file_content);
 			break;
 		case FileType::Physical:
 			FileManager::createPhysicalFile(file_path, new_file_content);
@@ -351,9 +326,6 @@ namespace fs {
 		switch (type) {
 		case FileType::Virtual:
 			FileManager::createVirtualFolder(dir_path);
-			break;
-		case FileType::Temporary:
-			FileManager::createTempFolder(dir_path);
 			break;
 		case FileType::Physical:
 			FileManager::createPhysicalFolder(dir_path);
@@ -375,7 +347,6 @@ namespace fs {
 			auto entries = vfsOf(path)->listDirectory(path);
 			for (const auto& entry: entries) result.emplace_back(path / entry);
 		} else {
-			// Physical or Temporary filesystem
 			for (const auto& entry: std::filesystem::directory_iterator(path.getPath()))
 				result.emplace_back(entry.path());
 		}

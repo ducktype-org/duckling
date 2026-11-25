@@ -17,7 +17,7 @@
 #include <concurrent/worker/worker_manager.hpp>
 #include <frontend/packages/access.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
@@ -36,10 +36,10 @@
 
 namespace {
 	/**
-	 * StableHashMap that stores all ModuleTree instances.
+	 * HashMap that stores all ModuleTree instances.
 	 */
-	base::StableHashMap<usize, compiler::frontend::ModuleTree> modules;
-	usize                                                      next_module_storage_key = 0;
+	base::HashMap<usize, compiler::frontend::ModuleTree> modules;
+	usize                                                next_module_storage_key = 0;
 
 	concurrent::ConHashMap<base::Bit256, base::Ref<compiler::frontend::ModuleTree>> module_registry;
 }
@@ -492,7 +492,7 @@ namespace compiler::frontend {
 	/****************
 	 * getFilePST *
 	 ****************/
-	CRef<pst::PST<>> getFilePST([[maybe_unused]] ::query::Context& ctx, FileID file_id) {
+	CRef<pst::ParsedPST<>> getFilePST([[maybe_unused]] ::query::Context& ctx, FileID file_id) {
 		Ref<SourceFile> file
 			= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 				file_id

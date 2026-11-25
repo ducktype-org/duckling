@@ -8,6 +8,7 @@
 
 #include "safe_compiler.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
 
@@ -16,7 +17,9 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 
+#include <ranges>
 #include <tuple>
 #include <type_traits>
 
@@ -156,16 +159,13 @@ namespace vm::loader::compiler::safe::detail {
 		 */
 		u64 sharedStackSpaceSize(base::StrID function_name) const {
 			const auto& signature = compiler.high_program.functions().at(function_name)->signature;
+			const auto low_types = std::views::transform([this](const code::Identifier& type_name) {
+				return resolveTypeName(type_name.str);
+			});
 
-			// Summed over the low types, the same ones `sharedStackSpaceSizeOfMethod` and the
-			// executor measure, so there is a single answer to how big a variable is.
-			u64 size = 0;
-			for (const auto& parameter: signature.parameters)
-				size += resolveTypeName(parameter.str)->getSize().asInt();
-			for (const auto& result: signature.result_types)
-				size += resolveTypeName(result)->getSize().asInt();
-
-			return size;
+			return sharedStackSpaceSizeOfTypes(
+				signature.parameters | low_types, signature.result_types | low_types
+			);
 		}
 
 		/**
@@ -182,8 +182,29 @@ namespace vm::loader::compiler::safe::detail {
 					method.method_name
 				);
 
-			return method_type->getParametersSize().value().asInt()
-			     + method_type->getResultTypeSize().value().asInt();
+			return sharedStackSpaceSizeOfFunctionType(method_type);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a call of a function of the given function
+		 * type.
+		 */
+		u64 sharedStackSpaceSizeOfFunctionType(TypeCRef function_type) const {
+			const auto function = function_type->get<kind::Function>().value();
+			return sharedStackSpaceSizeOfTypes(function->parameters, function->result_types);
+		}
+
+		/**
+		 * @brief Same as `sharedStackSpaceSize`, for a call with the given parameter and result
+		 * types.
+		 */
+		static u64 sharedStackSpaceSizeOfTypes(
+			std::ranges::input_range auto&& parameters, std::ranges::input_range auto&& results
+		) {
+			u64 size = 0;
+			for (const TypeCRef type: parameters) size += type->getSize().asInt();
+			for (const TypeCRef type: results) size += type->getSize().asInt();
+			return size;
 		}
 
 		/**
@@ -297,6 +318,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_ffifunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_func, _) { is_control_flow = true; }
+			instr_case(high::Op_call_pfun, _) { is_control_flow = true; }
 			instr_case(high::Op_virtualCall_pptr_method, _) { is_control_flow = true; }
 			instr_default { is_control_flow = false; }
 		}
@@ -372,12 +394,20 @@ namespace vm::loader::compiler::safe::detail {
 				// A reinterpreting cast is a plain 8-byte move.
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
 			}
+			instr_case(high::Op_cast_p64_pcptr, i) {
+				// A C pointer is a plain 8-byte native address, so reading it as an integer is a
+				// move.
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
 			instr_case(high::Op_add_pcptr_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.offset); }
 			instr_case(high::Op_add_pcptr_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.offset); }
 			instr_case(high::Op_cmpNull_pcptr, i) {
 				// A null cpointer is the native address 0.
 				addLow<Op_cmpEq_p64_imm>(i.ptr, vm::opargs::Immediate{ 0 });
 			}
+			// A cpointer is a native address, so equality is 64-bit integer equality.
+			instr_case(high::Op_cmpEq_pcptr_pcptr, i) { addLow<Op_cmpEq_p64_p64>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpNeq_pcptr_pcptr, i) { addLow<Op_cmpNeq_p64_p64>(i.lhs, i.rhs); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_mov_pvnt_pvnt, i) { addLow<Op_mov_bvnt_bvnt>(i.dst, i.src); }
@@ -623,6 +653,8 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fcmpLe_p32_p32, i) { addLow<Op_fcmpLe_p32_p32>(i.lhs, i.rhs); }
 			instr_case(high::Op_fcmpLe_p32_imm, i) { addLow<Op_fcmpLe_p32_imm>(i.lhs, i.rhs); }
 			instr_case(high::Op_cmpNull_pptr, i) { addLow<Op_cmpNull_pptr>(i.ptr); }
+			instr_case(high::Op_cmpEq_pptr_pptr, i) { addLow<Op_cmpEq_pptr_pptr>(i.lhs, i.rhs); }
+			instr_case(high::Op_cmpNeq_pptr_pptr, i) { addLow<Op_cmpNeq_pptr_pptr>(i.lhs, i.rhs); }
 			instr_case(high::Op_variantSetInner_pvnt_type, i) {
 				addLow<Op_variantSetInner_bvnt_type>(i.variant, i.inner_type);
 				opargs::Type variant_type = getPlaceType(i.variant)->getName();
@@ -657,6 +689,18 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_call_ffifunc, i) { addLow<Op_call_ffifunc>(i.function); }
+			instr_case(high::Op_mov_pfun_func, i) {
+				const u64 function_id
+					= compiler.high_program.functions().idOf(i.function.function_name).value();
+				addLow<Op_mov_p64_imm>(i.dst, vm::opargs::Immediate{ function_id });
+			}
+			instr_case(high::Op_mov_pfun_pfun, i) { addLow<Op_mov_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_call_pfun, i) {
+				addLow<Op_call_p64_off>(
+					i.callee,
+					calleeStackDistance(sharedStackSpaceSizeOfFunctionType(getPlaceType(i.callee)))
+				);
+			}
 			instr_case(high::Op_setThreadCtx_func, i) { addLow<Op_setThreadCtx_func>(i.function); }
 			instr_case(high::Op_retTailcall_func, i) { addLow<Op_retTailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) {
@@ -873,7 +917,15 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_initFromVMValue, i) { addLow<Op_initFromVMValue>(); }
+			instr_case(high::Op_initFromVMValue_pany_type_imm, i) {
+				const auto* safe_vm_value = dynamic_cast<const SafeVMValue*>(
+					std::bit_cast<const IVMValue*>(i.vm_value.value)
+				);
+				CORE_ASSERT(safe_vm_value != nullptr, "Expected a VMValue of the safe VM.");
+				addLow<Op_initFromVMValue_imm_off>(
+					vm::opargs::Immediate{ std::bit_cast<u64>(safe_vm_value) }, byteOffsetOf(i.var)
+				);
+			}
 			instr_case(high::Comment, i) {
 				// Do nothing
 			}

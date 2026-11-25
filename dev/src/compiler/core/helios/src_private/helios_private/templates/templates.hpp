@@ -7,8 +7,8 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -54,7 +54,7 @@ namespace compiler::helios::templates {
 	 * This will be passed to PST root as additional root data in type-opaque way, so other helios
 	 * code can retrieve it when needed.
 	 *
-	 * @TODO: #3071 link this to the proper custom root element, like pst::BakedTemplateRoot or
+	 * @TODO: #3892 link this to the proper custom root element, like pst::BakedTemplateRoot or
 	 * something like that.
 	 */
 	struct TemplateBakePSTLinkedData final {

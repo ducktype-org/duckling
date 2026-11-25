@@ -9,7 +9,7 @@
 #include "generated_symbol_data.hpp"
 #include "pst_symbol_data.hpp"
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_id.hpp>

@@ -40,8 +40,10 @@ namespace compiler::backend_vm::internal {
 			// Branch instr has the deinits pushed between the condition evaluation and the jump.
 			ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
+			// Use an unconditional second jump: the validator cannot infer that two
+			// complementary conditional jumps have no fallthrough path.
 			ctx->pushInstruction({ OpKind::jmpIf, op.true_target.asArgument() });
-			ctx->pushInstruction({ OpKind::jmpIfNot, op.false_target.asArgument() });
+			ctx->pushInstruction({ OpKind::jmp, op.false_target.asArgument() });
 		}
 	}
 
@@ -53,26 +55,28 @@ namespace compiler::backend_vm::internal {
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
 		ctx->pushInstruction({ OpKind::jmpIf, op.null_target.asArgument() });
-		ctx->pushInstruction({ OpKind::jmpIfNot, op.not_null_target.asArgument() });
+		ctx->pushInstruction({ OpKind::jmp, op.not_null_target.asArgument() });
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {
+		const bool is_already_in_return_local = op.value.has_value()
+		                                    and op.value.value().is<DVMPlace>()
+		                                    and op.value.value().get<DVMPlace>().getSpecialKind()
+		                                            == DVMPlace::SpecialKind::ReturnValue;
+
+		// Since VM does not support `return X;` operation, we must move the value to
+		// the ret_val local and then return.
+		if (not is_already_in_return_local) {
+			if_opt_some(op.value, ret_val) {
+				ctx->pushInstruction(
+					{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
+				);
+			}
+		}
+
+		ctx->cleanUpRegisteredTemps();
 		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
-		if (op.value.has_value() and op.value.value().is<DVMPlace>()
-		    and op.value.value().get<DVMPlace>().getSpecialKind()
-		            == DVMPlace::SpecialKind::ReturnValue) {
-			// Since VM does not support `return X;` operation, we must move the value to
-			// the ret_val local and then return.
-			ctx->pushInstruction({ OpKind::ret });
-			return;
-		}
-
-		if_opt_some(op.value, ret_val) {
-			ctx->pushInstruction(
-				{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
-			);
-		}
 		ctx->pushInstruction({ OpKind::ret });
 	}
 

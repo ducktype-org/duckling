@@ -17,10 +17,10 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(expr, CommaAllowBlocksExprHolder);
+		NAMED_CHILD(expr, CommaExprHolder);
 
 	public:
-		explicit RoundGroupExpr(const LangParserState& state): NotStmt(state) {
+		explicit RoundGroupExpr(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::RoundGroupExpr;
 		}
 

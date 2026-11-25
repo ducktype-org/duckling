@@ -6,6 +6,8 @@
 
 #include "type_context.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
@@ -127,12 +129,7 @@ void TypeContext::insertAndValidate(
 			if (type != *tod_types.at(name)) throw DuplicatedTypeError(type, *tod_types.at(name));
 		} else {
 			tod_types.insert(type, name);
-			types.insert(
-				vm::code::valid_type::ValidType::declareType(
-					name, valid_type::ValidTypeID(types.size())
-				),
-				name
-			);
+			types.insert(vm::code::valid_type::ValidType::declareType(name, types.nextID()), name);
 			really_new_types.emplace_back(&type);
 		}
 	}

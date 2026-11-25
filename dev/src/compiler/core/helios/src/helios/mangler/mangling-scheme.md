@@ -22,8 +22,13 @@ either in the scheme or it's implementation, they should be reflected here.
              | <repl-input-wrapper>                         // REPL/script input statements
 
 // Wrappers of REPL/script input statements (expressions, instructions and global variable
-// initializers) use simplified mangling for now. @TODO: #1768 decide if it's correct.
-<repl-input-wrapper> ::= "__repl_input_wrapper_" <base-10-number>
+// initializers) and of comp-time evaluated expressions use simplified mangling for now.
+// @TODO: #1768 decide if it's correct.
+<repl-input-wrapper> ::= <wrapper-name> "_" <base-10-number> "_" <type>
+// the number is the REPL/script input counter, or the ID of the wrapped comp-time expression
+// <type> is the return type of the wrapper
+<wrapper-name> ::= "__repl_input_wrapper"                   // REPL/script input statements
+                 | "__comp_time_expr_wrapper"               // comp-time evaluated expressions
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
@@ -105,6 +110,7 @@ either in the scheme or it's implementation, they should be reflected here.
                  | "CP" <type> "E"                          // c pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
+                 | "Q" <type> "E"                           // optional type (?T)
 
 <tuple-type> ::= "T" <type>* "E"                            // tuple type
 
@@ -141,7 +147,9 @@ either in the scheme or it's implementation, they should be reflected here.
               | "T" <value-arg>* "E"                        // tuple
               | <function-type> <hex-value> "_"             // function
               | <pointer-type> <hex-value> "_"              // pointer
-              | <enum-type> <base-10-number> "_")           // enum
+              | <enum-type> <base-10-number> "_"            // enum
+              | "M" <type> <base-10-number> "_" <hex-value>) // value computed by the compile-time DVM (class, array, ...): its type, its byte size and its raw bytes
+                                                            // @TODO: #2990 pointers inside are mangled by their address, not by the data they point to
               | <back-reference>
 
 <unscoped-name> ::= <identifier>                            // actual name of a (typical) symbol

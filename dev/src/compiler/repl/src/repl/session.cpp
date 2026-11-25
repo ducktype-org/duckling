@@ -13,7 +13,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/repl_symbols.hpp>
@@ -456,8 +456,8 @@ namespace compiler::repl {
 		if (!teardown.has_value())
 			std::cerr << "Failed to teardown the DVM process: "
 					  << vm::api::errorToString(teardown.error()) << "\n";
-		else if (teardown->has_value() && !teardown->value())
-			std::cerr << "The DVM process failed its memory validation.\n";
+		else if (teardown->has_value())
+			std::cerr << teardown->value().toString();
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {

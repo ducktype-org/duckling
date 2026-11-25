@@ -1,0 +1,11 @@
+template(T: type)
+fun pick() -> i64 = if const T == char then 1 else 2;
+
+# The untaken branch is never compiled, so it may name a function that does not exist.
+template(T: type)
+fun onlyChar() -> i64 = if const T == char then 3 else this_function_does_not_exist();
+
+builtin_output_i64(pick[char]());
+builtin_output_i64(pick[str]());
+builtin_output_i64(onlyChar[char]());
+builtin_output_i64(if const 1 == 2 then this_function_does_not_exist() else 4);

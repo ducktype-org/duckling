@@ -218,19 +218,25 @@ namespace compiler::helios::code {
 							return whole_call_origin.getStablePosition().value();
 						}();
 
-						if (data.failed.getInvalidReason()
-						    == helios::InvalidCoercionReason::IncompatibleTypes) {
-							base::Optional<Box<InteractiveFunction>> function_name
-								= get_interactive_function(data.function);
-							return makeBox<ArgumentIncompatibleTypeError>(
-								pos,
-								makeBox<InteractiveType>(ctx, data.failed.to),
-								makeBox<InteractiveType>(ctx, data.failed.validated_from),
-								std::move(function_name)
-							);
-						}
-
-						return helios::getCoercionError(ctx, data.failed, pos);
+						// A mismatch of types is explained in terms of the call.
+						return coercions::getCoercionError(
+							ctx,
+							data.failed,
+							pos,
+							{},
+							coercions::CoercionErrorOverrides{
+								.incompatible_types = [&] -> Box<dia::MessageBase> {
+									return makeBox<ArgumentIncompatibleTypeError>(
+										pos,
+										makeBox<InteractiveType>(ctx, data.failed.getTarget()),
+										makeBox<InteractiveType>(
+											ctx, data.failed.getSource().getSymbolType()
+										),
+										get_interactive_function(data.function)
+									);
+								},
+							}
+						);
 					}
 					variant_case(MissingCallArgument, data) {
 						auto& decl = ctx.query<QueryDeclOfFun>(data.function)->valueOrThrow();

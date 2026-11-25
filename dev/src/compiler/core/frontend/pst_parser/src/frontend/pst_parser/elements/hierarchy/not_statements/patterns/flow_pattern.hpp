@@ -19,13 +19,13 @@ namespace pst {
 	protected:
 		NAMED_CHILD(pattern, AnalysisPattern);
 		NAMED_CHILD_OPT(as_identifier, IdentifierWrapper);
-		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
+		NAMED_CHILD_OPT(type_constraint, UniversalNoBlockExprHolder);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit FlowPattern(const LangParserState& state): NotStmt(state) {
+		explicit FlowPattern(LangElementConstructionData state): NotStmt(state) {
 			this->element_kind = ElementKind::FlowPattern;
 		}
 
@@ -41,7 +41,8 @@ namespace pst {
 			return as_identifier.map([](const auto& acc) { return acc.give(); });
 		}
 
-		[[nodiscard]] base::Optional<AccessLocked<UniversalExprHolder>> getTypeConstraint() const;
+		[[nodiscard]] base::Optional<AccessLocked<UniversalNoBlockExprHolder>> getTypeConstraint(
+		) const;
 
 		static MBox<FlowPattern> parse(LangParserState& state);
 		void                     dprint(std::ostream& out) const final;

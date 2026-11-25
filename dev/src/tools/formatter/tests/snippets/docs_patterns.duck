@@ -1,0 +1,27 @@
+# Examples from docs: writing_code/declarations/patterns.html
+pattern Point(p: ref Point) -> (i32, i32) = {
+	return (p.x, p.y);
+}
+
+pattern TakeBigData(bdh: ref BigDataHolder) -> ref BigData = &bdh.big_data;
+
+pattern Square(rect: ref Rectangle) -> ?i32 = {
+	let Rectangle(width, height) = rect;
+	return if width == height then width else none;
+}
+
+fun main() = {
+	let t = (1, 2);
+	let (a, b) = t;
+
+	# Match arms need no trailing semicolon.
+	match (rect) {
+		case Square(length) = print(f"Square of side length {length}")
+		case _ = print("Not a square")
+	}
+
+	match (x) {
+		case Even(y) = print(f"{x} is equal to 2 * {y}")
+		case _ = print("{x} is not even")
+	}
+}

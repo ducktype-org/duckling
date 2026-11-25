@@ -7,6 +7,7 @@
 #include "default_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -74,9 +75,10 @@ namespace compiler::helios::defgen {
 						const auto field_type = field.getType(ctx);
 						auto       field_init_hout
 							= getHoutOfExprWithExpectedType(
-								  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
+								  ctx, field_init.unlock(ctx)->getExpr(), field_type
 							)
 						          .valueOrThrow();
+						refuseBlockExpr(ctx, *field_init_hout, "a field initializer");
 						field_values.emplace_back(
 							field_init_hout.isBox() ? std::move(field_init_hout.getBox())
 													: field_init_hout->clone()
@@ -280,9 +282,9 @@ namespace compiler::helios::defgen {
 		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
-			ctx.logInt(makeBox<dia::PlaceholderError>(
+			ctx.log<dia::PlaceholderError>(
 				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
-			));
+			);
 			return query::Failed();
 		}
 

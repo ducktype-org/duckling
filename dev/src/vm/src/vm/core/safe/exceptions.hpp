@@ -7,9 +7,14 @@
 #pragma once
 #include <base/except/exceptions.hpp>
 
+#include <vm/api/data/stack_trace.hpp>
+
 namespace vm::exceptions {
 	class VMRuntimeException: public base::Exception {
 		std::string message;
+		/// The DVM call stack at the moment of the error. Kept apart from `message`, so the error
+		/// message the API reports stays the same.
+		base::Optional<api::StackTrace> vm_stack_trace;
 
 	public:
 		VMRuntimeException(std::string message): message(std::move(message)) {}
@@ -17,6 +22,23 @@ namespace vm::exceptions {
 		[[nodiscard]]
 		const char* what() const noexcept override {
 			return message.c_str();
+		}
+
+		/**
+		 * @brief Attaches the DVM call stack. Set once, by the innermost interpreter run the error
+		 * escapes from.
+		 */
+		void setVMStackTrace(api::StackTrace trace) {
+			if (!vm_stack_trace.has_value()) vm_stack_trace = std::move(trace);
+		}
+
+		/**
+		 * @brief The DVM call stack at the moment of the error. Nothing when the error was not
+		 * raised by running code.
+		 */
+		[[nodiscard]]
+		const base::Optional<api::StackTrace>& getVMStackTrace() const noexcept {
+			return vm_stack_trace;
 		}
 	};
 
@@ -29,6 +51,11 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMPanicException, "Program panicked");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
 	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");
+	VM_RUNTIME_EXCEPTION(VMNullFunctionCallException, "Calling a null function value");
+	VM_RUNTIME_EXCEPTION(
+		VMInvalidFunctionValueException,
+		"Calling a function value which does not reference a function"
+	);
 	VM_RUNTIME_EXCEPTION(VMOutOfBlockBoundsException, "Accessing block out of bounds");
 	VM_RUNTIME_EXCEPTION(VMUseAfterFreeException, "Data was freed");
 	VM_RUNTIME_EXCEPTION(VMDoubleFreeException, "Data was already freed");

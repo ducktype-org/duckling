@@ -6,7 +6,7 @@
 
 #include "code_dependency.hpp"
 
-#include "../lang_parser_element.hpp"
+#include "../base_element/lang_parser_element.hpp"
 #include "pst_access_side_input.hpp"
 
 #include <diagnostic/location.hpp>

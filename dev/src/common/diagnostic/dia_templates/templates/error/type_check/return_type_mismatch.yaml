@@ -1,0 +1,41 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "return_type_mismatch"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  given_type:
+    description: "The type of the returned value."
+  expected_type:
+    description: "The result type of the function."
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+
+header_message:
+  - "Returned value of type `"
+  - param: "given_type"
+  - "` does not match the result type `"
+  - param: "expected_type"
+  - "` of the function."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+  - "Inside a block expression the returned value is not converted, so it has to have exactly the result type of the function."
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "returns `"
+      - param: "given_type"
+      - "`"

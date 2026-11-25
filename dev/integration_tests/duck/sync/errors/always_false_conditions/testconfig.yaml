@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo add bar --local=../bar
+  echo "    conditions:
+        package-features: []" >> foo/quackconfig.yaml
+
+Tests:
+  always-false-conditions:
+    Description: checks "always_false_conditions" lint
+    Cases:
+      sync:
+        test-cmd: duck --verbose -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: dependency \`bar\` is disabled, because it is conditioned on an empty features list [always_false_conditions]
+            error: emitted 1 error

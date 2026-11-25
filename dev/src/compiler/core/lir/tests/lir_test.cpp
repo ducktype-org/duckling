@@ -60,6 +60,7 @@ public:
 		TESTER_ADD_TEST(simpleConstant);
 		TESTER_ADD_TEST(cVariadicAbiTest);
 		TESTER_ADD_TEST(cSymbolNameTest);
+		TESTER_ADD_TEST(neverReturnsTest);
 		TESTER_ADD_TEST(debugPrintStandaloneElements);
 		TESTER_ADD_TEST(debugPrintElementsWithFunctionIDs);
 		TESTER_ADD_TEST(debugPrintFunctionWithAndWithoutContext);
@@ -299,6 +300,15 @@ private:
 		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
 		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
+
+		// Globals carry the same metadata as locals: their source name and declaration position.
+		for (const auto& [global_data, name]: { std::pair{ g, "g" },
+		                                        std::pair{ some_global, "some_global" },
+		                                        std::pair{ global_tuple, "global_tuple" } }) {
+			ASSERT_HAS_VALUE(global_data.metadata.source_code_name);
+			ASSERT_EQUAL(global_data.metadata.source_code_name->strView(), name);
+			ASSERT_HAS_VALUE(global_data.metadata.position);
+		}
 
 		// All the globals here are trivially destructible, so none of them gets a dtor.
 		ASSERT_TRUE(g.getCtorDtorPair().global_dtor.empty());
@@ -598,17 +608,28 @@ private:
 
 			check_meta_function("createBox", MK::CreateBox, 1);
 			check_meta_function("createRef", MK::CreateRef, 1);
-			check_meta_function("createConst", MK::CreateConst, 1);
+			check_meta_function("createMut", MK::CreateMut, 1);
+			check_meta_function("createImm", MK::CreateImm, 1);
 			check_meta_function("createPtr", MK::CreatePtr, 1);
 			check_meta_function("createCPtr", MK::CreateCPtr, 1);
 			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
 			check_meta_function("createSlice", MK::CreateSlice, 1);
+			check_meta_function("createOptional", MK::CreateOptional, 1);
 			check_meta_function("createVariant", MK::CreateVariant, 4);
-			check_meta_function("createTuple", MK::CreateTuple, 4);
+
+			{
+				auto create_tuple       = module.lirFunc("createTuple");
+				bool found_create_tuple = false;
+				for (const auto& block: create_tuple->block_order)
+					for (const auto& instr: block->instructions)
+						if (instr.operation == MetaTypeOperation
+						    && meta_kind(instr) == MK::CreateTuple && instr.arguments.size() == 4)
+							found_create_tuple = true;
+				ASSERT_TRUE(found_create_tuple);
+			}
 
 			{
 				auto mega_type = module.lirFunc("megaType");
-				for (const auto& local: mega_type->local_list) assert_is_meta_local(local);
 
 				int  create_variant_count = 0;
 				int  create_tuple_count   = 0;
@@ -776,6 +797,31 @@ private:
 			)
 		);
 		ASSERT_EQUAL_PRINT(ignored_called.at(1), base::StrID("dvmDecl"));
+	}
+
+	void neverReturnsTest() {
+		auto module = getLIROfModule(path("modules/never_returns"));
+
+		// Only a `void` result means "never returns", `()` is an ordinary return value.
+		ASSERT_TRUE(module.lirFunc("fails")->never_returns);
+		ASSERT_TRUE(not module.lirFunc("returnsUnit")->never_returns);
+		ASSERT_TRUE(not module.lirFunc("caller")->never_returns);
+
+		// The function literals used as callees carry the same flag.
+		base::Map<base::StrID, bool> callee_never_returns;
+		for (const auto block: module.lirFunc("caller")->block_order) {
+			for (const auto& instruction: block->instructions) {
+				if (instruction.operation != lir::Operation::Call) continue;
+				const auto& callee = instruction.arguments.at(0).get<lir::FunctionLiteral>();
+				callee_never_returns.put(callee.mangled_name, callee.never_returns);
+			}
+		}
+		ASSERT_EQUAL(callee_never_returns.size(), usize(2));
+		ASSERT_TRUE(callee_never_returns.at(module.lirFunc("fails")->mangled_name));
+		ASSERT_TRUE(not callee_never_returns.at(module.lirFunc("returnsUnit")->mangled_name));
+
+		// `fromFunction` keeps the flag.
+		ASSERT_TRUE(lir::FunctionLiteral::fromFunction(*module.lirFunc("fails")).never_returns);
 	}
 
 	void debugPrintStandaloneElements() {

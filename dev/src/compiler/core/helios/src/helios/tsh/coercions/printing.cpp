@@ -51,6 +51,9 @@ namespace compiler::tsh::coercions {
 			case Rank::MutabilityChange:
 				out << "MutabilityChange";
 				return;
+			case Rank::RefOf:
+				out << "RefOf";
+				return;
 			case Rank::Deref:
 				out << "Deref";
 				return;
@@ -102,9 +105,13 @@ namespace compiler::tsh::coercions {
 							   ", "
 						   );
 				}
-				variant_case_novalue(TypeNotCopyable) { out << "type not copyable"; }
-				variant_case_novalue(RequiresExplicitCopyMove) {
-					out << "requires explicit copy or move";
+				variant_case(TypeNotCopyable, not_copyable) {
+					out << "type not copyable, copies " << not_copyable.copied.type.toString();
+				}
+				variant_case(RequiresExplicitCopyMove, explicit_copy) {
+					out << "requires explicit copy or move, copies "
+						<< explicit_copy.copied.type.toString();
+					if (explicit_copy.copied.is_pointee) out << " out of a reference";
 				}
 			}
 		}

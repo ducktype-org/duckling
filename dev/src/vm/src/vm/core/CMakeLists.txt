@@ -3,7 +3,7 @@ if (JIT_ENABLED)
 	set(jit_dependency ${jit_dependency} PARENT_SCOPE)
 endif ()
 
-add_files(
+set_files(
 	supervisor/supervisor.cpp
 	safe/safe_vmprocess.cpp
 	process/ivmprocess.cpp
@@ -27,7 +27,7 @@ add_files(
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
-add_files(
+set_files(
 	safe/opcode_functions/opcodes_functions_impl_exec.cpp
 	safe/opcode_functions/opcodes_functions_impl_debug.cpp
 	safe/low_program/instruction.cpp

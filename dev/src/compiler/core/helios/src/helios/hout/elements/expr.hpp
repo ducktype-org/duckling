@@ -11,6 +11,7 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/function_kind.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -25,6 +26,7 @@
 namespace compiler::helios::code {
 	class HoutExprVisitor;
 	struct Stmt;
+	struct BlockStmt;
 
 	/**
 	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
@@ -222,7 +224,8 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents expression made of a single identifier in HOUT.
+	 * @brief Represents expression made of a single identifier in HOUT. An identifier naming a
+	 * function is a function value, the address of the function.
 	 * @note: This will have to be improved,
 	 * when more complex expressions involving "." operator, local variables, etc
 	 * will be introduced.
@@ -375,7 +378,8 @@ namespace compiler::helios::code {
 		CPtr,
 		Slice,
 		Box,
-		Const,
+		Mut,
+		Imm,
 		SizeOf,
 		AlignOf
 	};
@@ -489,6 +493,66 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
 			std::vector<base::Box<Expr>> subtypes
+		);
+	};
+
+	/**
+	 * @brief Function type constructor inside an expression, for example `funptr(i32) -> bool` (a
+	 * raw function) or `(i32) -> bool` (a closure).
+	 *
+	 * Every parameter and the result are expressions of the meta type.
+	 */
+	struct FunctionTypeExpr final: public Expr {
+		std::vector<base::Box<Expr>> parameters;
+		base::Box<Expr>              result;
+		tsh::FunctionKind            kind;
+
+		FunctionTypeExpr(
+			query::Context&              ctx,
+			ElementOrigin                origin,
+			std::vector<base::Box<Expr>> parameters,
+			base::Box<Expr>              result,
+			tsh::FunctionKind            kind
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		FunctionTypeExpr(
+			tsh::ExpressionType<>        expression_type,
+			ElementOrigin                origin,
+			std::vector<base::Box<Expr>> parameters,
+			base::Box<Expr>              result,
+			tsh::FunctionKind            kind
+		);
+	};
+
+	/**
+	 * @brief Optional type constructor `?T` inside an expression. It creates the optional type
+	 * holding @p value_type, which is a special variant of `T` and `None`.
+	 */
+	struct OptionalTypeConstructorExpr final: public Expr {
+		base::Box<Expr> value_type;
+
+		OptionalTypeConstructorExpr(
+			query::Context& ctx, ElementOrigin origin, base::Box<Expr> value_type
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		OptionalTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, base::Box<Expr> value_type
 		);
 	};
 
@@ -759,10 +823,22 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
+		/**
+		 * @brief Some casts create temporary for example `i32 -> i64`,
+		 * but some doesn't, for example `i32 -> const i32` or `ref i32 -> ptr i32`.
+		 * This function answers this question, used in MIR lowering.
+		 * When there is no temporary created the cast is basically transparent for the lower layers.
+		 * The empty Cast node is still needed to change the type of the expression
+		 * (for example in the `ref i32 -> ptr i32`).
+		 */
+		[[nodiscard]] bool castCreatesTemporary() const;
+
 		[[nodiscard]] Box<Expr> clone() const final;
 
 	private:
 		FRIEND_MAKEBOX
+
+		static bool castCreatesTemporary(tsh::SymbolType<> source, tsh::SymbolType<> dst);
 
 		CastExpr(
 			tsh::ExpressionType<> expression_type,
@@ -780,6 +856,12 @@ namespace compiler::helios::code {
 		Box<Expr> inner;
 
 		RefOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+
+		/**
+		 * @brief The type of a `RefOfExpr` taking a reference to a value of type @p inner_type.
+		 */
+		static tsh::ExpressionType<> typeOfRefTo(const tsh::ExpressionType<>& inner_type);
+
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -984,13 +1066,20 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a block of statements that evaluates to a single value.
+	 *
+	 * Without a `tail` the block evaluates to a unit.
 	 */
 	struct BlockExpr final: public Expr {
-		// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
-		// expressions.
-		Box<Stmt> block;
+		Box<BlockStmt> block;
 
-		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
+		/**
+		 * @brief The trailing expression `{ ...; tail }` that gives the block its value. It is
+		 * evaluated in the scope of `block`.
+		 */
+		base::Optional<Box<Expr>> tail;
+
+		BlockExpr(ElementOrigin origin, Box<BlockStmt> block, base::Optional<Box<Expr>> tail = {});
+		~BlockExpr() override;
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -1000,7 +1089,12 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
+		BlockExpr(
+			tsh::ExpressionType<>     expression_type,
+			ElementOrigin             origin,
+			Box<BlockStmt>            block,
+			base::Optional<Box<Expr>> tail
+		);
 	};
 }
 

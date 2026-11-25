@@ -81,6 +81,7 @@ They are declared in the order of their ranks:
 | `HandOver`         | `hand over`             | `Identity`             | `SymbolType` coercions only, `handOver()` in `rules.cpp`                      |
 | `ImplicitMove`     | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`     |
 | `MutabilityChange` | `mutability change`     | `MutabilityChange`     | `keepReference`, raw pointers, and a tuple whose parts only change mutability |
+| `RefOf`            | `ref of`                | `RefOf`                | `takeByRef`, only in the `CoercionMode::ImplicitRefOf` mode                   |
 | `Deref`            | `deref`                 | `Deref`                | `readThroughReference`                                                        |
 | `Numeric`          | `numeric`               | `Numeric`              | `convertValue`: a wider integer or float, `bool` into an integer              |
 | `VariantPack`      | `pack as alternative N` | `VariantPack`          | `packIntoVariant`                                                             |
@@ -231,6 +232,7 @@ like the alternatives of a variant or the overloads of a function.
 | ------------------ | --------------------------------------------------------------------------- |
 | `Identity`         | nothing happens to the value (`HandOver` and `ImplicitMove` have this rank) |
 | `MutabilityChange` | only the mutability the value is seen with changes                          |
+| `RefOf`            | the value is implicitly taken by `ref`                                      |
 | `Deref`            | the pointee is read out of a `ref`/`box`                                    |
 | `Numeric`          | a widening numeric conversion                                               |
 | `VariantPack`      | the value is packed into a variant                                          |
@@ -306,17 +308,22 @@ plan  i32  ->  Variant (Variant (bool, i32), i64)
 `planCoercion` is a short ladder of cases, tried in order:
 
 1. A `void` source is retyped into anything (`RetypeVoid`).
-2. A `ref`/`box` target keeps the reference (`keepReference`). Which reference-kind transitions
+2. In the `CoercionMode::ImplicitRefOf` mode a direct or `box` source with a `ref` target is
+   implicitly taken by `ref` (`takeByRef`). The rule plans `ref` of the source into the target and
+   puts a `RefOf` in front of its steps, in the same node. This is how the receiver of a method call
+   is passed as its `self`. The mode is a part of the query key and only applies to the root, so
+   the sub-plans never take a value by `ref`.
+3. A `ref`/`box` target keeps the reference (`keepReference`). Which reference-kind transitions
    are legal is a small table in `reference_coercion.hpp`/`.cpp` (`referenceCoercionRule`).
    Behind a reference nothing converts, and only mutability may relax.
-3. A variant target means packing into a variant (`packIntoVariant`). The rule plans the source
+4. A variant target means packing into a variant (`packIntoVariant`). The rule plans the source
    into *every* alternative, ranks the plans that succeed with `bestCoercion`, and either extends
    the winning plan with a `VariantPack` step or refuses with `AmbiguousCoercion` or with the
    collected per-alternative refusals.
-4. A `ref`/`box` source with a direct target is read through the reference
+5. A `ref`/`box` source with a direct target is read through the reference
    (`readThroughReference`). The rule plans the pointee into the target and puts a `Deref` in
    front of the pointee's steps, in the same node.
-5. Everything else is a plain value conversion (`convertValue`): numeric widening, zero checks,
+6. Everything else is a plain value conversion (`convertValue`): numeric widening, zero checks,
    lifting to `type`, and tuples. A tuple is handled by `coerceElementwise`, which plans each
    component and builds an `Elementwise` step from the results.
 

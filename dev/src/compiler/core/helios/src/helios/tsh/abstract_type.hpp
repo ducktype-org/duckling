@@ -235,34 +235,6 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Determine whether it is legal to consider and implicit coercion
-		 * from a value described by this ExpressionType to one described by target.
-		 *
-		 * An implicit coercion is when, for example, a boolean is expected, but
-		 * and integer is given. A desirable (and common) behaviour may be to
-		 * convert the integer value to true if and only if it is non-zero.
-		 *
-		 * Another context in which implicit coercions are desirable is when
-		 * casting from subclass to superclass.
-		 *
-		 * This method does not determine how to perform a coercion.
-		 * It only determines whether one should be considered.
-		 * A coercion may thus be allowed but not implemented, or implemented
-		 * but not allowed to be used implicitly by the compiler, so the user
-		 * may define a coercion from class A to class B, but not want it
-		 * to ever be used implicitly (in C++ that is achieved by annotating a
-		 * single-argument constructor with the `explicit` keyword).
-		 *
-		 * This is typically determined by rules specific for the Kind of the source type.
-		 *
-		 * @param target The target of a hypothetical implicit coercion.
-		 * @param context Context needed fo the query call.
-		 * @return Whether the implicit coercion is allowed or not.
-		 */
-		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
-
-		/**
 		 * @brief Whether the type carries any information, in an information-theoretic sense. For
 		 * example, the unit and void types does not carry any information, while other types do.
 		 * @param ctx Query context needed to process complex types, esp. classes.
@@ -277,6 +249,25 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		const std::string& toString() const;
+
+		/**
+		 * @brief Returns a source-oriented representation of this abstract type.
+		 *
+		 * Unlike @ref toString, whose output may contain internal type-system terminology, the
+		 * returned representation follows canonical Duckling source syntax whenever the type has a
+		 * type-expression spelling, for example `funptr(i64) -> bool | i64` or `(i64) -> bool`.
+		 * Compiler-level types which cannot currently be written as type expressions use a
+		 * human-readable representation instead, for example `Type template: Boxed`. Class and
+		 * template names include enclosing namespaces and
+		 * classes, but omit module paths and import aliases. Names therefore need not be unique
+		 * across modules or directly resolvable from the caller's scope.
+		 *
+		 * @param ctx Query context used to resolve namespace-qualified class names and baked
+		 * template arguments.
+		 * @return A string containing the source-oriented representation of this type.
+		 */
+		[[nodiscard]]
+		std::string sourceTypeName(query::Context& ctx) const;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;

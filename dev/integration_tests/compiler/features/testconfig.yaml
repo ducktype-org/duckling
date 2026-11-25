@@ -41,7 +41,7 @@ enable_conc_deterministic_tests: "true"
 # Number of duckc worker threads used for compilation and determinism checks.
 duckc_worker_count: "3"
 # Each case occupies that many threads, so the scheduler runs fewer cases at
-# once instead of oversubscribing the machine (and blowing the `TimeOut`s).
+# once instead of oversubscribing the machine.
 # However, most cases do not consume all "duckc_worker_count" threads consitently,
 # so this number is reduced so speed the tests up.
 NeededThreads: "2"
@@ -68,7 +68,7 @@ compiled_to_dvm: "@{case_build}/package_dvm.dbc"
 PreNode: ""
 
 PostCase: "@{cleanup_tmp_env}"
-PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts};
+PreCase: "@{copy_std_artifacts};
   case '@{backend}' in
     dvm)                @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)               @{compile_llvm_backend_cmd}                                                                               ;;

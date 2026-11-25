@@ -9,6 +9,7 @@
 #include <concurrent/base/locks/assert_lock.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/config/build_type.hpp>
@@ -327,7 +328,9 @@ namespace query::internal {
 		return *node_colors->atMaybe(start_node).value();
 	}
 
-	bool dummyEraseFunction(QueryStableHash) { return false; }
+	namespace {
+		bool dummyEraseFunction(QueryStableHash) { return false; }
+	}
 
 	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
@@ -508,7 +511,7 @@ namespace query::internal {
 		std::vector<NodeID>                idx_to_node;
 
 		for (const auto& [node, _]: *node_deps) {
-			node_to_idx.emplace(node, idx_to_node.size());
+			node_to_idx.put(node, idx_to_node.size());
 			idx_to_node.push_back(node);
 		}
 

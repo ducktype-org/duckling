@@ -189,6 +189,36 @@ namespace vm {
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 
+		/**
+		 * @brief The DVM call stack above `start_frame`, most recent call first. Used when a
+		 * runtime error escapes the interpreter.
+		 * @details In tail-call mode the current frame lives only in registers, so the stack is
+		 * read from the frames themselves: `ret` resets every frame it pops, which makes the live
+		 * frames exactly those with a function set. A very deep stack (a stack overflow) keeps
+		 * only its two ends. Each frame is filled in by `getStackFrame`.
+		 */
+		[[nodiscard]] api::StackTrace getVMStackTrace(const Frame* start_frame) const;
+
+		/**
+		 * @brief What the process knows about `frame`, which is `depth` calls away from the most
+		 * recent one: its function's mangled and Duckling names, where the function is defined,
+		 * and its call site. A caller frame resumes after its call, so its call site is the
+		 * instruction before its saved position: its Duckling file and line when the process has
+		 * debug info for it, else its position in the bytecode file. The innermost frame
+		 * (`depth == 0`) has no saved position, so it has no call site.
+		 */
+		[[nodiscard]] api::StackFrame getStackFrame(const Frame& frame, u64 depth) const;
+
+		/**
+		 * @brief Clears the frames which a runtime error left above `start_frame`.
+		 * @details A normal return (`ret`) clears each frame it leaves, but an exception skips
+		 * it, so these frames keep their function. `getVMStackTrace` takes every frame with a
+		 * function as live. Without this, the next error on this thread would also list the
+		 * frames of the old one. This happens e.g. when the main thread panicked: the global
+		 * destructors then run on the same thread, and one of them can panic too.
+		 */
+		void resetFramesAbove(Frame* start_frame);
+
 		void execGlobalDestructors() override;
 
 		/**

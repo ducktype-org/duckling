@@ -6,39 +6,27 @@
 
 /**
  * @file errors.hpp
- * @brief Errors and error messages related to failed coercions, plus the reasons a coercion may
- * fail with.
+ * @brief Errors and error messages related to failed coercions.
+ *
+ * @TODO: #3732 Make the errors gooood.
  */
 #pragma once
 
+#include <helios/tsh/coercions/coercion.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 
-#include <base/extend_cpp/stringifyable_enum.hpp>
-#include <base/pointers/box_or_ref.hpp>
+#include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 
 #include <diagnostic/message.hpp>
 #include <query_framework/context/context.hpp>
 
-#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
 
-/**
- * @brief The specific reason a coercion cannot be performed.
- */
-MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason,
-		/// The source type is not coercible to the target type.
-		IncompatibleTypes,
-		/// The value's type is not copyable, but this coercion required a copy.
-		TypeNotCopyable,
-		/// The value is copyable but not trivially copyable. The implicit copy must be made explicit
-		/// with `copy` or `move` keyword.
-		RequiresExplicitCopyMove
-);
-
-namespace compiler::helios {
-	class Coercion;
+namespace compiler::helios::coercions {
+	using tsh::coercions::Coercion;
 
 	class IncompatibleTypesError final: public dia::MessageWithCodeFragment {
 		dia::Metadata getMetadata() const final {
@@ -85,25 +73,39 @@ namespace compiler::helios {
 	 * @brief Optional overrides of the default coercion failure errors.
 	 */
 	struct CoercionErrorOverrides final {
-		using Logger = std::function<void(query::Context&)>;
+		using MessageReturner = std::function<Box<dia::MessageBase>()>;
 
-		/// Override for `InvalidCoercionReason::IncompatibleTypes`.
-		base::Optional<Logger> incompatible_types = {};
-		/// Override for `InvalidCoercionReason::TypeNotCopyable`.
-		base::Optional<Logger> type_not_copyable = {};
-		/// Override for `InvalidCoercionReason::RequiresExplicitCopyMove`.
-		base::Optional<Logger> requires_explicit_copy_move = {};
+		/// Override for `tsh::coercions::coercion_error::IncompatibleTypes`.
+		base::Optional<MessageReturner> incompatible_types = {};
+		/// Override for `tsh::coercions::coercion_error::MutabilityMismatch`.
+		base::Optional<MessageReturner> mutability_mismatch = {};
+		/// Override for `tsh::coercions::coercion_error::NotImplemented`.
+		base::Optional<MessageReturner> not_implemented = {};
+		/// Override for `tsh::coercions::coercion_error::AmbiguousCoercion`.
+		base::Optional<MessageReturner> ambiguous_coercion = {};
+		/// Override for `tsh::coercions::coercion_error::TypeNotCopyable`.
+		base::Optional<MessageReturner> type_not_copyable = {};
+		/// Override for `tsh::coercions::coercion_error::RequiresExplicitCopyMove`.
+		base::Optional<MessageReturner> requires_explicit_copy_move = {};
+
+		/**
+		 * @brief The override for a coercion refused for @p reason.
+		 */
+		[[nodiscard]] const base::Optional<MessageReturner>& overrideFor(
+			const tsh::coercions::CoercionFailure& reason
+		) const;
 	};
 
 	/**
-	 * @brief Builds the default diagnostic message describing why a coercion failed, based on the
-	 * `reason`.
+	 * @brief Builds the diagnostic message describing why a coercion was refused. Uses the
+	 * overrides provided in @p error_overrides if ones are provided.
 	 */
 	[[nodiscard]] Box<dia::MessageBase> getCoercionError(
 		query::Context&                     ctx,
 		const Coercion&                     failed,
 		dia::StablePosition                 source_position,
-		base::Optional<dia::StablePosition> coercion_expects_pos = {}
+		base::Optional<dia::StablePosition> coercion_expects_pos = {},
+		const CoercionErrorOverrides&       error_overrides      = {}
 	);
 
 	/**
@@ -115,7 +117,7 @@ namespace compiler::helios {
 		const Coercion&                     failed,
 		dia::StablePosition                 source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos,
-		CoercionErrorOverrides              error_overrides = {}
+		const CoercionErrorOverrides&       error_overrides = {}
 	);
 
 	/**

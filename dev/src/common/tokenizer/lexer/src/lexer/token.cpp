@@ -325,6 +325,13 @@ namespace lexer {
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
+	bool Token::isIdentifierLike() const {
+		return isIdentifier()
+		    || (isKeyword()
+		        && lang_def::keywordFlags(asKeyword())
+		               .contains(lang_def::KeywordFlagsOptions::IsIdentifierLike));
+	}
+
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
 
 	bool Token::isNumLiteralGroup() const { return type == Type::NumLiteralGroup; }
@@ -363,6 +370,17 @@ namespace lexer {
 	dia::SourcePosition Token::getPosition() const { return source_position; }
 
 	std::string Token::describe() const {
+		// Group tokens are an internal representation; describe their contents in user-facing
+		// terms instead of leaking names like `NumLiteralGroup` or `BracketGroup`.
+		switch (type) {
+		case Type::NumLiteralGroup:
+			return base::strConcat("number literal '", getStrValue(), "'");
+		case Type::BracketGroup:
+			return base::strConcat("brackets '", getStrValue(), "'");
+		default:
+			break;
+		}
+
 		if (type != Type::Sentinel)
 			return base::strConcat(typeToStr(type), " '", getStrValue(), "'");
 

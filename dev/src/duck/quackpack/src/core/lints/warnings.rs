@@ -1,0 +1,58 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+//! Various warnings created when parsing the [`manifest`].
+//!
+//! They are simple diagnostics, not associated with any lint, and are not checked when running
+//! [`run_lint_passes`].
+//!
+//! [`manifest`]: crate::core::parse
+//! [`run_lint_passes`]: super::run_lint_passes
+
+use super::{Diagnostic, macros};
+use crate::{DuckContext, QuackResult};
+
+#[derive(Debug, Default)]
+/// Warnings encountered when parsing the manifest.
+pub struct Warnings {
+    warnings: Vec<Box<dyn Diagnostic + 'static>>,
+}
+
+impl Warnings {
+    /// Create a new [`Warnings`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Register a new [`Diagnostic`] to be emitted later.
+    pub fn push<T: Diagnostic + 'static>(&mut self, warning: T) {
+        self.warnings.push(Box::new(warning));
+    }
+
+    /// Emit all registered [`Diagnostic`]s.
+    pub fn emit_warnings(&self, ctx: &DuckContext) -> QuackResult<()> {
+        for warning in &self.warnings {
+            emit_warning(warning, ctx)?;
+        }
+        Ok(())
+    }
+}
+
+/// Emit a single [`Diagnostic`] to an appropriate [`Terminal`](crate::context::terminal::Terminal).
+fn emit_warning(warning: &impl Diagnostic, ctx: &DuckContext) -> QuackResult<()> {
+    ctx.warning(warning)
+}
+
+macros::make_diagnostic! {
+    pub struct GitUrlIsPath {
+        pub url: String,
+        pub path_to_dep: String,
+    }
+    display(
+        "git url `{}` of a dependency `{}` is a path; it can cause surprising effects",
+        url, path_to_dep
+    )
+}

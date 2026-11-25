@@ -1,3 +1,3 @@
 add_subdirectory(persistent)
 
-set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
+set(vm_common_sources ${vm_common_sources} PARENT_SCOPE)

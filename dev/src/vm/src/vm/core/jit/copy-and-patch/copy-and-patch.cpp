@@ -127,6 +127,7 @@ namespace vm::jit {
 						return std::bit_cast<u64>(next);
 					case HoleValue::CallFn:
 						if (opcode == low::MicroOpcode::call_func_off
+						    || opcode == low::MicroOpcode::call_p64_off
 						    || opcode == low::MicroOpcode::virtualCall_pptr_method) {
 							return std::bit_cast<u64>(&jit::helpers::trampoline);
 						} else {
