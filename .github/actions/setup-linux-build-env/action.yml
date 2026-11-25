@@ -16,7 +16,7 @@ inputs:
     description: Linker from the build matrix.
     required: true
   coverage-enabled:
-    description: '"true" to install the coverage tooling (lcov + fastcov).'
+    description: '"true" to install the coverage tooling (lcov, fastcov, clang profile runtime).'
     required: false
     default: "false"
   build-deployables:
@@ -38,6 +38,12 @@ runs:
       uses: ./.github/actions/apt-get/
       with:
         packages: lcov
+
+    - name: Install clang profile runtime
+      if: ${{ inputs.coverage-enabled == 'true' }}
+      uses: ./.github/actions/apt-get/
+      with:
+        packages: libclang-rt-19-dev
 
     - name: Install fastcov
       if: ${{ inputs.coverage-enabled == 'true' }}

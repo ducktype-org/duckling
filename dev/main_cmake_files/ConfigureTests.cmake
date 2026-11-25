@@ -32,6 +32,8 @@ if(ENABLE_COVERAGE AND COVERAGE_BACKEND STREQUAL "gcov")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 	endif()
 	add_compile_options("-fprofile-exclude-files=^/usr/|^${CMAKE_BINARY_DIR}/")
+	# Arc counters sit after calls, so no call is ever a tail call.
+	set(COVERAGE_BLOCKS_TAIL_CALLS ON)
 
 	find_program(FASTCOV fastcov REQUIRED)
 
