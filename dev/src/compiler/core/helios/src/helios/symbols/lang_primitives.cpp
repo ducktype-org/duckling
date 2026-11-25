@@ -274,9 +274,9 @@ namespace compiler::helios {
 	}
 
 	SymID bakeLanguagePrimitiveWithTypes(
-		query::Context&                ctx,
-		LanguagePrimitive              primitive,
-		std::vector<tsh::SymbolType<>> type_arguments
+		query::Context&               ctx,
+		LanguagePrimitive             primitive,
+		std::vector<tsh::ValueType<>> type_arguments
 	) {
 		std::vector ctv_args
 			= type_arguments
@@ -285,14 +285,14 @@ namespace compiler::helios {
 		return bakeLanguagePrimitive(ctx, primitive, std::move(ctv_args));
 	}
 
-	tsh::SymbolType<> getOptionalNoneType(query::Context& ctx) {
+	tsh::ValueType<> getOptionalNoneType(query::Context& ctx) {
 		const SymID none_sym
 			= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::OptionalNone })
 		          ->valueOrThrow();
-		return tsh::SymbolType<>::withDefaultsMut(ctx.query<tsh::QueryClassType>(none_sym));
+		return tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryClassType>(none_sym));
 	}
 
-	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::SymbolType<> value_type) {
+	tsh::VariantAbstractType getOptionalType(query::Context& ctx, tsh::ValueType<> value_type) {
 		return ctx.query<tsh::QueryOptionalType>({ value_type });
 	}
 }

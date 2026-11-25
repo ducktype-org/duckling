@@ -8,14 +8,14 @@
 
 
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios {
 
-	using QuerySymbolType_Result = query::QResult<tsh::SymbolType<>>;
+	using QuerySymbolType_Result = query::QResult<tsh::ValueType<>>;
 
 	/**
 	 * @brief Query type of the symbol.
@@ -29,5 +29,5 @@ namespace compiler::helios {
 	 * If it is trivial, return empty optional.
 	 * @note This a public API the HELIOS code.
 	 */
-	base::Optional<helios::SymID> getTypeDestructor(query::Context&, tsh::SymbolType<>);
+	base::Optional<helios::SymID> getTypeDestructor(query::Context&, tsh::ValueType<>);
 }

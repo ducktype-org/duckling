@@ -18,14 +18,14 @@ namespace compiler::tsh::coercions {
 		);
 
 		return singleValueSource({
-			value.getSymbolType().getPointeeSymbolType(),
+			value.getValueType().getPointeeValueType(),
 			ValueCategory(PrimaryCategory::Dereferenced),
 		});
 	}
 
 	ValueSource ValueSource::partAt(const usize index) const {
-		const TupleAbstractType          tuple{ value.getType() };
-		const std::vector<SymbolType<>>& components = tuple.getComponents();
+		const TupleAbstractType         tuple{ value.getType() };
+		const std::vector<ValueType<>>& components = tuple.getComponents();
 		CORE_ASSERT(index < components.size(), "ValueSource part out of bounds");
 
 		// A part of a value that already exists came from wherever the value came from.
@@ -37,7 +37,7 @@ namespace compiler::tsh::coercions {
 			"A value built out of parts should be built out of one per component of its type."
 		);
 		CORE_ASSERT(
-			parts[index].getValue().getSymbolType() == components[index],
+			parts[index].getValue().getValueType() == components[index],
 			"The part given for a value has to be the part the type lists in that place."
 		);
 

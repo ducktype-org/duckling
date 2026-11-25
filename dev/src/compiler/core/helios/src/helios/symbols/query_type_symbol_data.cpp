@@ -168,7 +168,7 @@ namespace compiler::helios {
 			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
 			const auto& params  = fn_type.getParameterTypes();
 			// The parameters are `self` and the right-hand side, both taken by `ref`.
-			const auto is_ref = [](const tsh::SymbolType<>& param) {
+			const auto is_ref = [](const tsh::ValueType<>& param) {
 				return param.getRefKind() == tsh::ReferenceKind::Ref;
 			};
 			if (params.size() == 2 && is_ref(params.at(0)) && is_ref(params.at(1))
@@ -198,7 +198,7 @@ namespace compiler::helios {
 						// parameterTypes.size() == 1 means method has not params except self.
 						if (fn_type.getParameterTypes().size() == 1
 						    && fn_type.getResultType()
-						           == tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx)))
+						           == tsh::ValueType<>::withDefaultsMut(tsh::getStringType(ctx)))
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}
@@ -438,8 +438,8 @@ namespace compiler::helios {
 				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
 				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 				// type of the base class has any specifiers.
-				class_info.base = ctv.get<tsh::SymbolType<>>()->getType();
-				class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
+				class_info.base = ctv.get<tsh::ValueType<>>()->getType();
+				class_info.implements.push_back(ctv.get<tsh::ValueType<>>()->getType());
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
@@ -449,7 +449,7 @@ namespace compiler::helios {
 					);
 					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 					// type of the base class has any specifiers.
-					class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
+					class_info.implements.push_back(ctv.get<tsh::ValueType<>>()->getType());
 				}
 			}
 

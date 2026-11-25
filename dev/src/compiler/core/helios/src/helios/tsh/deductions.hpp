@@ -17,7 +17,7 @@
 
 #include "expression_type.hpp"
 #include "mutability.hpp"
-#include "symbol_type.hpp"
+#include "value_type.hpp"
 
 namespace compiler::tsh::deductions {
 	/**
@@ -43,7 +43,7 @@ namespace compiler::tsh::deductions {
 	 * auto symbol_type = declarationTypeFromInitializer(expr_type, Mutability::Immutable);
 	 */
 	[[nodiscard]]
-	SymbolType<> declarationTypeFromInitializer(
+	ValueType<> declarationTypeFromInitializer(
 		const ExpressionType<>& expr_type, Mutability expected_mutability
 	);
 
@@ -64,7 +64,7 @@ namespace compiler::tsh::deductions {
 	 * auto decl_type = declarationTypeFromProvidedType(given_type, Mutability::Immutable);
 	 */
 	[[nodiscard]]
-	SymbolType<> declarationTypeFromProvidedType(
-		const SymbolType<>& given_type, Mutability expected_mutability
+	ValueType<> declarationTypeFromProvidedType(
+		const ValueType<>& given_type, Mutability expected_mutability
 	);
 }
