@@ -768,13 +768,13 @@
 																	"sourceStart": 199,
 																	"sourceEnd": 202
 																},
-																"Keyword Expression": {
-																	"keyword": {
+																"Identifier Expression": {
+																	"name": {
 																		"position": {
 																			"sourceStart": 199,
 																			"sourceEnd": 202
 																		},
-																		"Keyword Wrapper": {
+																		"Identifier Wrapper": {
 																			"value": "self"
 																		}
 																	}

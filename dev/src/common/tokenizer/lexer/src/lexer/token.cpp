@@ -325,6 +325,13 @@ namespace lexer {
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 
+	bool Token::isIdentifierLike() const {
+		return isIdentifier()
+		    || (isKeyword()
+		        && lang_def::keywordFlags(asKeyword())
+		               .contains(lang_def::KeywordFlagsOptions::IsIdentifierLike));
+	}
+
 	bool Token::isNumLiteral() const { return type == Type::NumLiteral; }
 
 	bool Token::isNumLiteralGroup() const { return type == Type::NumLiteralGroup; }
