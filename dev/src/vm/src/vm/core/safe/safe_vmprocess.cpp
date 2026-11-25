@@ -279,19 +279,20 @@ namespace vm {
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
-		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
-		value->owned_by_process = true;
-		owned_vm_values.emplace_back(std::move(value));
-		return owned_vm_values.back().refMut();
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(const LocalSlot& slot) {
+		auto value = createVMValue(TypeCRef(slot.type));
+		value->importFromSlot(slot);
+		return value;
 	}
 
 	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type) {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 	}
 
-	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type, Pointer src) {
-		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(const LocalSlot& slot) {
+		auto value = createOwnedVMValue(TypeCRef(slot.type));
+		value->importFromSlot(slot);
+		return value;
 	}
 
 	SafeVMProcess::SafeVMProcess(

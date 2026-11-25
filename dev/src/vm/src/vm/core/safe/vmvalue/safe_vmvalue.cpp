@@ -8,6 +8,7 @@
 
 #include <logger/logger.hpp>
 
+#include <vm/core/safe/memory/local_slot_block.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
 #include <ostream>
@@ -44,11 +45,6 @@ vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type):
 	memory->increaseBlockRefcount(pointer.getBlock());
 }
 
-vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type, Pointer src):
-	  SafeVMValue(process, type) {
-	importData(src);
-}
-
 vm::SafeVMValue::~SafeVMValue() {
 	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VMValue not freed!\n");
 }
@@ -56,6 +52,24 @@ vm::SafeVMValue::~SafeVMValue() {
 void vm::SafeVMValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
 
 void vm::SafeVMValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
+
+void vm::SafeVMValue::exportToSlot(LocalSlot& slot) const {
+	if (slot.block == nullptr && type->needsBlock()) createLocalSlotBlock(slot, *memory);
+	if (slot.block != nullptr) {
+		exportData({ Ref(slot.block), 0 });
+		return;
+	}
+	// Without a variant in the type, the data has no child blocks to carry over.
+	memory->overwriteBytes({ slot.data, type->getSize().asInt() }, data.data(), type);
+}
+
+void vm::SafeVMValue::importFromSlot(const LocalSlot& slot) {
+	if (slot.block != nullptr) {
+		importData({ Ref(slot.block), 0 });
+		return;
+	}
+	memory->copyBytesIntoPointedData(pointer, slot.data, type);
+}
 
 void vm::SafeVMValue::importDataFrom(const IVMValue& source) {
 	const auto* safe_source = dynamic_cast<const SafeVMValue*>(&source);
