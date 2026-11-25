@@ -10,8 +10,4 @@ pub mod schemas;
 pub mod subcommands;
 pub mod util;
 
-<<<<<<< HEAD:dev/src/duck/src/lib/duck/mod.rs
-pub use main::{main, main_runner, setup_logger};
-=======
 pub use duck_core::*;
->>>>>>> main:dev/src/duck/quackpack/src/lib.rs

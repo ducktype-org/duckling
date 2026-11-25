@@ -544,6 +544,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "duck-fmt"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "duck_core",
+]
+
+[[package]]
 name = "duck_core"
 version = "0.3.0"
 dependencies = [
@@ -562,14 +570,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "duck-fmt"
-version = "0.1.0"
-dependencies = [
- "clap",
- "duck",
 ]
 
 [[package]]

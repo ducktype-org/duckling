@@ -11,11 +11,12 @@ use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 
 use clap::ArgMatches;
-use duck::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, TryFileVisitor};
-use duck::{DuckContext, QuackResult};
 
 use crate::duckfmt::DuckFmt;
-use crate::fmt_config::AnyPackageFmtExt;
+use crate::fmt_config::package_fmt_config_path;
+use crate::package_root::find_package_root;
+use crate::util::filesystem::{TryFileVisitor, visit_duckling_source_files};
+use crate::{DuckContext, QuackResult};
 
 /// Options of `duck-fmt`.
 pub struct FormatOptions {
@@ -34,23 +35,19 @@ impl FormatOptions {
 }
 
 /// Struct responsible for formatting a single package, given [`FormatOptions`].
-pub struct PackageFormatter<'duck> {
-    /// [`PackageContext`] of the package.
-    pcx: PackageContext<'duck>,
+pub struct PackageFormatter {
+    /// Root of the package.
+    root: PathBuf,
     /// [`FormatOptions`] to be used.
     options: FormatOptions,
 }
 
-impl<'duck> PackageFormatter<'duck> {
+impl PackageFormatter {
     /// Create a new [`PackageFormatter`].
-    ///
-    /// Note
-    /// ----
-    /// This calls [`PackageLoader::find_from_cwd`] with [`AllowGlobalPackage::No`],
-    /// as global package has no code, so it makes no sense to format it.
-    pub fn new(ctx: &'duck DuckContext, options: FormatOptions) -> QuackResult<Self> {
-        let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
-        Ok(Self { pcx, options })
+    /// This searches for the package's root with [`find_package_root`].
+    pub fn new(ctx: &DuckContext, options: FormatOptions) -> QuackResult<Self> {
+        let root = find_package_root(ctx.cwd())?;
+        Ok(Self { root, options })
     }
 
     /// Formats the package.
@@ -60,7 +57,7 @@ impl<'duck> PackageFormatter<'duck> {
         duckfmt_command.set_check(self.options.check);
         duckfmt_command.set_print(self.options.print);
 
-        let fmt_config_path = self.pcx.package().fmt_config_path()?;
+        let fmt_config_path = self.fmt_config_path();
         if fmt_config_path.exists() {
             duckfmt_command.set_fmt_config_path(&fmt_config_path);
         }
@@ -88,10 +85,14 @@ impl<'duck> PackageFormatter<'duck> {
             }
         }
 
+        let src = self.root.join("src");
         let mut collector = SourceFilesCollector { inner: vec![] };
-        self.pcx
-            .package()
-            .try_visit_all_source_files(&mut collector)?;
+        visit_duckling_source_files(&src, &mut collector)?;
         Ok(collector.inner)
+    }
+
+    /// Get the potential localization of the `duckfmt` config file.
+    fn fmt_config_path(&self) -> PathBuf {
+        package_fmt_config_path(&self.root)
     }
 }

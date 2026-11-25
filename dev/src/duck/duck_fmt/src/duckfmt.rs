@@ -11,8 +11,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use duck::util::command_ext::CommandExt;
-use duck::{QuackError, QuackResult, QuackResultContext, StrId};
+use crate::util::command_ext::CommandExt;
+use crate::{QuackError, QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
 /// Data holder of all required in order to execute the formatter.

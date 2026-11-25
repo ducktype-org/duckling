@@ -7,7 +7,8 @@
 //! Command line interface of `duck-fmt`.
 
 use clap::Command;
-use duck::duck::driver::{cli_ext::flag, styles::get_styles};
+use duck_core::cli::flag;
+use duck_core::cli::styles::get_styles;
 
 /// Returns command line interface of `duck-fmt` as a [`Command`].
 pub(super) fn cli() -> Command {

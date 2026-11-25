@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 clap = { workspace = true }
-duck = { path = ".."}
+duck_core = { path = "../duck_core"}

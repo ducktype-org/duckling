@@ -33,20 +33,9 @@ use std::ops::ControlFlow;
 use std::path::Path;
 use std::time::SystemTime;
 
+use duck_core::util::filesystem::{TryFileVisitor, visit_duckling_source_files};
+
 use crate::QuackResult;
-<<<<<<< HEAD:dev/src/duck/src/lib/quackpack/core/compile/unit_runner/incremental/red_green_nodes.rs
-use crate::quackpack::core::TryFileVisitor;
-use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
-use crate::quackpack::core::compile::unit::Unit;
-use crate::quackpack::core::compile::unit::graph::{
-    CompilationInput, GraphNodeId, UnitGraph, UnitGraphNode, UnitGraphNodeData,
-};
-use crate::quackpack::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
-use crate::quackpack::core::compile::unit_runner::outputs::unit_output;
-use crate::util::path_ops::{change_time, modification_time};
-=======
-use crate::core::AnyPackage;
 use crate::core::compile::BuildContext;
 use crate::core::compile::artifacts_layout::ProfileLayout;
 use crate::core::compile::unit::Unit;
@@ -55,10 +44,7 @@ use crate::core::compile::unit::graph::{
 };
 use crate::core::compile::unit_runner::incremental::{BuildData, IncrementalData};
 use crate::core::compile::unit_runner::outputs::unit_output;
-use crate::core::script::Script;
-use crate::util::duckling_consts::{DUCKLING_MODULE_EXT, DUCKLING_SCRIPT_EXT};
-use crate::util::filesystem::{change_time, create_dir_iterator, modification_time};
->>>>>>> main:dev/src/duck/quackpack/src/core/compile/unit_runner/incremental/red_green_nodes.rs
+use crate::util::filesystem::{change_time, modification_time};
 
 impl UnitGraphNode {
     /// Main logic for checking whether a [`UnitGraphNode`] is green or red.
@@ -137,10 +123,12 @@ impl CompilationInput {
     ) -> QuackResult<bool> {
         let CompilationInput::PackageSourceCode(identity) = self;
         let mut check_visitor = InputCheckVisitor::new(incremental_data.prev_build_start());
-        graph
+        let src_path = graph
             .package_data(*identity)
             .package()
-            .try_visit_all_source_files(&mut check_visitor)?;
+            .src()
+            .expect("always package");
+        visit_duckling_source_files(src_path, &mut check_visitor)?;
         current_build_data
             .add_number_of_source_files(*identity, check_visitor.number_of_source_files);
         Ok(check_visitor.all_mtimes_ok

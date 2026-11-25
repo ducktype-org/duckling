@@ -6,26 +6,13 @@
 
 //! Module for finding the location of the `duckfmt` configuration file from [`AnyPackage`].
 
-use std::path::PathBuf;
-
-use duck::quackpack::core::AnyPackage;
-use duck::{QuackResult, qp_bail_internal};
+use std::path::{Path, PathBuf};
 
 /// Name of the `duckfmt` configuration file.
 const FMT_CONFIG_FILE: &str = "fmt.json";
 
-pub trait AnyPackageFmtExt {
-    /// Return the location to find the `duckfmt` configuration file.
-    /// Root of the package for packages, undecided for scripts.
-    fn fmt_config_path(&self) -> QuackResult<PathBuf>;
-}
-
-impl AnyPackageFmtExt for AnyPackage {
-    fn fmt_config_path(&self) -> QuackResult<PathBuf> {
-        if self.is_package() {
-            Ok(self.root().join(FMT_CONFIG_FILE))
-        } else {
-            qp_bail_internal!("formatting non-package targets is currently unsupported")
-        }
-    }
+/// Get the `duckfmt` config file for formatting a package.
+/// Currently only looks at package root for it (but might also look at duck home).
+pub fn package_fmt_config_path(root: &Path) -> PathBuf {
+    root.join(FMT_CONFIG_FILE)
 }

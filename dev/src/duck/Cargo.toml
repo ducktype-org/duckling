@@ -5,7 +5,7 @@ edition.workspace = true
 publish.workspace = true
 
 [workspace]
-members = [".", "duck_core", "quackpack", "duck_fmt]
+members = [".", "duck_core", "quackpack", "duck_fmt"]
 default-members = [".", "duck_core", "quackpack"]
 resolver = "3"
 

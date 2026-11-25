@@ -12,25 +12,6 @@ use std::error::Error;
 use chrono::Local;
 use tracing::info;
 
-<<<<<<< HEAD:dev/src/duck/src/lib/duck/main.rs
-use crate::duck::util::indent::indent;
-use crate::duck::util::terminal::Terminal;
-use crate::util::error::{ErrorExt, ErrorType, InternalError};
-use crate::{DuckContext, QuackError, QuackResult};
-
-/// Actual main entry point for the duck-binary.
-/// Wrapper on [`main_runner`] with the correct `run` function.
-pub fn main() {
-    main_runner(crate::duck::driver::run::run);
-}
-
-/// Main pipeline of the duck-binary.
-/// Parametrized by `run` so that it can be used by duck's dependencies.
-pub fn main_runner<F>(run: F)
-where
-    F: FnOnce(&mut DuckContext) -> QuackResult<()>,
-{
-=======
 use crate::duck_context::Terminal;
 use crate::error::{ErrorExt, ErrorType, InternalError};
 use crate::util::indent::indent;
@@ -42,7 +23,6 @@ use crate::{DuckContext, QuackError, QuackResult};
 /// An error, from the context creation or from `run`, is printed and the process exits with
 /// [`QuackError::exit_code`]. Returns normally only when `run` succeeds.
 pub fn main(run: impl FnOnce(&mut DuckContext) -> QuackResult<()>) {
->>>>>>> main:dev/src/duck/duck_core/src/pipeline.rs
     setup_logger();
     let mut ctx = match DuckContext::new() {
         Ok(ctx) => ctx,

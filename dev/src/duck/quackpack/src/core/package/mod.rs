@@ -17,14 +17,12 @@
 
 mod package_context;
 pub mod script;
-mod source_files_visitor;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 pub use package_context::*;
 use script::Script;
-pub use source_files_visitor::TryFileVisitor;
 
 use crate::core::identity::{Identity, Origin};
 use crate::core::{Manifest, VenvConfig, Version};

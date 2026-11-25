@@ -12,8 +12,7 @@
 //! - [`fmt_config`] - locating `duckfmt` config inside a package,
 //! - [`formatting`] - main logic for formatting a package.
 
-use duck::duck::main_runner;
-use duck::{DuckContext, QuackResult};
+use duck_core::*;
 
 use crate::formatting::{FormatOptions, PackageFormatter};
 
@@ -25,7 +24,7 @@ mod formatting;
 /// Main entry point to the `duck-fmt` binary.
 /// Reuses [`duck::duck::main_runner`] abstraction.
 fn main() {
-    main_runner(run)
+    pipeline::main(run);
 }
 
 /// Main pipeline of `duck-fmt`.
