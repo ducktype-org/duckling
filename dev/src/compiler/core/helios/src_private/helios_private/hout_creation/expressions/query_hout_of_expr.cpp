@@ -799,18 +799,6 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
-				case pst::Keyword::Self: {
-					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getStablePosition(), ctx, base::StrID("self")
-					);
-
-					node = makeBox<IdentifierExpr>(
-						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
-					);
-					break;
-				}
 				default:
 					ctx.log<dia::NotYetImplementedCodeError>(
 						"Keyword not yet handled.", stmt->getStablePosition()

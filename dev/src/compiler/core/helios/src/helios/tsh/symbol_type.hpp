@@ -411,6 +411,24 @@ namespace compiler::tsh {
 			);
 		}
 
+		/**
+		 * @brief Returns a source-oriented representation of this symbol type.
+		 *
+		 * The returned representation includes all applicable symbol qualifiers, such as `imm`,
+		 * `ref`, `box`, `unique` and `leaking`, in the same order as @ref toString. The qualifiers
+		 * `unique` and `leaking` currently have no type-expression syntax. The underlying type
+		 * follows Duckling source syntax whenever it has a type-expression spelling and otherwise
+		 * uses the human-readable fallback documented by AbstractType::sourceTypeName. The result
+		 * is intended for user-facing output, subject to the name-qualification limitations
+		 * documented by AbstractType::sourceTypeName.
+		 *
+		 * @param ctx Query context used to resolve namespace-qualified class names and baked
+		 * template arguments.
+		 * @return A string containing the source-oriented representation of this symbol type.
+		 */
+		[[nodiscard]]
+		std::string sourceTypeName(query::Context& ctx) const;
+
 	private:
 		ABSTRACT_TYPE abstract_type;
 		ReferenceKind reference_kind;
@@ -421,4 +439,5 @@ namespace compiler::tsh {
 
 	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const
 		-> SymbolType<AbstractType>;
+	extern template std::string SymbolType<AbstractType>::sourceTypeName(query::Context&) const;
 }

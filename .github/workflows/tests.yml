@@ -372,7 +372,7 @@ jobs:
           ITEST_LOG="$log_dir/dit.log"
           rm -f "$ITEST_LOG"
           echo "ITEST_LOG=$ITEST_LOG" >> "$GITHUB_ENV"
-          ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG" ${{ env.COVERAGE_ENABLED == 'true' && '--timeout-scale 5' || '' }} ${{ env.PLATFORM == 'macos' && '--timeout-scale 5' || '' }}
+          ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --log-file "$ITEST_LOG"
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
