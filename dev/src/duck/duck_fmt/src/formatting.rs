@@ -22,6 +22,7 @@ use crate::{DuckContext, QuackResult};
 pub struct FormatOptions {
     pub check: bool,
     pub print: bool,
+    pub config_path: Option<PathBuf>,
 }
 
 impl FormatOptions {
@@ -30,6 +31,7 @@ impl FormatOptions {
         Self {
             check: matches.get_flag("check"),
             print: matches.get_flag("print"),
+            config_path: matches.get_one("config").cloned(),
         }
     }
 }
@@ -65,14 +67,23 @@ impl PackageFormatter {
         duckfmt_command.set_check(self.options.check);
         duckfmt_command.set_print(self.options.print);
 
-        let fmt_config_path = self.fmt_config_path();
-        if fmt_config_path.exists() {
-            duckfmt_command.set_fmt_config_path(&fmt_config_path);
-        }
         let files = self.collect_source_files()?;
         if files.is_empty() {
             // Nothing to do.
             return Ok(());
+        }
+
+        // Config from [`FormatOptions`] is more important that package's config.
+        let config_path = self.options.config_path.or_else(|| {
+            let pkg_config_path = package_fmt_config_path(&self.root);
+            if pkg_config_path.exists() {
+                Some(pkg_config_path)
+            } else {
+                None
+            }
+        });
+        if let Some(config_path) = config_path {
+            duckfmt_command.set_fmt_config_path(&config_path);
         }
         duckfmt_command.add_files_to_format(&files);
         duckfmt_command.execute_and_replace()?;
@@ -98,11 +109,6 @@ impl PackageFormatter {
         visit_duckling_source_files(&src, &mut collector)?;
         Ok(collector.inner)
     }
-
-    /// Get the potential localization of the `duckfmt` config file.
-    fn fmt_config_path(&self) -> PathBuf {
-        package_fmt_config_path(&self.root)
-    }
 }
 
 impl FilesFormatter {
@@ -118,6 +124,11 @@ impl FilesFormatter {
         duckfmt_command.set_check(self.options.check);
         duckfmt_command.set_print(self.options.print);
         duckfmt_command.add_files_to_format(&self.files);
+
+        if let Some(config_path) = self.options.config_path {
+            duckfmt_command.set_fmt_config_path(&config_path);
+        }
+
         duckfmt_command.execute_and_replace()?;
         Ok(())
     }

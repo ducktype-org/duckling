@@ -6,9 +6,11 @@
 
 //! Command line interface of `duck-fmt`.
 
-use clap::Command;
-use duck_core::cli::flag;
+use std::path::PathBuf;
+
+use clap::{Arg, Command, value_parser};
 use duck_core::cli::styles::get_styles;
+use duck_core::cli::{flag, optional};
 
 /// Returns command line interface of `duck-fmt` as a [`Command`].
 pub(super) fn cli() -> Command {
@@ -18,9 +20,21 @@ pub(super) fn cli() -> Command {
             .short('k')
         )
         .arg(
-            flag("print", "Do not rewrite the files; print each formatted file on stdout")
+            flag("print", "Do not rewrite the files; print each formatted file on stdout.")
             .short('p')
             .conflicts_with("check")
+        )
+        .arg(
+            optional("config", "Path to a JSON formatter configuration file.")
+            .short('p')
+            .value_parser(value_parser!(PathBuf))
+        )
+        .arg(
+            Arg::new("files")
+                .help("Files to format")
+                .trailing_var_arg(true)
+                .num_args(0..)
+                .value_parser(value_parser!(PathBuf))
         )
         .styles(get_styles())
         .about("Formats all Duckling files inside the current package using `duckfmt`")

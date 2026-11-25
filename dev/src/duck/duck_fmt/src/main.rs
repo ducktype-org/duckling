@@ -12,9 +12,12 @@
 //! - [`fmt_config`] - locating `duckfmt` config inside a package,
 //! - [`formatting`] - main logic for formatting a package.
 
+use std::path::PathBuf;
+
+use clap::ArgMatches;
 use duck_core::*;
 
-use crate::formatting::{FormatOptions, PackageFormatter};
+use crate::formatting::{FilesFormatter, FormatOptions, PackageFormatter};
 
 mod cli;
 mod duckfmt;
@@ -32,6 +35,22 @@ fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let cli = cli::cli();
     let matches = cli.try_get_matches()?;
     let options = FormatOptions::from_matches(&matches);
-    let formatter = PackageFormatter::new(ctx, options)?;
-    formatter.format()
+    match files_to_format(&matches) {
+        Some(files) => {
+            // We have a list of files to format, so format them.
+            let formatter = FilesFormatter::new(files, options);
+            formatter.format()
+        }
+        None => {
+            // We have no files to format, so the user wants to format all files inside the package.
+            let formatter = PackageFormatter::new(ctx, options)?;
+            formatter.format()
+        }
+    }
+}
+
+/// Get a list of files to fromat from [`ArgMatches`].
+fn files_to_format(matches: &ArgMatches) -> Option<Vec<PathBuf>> {
+    let files = matches.get_many::<PathBuf>("files")?;
+    Some(files.into_iter().map(|x| x.clone()).collect())
 }
