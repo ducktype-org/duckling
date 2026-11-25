@@ -15,17 +15,14 @@ if(ENABLE_COVERAGE)
 	# drops them anyway, and their shared atomic counters make the instrumented binaries much slower.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-		# ccache won't cache a compile with -fprofile-exclude-files on its command line, but it
-		# hashes a specs file's contents. Specs files are GCC-only, so other compilers get the
-		# flag directly and their coverage compiles are not cached.
-		# Regexes are ;-separated, since | is a pipe in specs.
+		# ccache rejects -fprofile-exclude-files but hashes specs files. ';' since '|' is a pipe in specs.
 		set(COVERAGE_SPECS_FILE "${CMAKE_BINARY_DIR}/coverage.specs")
 		file(CONFIGURE OUTPUT "${COVERAGE_SPECS_FILE}"
 			CONTENT "*cc1plus:\n+ -fprofile-exclude-files=^/usr/;^${CMAKE_BINARY_DIR}/\n" @ONLY
 		)
 		add_compile_options("-specs=${COVERAGE_SPECS_FILE}")
 	else()
-		add_compile_options("-fprofile-exclude-files=^/usr/$<SEMICOLON>^${CMAKE_BINARY_DIR}/")
+		add_compile_options("-fprofile-exclude-files=^/usr/|^${CMAKE_BINARY_DIR}/")
 	endif()
 
 	find_program(FASTCOV fastcov REQUIRED)

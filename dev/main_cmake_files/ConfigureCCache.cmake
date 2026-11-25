@@ -3,37 +3,36 @@ option(USE_CCACHE "Use ccache" OFF)
 if(USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
-	set(SHIPPED_BINARIES_FILE "${CMAKE_CURRENT_SOURCE_DIR}/scripts/shipped_binaries.json")
-	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SHIPPED_BINARIES_FILE}")
-	file(READ "${SHIPPED_BINARIES_FILE}" SHIPPED_BINARIES)
-	string(JSON CCACHE_SHIPPED_VERSION GET "${SHIPPED_BINARIES}" ccache)
+	set(DOWNLOADED_BINARIES_FILE "${CMAKE_CURRENT_SOURCE_DIR}/scripts/downloaded_binaries.json")
+	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${DOWNLOADED_BINARIES_FILE}")
+	file(READ "${DOWNLOADED_BINARIES_FILE}" DOWNLOADED_BINARIES)
+	string(JSON CCACHE_REQUIRED_VERSION GET "${DOWNLOADED_BINARIES}" ccache)
 
-	set(CCACHE_FIX_HINT "Run `./toolbox.py download-binaries -s ccache -f` to get ccache ${CCACHE_SHIPPED_VERSION}.")
+	set(CCACHE_FIX_HINT "Run `./toolbox.py download-binaries -s ccache` to get ccache ${CCACHE_REQUIRED_VERSION}.")
 
-	# NO_CACHE so a ccache downloaded after the first configure is picked up.
-	find_program(CCACHE "ccache" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts/downloads/" NO_CACHE)
-	if(NOT CCACHE)
+	find_program(CCACHE_PROGRAM "ccache" HINTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts/downloads/" NO_CACHE)
+	if(NOT CCACHE_PROGRAM)
 		message(FATAL_ERROR "ccache not found. ${CCACHE_FIX_HINT}")
 	endif()
 
 	execute_process(
-		COMMAND "${CCACHE}" --version
+		COMMAND "${CCACHE_PROGRAM}" --version
 		OUTPUT_VARIABLE CCACHE_VERSION_OUTPUT
 		ERROR_QUIET
 	)
 	string(REGEX MATCH "ccache version ([0-9.]+)" _ "${CCACHE_VERSION_OUTPUT}")
 	set(CCACHE_FOUND_VERSION "${CMAKE_MATCH_1}")
 
-	if(NOT CCACHE_FOUND_VERSION VERSION_EQUAL CCACHE_SHIPPED_VERSION)
+	if(NOT CCACHE_FOUND_VERSION VERSION_EQUAL CCACHE_REQUIRED_VERSION)
 		message(FATAL_ERROR
-			"ccache at ${CCACHE} is version '${CCACHE_FOUND_VERSION}', but Duckling requires "
-			"${CCACHE_SHIPPED_VERSION}. ${CCACHE_FIX_HINT}"
+			"ccache at ${CCACHE_PROGRAM} is version '${CCACHE_FOUND_VERSION}', but Duckling requires "
+			"${CCACHE_REQUIRED_VERSION}. ${CCACHE_FIX_HINT}"
 		)
 	endif()
 
-	message(STATUS "Ccache set to: ${CCACHE} (${CCACHE_FOUND_VERSION})")
+	message(STATUS "Ccache set to: ${CCACHE_PROGRAM} (${CCACHE_FOUND_VERSION})")
 
 	# As of 02.2024 there is no better way to set configuration other then listing it here:
 	# @FUTURE It might change in the future
-	set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache/;max_size=1")
+	set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM};cache_dir=${CMAKE_CURRENT_SOURCE_DIR}/.ccache/;max_size=1")
 endif(USE_CCACHE)
