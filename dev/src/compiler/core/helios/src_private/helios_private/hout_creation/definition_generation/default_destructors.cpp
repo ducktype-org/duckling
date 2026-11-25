@@ -32,7 +32,7 @@ namespace compiler::helios::defgen {
 		 */
 		SymID boxFreeSymFor(query::Context& ctx, const tsh::AbstractType pointee_type) {
 			return bakeLanguagePrimitiveWithTypes(
-				ctx, LanguagePrimitive::BoxFree, { tsh::ValueType<>::withDefaultsMut(pointee_type) }
+				ctx, LanguagePrimitive::BoxFree, { tsh::ValueType<>::direct(pointee_type) }
 			);
 		}
 	}
@@ -80,10 +80,9 @@ namespace compiler::helios::defgen {
 			// A `box T` owns its pointee and its heap storage. `boxFree` destroys the pointee and
 			// then frees the memory, so the box itself is all it needs.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				const auto pointee_type = tsh::ValueType<>::withDefaultsMut(type.getType());
-				const auto storage_type = tsh::ValueType<>::withDefaultsMut(
-					ctx.query<tsh::QueryPointerType>({ pointee_type })
-				);
+				const auto pointee_type = tsh::ValueType<>::direct(type.getType());
+				const auto storage_type
+					= tsh::ValueType<>::direct(ctx.query<tsh::QueryPointerType>({ pointee_type }));
 
 				body.emplace_back(s.expr(s.call(
 					s.ident(boxFreeSymFor(ctx, type.getType())),
@@ -173,14 +172,14 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
 
-				const auto payload_type
-					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
+				const auto payload_type = alternatives[i].toRef();
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
-					.name                  = base::StrID(base::strConcat("__alternative_", i)),
-					.generated_symbol_data = Variable{ .function_symbol = dtor_sym,
-				                                       .variable_index  = i,
-				                                       .type            = payload_type },
+					.name = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data
+					= Variable{ .function_symbol = dtor_sym,
+				                .variable_index  = i,
+				                .type = tsh::SymbolType(payload_type, tsh::PlaceAccess::Mutable) },
 				});
 
 				// The binding already is the reference the destructor wants. Going through
@@ -223,12 +222,14 @@ namespace compiler::helios::defgen {
 
 			const auto i64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_type = tsh::ValueType<>::withDefaultsMut(i64_abs_type);
+			const auto i64_type = tsh::ValueType<>::direct(i64_abs_type);
 
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name = base::StrID("__i"),
 				   .generated_symbol_data
-                = Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = i64_type },
+                = Variable{ .function_symbol = dtor_sym,
+			                   .variable_index  = 0,
+			                   .type = tsh::SymbolType(i64_type, tsh::PlaceAccess::Mutable) },
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
 			                    .expect("i64 creation failed");

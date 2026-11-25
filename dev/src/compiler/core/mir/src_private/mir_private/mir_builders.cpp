@@ -112,6 +112,7 @@ namespace compiler::mir {
 				  variant_case(FunctionSymID, fun_sym) {
 					  return ctx.query<helios::QueryTypeOfSymbol>(fun_sym.id)
 				          ->valueOrThrow()
+				          .getValueType()
 				          .getType();
 				  }
 				  variant_default {
@@ -194,7 +195,7 @@ namespace compiler::mir {
 		local_list.emplaceBack(MIRLocal{
 			LocalID(next_local_id++),
 			helios_id,
-			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
+			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow().getValueType(),
 			{} });
 		return local_list.last();
 	}
@@ -207,7 +208,7 @@ namespace compiler::mir {
 		local_list.emplaceBack(MIRLocal{
 			LocalID(next_local_id++),
 			helios_id,
-			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
+			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow().getValueType(),
 			LifetimeFlag::NoScopeFlags,
 			parameter_index,
 		});
@@ -264,7 +265,7 @@ namespace compiler::mir {
 	 */
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addConditionTmp(ScopeRef scope) {
-		auto type = tsh::ValueType<>::withDefaults(tsh::getBoolType());
+		auto type = tsh::ValueType<>::direct(tsh::getBoolType());
 		auto tmp  = addTmp(type, scope);
 		tmp->lifetime_flags |= LifetimeFlag::ConditionTmpValue | LifetimeFlag::NoDestructor;
 		return tmp;

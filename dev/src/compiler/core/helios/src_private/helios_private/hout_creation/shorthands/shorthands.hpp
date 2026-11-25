@@ -522,10 +522,7 @@ namespace compiler::helios::code::shorthands {
 		Box<VariableStmt> var(SymID symbol, Box<Expr> init) const {
 			const auto type = init->expression_type.getType();
 			return makeBox<VariableStmt>(
-				generatedOrigin(),
-				consume(std::move(init)),
-				tsh::ValueType<>::withDefaultsMut(type),
-				symbol
+				generatedOrigin(), consume(std::move(init)), tsh::ValueType<>::direct(type), symbol
 			);
 		}
 

@@ -48,16 +48,9 @@ namespace compiler::helios::desugaring {
 		};
 
 		tsh::ValueType<> getI64(query::Context& ctx) {
-			return tsh::ValueType<>::withDefaultsMut(
+			return tsh::ValueType<>::direct(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
-		}
-
-		tsh::ValueType<> getConstI64(query::Context& ctx) {
-			return tsh::ValueType<>::withDefaultsMut(
-					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
-			)
-			    .withMutability(tsh::Mutability::Immutable);
 		}
 
 		base::Optional<ForDesugarCtx> buildForDesugarCtx(
@@ -132,9 +125,7 @@ namespace compiler::helios::desugaring {
 				std::move(length_args)
 			);
 
-			return makeBox<code::VariableStmt>(
-				gen, std::move(len_expr), getConstI64(ctx.ctx), len_sym
-			);
+			return makeBox<code::VariableStmt>(gen, std::move(len_expr), getI64(ctx.ctx), len_sym);
 		}
 
 		// __idx < __len
@@ -242,7 +233,7 @@ namespace compiler::helios::desugaring {
 	ForGeneratedSymbols getForGeneratedSymbols(query::Context& ctx, pst::Access<pst::For> stmt) {
 		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-		auto get_generated_local = [&](base::StrID role, tsh::ValueType<> type) {
+		auto get_generated_local = [&](base::StrID role, tsh::SymbolType type) {
 			// No discriminator in the name: it is part of the query key, so anything derived from
 			// the loop (scope id, position, hash) would differ per compilation or move on edits.
 			auto name = role;
@@ -262,8 +253,12 @@ namespace compiler::helios::desugaring {
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
-			.index  = get_generated_local(base::StrID("__index"), getI64(ctx)),
-			.length = get_generated_local(base::StrID("__len"), getConstI64(ctx)),
+			.index = get_generated_local(
+				base::StrID("__index"), tsh::SymbolType(getI64(ctx), tsh::PlaceAccess::Mutable)
+			),
+			.length = get_generated_local(
+				base::StrID("__len"), tsh::SymbolType(getI64(ctx), tsh::PlaceAccess::Immutable)
+			),
 		};
 	}
 
@@ -280,7 +275,8 @@ namespace compiler::helios::desugaring {
 
 		// Get the needed symbols.
 		ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, stmt);
-		tsh::ValueType<> iter_type = ctx.query<QueryTypeOfSymbol>(symbols.iterator)->valueOrThrow();
+		tsh::ValueType<>    iter_type
+			= ctx.query<QueryTypeOfSymbol>(symbols.iterator)->valueOrThrow().getValueType();
 
 		Box<code::Expr> reusable_inner = [&]() -> Box<code::Expr> {
 			if (for_ctx.collection_is_l_value)

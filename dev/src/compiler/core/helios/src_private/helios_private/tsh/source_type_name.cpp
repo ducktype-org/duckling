@@ -188,7 +188,7 @@ namespace compiler::tsh {
 			};
 		case Kind::Slice: {
 			const auto element = type.as<SliceAbstractType>().getElementType();
-			if (element == ValueType<>::withDefaultsMut(getCharType()))
+			if (element == ValueType<>::direct(getCharType()))
 				return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
 			return {
 				.text
@@ -273,7 +273,6 @@ namespace compiler::tsh {
 		const std::string prefix = base::strConcat(
 			type.getUniqueness() == Uniqueness::Unique ? "unique " : "",
 			type.getLeakage() == Leakage::Leaking ? "leaking " : "",
-			type.getMutability() == Mutability::Immutable ? "imm " : "",
 			type.getRefKind() == Direct ? ""
 			: type.getRefKind() == Box  ? "box "
 										: "ref "

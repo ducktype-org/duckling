@@ -43,7 +43,6 @@ public:
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(classWithArrayFieldTest);
-		TESTER_ADD_TEST(mutabilityTest);
 		TESTER_ADD_TEST(pointerLayoutManglingTest);
 	}
 
@@ -59,10 +58,8 @@ private:
 		}
 	}
 
-	using enum Mutability;
-
-	static ValueType<> vt(const AbstractType abstract_type, const bool is_mutable = false) {
-		return ValueType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	static ValueType<> vt(const AbstractType abstract_type) {
+		return ValueType<>::direct(abstract_type);
 	}
 
 	void basicTypesTest() {
@@ -377,10 +374,8 @@ private:
 			);
 			const ValueType<> f16_type = vt(getFloatType(ctx, 16));
 			const ValueType<> f64_type = vt(getFloatType(ctx, 64));
-			const ValueType<> f16_ref
-				= ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Ref, Immutable };
-			const ValueType<> f16_box
-				= ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Box, Immutable };
+			const ValueType<> f16_ref  = ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Ref };
+			const ValueType<> f16_box  = ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Box };
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });
@@ -565,27 +560,9 @@ private:
 		});
 	}
 
-	void mutabilityTest() {
-		withContextDo([&](query::Context& ctx) -> void {
-			auto int_value_type = vt(
-				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed),
-				true
-			);
-			auto const_int_value_type = int_value_type.withMutability(Immutable);
-			auto int_layout           = queryValueTypeLayout(ctx, int_value_type);
-			auto const_int_layout     = queryValueTypeLayout(ctx, const_int_value_type);
-			assertTrue(
-				*int_layout == *const_int_layout, "Symbol mutability should not affect type layout"
-			);
-
-			testPrinting(int_layout, ctx);
-			testPrinting(const_int_layout, ctx);
-		});
-	}
-
 	void pointerLayoutManglingTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto i64 = ValueType<>::withDefaultsMut(
+			auto i64 = ValueType<>::direct(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			auto ref_i64 = i64.toRef();

@@ -141,6 +141,7 @@ namespace compiler::lir {
 			tsh::FunctionAbstractType type
 				= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 			          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
+			          .getValueType()
 			          .getType();
 
 			auto link_once
@@ -1293,7 +1294,7 @@ namespace compiler::lir {
 	) {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
 			.parameter_types = {},
-			.result_type     = tsh::ValueType<>::withDefaults(tsh::getUnitType()),
+			.result_type     = tsh::ValueType<>::direct(tsh::getUnitType()),
 		});
 
 		auto layouts = getFunctionLayouts(ctx, function_type);

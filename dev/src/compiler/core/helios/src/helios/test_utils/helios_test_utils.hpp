@@ -12,6 +12,7 @@
 #include <helios/hout/elements/expr.hpp>  // @TODO: #404 relax this dependency, just expr is needed
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/utils/symbol_list.hpp>
 
 #include <filesystem/file.hpp>
@@ -93,9 +94,18 @@ namespace compiler::helios::test_utils {
 	 * Use this to get the type of the variable `a` in `var a : i32`.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
-	 * @return The ValueType of the last symbol in the chain.
+	 * @return The value type of the last symbol in the chain.
 	 */
 	tsh::ValueType<> getValueTypeOf(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the type of the last symbol in a symbol chain in a given scope, together with whether
+	 * its place may be written to.
+	 * @param chain The symbol chain to resolve.
+	 * @param scope The scope in which to resolve.
+	 * @return The symbol type of the last symbol in the chain.
+	 */
+	tsh::SymbolType getSymbolTypeOf(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the abstract type of the value associated with last symbol in a symbol chain

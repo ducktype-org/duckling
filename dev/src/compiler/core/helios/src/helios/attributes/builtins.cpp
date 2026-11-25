@@ -177,7 +177,7 @@ namespace compiler::helios {
 				.name                  = base::StrID("__result"),
 				.generated_symbol_data = Variable{ .function_symbol = symbol,
 			                                       .variable_index  = 0,
-			                                       .type            = result_sym_type },
+			                                       .type            = tsh::SymbolType(result_sym_type, tsh::PlaceAccess::Mutable) },
 			});
 
 			auto body = StmtPack{
@@ -285,7 +285,7 @@ namespace compiler::helios {
 		using namespace code::shorthands;
 		const Shorthand s{ ctx };
 		const auto      pointee_type
-			= tsh::ValueType<>::withDefaultsMut(inner->expression_type.getValueType().getType());
+			= tsh::ValueType<>::direct(inner->expression_type.getValueType().getType());
 		const SymID alloc_symbol
 			= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { pointee_type });
 

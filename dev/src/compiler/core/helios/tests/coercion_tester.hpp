@@ -10,7 +10,6 @@
  * ```
  * coerce("(1i32, move b)", "(i64, box i32)").succeeds().steps({ ELEMENTWISE }).part(1).steps({});
  * plan("u8", "u16 | u32").refuses().ambiguousBetween({ 0, 1 });
- * plan(type("ref i32"), immutable(type("ref i32"))).succeeds().steps({ MUTABILITY_CHANGE });
  * ```
  */
 
@@ -66,14 +65,9 @@ namespace coercion_testing {
 		));
 	}
 
-	/// @p type as a mutable value of its own, for a type Duckling cannot write, like `byte`.
+	/// @p type as a value of its own, for a type Duckling cannot write, like `byte`.
 	[[nodiscard]] inline ValueType<> direct(const AbstractType& type) {
-		return { type, ReferenceKind::Direct, Mutability::Mutable };
-	}
-
-	/// @p type seen as immutable, which a parameter does not keep yet (#1488).
-	[[nodiscard]] inline ValueType<> immutable(const ValueType<>& type) {
-		return { type.getType(), type.getRefKind(), Mutability::Immutable };
+		return ValueType<>::direct(type);
 	}
 
 	/// The variant of @p alternatives, for one Duckling cannot write, like a variant of tuples only.

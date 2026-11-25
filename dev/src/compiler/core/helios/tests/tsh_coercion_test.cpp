@@ -314,22 +314,12 @@ private:
 		plan("void", "ref i32").succeeds().steps({ RETYPE_VOID });
 		plan("void", "box i32").succeeds().steps({ RETYPE_VOID });
 
-		// A value copied into a location of its own keeps no mutability, and a reference is only
-		// rebound, while a box is handed over.
-		plan(immutable(type("i32")), type("i32")).succeeds().steps({});
+		// A reference is only rebound, while a box is handed over.
+		plan("i32", "i32").succeeds().steps({});
 		plan("ref i32", "i32").succeeds().steps({ DEREF });
 		plan("box i32", "i32").succeeds().steps({ DEREF });
 		plan("ref i32", "i64").succeeds().steps({ DEREF, NUMERIC });
 		plan("ref i32", "ref i32").succeeds().steps({});
-		plan(type("ref i32"), immutable(type("ref i32")))
-			.succeeds()
-			.doesNothing()
-			.steps({ MUTABILITY_CHANGE });
-		// @TODO: #1488 Change it into an error test.
-		plan(immutable(type("ref i32")), type("ref i32"))
-			.succeeds()
-			.doesNothing()
-			.steps({ MUTABILITY_CHANGE });
 		plan("box i32", "box i32").succeeds().steps({ HAND_OVER });
 		plan("Owner", "Owner").succeeds().steps({ HAND_OVER });
 

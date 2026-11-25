@@ -47,7 +47,10 @@ namespace compiler::tsh {
 			for (const auto& component: components) {
 				elements.emplace_back(
 					component,
-					ctx.query<helios::QueryTypeOfSymbol>(component)->valueOrThrow().getType(),
+					ctx.query<helios::QueryTypeOfSymbol>(component)
+						->valueOrThrow()
+						.getValueType()
+						.getType(),
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Field,
 					MemberVisibility::Public

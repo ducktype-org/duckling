@@ -104,8 +104,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto get_type = [&](const compiler::helios::SymID sym_id) {
-				return ValueType<>::withDefaultsMut(ctx.query<compiler::tsh::QueryClassType>(sym_id)
-				);
+				return ValueType<>::direct(ctx.query<compiler::tsh::QueryClassType>(sym_id));
 			};
 
 			auto assert_flags = [&](const ValueType<>& type,
@@ -179,6 +178,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			const AbstractType type = ctx.query<compiler::helios::QueryTypeOfSymbol>(template_sym)
 			                              ->valueOrPanicMsg("Not expecting an ERROR here...")
+			                              .getValueType()
 			                              .getType();
 
 			assertTrue(
@@ -425,17 +425,14 @@ private:
 						signedness == IntegralAbstractType::Signedness::Signed ? "i" : "u", bits
 					);
 					ASSERT_EQUAL(expected, integral.sourceTypeName(ctx));
-					ASSERT_EQUAL(
-						expected, ValueType<>::withDefaultsMut(integral).sourceTypeName(ctx)
-					);
+					ASSERT_EQUAL(expected, ValueType<>::direct(integral).sourceTypeName(ctx));
 				}
 			}
 			for (const auto bits: { 16u, 32u, 64u, 80u, 128u }) {
 				const auto floating = getFloatType(ctx, bits);
 				ASSERT_EQUAL(base::strConcat("f", bits), floating.sourceTypeName(ctx));
 				ASSERT_EQUAL(
-					base::strConcat("f", bits),
-					ValueType<>::withDefaultsMut(floating).sourceTypeName(ctx)
+					base::strConcat("f", bits), ValueType<>::direct(floating).sourceTypeName(ctx)
 				);
 			}
 			ASSERT_EQUAL(std::string("()"), getUnitType().sourceTypeName(ctx));
@@ -443,7 +440,7 @@ private:
 			ASSERT_EQUAL(std::string("bool"), getBoolType().sourceTypeName(ctx));
 			ASSERT_EQUAL(std::string("char"), getCharType().sourceTypeName(ctx));
 			const KeyFor_QueryTupleType single_tuple_key{
-				.components = { ValueType<>::withDefaultsMut(i64_type) },
+				.components = { ValueType<>::direct(i64_type) },
 			};
 			const auto single_tuple = ctx.query<QueryTupleType>(single_tuple_key);
 			assertEqual(
@@ -459,21 +456,12 @@ private:
 			);
 
 			const ValueType<> qualified_type(
-				i64_type,
-				ReferenceKind::Ref,
-				Mutability::Immutable,
-				Leakage::Leaking,
-				Uniqueness::Unique
-			);
-			assertEqual(
-				std::string("unique leaking imm ref i64"),
-				qualified_type.sourceTypeName(ctx),
-				"ValueType qualifiers should use the same order as toString"
+				i64_type, ReferenceKind::Ref, Leakage::Leaking, Uniqueness::Unique
 			);
 			assertEqual(
 				std::string("unique leaking ref i64"),
-				qualified_type.withMutability(Mutability::Mutable).sourceTypeName(ctx),
-				"Mutable ValueTypes should omit the imm qualifier"
+				qualified_type.sourceTypeName(ctx),
+				"ValueType qualifiers should use the same order as toString"
 			);
 
 			assertEqual(
@@ -488,8 +476,8 @@ private:
 			);
 
 			const auto function_type = ctx.query<QueryFunctionType>({
-				.parameter_types = { ValueType<>::withDefaultsMut(i64_type) },
-				.result_type     = ValueType<>::withDefaultsMut(getBoolType()),
+				.parameter_types = { ValueType<>::direct(i64_type) },
+				.result_type     = ValueType<>::direct(getBoolType()),
 			});
 			assertEqual(
 				std::string("funptr(i64) -> bool"),
@@ -498,13 +486,13 @@ private:
 			);
 			const auto variant_type = ctx.query<QueryVariantType>({
 				.underlying_types = {
-					ValueType<>::withDefaultsMut(i64_type),
-					ValueType<>::withDefaultsMut(getBoolType()),
+					ValueType<>::direct(i64_type),
+					ValueType<>::direct(getBoolType()),
 				},
 			});
 			const auto composite_function_type = ctx.query<QueryFunctionType>({
 				.parameter_types = { person_type },
-				.result_type     = ValueType<>::withDefaultsMut(variant_type),
+				.result_type     = ValueType<>::direct(variant_type),
 			});
 			assertEqual(
 				std::string("funptr(Person) -> bool | i64"),

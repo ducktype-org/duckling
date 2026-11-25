@@ -29,16 +29,14 @@ namespace ats = abi::types;
 
 namespace {
 
-	ValueType<> directOf(AbstractType abstract_type) {
-		return ValueType<>::withDefaults(abstract_type);
-	}
+	ValueType<> directOf(AbstractType abstract_type) { return ValueType<>::direct(abstract_type); }
 
 	ValueType<> refOf(AbstractType abstract_type) {
-		return ValueType{ abstract_type, ReferenceKind::Ref, Mutability::Immutable };
+		return ValueType{ abstract_type, ReferenceKind::Ref };
 	}
 
 	ValueType<> boxOf(AbstractType abstract_type) {
-		return ValueType{ abstract_type, ReferenceKind::Box, Mutability::Immutable };
+		return ValueType{ abstract_type, ReferenceKind::Box };
 	}
 
 	IntegralAbstractType i32Of(query::Context& ctx) {

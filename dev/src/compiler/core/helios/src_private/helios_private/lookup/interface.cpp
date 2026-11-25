@@ -42,7 +42,9 @@ namespace compiler::helios {
 		case SymbolKind::Field:
 		case SymbolKind::Parameter:
 		case SymbolKind::Const:
-			return ofTypeInstance(ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow().getType());
+			return ofTypeInstance(
+				ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow().getValueType().getType()
+			);
 		default:
 			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat("Interface of the ", base::enumToStr(kind(symbol)))

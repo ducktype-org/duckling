@@ -259,7 +259,7 @@ public:
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::ValueType<>::withDefaultsMut(
+			const auto i64_sym_type = tsh::ValueType<>::direct(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 
@@ -305,7 +305,7 @@ public:
 			// A default value carries the given type.
 			const auto zero = s.defaultValue(i64_type);
 			ASSERT_EQUAL(zero->expression_type.getType().getKind(), tsh::Kind::Integral);
-			ASSERT_EQUAL(dprint(zero), std::string("default_value(imm i64)"));
+			ASSERT_EQUAL(dprint(zero), std::string("default_value(i64)"));
 			ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(zero.get()) != nullptr);
 
 			// Lifting a value to a type produces a `meta` value.
@@ -335,6 +335,7 @@ public:
 			// Resolve the `x` field of `point`'s struct type through its type interface.
 			const auto x_field = ctx.query<helios::QueryTypeOfSymbol>(point_var)
 			                         ->valueOrThrow()
+			                         .getValueType()
 			                         .getType()
 			                         .getInterface(ctx)
 			                         ->getElementsWithName(base::StrID("x"))
@@ -369,7 +370,7 @@ public:
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::ValueType<>::withDefaultsMut(i64_type);
+			const auto i64_sym_type = tsh::ValueType<>::direct(i64_type);
 
 			// Simple statements wrap their expression operand.
 			const auto decl = s.var(dummy_symbol, i64_sym_type, s.litNum(0, i64_type));
@@ -444,7 +445,7 @@ public:
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::ValueType<>::withDefaultsMut(
+			const auto i64_sym_type = tsh::ValueType<>::direct(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 

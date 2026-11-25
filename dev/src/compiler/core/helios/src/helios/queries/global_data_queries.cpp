@@ -115,7 +115,8 @@ namespace compiler::helios {
 			auto data_type = symbol_kind == SymbolKind::Const ? HOUTGlobalDataType::Constant
 			                                                  : HOUTGlobalDataType::Variable;
 
-			const auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+			const auto symbol_type
+				= ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow().getValueType();
 
 			auto maybe_pst_decl = maybeSymbolPst(symbol);
 			auto origin         = [&]() -> code::ElementOrigin {

@@ -236,11 +236,11 @@ private:
 				R"(fun a() = 'c' + 1i64;)",
 				{
 					"Call failed due to ambiguous overload resolution",
-					"type imm Function (imm u8, imm char) -> (imm char).",
-					"given argument type `char` cannot be converted to the expected type `imm "
+					"type Function (u8, char) -> (char).",
+					"given argument type `char` cannot be converted to the expected type `"
 					"u8`.",
-					"type imm Function (imm char, imm u8) -> (imm char).",
-					"given argument type `i64` cannot be converted to the expected type `imm "
+					"type Function (char, u8) -> (char).",
+					"given argument type `i64` cannot be converted to the expected type `"
 					"u8`.",
 				},
 				1
@@ -670,7 +670,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `imm i64`." },
+				{ "Type `slice char` cannot be converted to type `i64`." },
 				1
 			);
 
@@ -711,7 +711,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "The given argument type `imm type` cannot be converted to the expected type "
+				{ "The given argument type `type` cannot be converted to the expected type "
 			      "`()`" },
 				1
 			);
@@ -1209,7 +1209,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-				{ "Type `f32` cannot be converted to type `imm i64`." },
+				{ "Type `f32` cannot be converted to type `i64`." },
 				1
 			);
 
@@ -1239,7 +1239,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `imm i64`." },
+				{ "Type `slice char` cannot be converted to type `i64`." },
 				1
 			);
 
@@ -1759,7 +1759,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun add(a: i64, b: i64) -> i64 = a + b;
 			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
-			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `imm Function "
+			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `Function "
 		      "(i64) -> (i64)`." },
 			1
 		);
@@ -1787,7 +1787,7 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"( fun main() -> i64 = { let n = 3; return n(1); } )",
-			{ "A value of type `imm i32` cannot be called, because it is not a function." },
+			{ "A value of type `i32` cannot be called, because it is not a function." },
 			1
 		);
 
@@ -1808,7 +1808,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun inc(x: i64) -> i64 = x + 1;
 			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
-			{ "Type `Function (i64) -> (i64)` cannot be converted to type `imm (i64) -> "
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `(i64) -> "
 		      "(i64)`." },
 			1
 		);
@@ -2512,7 +2512,7 @@ private:
 					return b;
 				}
 			)",
-			{ "Type `imm i64` is trivially copyable. No need to use the explicit `copy` "
+			{ "Type `i64` is trivially copyable. No need to use the explicit `copy` "
 		      "keyword." },
 			1
 		);
@@ -2896,7 +2896,7 @@ private:
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			auto st = tsh::ValueType<>::withDefaultsMut(int32_type);
+			auto st = tsh::ValueType<>::direct(int32_type);
 
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(

@@ -265,7 +265,7 @@ namespace compiler::mir {
 			"Field access on ref/box type. A proper DerefExpr should be inserted in HOUT"
 		);
 		result.projection_chain.push_back(Projection::field(field));
-		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow();
+		result.type = ctx.query<helios::QueryTypeOfSymbol>(field)->valueOrThrow().getValueType();
 		return result;
 	}
 

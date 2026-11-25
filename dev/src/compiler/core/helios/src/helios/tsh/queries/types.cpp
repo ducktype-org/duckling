@@ -110,7 +110,7 @@ namespace compiler::tsh {
 	}
 
 	SliceAbstractType getCharSliceType(query::Context& ctx) {
-		return ctx.query<QuerySliceType>(tsh::ValueType<>::withDefaultsMut(tsh::getCharType()));
+		return ctx.query<QuerySliceType>(tsh::ValueType<>::direct(tsh::getCharType()));
 	}
 
 	NamespaceAbstractType getNamespaceType() {

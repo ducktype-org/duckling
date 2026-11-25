@@ -158,14 +158,12 @@ namespace compiler::helios {
 						= sinkStaticArrayDimension(ctx, static_arr.getElementType(), size);
 
 					return tsh::ValueType<>{
-						ctx.query<tsh::QueryStaticArrayType>({ inner_type, static_arr.getSize() }),
-						base.getRefKind(),
-						base.getMutability()
+						ctx.query<tsh::QueryStaticArrayType>({ .element_type=inner_type, .size=static_arr.getSize() }),
+						base.getRefKind()
 					};
 				}
-				return tsh::ValueType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
-					                     base.getRefKind(),
-					                     base.getMutability() };
+				return tsh::ValueType<>{ ctx.query<tsh::QueryStaticArrayType>({ .element_type=base, .size=size }),
+					                     base.getRefKind() };
 			}
 
 			/**
@@ -242,9 +240,8 @@ namespace compiler::helios {
 					result                = const_val_result.valueOrThrow();
 				} else if (kind(expr.symbol) == SymbolKind::Class) {
 					// Special case for type definitions.
-					result = tsh::ValueType<>::withDefaultsMut(
-						ctx.query<tsh::QueryClassType>({ expr.symbol })
-					);
+					result
+						= tsh::ValueType<>::direct(ctx.query<tsh::QueryClassType>({ expr.symbol }));
 				} else {
 					result = CouldNotShortPath{};
 				}
@@ -520,19 +517,19 @@ namespace compiler::helios {
 							case Box:
 								return ctv::CompileTimeValue{ val.toBox() };
 							case Ptr:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
 									ctx.query<tsh::QueryPointerType>({ val })
 								) };
 							case ManyPtr:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
 									ctx.query<tsh::QueryManyPointerType>({ val })
 								) };
 							case CPtr:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
 									ctx.query<tsh::QueryCPointerType>({ val })
 								) };
 							case Slice:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
 									ctx.query<tsh::QuerySliceType>({ val })
 								) };
 							default:
@@ -662,7 +659,7 @@ namespace compiler::helios {
 							ctx.log<DuplicateVariantAlternativeError>(
 								position.value(),
 								makeBox<InteractiveType>(
-									ctx, tsh::ValueType<>::withDefaultsMut(subtypes[i].getType())
+									ctx, tsh::ValueType<>::direct(subtypes[i].getType())
 								)
 							);
 							result = query::Failed();
@@ -671,9 +668,9 @@ namespace compiler::helios {
 					}
 				}
 
-				result = CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
-					ctx.query<tsh::QueryVariantType>({ subtypes })
-				) };
+				result = CompileTimeValue{
+					tsh::ValueType<>::direct(ctx.query<tsh::QueryVariantType>({ subtypes }))
+				};
 			}
 
 			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) final {
@@ -695,13 +692,12 @@ namespace compiler::helios {
 					return;
 				}
 
-				result = CompileTimeValue{
-					tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryFunctionType>({
+				result
+					= CompileTimeValue{ tsh::ValueType<>::direct(ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = std::move(parameter_types),
 						.result_type = result_ctv.valueOrThrow().get<tsh::ValueType<>>().value(),
 						.kind        = expr.kind,
-					}))
-				};
+					})) };
 			}
 
 			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
@@ -726,17 +722,15 @@ namespace compiler::helios {
 					);
 					ctx.log<DuplicateVariantAlternativeError>(
 						position.value(),
-						makeBox<InteractiveType>(
-							ctx, tsh::ValueType<>::withDefaultsMut(value_type.getType())
-						)
+						makeBox<InteractiveType>(ctx, tsh::ValueType<>::direct(value_type.getType()))
 					);
 					result = query::Failed();
 					return;
 				}
 
-				result = CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
-					ctx.query<tsh::QueryOptionalType>({ value_type })
-				) };
+				result = CompileTimeValue{
+					tsh::ValueType<>::direct(ctx.query<tsh::QueryOptionalType>({ value_type }))
+				};
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
@@ -821,7 +815,7 @@ namespace compiler::helios {
 				variant_match(ctv.getStorage()) {
 					variant_case(tsh::ValueType<>, value_type) { return value_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
-						return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
+						return tsh::ValueType<>::direct(tsh::getUnitType());
 					}
 					variant_case(CompileTimeValue::TypeTuple, tuple) {
 						std::vector<tsh::ValueType<>> element_types;
@@ -830,7 +824,7 @@ namespace compiler::helios {
 							element_types.emplace_back(liftCTVToTypeRecursively(
 								ctx, CompileTimeValue::TypeTuple::elementToCtv(element)
 							));
-						return tsh::ValueType<>::withDefaultsMut(
+						return tsh::ValueType<>::direct(
 							ctx.query<tsh::QueryTupleType>({ std::move(element_types) })
 						);
 					}
@@ -1143,7 +1137,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx, pst_expr, tsh::ValueType<>::withDefaultsMut(tsh::getMetaType())
+			ctx, pst_expr, tsh::ValueType<>::direct(tsh::getMetaType())
 		);
 
 		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
@@ -1155,7 +1149,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx, pst_expr, tsh::ValueType<>::withDefaultsMut(tsh::getBoolType())
+			ctx, pst_expr, tsh::ValueType<>::direct(tsh::getBoolType())
 		);
 		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
 		UNPACK_QRESULT(auto ctv =, ctx.query<QueryEvaluateHOUTExpression>({ hout.ref() }));

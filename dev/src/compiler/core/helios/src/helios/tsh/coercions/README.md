@@ -21,8 +21,7 @@ All the trees below are real `debugPrint` output. To print one yourself, call `d
 To coerce a value into a location, the compiler has to answer two different kinds of questions:
 
 1. **What happens to the type?** Is `ref i32 -> i64` possible, and how: deref first, then widen?
-   Which alternative of `i32 | f64` does an `i16` go into? Can an immutable value go into a mutable
-   slot? Which coercions create a need of materializing a value in a new place (hand it over)? 
+   Which alternative of `i32 | f64` does an `i16` go into? Which coercions create a need of materializing a value in a new place (hand it over)? 
    These questions depend only on the two `ValueType`s.
 2. **Who owns the value?** Is a `box i32` passed by moving it out of a temporary? Does the user
    have to write `copy`/`move`? Is the type not copyable at all? These questions depend on where
@@ -80,7 +79,7 @@ They are declared in the order of their ranks:
 | ------------------ | ----------------------- | ---------------------- | ----------------------------------------------------------------------------- |
 | `HandOver`         | `hand over`             | `Identity`             | `ValueType` coercions only, `handOver()` in `rules.cpp`                       |
 | `ImplicitMove`     | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`     |
-| `MutabilityChange` | `mutability change`     | `MutabilityChange`     | `keepReference`, raw pointers, and a tuple whose parts only change mutability |
+| `MutabilityChange` | `mutability change`     | `MutabilityChange`     | raw pointers, and a tuple whose parts only change mutability                   |
 | `RefOf`            | `ref of`                | `RefOf`                | `takeByRef`, only in the `CoercionMode::ImplicitRefOf` mode                   |
 | `Deref`            | `deref`                 | `Deref`                | `readThroughReference`                                                        |
 | `Numeric`          | `numeric`               | `Numeric`              | `convertValue`: a wider integer or float, `bool` into an integer              |
@@ -315,7 +314,7 @@ plan  i32  ->  Variant (Variant (bool, i32), i64)
    the sub-plans never take a value by `ref`.
 3. A `ref`/`box` target keeps the reference (`keepReference`). Which reference-kind transitions
    are legal is a small table in `reference_coercion.hpp`/`.cpp` (`referenceCoercionRule`).
-   Behind a reference nothing converts, and only mutability may relax.
+   Behind a reference nothing converts.
 4. A variant target means packing into a variant (`packIntoVariant`). The rule plans the source
    into *every* alternative, ranks the plans that succeed with `bestCoercion`, and either extends
    the winning plan with a `VariantPack` step or refuses with `AmbiguousCoercion` or with the

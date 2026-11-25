@@ -461,8 +461,9 @@ namespace compiler::helios::code {
 
 					// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 					if_opt_none(decl.origin.getStablePosition()) {
-						const auto type
-							= ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
+						const auto type = ctx.query<QueryTypeOfSymbol>(match.function)
+						                      ->valueOrThrow()
+						                      .getValueType();
 						return makeBox<dia::PlaceholderError>(
 							"Found exact candidate.",
 							base::strConcat(
@@ -503,8 +504,9 @@ namespace compiler::helios::code {
 
 					// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 					if_opt_none(decl.origin.getStablePosition()) {
-						const auto type
-							= ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
+						const auto type = ctx.query<QueryTypeOfSymbol>(match.function)
+						                      ->valueOrThrow()
+						                      .getValueType();
 						return makeBox<dia::PlaceholderNote>(
 							"Found coercible candidate.",
 							"Candidate is compiler-generated, with type " + type.toString() + "."
@@ -565,7 +567,8 @@ namespace compiler::helios::code {
 
 					// @TODO: #2110 unify diagnostics between user-defined and generated functions.
 					if_opt_none(decl.origin.getStablePosition()) {
-						const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
+						const auto type
+							= ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow().getValueType();
 						return makeBox<dia::PlaceholderNote>(
 							"Candidate failed to match.",
 							"Candidate is compiler-generated, with type " + type.toString() + "."
@@ -877,7 +880,7 @@ namespace compiler::helios::code {
 			auto direct_callee = coercions::coerceFromBox(
 				ctx,
 				std::move(callee),
-				tsh::ValueType<>::withDefaultsMut(function_type),
+				tsh::ValueType<>::direct(function_type),
 				call_expr->getStablePosition()
 			);
 			UNPACK_QRESULT_MOVE(callee =, direct_callee);

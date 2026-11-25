@@ -242,8 +242,8 @@ namespace compiler::helios {
 				return;
 			}
 
-			auto location_mutability = location_type.getMutability();
-			if (location_mutability == tsh::Mutability::Immutable) {
+			if (location_expr->expression_type.getValueCategory().getPlaceAccess()
+			    == tsh::PlaceAccess::Immutable) {
 				ctx.log<dia::PlaceholderError>(
 					"Left side of assignment can't be immutable.", assignment->getStablePosition()
 				);
@@ -377,7 +377,7 @@ namespace compiler::helios {
 
 			// in the future we must also handle here different if-s variants
 			// for example: `if (let a = ...) {}`.
-			auto bool_type        = tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
+			auto bool_type        = tsh::ValueType<>::direct(tsh::getBoolType());
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
 				is_failed = true;
@@ -414,7 +414,7 @@ namespace compiler::helios {
 		}
 
 		void visitWhile(pst::Access<pst::While> stmt) override {
-			auto bool_type        = tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
+			auto bool_type        = tsh::ValueType<>::direct(tsh::getBoolType());
 			auto control_flow_id  = getControlFlowID(ctx, stmt);
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
@@ -437,32 +437,33 @@ namespace compiler::helios {
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
 			auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 
-			auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+			const tsh::SymbolType& symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+			const auto&            value_type = symbol_type.getValueType();
 
 			if (stmt->getValue().empty()) {
 				// no initial value case
 
-				if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
+				if (symbol_type.getPlaceAccess() == tsh::PlaceAccess::Immutable) {
 					ctx.log<ImmutableVariableNoInitError>(stmt->getStablePosition());
 					is_failed = true;
 					return;
 				}
 
 				auto initial_value_qresult
-					= defgen::getDefaultInitializerExpr(ctx, symbol_type, stmt->getStablePosition());
+					= defgen::getDefaultInitializerExpr(ctx, value_type, stmt->getStablePosition());
 				if (initial_value_qresult.hasFailed()) {
 					is_failed = true;
 					return;
 				}
 				auto initial_value = initial_value_qresult.valueOrThrow();
 
-				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, symbol_type, symbol)
+				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, value_type, symbol)
 				);
 			} else {
 				auto initial_value_coerced = getHoutOfExprWithExpectedType(
 												 ctx,
 												 stmt->getValue().value().unlock(ctx)->getExpr(),
-												 symbol_type,
+												 value_type,
 												 stmt->getName().unlock(ctx)->getStablePosition()
 				)
 
@@ -470,7 +471,7 @@ namespace compiler::helios {
 
 
 				output(code::VariableStmt(
-					code::pstOrigin(stmt), std::move(initial_value_coerced), symbol_type, symbol
+					code::pstOrigin(stmt), std::move(initial_value_coerced), value_type, symbol
 				));
 			}
 		}

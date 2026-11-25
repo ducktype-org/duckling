@@ -26,7 +26,6 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <helios/tsh/mutability.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -137,7 +136,7 @@ public:
 	}
 
 private:
-	using enum compiler::tsh::Mutability;
+	using enum compiler::tsh::PlaceAccess;
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
 	/**
@@ -174,22 +173,14 @@ private:
 	 * Shorthand to create a mutable ValueType from an abstract type.
 	 */
 	static compiler::tsh::ValueType<> vt(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::ValueType<>::withDefaultsMut(abstract_type);
-	}
-
-	static compiler::tsh::ValueType<> vtImm(const compiler::tsh::AbstractType abstract_type) {
-		return vt(abstract_type).withMutability(Immutable);
+		return compiler::tsh::ValueType<>::direct(abstract_type);
 	}
 
 	/**
 	 * Shorthand to create a reference to mutable ValueType from an abstract type.
 	 */
 	static compiler::tsh::ValueType<> refvt(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::ValueType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Ref,
-			Mutable,
-		};
+		return compiler::tsh::ValueType{ abstract_type, compiler::tsh::ReferenceKind::Ref };
 	}
 
 	static const compiler::helios::code::Expr* stripImplicitMove(
@@ -538,11 +529,11 @@ private:
 		auto verify_type_and_mutability = [&](std::string_view            keyword,
 		                                      std::string_view            type_suffix,
 		                                      compiler::tsh::AbstractType expected_type,
-		                                      compiler::tsh::Mutability   expected_mutability) {
-			auto var_name   = base::strConcat(keyword, "_", type_suffix);
-			auto value_type = getValueTypeOf(var_name, root_scope);
-			ASSERT_EQUAL(expected_type, value_type.getType());
-			ASSERT_EQUAL(expected_mutability, value_type.getMutability());
+		                                      compiler::tsh::PlaceAccess  expected_access) {
+			auto var_name    = base::strConcat(keyword, "_", type_suffix);
+			auto symbol_type = getSymbolTypeOf(var_name, root_scope);
+			ASSERT_EQUAL(expected_type, symbol_type.getValueType().getType());
+			ASSERT_EQUAL(expected_access, symbol_type.getPlaceAccess());
 		};
 
 		verify_type_and_mutability("const", "i16", i16_type, Immutable);
@@ -732,8 +723,9 @@ private:
 				defgen::copyConstructorSymForType(ctx, no_copy_type)
 			);
 
-			const auto pair_type = ctx.query<QueryTypeOfSymbol>(pair_sym)->valueOrThrow().getType();
-			auto       pair_fields = pair_type.getInterface(ctx)->getFieldsView();
+			const auto pair_type
+				= ctx.query<QueryTypeOfSymbol>(pair_sym)->valueOrThrow().getValueType().getType();
+			auto pair_fields = pair_type.getInterface(ctx)->getFieldsView();
 			ASSERT_TRUE(not std::ranges::empty(pair_fields));
 			for (const auto& field: pair_fields)
 				ASSERT_EQUAL(pair_type, typeMemberOwner(field.getSymbol()));
@@ -778,7 +770,8 @@ private:
 			ASSERT_EQUAL(counter_sym, global_data.helios_symbol);
 			ASSERT_TRUE(std::holds_alternative<HOUTGlobalVariable>(global_data.value));
 			ASSERT_EQUAL(
-				ctx.query<QueryTypeOfSymbol>(counter_sym)->valueOrThrow(), global_data.type
+				ctx.query<QueryTypeOfSymbol>(counter_sym)->valueOrThrow().getValueType(),
+				global_data.type
 			);
 		});
 
@@ -801,20 +794,23 @@ private:
 			= query::entryPoint<compiler::tsh::QueryClassType>(first_class);
 
 		auto c_symbol = getChain("c", root_scope).back();
-		auto c_type
-			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_symbol)->valueOrThrow();
+		auto c_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_symbol)
+		                  ->valueOrThrow()
+		                  .getValueType();
 		ASSERT_EQUAL(c_type, vt(class_with_member_abstract_type));
 
 		auto c_member_symbol = getChain("c_member", root_scope).back();
 		auto c_member_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_symbol)
-		                         ->valueOrThrow();
+		                         ->valueOrThrow()
+		                         .getValueType();
 
 		ASSERT_EQUAL(c_member_type, vt(first_class_abstract_type));
 
 		auto c_member_a_symbol = getChain("c_member_pub", root_scope).back();
 		auto c_member_a_type
 			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(c_member_a_symbol)
-		          ->valueOrThrow();
+		          ->valueOrThrow()
+		          .getValueType();
 		auto expected_type = vt(getIntegralTypeNoContext(64, Signed));
 		ASSERT_EQUAL(c_member_a_type, expected_type);
 
@@ -864,9 +860,11 @@ private:
 	void testTupleInterface() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/tuples")));
 
-		const auto tup = getChain("tup", root_scope).back();
-		const auto tup_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)->valueOrThrow().getType();
+		const auto tup               = getChain("tup", root_scope).back();
+		const auto tup_abstract_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)
+		                                   ->valueOrThrow()
+		                                   .getValueType()
+		                                   .getType();
 
 		const auto h_interface = compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
 
@@ -882,7 +880,10 @@ private:
 			auto first_symbol = first_result->leaves.at(0);
 			ASSERT_EQUAL(kind(first_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
-				ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)->valueOrThrow(), i32
+				ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)
+					->valueOrThrow()
+					.getValueType(),
+				i32
 			);
 
 			CRef<LookupResult> second_result
@@ -891,7 +892,10 @@ private:
 			auto second_symbol = second_result->leaves.at(0);
 			ASSERT_EQUAL(kind(second_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
-				ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)->valueOrThrow(), f32
+				ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)
+					->valueOrThrow()
+					.getValueType(),
+				f32
 			);
 
 			CRef<LookupResult> third_result
@@ -900,7 +904,10 @@ private:
 			auto third_symbol = third_result->leaves.at(0);
 			ASSERT_EQUAL(kind(third_symbol), compiler::helios::SymbolKind::Field);
 			ASSERT_EQUAL(
-				ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)->valueOrThrow(), str
+				ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)
+					->valueOrThrow()
+					.getValueType(),
+				str
 			);
 
 			CRef<LookupResult> empty_result
@@ -923,8 +930,8 @@ private:
 		const auto bool_type  = compiler::tsh::getBoolType();
 		const auto meta_type  = compiler::tsh::getMetaType();
 
-		const auto int32_mut_value_type   = vt(int32_type).withMutability(Mutable);
-		const auto int32_immut_value_type = vtImm(int32_type);
+		const auto int32_mut_value_type   = vt(int32_type);
+		const auto int32_immut_value_type = vt(int32_type);
 
 		ASSERT_EQUAL(int32_immut_value_type, getValueTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_value_type, getValueTypeOf("SimpleIntLet", root_scope));
@@ -1063,6 +1070,7 @@ private:
 			const compiler::helios::SymID a_field
 				= ctx.query<compiler::helios::QueryTypeOfSymbol>(a_obj)
 			          ->valueOrThrow()
+			          .getValueType()
 			          .getType()
 			          .getInterface(ctx)
 			          ->getElementsWithName(base::StrID("a"))
@@ -1446,7 +1454,7 @@ private:
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
 		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-		const auto int32ref_type = vt(int32_type).toRef().withMutability(Immutable);
+		const auto int32ref_type = compiler::tsh::SymbolType(vt(int32_type).toRef(), Immutable);
 		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
@@ -1455,7 +1463,7 @@ private:
 		// is covered by `helios_with_std_test`.
 		auto       sym_vbox    = getChain("VBOX", root_scope).back();
 		const auto f32_type    = getFloatTypeNoContext(32);
-		const auto f32box_type = vt(f32_type).toBox().withMutability(Immutable);
+		const auto f32box_type = compiler::tsh::SymbolType(vt(f32_type).toBox(), Immutable);
 		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
@@ -1464,7 +1472,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = vtImm(bool_type);
+		const auto const_bool_type = compiler::tsh::SymbolType(vt(bool_type), Immutable);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -1734,7 +1742,8 @@ private:
 			auto i32_type = getIntegralTypeNoContext(32, Signed);
 			ASSERT_EQUAL(vt(i32_type), getValueTypeOf("copied", scope));
 			ASSERT_EQUAL(
-				vt(i32_type).withMutability(Immutable), getValueTypeOf("copied_let", scope)
+				compiler::tsh::SymbolType(vt(i32_type), Immutable),
+				getSymbolTypeOf("copied_let", scope)
 			);
 		}
 	}
@@ -1848,7 +1857,9 @@ private:
 				ASSERT_EQUAL(int32_type, a_type.getType());
 				ASSERT_EQUAL(
 					vt(int32_type),
-					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->valueOrThrow()
+					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })
+						->valueOrThrow()
+						.getValueType()
 				);
 
 				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
@@ -1993,6 +2004,7 @@ private:
 		const auto function_type
 			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(diverges_symbol)
 		          ->valueOrThrow()
+		          .getValueType()
 		          .getType()
 		          .as<compiler::tsh::FunctionAbstractType>();
 
@@ -2107,6 +2119,7 @@ private:
 					   getChain(function, scope).back()
 			)
 			    ->valueOrThrow()
+			    .getValueType()
 			    .getType()
 			    .as<compiler::tsh::FunctionAbstractType>()
 			    .getResultType()
@@ -2692,7 +2705,7 @@ private:
 		constexpr std::string_view EXPECTED
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
 			  "jq1234_ iqn9223372036854775808_ c66_ c94_ r6_737472414243 "
-			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u TutNidE tNid "
+			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u TutidE tid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(EXPECTED, result);
@@ -2924,15 +2937,15 @@ private:
 		ASSERT_EQUAL(tuple_si_type, getTypeOf("TupleCSI", root_scope));
 
 		// Differences between const, let, and var
-		const auto const_type = getValueTypeOf("const_no_type", root_scope);
-		const auto let_type   = getValueTypeOf("let_no_type", root_scope);
-		const auto var_type   = getValueTypeOf("var_no_type", root_scope);
-		ASSERT_EQUAL(const_type.getType(), int32_type);
-		ASSERT_EQUAL(let_type.getType(), int32_type);
-		ASSERT_EQUAL(var_type.getType(), int32_type);
-		ASSERT_EQUAL(const_type.getMutability(), compiler::tsh::Mutability::Immutable);
-		ASSERT_EQUAL(let_type.getMutability(), compiler::tsh::Mutability::Immutable);
-		ASSERT_EQUAL(var_type.getMutability(), compiler::tsh::Mutability::Mutable);
+		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
+		const auto let_type   = getSymbolTypeOf("let_no_type", root_scope);
+		const auto var_type   = getSymbolTypeOf("var_no_type", root_scope);
+		ASSERT_EQUAL(const_type.getValueType().getType(), int32_type);
+		ASSERT_EQUAL(let_type.getValueType().getType(), int32_type);
+		ASSERT_EQUAL(var_type.getValueType().getType(), int32_type);
+		ASSERT_EQUAL(const_type.getPlaceAccess(), Immutable);
+		ASSERT_EQUAL(let_type.getPlaceAccess(), Immutable);
+		ASSERT_EQUAL(var_type.getPlaceAccess(), Mutable);
 	}
 
 	void testDebugPrint() {
@@ -3345,8 +3358,7 @@ private:
 			                             const std::string&               message) -> void {
 				const auto symbol_value
 					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
-				const auto actual_type
-					= symbol_value.getTypeOfStoredValue(ctx).withMutability(Immutable);
+				const auto actual_type = symbol_value.getTypeOfStoredValue(ctx);
 				assertEqual(
 					actual_type,
 					expected_type,
@@ -3355,15 +3367,13 @@ private:
 				);
 			};
 
-			const auto meta_vt     = vtImm(compiler::tsh::getMetaType());
-			const auto unit_vt     = vtImm(compiler::tsh::getUnitType());
-			const auto int_vt      = vtImm(compiler::tsh::getIntegralType(ctx, 32, Signed));
-			const auto tuple_ii_vt = vtImm(ctx.query<compiler::tsh::QueryTupleType>(
-				{ { int_vt.withMutability(Mutable), int_vt.withMutability(Mutable) } }
-			));
-			const auto tuple_tt_vt = vtImm(ctx.query<compiler::tsh::QueryTupleType>(
-				{ { meta_vt.withMutability(Mutable), meta_vt.withMutability(Mutable) } }
-			));
+			const auto meta_vt = vt(compiler::tsh::getMetaType());
+			const auto unit_vt = vt(compiler::tsh::getUnitType());
+			const auto int_vt  = vt(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_vt
+				= vt(ctx.query<compiler::tsh::QueryTupleType>({ { int_vt, int_vt } }));
+			const auto tuple_tt_vt
+				= vt(ctx.query<compiler::tsh::QueryTupleType>({ { meta_vt, meta_vt } }));
 
 			check_types(unit1, unit_vt, "Unit1 should be of unit type.");
 			check_types(unit2, unit_vt, "Unit2 should be of unit type.");
@@ -3522,7 +3532,7 @@ private:
 			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
 			ASSERT_EQUAL(
 				number_signature.parameters.at(0).type,
-				vtImm(compiler::tsh::getIntegralType(ctx, 64, Signed))
+				vt(compiler::tsh::getIntegralType(ctx, 64, Signed))
 			);
 
 			// Baking the same template symbol with equal arguments must return

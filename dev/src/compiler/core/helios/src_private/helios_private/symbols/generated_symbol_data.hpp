@@ -13,6 +13,7 @@
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/tsh/value_type.hpp>
 
@@ -195,7 +196,7 @@ namespace compiler::helios::defgen {
 		SymID function_symbol;  // The symbol of the function this variable belongs to.
 		u64   variable_index;   // The index of the variable in the function's body.
 		// @TODO: #2515 Remove this
-		tsh::ValueType<> type;  // The type of the variable.
+		tsh::SymbolType type;  // The symbol type of the variable.
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -218,7 +219,7 @@ namespace compiler::helios::defgen {
 		base::StrID role;  /// Role of the variable (typically it's name). Needed to distinguish
 		                   /// between many Locals inserted into the same scope.
 		// @TODO: #2515 Remove this
-		tsh::ValueType<> type;  /// The type of the variable;
+		tsh::SymbolType type;  /// The symbol type of the variable.
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

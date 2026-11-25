@@ -32,10 +32,10 @@ namespace compiler::helios {
 			auto expand_expr = expand->getValue().unlock(ctx)->getExpr();
 
 			std::vector<tsh::ValueType<>> accepted_types{
-				tsh::ValueType<>::withDefaults(tsh::getCharSliceType(ctx))
+				tsh::ValueType<>::direct(tsh::getCharSliceType(ctx))
 			};
 			if (tsh::isStringTypePresent(ctx))
-				accepted_types.push_back(tsh::ValueType<>::withDefaults(tsh::getStringType(ctx)));
+				accepted_types.push_back(tsh::ValueType<>::direct(tsh::getStringType(ctx)));
 
 			auto expand_hout_qresult
 				= getHoutOfExprWithExpectedTypes(ctx, { expand_expr }, accepted_types);

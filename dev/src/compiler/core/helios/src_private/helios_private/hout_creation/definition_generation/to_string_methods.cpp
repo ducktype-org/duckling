@@ -52,7 +52,7 @@ namespace compiler::helios::defgen {
 		});
 	}
 
-#define STRING_TYPE tsh::ValueType<>::withDefaultsMut(tsh::getStringType(ctx))
+#define STRING_TYPE tsh::ValueType<>::direct(tsh::getStringType(ctx))
 #define LANG_PRIMITIVE(primitive) \
 	ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
 
@@ -62,7 +62,7 @@ namespace compiler::helios::defgen {
 		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
 		auto       string_abstract_type = tsh::getStringType(ctx);
 		const auto expected_arg_type
-			= tsh::ValueType<>::withDefaultsMut(string_abstract_type)
+			= tsh::ValueType<>::direct(string_abstract_type)
 		          .withReferenceKind(
 					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
 				  );
@@ -74,6 +74,7 @@ namespace compiler::helios::defgen {
 		for (const SymID candidate: lookup_result.leaves) {
 			const auto fn_type = ctx.query<QueryTypeOfSymbol>(candidate)
 			                         ->valueOrThrow()
+			                         .getValueType()
 			                         .getType()
 			                         .as<tsh::FunctionAbstractType>();
 			const auto& params = fn_type.getParameterTypes();
@@ -114,7 +115,7 @@ namespace compiler::helios::defgen {
 			const bool is_signed
 				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
 			   == tsh::IntegralAbstractType::Signedness::Signed;
-			const auto target_int_type = tsh::ValueType<>::withDefaultsMut(tsh::getIntegralType(
+			const auto target_int_type = tsh::ValueType<>::direct(tsh::getIntegralType(
 				ctx,
 				64,
 				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
@@ -159,10 +160,9 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-			const auto target_float_type
-				= tsh::ValueType<>::withDefaultsMut(tsh::getFloatType(ctx, 64));
-			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
+			const auto self_param        = to_string_decl.parameters.at(0).helios_symbol;
+			const auto target_float_type = tsh::ValueType<>::direct(tsh::getFloatType(ctx, 64));
+			const auto builtin_sym       = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
 
 			const Shorthand s{ ctx };
 			body.emplace_back(s.ret(
@@ -239,7 +239,7 @@ namespace compiler::helios::defgen {
 			const auto builtin_sym = bakeLanguagePrimitive(
 				ctx,
 				LanguagePrimitive::StringifyStaticArray,
-				{ tsh::ValueType<>::withDefaultsMut(array_type), size }
+				{ tsh::ValueType<>::direct(array_type), size }
 			);
 
 			const Shorthand s{ ctx };
@@ -267,15 +267,16 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a `box` alternative
 				// is a reference to the pointee.
-				const auto payload_type
-					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
+				const auto payload_type = alternatives[i].toRef();
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name = base::StrID(base::strConcat("__alternative_", i)),
 					.generated_symbol_data
 					= GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
 				                                 .variable_index  = i,
-				                                 .type            = payload_type },
+				                                 .type            = tsh::SymbolType(
+                                                     payload_type, tsh::PlaceAccess::Mutable
+                                                 ) },
 				});
 
 				const SymID payload_to_string = toStringSymForType(ctx, alternatives[i].getType());
@@ -319,7 +320,9 @@ namespace compiler::helios::defgen {
 			      .generated_symbol_data
 			      = GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
 			                                   .variable_index  = 0,
-			                                   .type            = STRING_TYPE } }
+			                                   .type            = tsh::SymbolType(
+                                                   STRING_TYPE, tsh::PlaceAccess::Mutable
+                                               ) } }
 			);
 			body.emplace_back(s.var(result_sym, STRING_TYPE, s.litStrObj(base::StrID(prefix))));
 
