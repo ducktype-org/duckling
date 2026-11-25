@@ -3316,6 +3316,26 @@ private:
 			// A cast to the source's own type is a no-op: the value is returned untouched.
 			auto same = cast(i64_t, i64_t);
 			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(same.get()) != nullptr);
+
+			// A `ref` source: a cast to a plain value reads the value first, while a cast of the
+			// reference itself (here to a `cptr`) uses the reference as it is.
+			auto ref_to = [&](const compiler::tsh::SymbolType<> to) {
+				return castAs(
+					ctx, makeBox<RefOfExpr>(ctx, generatedOrigin(), literal(i64_t)), to, as_stmt
+				);
+			};
+			auto read_through = ref_to(st(i32_t));
+			auto read_cast    = dynamic_cast<const CastExpr*>(read_through.get());
+			ASSERT_TRUE(read_cast != nullptr);
+			ASSERT_EQUAL(i32_t, read_cast->target_type.getType());
+			ASSERT_TRUE(dynamic_cast<const DerefExpr*>(read_cast->source_expr.get()) != nullptr);
+
+			const auto cptr_t       = ctx.query<compiler::tsh::QueryCPointerType>({ st(i32_t) });
+			auto       as_reference = ref_to(st(cptr_t));
+			auto       ref_cast     = dynamic_cast<const CastExpr*>(as_reference.get());
+			ASSERT_TRUE(ref_cast != nullptr);
+			ASSERT_EQUAL(cptr_t, ref_cast->target_type.getType());
+			ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(ref_cast->source_expr.get()) != nullptr);
 		});
 	}
 
