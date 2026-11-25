@@ -649,21 +649,14 @@ namespace compiler::helios {
 		query::QResult<SymbolData> makeSymbolFromStatement(
 			query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
 		) {
-			// Attribute handling
-			auto attributes           = attributesFromPSTStatement(ctx, stmt);
-			bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
+			UNPACK_QRESULT_MOVE(CommonSymbolData common =, commonSymbolDataFromStatement(ctx, stmt));
+			common.attributes           = attributesFromPSTStatement(ctx, stmt);
+			common.is_ignored_by_lookup = std::ranges::any_of(common.attributes, &disablesLookup);
 
 			// Check if it is a builtin.
-			if_opt_some(getAttrInVector<attributes::Builtin>(attributes), builtin_data) {
-				auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			if_opt_some(getAttrInVector<attributes::Builtin>(common.attributes), builtin_data) {
 				return SymbolData::makeBuiltinSymbolData(
-					{
-						.name                 = function->getName().unlock(ctx)->unwrap(),
-						.kind                 = SymbolKind::FunctionDeclaration,
-						.is_ignored_by_lookup = is_ignored_by_lookup,
-						.attributes           = std::move(attributes),
-
-					},
+					std::move(common),
 					BuiltinSemantics{
 						scope,
 						stmt->getHash(),
@@ -672,46 +665,42 @@ namespace compiler::helios {
 				);
 			}
 
-			UNPACK_QRESULT_MOVE(CommonSymbolData common =, commonSymbolDataFromStatement(ctx, stmt));
-			common.is_ignored_by_lookup = is_ignored_by_lookup;
-			common.attributes           = std::move(attributes);
-
-			if (not isClassMember(common.kind)) {
-				if (isTemplateInstanceRoot(scope)) {
-					if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
-						return SymbolData::makeTemplateInstanceSymbolData(
-							std::move(common),
-							TemplateInstanceSemantics(
-								scope,
-								stmt->getHash(),
-								instance.template_symbol,
-								instance.template_arguments_symbols
-							)
-						);
-					}
+			if (isClassMember(common.kind)) {
+				auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
+				if_opt_none(owner_class_element) {
+					ctx.log<dia::PlaceholderError>(
+						"Class member declared outside of a class.", stmt->getStablePosition()
+					);
+					return query::Failed();
 				}
-				return SymbolData::makePSTSymbolData(
-					std::move(common), PstImplementedSemantics(scope, stmt->getHash())
-				);
-			}
 
-			auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
-			if_opt_none(owner_class_element) {
-				ctx.log<dia::PlaceholderError>(
-					"Class member declared outside of a class.", stmt->getStablePosition()
-				);
-				return query::Failed();
-			}
-
-			return SymbolData::makeClassMemberSymbolData(
-				std::move(common),
-				ClassMemberSemantics(
-					scope,
-					stmt->getHash(),
-					ctx.query<tsh::QueryClassType>(
-						ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+				return SymbolData::makeClassMemberSymbolData(
+					std::move(common),
+					ClassMemberSemantics(
+						scope,
+						stmt->getHash(),
+						ctx.query<tsh::QueryClassType>(
+							ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+						)
 					)
-				)
+				);
+			}
+
+			if (isTemplateInstanceRoot(scope)) {
+				if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
+					return SymbolData::makeTemplateInstanceSymbolData(
+						std::move(common),
+						TemplateInstanceSemantics(
+							scope,
+							stmt->getHash(),
+							instance.template_symbol,
+							instance.template_arguments_symbols
+						)
+					);
+				}
+			}
+			return SymbolData::makePSTSymbolData(
+				std::move(common), PstImplementedSemantics(scope, stmt->getHash())
 			);
 		}
 
