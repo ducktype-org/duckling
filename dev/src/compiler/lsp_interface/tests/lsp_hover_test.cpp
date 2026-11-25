@@ -80,6 +80,8 @@ public:
 		TESTER_ADD_TEST(moreExpressionKindsTest);
 		TESTER_ADD_TEST(literalsPointersAndTypesTest);
 		TESTER_ADD_TEST(remainingExpressionKindsTest);
+		TESTER_ADD_TEST(blockExpressionsTest);
+		TESTER_ADD_TEST(rangeTest);
 	}
 
 protected:
@@ -145,6 +147,43 @@ private:
 	}
 
 	/**
+	 * @brief The hover at `line:character` highlights the UTF-16 columns from `start` to `end`
+	 * (exclusive) of the same line.
+	 */
+	void assertHoverRange(
+		CompilerUnderTest& under_test, const lsp::Uri& uri, u32 line, u32 character, u32 start, u32 end
+	) {
+		const auto result
+			= under_test.compiler.hover(uri, lsp::Position{ .line = line, .character = character });
+		const auto where = std::to_string(line) + ":" + std::to_string(character);
+
+		assertTrue(!result.isNull(), "Expected a hover at " + where + ", got none");
+		assertTrue(result.value().range.has_value(), "Expected a range for the hover at " + where);
+
+		const auto& range = result.value().range.value();
+		assertTrue(
+			range.start.line == line && range.end.line == line && range.start.character == start
+				&& range.end.character == end,
+			base::strConcat(
+				"The hover at ",
+				where,
+				" must highlight columns ",
+				std::to_string(start),
+				" to ",
+				std::to_string(end),
+				", got ",
+				std::to_string(range.start.line),
+				":",
+				std::to_string(range.start.character),
+				" to ",
+				std::to_string(range.end.line),
+				":",
+				std::to_string(range.end.character)
+			)
+		);
+	}
+
+	/**
 	 * @brief The program the other tests use compiles, so a failure elsewhere is about
 	 * hover and not about the program.
 	 */
@@ -162,9 +201,9 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test);
 
-		assertHoverContains(under_test, uri, 7, 12, { "sum", "i64" });     // return s|um;
-		assertHoverContains(under_test, uri, 6, 14, { "a", "i64" });       // = a| + b
-		assertHoverContains(under_test, uri, 14, 12, { "total", "i64" });  // below the emoji line
+		assertHoverContains(under_test, uri, 7, 12, { "sum: i64" });     // return s|um;
+		assertHoverContains(under_test, uri, 6, 14, { "a: i64" });       // = a| + b
+		assertHoverContains(under_test, uri, 14, 12, { "total: i64" });  // below the emoji line
 	}
 
 	void declarationsTest() {
@@ -172,9 +211,9 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test);
 
-		assertHoverContains(under_test, uri, 6, 9, { "sum", "i64" });     // var s|um
-		assertHoverContains(under_test, uri, 13, 9, { "total", "i64" });  // var t|otal
-		assertHoverContains(under_test, uri, 5, 5, { "add" });            // fun ad|d
+		assertHoverContains(under_test, uri, 6, 9, { "sum: i64" });     // var s|um
+		assertHoverContains(under_test, uri, 13, 9, { "total: i64" });  // var t|otal
+		assertHoverContains(under_test, uri, 5, 5, { "add" });          // fun ad|d
 	}
 
 	void membersAndCallsTest() {
@@ -182,11 +221,11 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test);
 
-		assertHoverContains(under_test, uri, 13, 17, { "add" });         // a|dd(
-		assertHoverContains(under_test, uri, 13, 20, { "p", "Point" });  // (p|.x
-		assertHoverContains(under_test, uri, 13, 22, { "x", "i64" });    // p.x|
-		assertHoverContains(under_test, uri, 12, 13, { "Point" });       // P|oint(1, 2)
-		assertHoverContains(under_test, uri, 6, 16, { "i64" });          // a |+ b: just the type
+		assertHoverContains(under_test, uri, 13, 17, { "add" });       // a|dd(
+		assertHoverContains(under_test, uri, 13, 20, { "p: Point" });  // (p|.x
+		assertHoverContains(under_test, uri, 13, 22, { "x: i64" });    // p.x|
+		assertHoverContains(under_test, uri, 12, 13, { "Point" });     // P|oint(1, 2)
+		assertHoverContains(under_test, uri, 6, 16, { "i64" });        // a |+ b: just the type
 	}
 
 	void nothingToShowTest() {
@@ -215,11 +254,11 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test, SAME_LINE_PROGRAM);
 
-		assertHoverContains(under_test, uri, 2, 27, { "x", "i64" });
+		assertHoverContains(under_test, uri, 2, 27, { "x: i64" });
 	}
 
 	/**
-	 * @brief Without a buffer the hover reads the file on disk.
+	 * @brief @brief A closed document gets no hover.
 	 */
 	void closedDocumentTest() {
 		duck_ls_test::VfsWorkspace workspace("lsp_hover_closed_ws");
@@ -227,7 +266,7 @@ private:
 		auto                       uri = openProgram(workspace, under_test);
 
 		assertTrue(under_test.compiler.closeDocument(uri).isOk(), "The document must close");
-		assertHoverContains(under_test, uri, 7, 12, { "sum", "i64" });
+		assertNoHover(under_test, uri, 7, 12);
 	}
 
 	/**
@@ -272,16 +311,18 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test, EXPRESSIONS_PROGRAM);
 
-		assertHoverContains(under_test, uri, 1, 19, { "i" });          // match case
-		assertHoverContains(under_test, uri, 2, 23, { "b", "bool" });  // if b then …
-		assertHoverContains(under_test, uri, 7, 13, { "n" });          // (n, 4i64)
-		assertHoverContains(under_test, uri, 8, 13, { "n" });          // &n
-		assertHoverContains(under_test, uri, 9, 12, { "n" });          // n as i32
-		assertHoverContains(under_test, uri, 10, 15, { "n" });         // -n
-		assertHoverContains(under_test, uri, 11, 20, { "n" });         // 1 < n < 5
-		assertHoverContains(under_test, uri, 13, 4, { "arr" });        // arr[0] = …
-		assertHoverContains(under_test, uri, 14, 25, { "t" });         // t._1
-		assertHoverContains(under_test, uri, 15, 24, { "n" });  // pick(n), n becomes a variant
+		assertHoverContains(under_test, uri, 1, 19, { "i: i64" });       // match case: = i|;
+		assertHoverContains(under_test, uri, 2, 23, { "b: bool" });      // if b| then …
+		assertHoverContains(under_test, uri, 7, 13, { "n: i64" });       // (n|, 4i64)
+		assertHoverContains(under_test, uri, 8, 13, { "n: i64" });       // &n|
+		assertHoverContains(under_test, uri, 9, 12, { "n: i64" });       // n| as i32
+		assertHoverContains(under_test, uri, 10, 15, { "n: i64" });      // -n|
+		assertHoverContains(under_test, uri, 11, 20, { "n: i64" });      // 1 < n| < 5
+		assertHoverContains(under_test, uri, 13, 4, { "arr: i64[2]" });  // a|rr[0] = …
+		assertHoverContains(under_test, uri, 14, 25, { "t: " });         // t|._1, a tuple
+		assertHoverContains(
+			under_test, uri, 15, 24, { "n: i64" }
+		);  // pick(n|), n becomes a variant
 	}
 
 	/**
@@ -305,11 +346,11 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test, LITERALS_PROGRAM);
 
-		assertHoverContains(under_test, uri, 2, 15, { "bool" });   // true
-		assertHoverContains(under_test, uri, 3, 16, { "slice" });  // "duck"
-		assertHoverContains(under_test, uri, 4, 17, { "type" });   // i64 | bool
-		assertHoverContains(under_test, uri, 5, 13, { "n" });      // &n as ptr i64
-		assertHoverContains(under_test, uri, 6, 13, { "p" });      // *p
+		assertHoverContains(under_test, uri, 2, 15, { "bool" });        // t|rue
+		assertHoverContains(under_test, uri, 3, 16, { "str" });         // "d|uck"
+		assertHoverContains(under_test, uri, 4, 17, { "bool: type" });  // the b|ool of i64 | bool
+		assertHoverContains(under_test, uri, 5, 13, { "n: i64" });      // &n| as ptr i64
+		assertHoverContains(under_test, uri, 6, 13, { "p: ptr i64" });  // *p|
 	}
 
 	/**
@@ -336,16 +377,84 @@ private:
 		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
 		auto                       uri = openProgram(workspace, under_test, REMAINING_PROGRAM);
 
-		assertHoverContains(under_test, uri, 4, 20, { "char" });      // 'a'
-		assertHoverContains(under_test, uri, 5, 16, { "()" });        // ()
-		assertHoverContains(under_test, uri, 6, 23, { "n", "i64" });  // [n, 4i64]
-		assertHoverContains(under_test, uri, 7, 12, { "ptr" });       // ptrof n: the pointer itself
-		assertHoverContains(under_test, uri, 7, 18, { "n", "i64" });  // ptrof n
-		assertHoverContains(under_test, uri, 8, 18, { "type" });      // funptr(i64) -> i64
-		assertHoverContains(under_test, uri, 9, 11, { "type" });      // ?i64
-		assertHoverContains(under_test, uri, 9, 18, { "n", "i64" });  // n lifted to ?i64
-		assertHoverContains(under_test, uri, 10, 13, { "i64" });      // move n: the move itself
-		assertHoverContains(under_test, uri, 10, 17, { "n", "i64" });  // move n
+		assertHoverContains(under_test, uri, 4, 20, { "char" });    // '|a'
+		assertHoverContains(under_test, uri, 5, 16, { "()" });      // (|)
+		assertHoverContains(under_test, uri, 6, 23, { "n: i64" });  // [n|, 4i64]
+		assertHoverContains(under_test, uri, 7, 12, { "ptr" });     // p|trof n: the pointer itself
+		assertHoverContains(under_test, uri, 7, 18, { "n: i64" });  // ptrof n|
+		assertHoverContains(
+			under_test, uri, 8, 18, { "i64: type" }
+		);                                                        // the i|64 of funptr(i64) -> i64
+		assertHoverContains(under_test, uri, 9, 11, { "type" });  // ?|i64, the optional type
+		assertHoverContains(under_test, uri, 9, 18, { "n: i64" });   // n|, lifted to ?i64
+		assertHoverContains(under_test, uri, 10, 13, { "i64" });     // m|ove n: the move itself
+		assertHoverContains(under_test, uri, 10, 17, { "n: i64" });  // move n|
+	}
+
+	/**
+	 * @brief Reaches into block expressions: statements inside a block, its tail and a block
+	 * inside a block.
+	 */
+	void blockExpressionsTest() {
+		constexpr std::string_view BLOCKS_PROGRAM
+			= "fun main() -> i64 = {\n"                                            // 0
+			  "    var n = 3i64;\n"                                                // 1
+			  "    var b = {\n"                                                    // 2
+			  "        var y = n + 2i64;\n"                                        // 3
+			  "        y * 2i64\n"                                                 // 4
+			  "    };\n"                                                           // 5
+			  "    var nested = { var w = { var q = n; q + 1i64 }; w * 2i64 };\n"  // 6
+			  "    return b + nested;\n"                                           // 7
+			  "}\n";                                                               // 8
+
+		duck_ls_test::VfsWorkspace workspace("lsp_hover_blocks_ws");
+		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
+		auto                       uri = openProgram(workspace, under_test, BLOCKS_PROGRAM);
+
+		assertHoverContains(under_test, uri, 3, 16, { "n: i64" });  // var y = n| + 2i64;
+		assertHoverContains(under_test, uri, 3, 12, { "y: i64" });  // var y|, declared in a block
+		assertHoverContains(under_test, uri, 4, 8, { "y: i64" });   // y| * 2i64, the tail
+		assertHoverContains(under_test, uri, 6, 37, { "n: i64" });  // var q = n|; in a nested block
+		assertHoverContains(under_test, uri, 6, 40, { "q: i64" });  // q| + 1i64, the nested tail
+	}
+
+	/**
+	 * @brief The hover tells the editor which code it describes, counted in UTF-16 units.
+	 */
+	void rangeTest() {
+		duck_ls_test::VfsWorkspace workspace("lsp_hover_range_ws");
+		CompilerUnderTest          under_test{ duck_ls_test::VfsWorkspace::vfs() };
+		auto                       uri = openProgram(workspace, under_test);
+
+		assertHoverRange(under_test, uri, 6, 16, 14, 19);   // a |+ b: the whole `a + b`
+		assertHoverRange(under_test, uri, 7, 12, 11, 14);   // return s|um;: just `sum`
+		assertHoverRange(under_test, uri, 13, 19, 16, 29);  // add|(p.x, p.y): the whole call
+		assertHoverRange(under_test, uri, 13, 20, 20, 21);  // (p|.x: just `p`
+		assertHoverRange(under_test, uri, 13, 22, 20, 23);  // p.x|: the field access `p.x`
+		assertHoverRange(under_test, uri, 12, 18, 18, 19);  // Point(1|, 2): the literal
+		assertHoverRange(under_test, uri, 14, 12, 11, 16);  // return t|otal;, below the emoji line
+
+		// A declared name has no range: the editor highlights the word under the cursor itself.
+		const auto declaration = under_test.compiler.hover(
+			uri, lsp::Position{ .line = 6, .character = 9 }
+		);  // var s|um
+		assertTrue(
+			!declaration.isNull() && !declaration.value().range.has_value(),
+			"The hover on a declared name must have no range"
+		);
+
+		constexpr std::string_view SAME_LINE_PROGRAM
+			= "fun main() -> i64 = {\n"
+			  "    var x: i64 = 1;\n"
+			  "    var s = \"ź😀\"; var y = x;\n"  // the x is at UTF-16 column 27
+			  "    return y;\n"
+			  "}\n";
+
+		duck_ls_test::VfsWorkspace same_line_workspace("lsp_hover_range_same_line_ws");
+		CompilerUnderTest          same_line{ duck_ls_test::VfsWorkspace::vfs() };
+		auto same_line_uri = openProgram(same_line_workspace, same_line, SAME_LINE_PROGRAM);
+
+		assertHoverRange(same_line, same_line_uri, 2, 27, 27, 28);  // x after the emoji
 	}
 };
 

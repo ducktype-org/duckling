@@ -27,8 +27,12 @@ namespace duck_ls {
         usize found_size = 0;
 
         auto consider = [&](const auto& node) {
-            // The walker hands over statements too; only an expression can be the answer.
-            if constexpr (std::derived_from<std::remove_cvref_t<decltype(node)>, code::Expr>) {
+            using Node = std::remove_cvref_t<decltype(node)>;
+            // The walker hands over statements too; only an expression can be the answer. A
+			// reusable expression only wraps a written one, like the `n` of `1 < n < 5`, that
+			// HELIOS uses twice; the walk goes into its first use, where the written one is.
+			if constexpr (std::derived_from<Node, code::Expr>
+			              && !std::same_as<Node, code::ReusableExpr>) {
                 const code::Expr& expr = node;
                 if (expr.origin.isGenerated()) return;
 
