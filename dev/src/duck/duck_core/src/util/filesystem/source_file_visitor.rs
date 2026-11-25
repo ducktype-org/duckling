@@ -16,7 +16,7 @@ use crate::util::filesystem::create_dir_iterator;
 
 /// A visitor of [`Path`].
 ///
-/// Its implementors can be used by [`AnyPackage::try_visit_all_source_files`].
+/// Its implementors can be used by [visit_duckling_source_files].
 pub trait TryFileVisitor {
     /// Value reported by visitor if it stops visiting, for any reason.
     type Break;
@@ -27,15 +27,15 @@ pub trait TryFileVisitor {
 
 impl<V: TryFileVisitor + ?Sized> TryFileVisitor for &mut V {
     type Break = V::Break;
-    fn visit(&mut self, unit: &Path) -> QuackResult<ControlFlow<Self::Break>> {
-        (*self).visit(unit)
+    fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
+        (*self).visit(path)
     }
 }
 
 impl<V: TryFileVisitor + ?Sized> TryFileVisitor for Box<V> {
     type Break = V::Break;
-    fn visit(&mut self, unit: &Path) -> QuackResult<ControlFlow<Self::Break>> {
-        (**self).visit(unit)
+    fn visit(&mut self, path: &Path) -> QuackResult<ControlFlow<Self::Break>> {
+        (**self).visit(path)
     }
 }
 

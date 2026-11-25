@@ -26,7 +26,7 @@ pub(super) fn cli() -> Command {
         )
         .arg(
             optional("config", "Path to a JSON formatter configuration file.")
-            .short('p')
+            .short('c')
             .value_parser(value_parser!(PathBuf))
         )
         .arg(

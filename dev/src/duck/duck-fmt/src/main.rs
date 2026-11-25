@@ -25,7 +25,7 @@ mod fmt_config;
 mod formatting;
 
 /// Main entry point to the `duck-fmt` binary.
-/// Reuses [`duck::duck::main_runner`] abstraction.
+/// Reuses [pipeline::main`] abstraction.
 fn main() {
     pipeline::main(run);
 }
@@ -49,8 +49,8 @@ fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     }
 }
 
-/// Get a list of files to fromat from [`ArgMatches`].
+/// Get a list of files to format from [`ArgMatches`].
 fn files_to_format(matches: &ArgMatches) -> Option<Vec<PathBuf>> {
     let files = matches.get_many::<PathBuf>("files")?;
-    Some(files.into_iter().map(|x| x.clone()).collect())
+    Some(files.cloned().collect())
 }

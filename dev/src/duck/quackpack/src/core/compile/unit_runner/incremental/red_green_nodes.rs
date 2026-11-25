@@ -127,7 +127,7 @@ impl CompilationInput {
             .package_data(*identity)
             .package()
             .src()
-            .expect("always package");
+            .expect("always package"); // @TODO: #2900 make script-units work.
         visit_duckling_source_files(src_path, &mut check_visitor)?;
         current_build_data
             .add_number_of_source_files(*identity, check_visitor.number_of_source_files);

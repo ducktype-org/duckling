@@ -74,5 +74,6 @@ bundled-curl = ["curl/static-curl", "curl/force-system-lib-on-osx"]
 bundled-git2 = ["libgit2-sys/vendored"]
 bundled-openssl = ["openssl/vendored"]
 bundled-sqlite3 = ["rusqlite/bundled"]
+# NOTE: These two should not be enabled at the same time.
 bundled-scip = ["russcip/bundled", "quackpack/bundled-scip"]
 static-scip = ["russcip/from-source", "quackpack/static-scip"]
