@@ -105,7 +105,7 @@ def download_binaries_impl(force=False, single=False):
     if not files_to_download:
         log_warning(
             f"No prebuilt ccache binary is published for {platform.system()} "
-            f"{platform.machine()}; install a recent ccache on PATH yourself. "
+            f"{platform.machine()}; install ccache 4.14 or newer on PATH yourself. "
             "Nothing to download."
         )
         return
