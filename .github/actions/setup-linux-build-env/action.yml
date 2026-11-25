@@ -15,8 +15,14 @@ inputs:
   linker:
     description: Linker from the build matrix.
     required: true
+  apt-llvm-version:
+    description: >
+      A clang major version to install from apt.llvm.org next to the default LLVM 19, together
+      with its llvm tools and profile runtime.
+    required: false
+    default: ""
   coverage-enabled:
-    description: '"true" to install the coverage tooling (lcov, fastcov, clang profile runtime).'
+    description: '"true" to install the coverage tooling (lcov + fastcov).'
     required: false
     default: "false"
   build-deployables:
@@ -39,11 +45,28 @@ runs:
       with:
         packages: lcov
 
-    - name: Install clang profile runtime
-      if: ${{ inputs.coverage-enabled == 'true' }}
+    - name: Add apt.llvm.org repository for clang ${{ inputs.apt-llvm-version }}
+      if: ${{ inputs.apt-llvm-version != '' }}
+      shell: bash
+      env:
+        VERSION: ${{ inputs.apt-llvm-version }}
+      run: |
+        codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+        python3 -c 'import sys, urllib.request; sys.stdout.buffer.write(urllib.request.urlopen(sys.argv[1]).read())' \
+          https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+        echo "deb https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${VERSION} main" \
+          | sudo tee "/etc/apt/sources.list.d/llvm-${VERSION}.list"
+
+    - name: Update apt for apt.llvm.org
+      if: ${{ inputs.apt-llvm-version != '' }}
+      uses: ./.github/actions/apt-get/
+
+    # llvm-N brings llvm-profdata-N and llvm-cov-N; libclang-rt-N-dev the profile runtime.
+    - name: Install clang ${{ inputs.apt-llvm-version }}
+      if: ${{ inputs.apt-llvm-version != '' }}
       uses: ./.github/actions/apt-get/
       with:
-        packages: libclang-rt-19-dev
+        packages: clang-${{ inputs.apt-llvm-version }} llvm-${{ inputs.apt-llvm-version }} libclang-rt-${{ inputs.apt-llvm-version }}-dev
 
     - name: Install fastcov
       if: ${{ inputs.coverage-enabled == 'true' }}

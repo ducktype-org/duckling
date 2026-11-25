@@ -312,8 +312,13 @@ Before running this command make sure you build folder has enabled coverage.
 ./toolbox.py coverage
 ```
 
-By default coverage uses gcov. With clang you can choose source-based coverage instead, which stays accurate in optimised builds:
+By default coverage uses gcov. With clang you can choose source-based coverage instead, which stays accurate in optimised builds. This is what CI measures:
 
 ```bash
-./toolbox.py setup-build -t DevOpt --coverage --coverage-backend llvm
+./toolbox.py setup-build -t DevOpt --coverage --coverage-backend llvm --coverage-opt-level 1 \
+    -c clang-23 -x clang++-23
 ```
+
+It needs the clang profile runtime (`libclang-rt-<version>-dev` on Ubuntu, `compiler-rt` on Arch) and the matching `llvm-profdata` and `llvm-cov`. With clang 23 or newer it records only whether each region ran, which is much faster in multithreaded code; older clang counts every execution instead.
+
+gcov places its counters after calls, so no call is a tail call. The TC VM depends on tail calls, so its tests are disabled in gcov builds.

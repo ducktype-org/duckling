@@ -30,6 +30,17 @@ LINUX_CLANG: dict[str, Any] = {
     "platform": "linux",
 }
 
+# Single-byte source-based coverage needs a newer clang than the project's LLVM 19.
+LINUX_CLANG_COVERAGE: dict[str, Any] = {
+    "name": "clang-23",
+    "cxx": "clang++-23",
+    "cc": "clang-23",
+    "apt-llvm": "23",
+    "linker": "mold",
+    "cache-prefix": "clang23-coverage-build",
+    "platform": "linux",
+}
+
 MACOS_CLANG: dict[str, Any] = {
     "name": "clang-23-macos",
     "cxx": "/opt/homebrew/opt/llvm@23/bin/clang++",
@@ -39,55 +50,28 @@ MACOS_CLANG: dict[str, Any] = {
     "platform": "macos",
 }
 
-COVERAGE_GATE: dict[str, Any] = {
-    "build-type": "Dev",
-    "compiler": LINUX_GCC,
-    "coverage": "gcov",
-    "coverage-gate": True,
+# The only job an unapproved PR runs, and the one whose coverage is compared against main.
+# It runs on the "debug" runners, which the former Dev / gcc coverage job used.
+COVERAGE: dict[str, Any] = {
+    "build-type": "DevOpt",
+    "compiler": LINUX_CLANG_COVERAGE,
+    "coverage": "llvm",
+    "coverage-opt-level": "1",
+    "runner": "debug",
 }
-
-# Optimised coverage candidates, run next to the gate to compare timings and percentages.
-# They use their own ccache entries and the gate's runners, so the comparison is fair.
-COVERAGE_EXPERIMENTS: list[dict[str, Any]] = [
-    {
-        "build-type": "DevOpt",
-        "compiler": {**LINUX_GCC, "cache-prefix": "gcc-cov-O1-build"},
-        "coverage": "gcov",
-        "coverage-opt-level": "1",
-        "runner": "debug",
-        "experiment": "gcov -O1",
-    },
-    {
-        "build-type": "DevOpt",
-        "compiler": {**LINUX_CLANG, "cache-prefix": "clang-cov-O1-build"},
-        "coverage": "llvm",
-        "coverage-opt-level": "1",
-        "runner": "debug",
-        "experiment": "llvm-cov -O1",
-    },
-    {
-        "build-type": "DevOpt",
-        "compiler": {**LINUX_CLANG, "cache-prefix": "clang-cov-O3-build"},
-        "coverage": "llvm",
-        "runner": "debug",
-        "experiment": "llvm-cov -O3",
-    },
-]
 
 FULL_MATRIX: dict[str, list[Any]] = {
     "include": [
-        COVERAGE_GATE,
-        {"build-type": "Dev", "compiler": MACOS_CLANG},
+        COVERAGE,
+        {"build-type": "DevOpt", "compiler": MACOS_CLANG},
         {"build-type": "DevOpt", "compiler": LINUX_GCC},
         {"build-type": "DevOpt", "compiler": LINUX_CLANG},
-        *COVERAGE_EXPERIMENTS,
     ],
 }
 
 PR_MATRIX: dict[str, list[Any]] = {
     "include": [
-        COVERAGE_GATE,
-        *COVERAGE_EXPERIMENTS,
+        COVERAGE,
     ],
 }
 

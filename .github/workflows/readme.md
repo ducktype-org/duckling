@@ -83,10 +83,10 @@ Each job is containerized, and sharing data between jobs in not trivial, which i
 `setup-build-matrix.py` decides which configurations `tests.yml`'s `build` job runs. It returns a
 matrix spelled out as an `include` list rather than a `build-type` x `compiler` product
 
-* **unapproved PR** -- `Dev` / gcc only.
+* **unapproved PR** -- `DevOpt / clang-23` only: the coverage job.
 * **`main`, `dev`, `workflow_dispatch`, an approved PR, or the `Run All Workflows` label** -- four
-  jobs: `Dev / gcc` (the coverage job), `DevOpt / gcc`, `DevOpt / clang` and
-  `Dev / clang-23-macos`. Those strings are also the status-check names the `main` ruleset
+  jobs: `DevOpt / clang-23` (the coverage job), `DevOpt / gcc`, `DevOpt / clang` (with the JIT)
+  and `DevOpt / clang-23-macos`. Those strings are also the status-check names the `main` ruleset
   requires -- the check name is the JOB name, so renaming a matrix entry means editing the
   ruleset
   Approval adds the label through `add-run-all-workflows-label.yml`, whose `labeled` event is what

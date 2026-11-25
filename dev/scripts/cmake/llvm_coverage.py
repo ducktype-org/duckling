@@ -12,6 +12,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ELF_MAGIC = b"\x7fELF"
@@ -86,22 +87,27 @@ def main() -> int:
         print(f"No profiles in {args.profile_dir}; run the tests first.", file=sys.stderr)
         return 1
 
+    started = time.monotonic()
     binaries = instrumented_binaries(args.build_dir)
+    print(f"Found {len(binaries)} instrumented binaries in {time.monotonic() - started:.1f}s")
     if not binaries:
         print(f"No instrumented binaries under {args.build_dir}.", file=sys.stderr)
         return 1
 
     profdata = args.build_dir / "coverage.profdata"
+    started = time.monotonic()
     subprocess.run(
         [args.llvm_profdata, "merge", "-sparse", "-o", str(profdata), *map(str, profiles)],
         check=True,
     )
+    print(f"Merged {len(profiles)} profiles in {time.monotonic() - started:.1f}s")
 
     ignored = [r"^/usr/", r"^/opt/", *(ere_escape(p) for p in args.exclude)]
     objects = [str(binaries[0])]
     for binary in binaries[1:]:
         objects += ["-object", str(binary)]
 
+    started = time.monotonic()
     exported = subprocess.run(
         [
             args.llvm_cov,
@@ -115,6 +121,7 @@ def main() -> int:
         text=True,
         check=True,
     ).stdout
+    print(f"Exported coverage in {time.monotonic() - started:.1f}s")
     args.output.write_text(drop_lines_past_eof(exported))
     return 0
 

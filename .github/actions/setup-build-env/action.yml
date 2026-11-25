@@ -20,8 +20,14 @@ inputs:
   linker:
     description: Linker from the build matrix.
     required: true
+  apt-llvm-version:
+    description: >
+      Linux only. A clang major version to install from apt.llvm.org next to the default LLVM 19,
+      for compilers Ubuntu does not ship.
+    required: false
+    default: ""
   coverage-enabled:
-    description: '"true" to install the coverage tooling (lcov, fastcov, clang profile runtime).'
+    description: '"true" to install the coverage tooling (lcov + fastcov).'
     required: false
     default: "false"
   build-deployables:
@@ -63,6 +69,7 @@ runs:
         cxx: ${{ inputs.cxx }}
         compiler-name: ${{ inputs.compiler-name }}
         linker: ${{ inputs.linker }}
+        apt-llvm-version: ${{ inputs.apt-llvm-version }}
         coverage-enabled: ${{ inputs.coverage-enabled }}
         build-deployables: ${{ inputs.build-deployables }}
         dev-dir: ${{ inputs.dev-dir }}

@@ -63,7 +63,7 @@ jobs:
 
   build:
     needs: [setup]
-    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}${{ matrix.experiment && format(' / {0} coverage experiment', matrix.experiment) || '' }}
+    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}
     # This if condition is quite complex, so let's break it down:
     # 1. Run on push (if not a draft PR) or workflow_dispatch events (these are not related to PRs).
     # 2. Run on pull_request events only if the PR is not a draft, and either
@@ -102,10 +102,8 @@ jobs:
       labels: ${{ matrix.compiler.platform == 'macos' && 'macOS' || matrix.runner || (matrix.build-type == 'Dev' && 'debug' || 'release') }}
 
     env:
-      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' && !matrix.experiment }}
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' && !matrix.coverage }}
       COVERAGE_ENABLED: ${{ matrix.coverage && 'true' || 'false' }}
-      # Only the gate's percentages are compared against main.
-      COVERAGE_GATE: ${{ matrix.coverage-gate && 'true' || 'false' }}
       PLATFORM: ${{ matrix.compiler.platform }}
 
     steps:
@@ -144,6 +142,7 @@ jobs:
           cxx: ${{ matrix.compiler.cxx }}
           compiler-name: ${{ matrix.compiler.name }}
           linker: ${{ matrix.compiler.linker }}
+          apt-llvm-version: ${{ matrix.compiler.apt-llvm }}
           coverage-enabled: ${{ env.COVERAGE_ENABLED }}
           build-deployables: ${{ env.BUILD_DEPLOYABLES }}
           dev-dir: ${{ env.WORKSPACE }}
@@ -354,8 +353,8 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
 
-      - name: Compute test coverage
-        id: compute-test-coverage
+      - name: Test Coverage
+        id: test-coverage
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -363,12 +362,6 @@ jobs:
           percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html)
           echo "Unit test line coverage: ${percent}%" >> $GITHUB_STEP_SUMMARY
           echo coverage-percent=$percent > $GITHUB_OUTPUT
-
-      # A separate step, so jobs other than the gate never set the job output that all matrix jobs share.
-      - name: Test Coverage
-        id: test-coverage
-        if: ${{ env.COVERAGE_GATE == 'true' }}
-        run: echo coverage-percent=${{ steps.compute-test-coverage.outputs.coverage-percent }} > $GITHUB_OUTPUT
 
       - name: Delete coverage data files
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
@@ -399,8 +392,8 @@ jobs:
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
         run: cat "${{ env.ITEST_LOG }}"
 
-      - name: Compute integration test coverage
-        id: compute-itest-coverage
+      - name: Test Coverage After Integration Tests
+        id: test-coverage-itests
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -408,11 +401,6 @@ jobs:
           percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html)
           echo "Integration test line coverage: ${percent}%" >> $GITHUB_STEP_SUMMARY
           echo coverage-percent=$percent > $GITHUB_OUTPUT
-
-      - name: Test Coverage After Integration Tests
-        id: test-coverage-itests
-        if: ${{ env.COVERAGE_GATE == 'true' }}
-        run: echo coverage-percent=${{ steps.compute-itest-coverage.outputs.coverage-percent }} > $GITHUB_OUTPUT
 
       - name: Test TODO Count
         id: todo-counter

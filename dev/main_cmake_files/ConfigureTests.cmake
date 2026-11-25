@@ -75,10 +75,30 @@ elseif(ENABLE_COVERAGE AND COVERAGE_BACKEND STREQUAL "llvm")
 	# %8m merges every run of a binary into at most 8 files, so many concurrent duckc processes
 	# do not each leave a profile behind.
 	set(COVERAGE_PROFILE_DIR "${CMAKE_BINARY_DIR}/profraw")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate=${COVERAGE_PROFILE_DIR}/%8m.profraw -fcoverage-mapping -fprofile-update=atomic")
-	add_link_options(-fprofile-instr-generate)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate=${COVERAGE_PROFILE_DIR}/%8m.profraw -fcoverage-mapping")
 
 	string(REGEX MATCH "^[0-9]+" CLANG_MAJOR_VERSION "${CMAKE_CXX_COMPILER_VERSION}")
+
+	# Single-byte counters only record whether a region ran, which is all the report needs, and
+	# multithreaded code does not contend on them. Older clang leaves some regions without one
+	# and reports executed code as not executed.
+	set(COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG 23)
+	if(CLANG_MAJOR_VERSION VERSION_GREATER_EQUAL COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG)
+		option(COVERAGE_LLVM_SINGLE_BYTE "Use single-byte coverage counters" ON)
+	else()
+		option(COVERAGE_LLVM_SINGLE_BYTE "Use single-byte coverage counters" OFF)
+	endif()
+
+	if(COVERAGE_LLVM_SINGLE_BYTE)
+		if(CLANG_MAJOR_VERSION VERSION_LESS COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG)
+			message(FATAL_ERROR "COVERAGE_LLVM_SINGLE_BYTE needs clang ${COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG} or newer")
+		endif()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -enable-single-byte-coverage=true")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-update=atomic")
+	endif()
+	add_link_options(-fprofile-instr-generate)
+
 	get_filename_component(CLANG_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
 	find_program(LLVM_PROFDATA NAMES llvm-profdata-${CLANG_MAJOR_VERSION} llvm-profdata HINTS ${CLANG_BIN_DIR} REQUIRED)
 	find_program(LLVM_COV NAMES llvm-cov-${CLANG_MAJOR_VERSION} llvm-cov HINTS ${CLANG_BIN_DIR} REQUIRED)
