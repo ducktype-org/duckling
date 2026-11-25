@@ -24,7 +24,7 @@ inputs:
       The Homebrew formulae the build needs, i.e. what the mac mini has. Installed on GitHub-hosted
       runners and checked on every runner. Not meant to be overridden.
     required: false
-    default: llvm@19 llvm@23 lld@19 icu4c ccache ninja
+    default: llvm@19 llvm@23 lld@19 icu4c ninja
 
 runs:
   using: composite
@@ -144,3 +144,9 @@ runs:
 
         ln -sfn "$venv" .venv
         echo "$venv/bin" >> "$GITHUB_PATH"
+
+    # CMake requires the exact ccache version the toolbox ships, so Homebrew's won't do.
+    - name: Install ccache
+      shell: bash
+      working-directory: ${{ inputs.dev-dir }}
+      run: ./toolbox.py download-binaries -s ccache
