@@ -21,7 +21,6 @@ pub struct Profile {
     pub opt_level: Option<OptLevel>,
     pub dvm_bytecode: Option<bool>,
     pub incremental: Option<bool>,
-    pub c_std: Option<bool>,
     pub inherits: Option<StrId>,
 }
 
@@ -42,7 +41,6 @@ impl From<registry::Profile> for Profile {
             opt_level: value.opt_level.map(Into::into),
             dvm_bytecode: value.dvm_bytecode,
             incremental: value.incremental,
-            c_std: value.c_std,
             inherits: value.inherits.map(Into::into),
         }
     }
@@ -54,7 +52,6 @@ impl From<Profile> for registry::Profile {
             opt_level: value.opt_level.map(Into::into),
             dvm_bytecode: value.dvm_bytecode,
             incremental: value.incremental,
-            c_std: value.c_std,
             inherits: value.inherits.map(Into::into),
         }
     }
@@ -238,28 +235,24 @@ mod test {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("b".into()),
         };
         let prof_b = Profile {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("c".into()),
         };
         let prof_c = Profile {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("d".into()),
         };
         let prof_d = Profile {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("b".into()),
         };
         let profiles_map = [
@@ -284,7 +277,6 @@ mod test {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("a".into()),
         };
         let profiles_map = [("a".into(), prof_a)].into();
@@ -298,7 +290,6 @@ mod test {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("dev".into()),
         };
         let profiles_map = [("a".into(), prof_a)].into();
@@ -311,14 +302,12 @@ mod test {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("dev".into()),
         };
         let prof_dev = Profile {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("a".into()),
         };
         let profiles_map = [("a".into(), prof_a), ("dev".into(), prof_dev)].into();
@@ -336,7 +325,6 @@ mod test {
             opt_level: Some(OptLevel::S),
             dvm_bytecode: Some(false),
             incremental: Some(false),
-            c_std: Some(false),
             inherits: Some("b".into()),
         };
         let profiles_map = [("a".into(), prof_a)].into();
