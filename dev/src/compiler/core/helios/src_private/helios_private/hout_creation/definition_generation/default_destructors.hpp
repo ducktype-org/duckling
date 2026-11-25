@@ -7,8 +7,8 @@
 #pragma once
 
 #include <helios/hout/hout.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -26,7 +26,7 @@ namespace compiler::helios::defgen {
 	 * @brief Get the symbol of the proper destructor for a given symbol type (not the optional user
 	 * one). Returns empty value when the type doesn't have a destructor (trivial destructor).
 	 */
-	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type);
+	base::Optional<SymID> destructSymForValueType(query::Context& ctx, tsh::ValueType<> type);
 
 	/**
 	 * @brief Whether the given symbol is a user-defined destructor.

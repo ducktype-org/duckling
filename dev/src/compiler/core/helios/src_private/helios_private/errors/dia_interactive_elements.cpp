@@ -152,7 +152,7 @@ namespace compiler::helios {
 
 	InteractiveType::InteractiveType(
 		query::Context&                               ctx,
-		tsh::SymbolType<>                             symbol_type,
+		tsh::ValueType<>                              symbol_type,
 		base::Optional<pst::Access<pst::LangElement>> pst_expr
 	):
 		  symbol_type(symbol_type),

@@ -6,9 +6,9 @@
 
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/kind.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/c_abi_target.hpp>
 
@@ -105,7 +105,7 @@ namespace compiler::tsl {
 		 * @brief Checks if a `cpr <target>` <target> is a C-friendly type. Avoids query cycle on
 		 * classes. We are not 100% sure we want this behaviour, may change in the future.
 		 */
-		CAbiConversionResult checkPointee(tsh::SymbolType<> pointee, query::Context& ctx) {
+		CAbiConversionResult checkPointee(tsh::ValueType<> pointee, query::Context& ctx) {
 			if (pointee.getRefKind() != tsh::ReferenceKind::Direct)
 				return fail("pointee is a reference");
 

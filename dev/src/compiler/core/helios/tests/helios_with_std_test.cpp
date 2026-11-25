@@ -130,15 +130,15 @@ private:
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
-	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
+	static compiler::tsh::ValueType<> st(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::ValueType<>::withDefaultsMut(abstract_type);
 	}
 
-	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::ValueType<> stConst(const compiler::tsh::AbstractType abstract_type) {
 		return st(abstract_type).withMutability(compiler::tsh::Mutability::Immutable);
 	}
 
-	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+	auto getSliceTypeNoContext(compiler::tsh::ValueType<> element_type) {
 		return std::any_cast<compiler::tsh::SliceAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
 				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
@@ -194,7 +194,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return compiler::tsh::SymbolType<>::withDefaultsMut(
+				return compiler::tsh::ValueType<>::withDefaultsMut(
 					ctx.query<compiler::tsh::QueryClassType>(sym_id)
 				);
 			};
@@ -1644,20 +1644,20 @@ private:
 		ASSERT_TRUE(dynamic_cast<const CallExpr*>(stripImplicitMove(ca_init)) != nullptr);
 		ASSERT_EQUAL(
 			compiler::tsh::ReferenceKind::Direct,
-			ca_init->expression_type.getSymbolType().getRefKind()
+			ca_init->expression_type.getValueType().getRefKind()
 		);
 
 		// `copyof r` keeps the `ref`: the reference itself is copied, so there is no node.
 		const auto* cr_init = init_of(2);
 		ASSERT_TRUE(dynamic_cast<const IdentifierExpr*>(cr_init) != nullptr);
 		ASSERT_EQUAL(
-			compiler::tsh::ReferenceKind::Ref, cr_init->expression_type.getSymbolType().getRefKind()
+			compiler::tsh::ReferenceKind::Ref, cr_init->expression_type.getValueType().getRefKind()
 		);
 
 		// `copyof bx` keeps the `box`: a fresh allocation holding a copy-constructed pointee.
 		const auto* cb_init = init_of(3);
 		ASSERT_EQUAL(
-			compiler::tsh::ReferenceKind::Box, cb_init->expression_type.getSymbolType().getRefKind()
+			compiler::tsh::ReferenceKind::Box, cb_init->expression_type.getValueType().getRefKind()
 		);
 		const auto* boxed = boxAllocArg(cb_init);
 		ASSERT_TRUE(boxed != nullptr);
@@ -1737,22 +1737,22 @@ private:
 		auto i32_st   = st(i32_type);
 
 		// Get all symbol types before entering query context
-		const auto p_type         = getSymbolTypeOf("p", body_scope);
-		const auto from_ref_type  = getSymbolTypeOf("from_ref", body_scope);
-		const auto from_addr_type = getSymbolTypeOf("from_addr", body_scope);
-		const auto from_box_type  = getSymbolTypeOf("from_box", body_scope);
-		const auto c_type         = getSymbolTypeOf("c", body_scope);
-		const auto m_type         = getSymbolTypeOf("m", body_scope);
-		const auto pp_type        = getSymbolTypeOf("pp", body_scope);
-		const auto inner_type     = getSymbolTypeOf("inner", body_scope);
-		const auto deref_val_type = getSymbolTypeOf("deref_val", body_scope);
-		const auto sum_type       = getSymbolTypeOf("sum", body_scope);
-		const auto c_elem_type    = getSymbolTypeOf("c_elem", body_scope);
+		const auto p_type         = getValueTypeOf("p", body_scope);
+		const auto from_ref_type  = getValueTypeOf("from_ref", body_scope);
+		const auto from_addr_type = getValueTypeOf("from_addr", body_scope);
+		const auto from_box_type  = getValueTypeOf("from_box", body_scope);
+		const auto c_type         = getValueTypeOf("c", body_scope);
+		const auto m_type         = getValueTypeOf("m", body_scope);
+		const auto pp_type        = getValueTypeOf("pp", body_scope);
+		const auto inner_type     = getValueTypeOf("inner", body_scope);
+		const auto deref_val_type = getValueTypeOf("deref_val", body_scope);
+		const auto sum_type       = getValueTypeOf("sum", body_scope);
+		const auto c_elem_type    = getValueTypeOf("c_elem", body_scope);
 
-		const auto pof_direct_type = getSymbolTypeOf("pof_direct", body_scope);
-		const auto pof_box_type    = getSymbolTypeOf("pof_box", body_scope);
-		const auto pof_ref_type    = getSymbolTypeOf("pof_ref", body_scope);
-		const auto pof_elem_type   = getSymbolTypeOf("pof_elem", body_scope);
+		const auto pof_direct_type = getValueTypeOf("pof_direct", body_scope);
+		const auto pof_box_type    = getValueTypeOf("pof_box", body_scope);
+		const auto pof_ref_type    = getValueTypeOf("pof_ref", body_scope);
+		const auto pof_elem_type   = getValueTypeOf("pof_elem", body_scope);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_st });
@@ -1839,14 +1839,14 @@ private:
 			ASSERT_EQUAL(
 				compiler::tsh::Kind::CPointer, index_ptr->base->expression_type.getType().getKind()
 			);
-			ASSERT_EQUAL(i32_st, index_ptr->expression_type.getSymbolType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_st, index_ptr->expression_type.getValueType().withMutability(Mutable));
 		}
 
 		{
 			auto expr_ptr  = get_var_init_expr(base::StrID("deref_val"));
 			auto deref_ptr = dynamic_cast<const compiler::helios::code::DerefExpr*>(expr_ptr.get());
 			ASSERT_TRUE(deref_ptr != nullptr);
-			ASSERT_EQUAL(i32_st, deref_ptr->expression_type.getSymbolType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_st, deref_ptr->expression_type.getValueType().withMutability(Mutable));
 		}
 
 		{
@@ -1857,7 +1857,7 @@ private:
 			auto deref_lhs
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_ptr->lhs.get());
 			ASSERT_TRUE(deref_lhs != nullptr);
-			ASSERT_EQUAL(i32_st, deref_lhs->expression_type.getSymbolType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_st, deref_lhs->expression_type.getValueType().withMutability(Mutable));
 		}
 
 		{
@@ -1919,7 +1919,7 @@ private:
 			                             .getSymbol();
 			const auto box_copy = s.copyValue(s.access(s.ident(holder_var), boxed_field));
 			ASSERT_EQUAL(
-				box_copy->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Box
+				box_copy->expression_type.getValueType().getRefKind(), tsh::ReferenceKind::Box
 			);
 			ASSERT_TRUE(boxAllocArg(box_copy.get()) != nullptr);
 		});

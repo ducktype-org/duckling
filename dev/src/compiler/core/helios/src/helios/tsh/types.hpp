@@ -15,7 +15,7 @@
 #pragma once
 #include "abstract_type.hpp"
 #include "function_kind.hpp"
-#include "symbol_type.hpp"
+#include "value_type.hpp"
 
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -218,7 +218,7 @@ namespace compiler::tsh {
 		 * @return The underlying symbol type of the Pointer type.
 		 */
 		[[nodiscard]]
-		SymbolType<> getPointee() const;
+		ValueType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -250,7 +250,7 @@ namespace compiler::tsh {
 		 * It is statically known what the type of the pointee is.
 		 */
 		[[nodiscard]]
-		SymbolType<> getPointee() const;
+		ValueType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -280,7 +280,7 @@ namespace compiler::tsh {
 		 *
 		 * A value of this type is simply a memory address.
 		 * It is statically known what the type of the pointee is.*/
-		[[nodiscard]] SymbolType<> getPointee() const;
+		[[nodiscard]] ValueType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -301,7 +301,7 @@ namespace compiler::tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(SliceAbstractType, AbstractType)
 
-		[[nodiscard]] SymbolType<> getElementType() const;
+		[[nodiscard]] ValueType<> getElementType() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(SliceAbstractType)
 
@@ -326,7 +326,7 @@ namespace compiler::tsh {
 		SETUP_TYPE_WITH_BASE(TupleAbstractType, AbstractType)
 
 		[[nodiscard]]
-		const std::vector<SymbolType<>>& getComponents() const;
+		const std::vector<ValueType<>>& getComponents() const;
 
 		[[nodiscard]]
 		std::vector<AbstractType> getComponentAbstractTypes() const;
@@ -383,14 +383,14 @@ namespace compiler::tsh {
 		 * @return The parameter types of the function type.
 		 */
 		[[nodiscard]]
-		const std::vector<SymbolType<>>& getParameterTypes() const;
+		const std::vector<ValueType<>>& getParameterTypes() const;
 
 		/**
 		 * @brief Gets the result type of the function type.
 		 * @return The result type of the function type.
 		 */
 		[[nodiscard]]
-		SymbolType<> getResultType() const;
+		ValueType<> getResultType() const;
 
 		/**
 		 * @brief Check whether the function type is pure or not.
@@ -419,7 +419,7 @@ namespace compiler::tsh {
 		 * @return The type of the elements of the dynamic array.
 		 */
 		[[nodiscard]]
-		SymbolType<> getElementType() const;
+		ValueType<> getElementType() const;
 
 		/**
 		 * @brief Gets the element count of the static array.
@@ -445,10 +445,10 @@ namespace compiler::tsh {
 		SETUP_TYPE_WITH_BASE(VariantAbstractType, AbstractType)
 
 		[[nodiscard]]
-		const std::vector<SymbolType<>>& getUnderlyingTypes() const;
+		const std::vector<ValueType<>>& getUnderlyingTypes() const;
 
 		[[nodiscard]]
-		SymbolType<> getMember(usize index) const;
+		ValueType<> getMember(usize index) const;
 
 		/**
 		 * @brief Whether this variant is the optional `?T`, i.e. `T | None` printed and exposing
@@ -463,7 +463,7 @@ namespace compiler::tsh {
 		 * @pre representsOptionalType()
 		 */
 		[[nodiscard]]
-		SymbolType<> getOptionalValueType() const;
+		ValueType<> getOptionalValueType() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantAbstractType)
 

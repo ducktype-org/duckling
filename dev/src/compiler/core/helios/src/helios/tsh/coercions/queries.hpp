@@ -9,8 +9,8 @@
  * @brief The queries that decide coercions.
  *
  * There are two layers here:
- * - `QuerySymbolTypeCoercion`:
- * Builds the `SymbolTypeCoercion` from the two types alone. Which
+ * - `QueryValueTypeCoercion`:
+ * Builds the `ValueTypeCoercion` from the two types alone. Which
  * includes the type conversions, reference kinds and mutability. The ownership is left undecided.
  * @see rules.cpp
  *
@@ -34,35 +34,35 @@
 
 namespace compiler::tsh::coercions {
 	/**
-	 * @brief Key for QuerySymbolTypeCoercion.
+	 * @brief Key for QueryValueTypeCoercion.
 	 */
-	struct KeyFor_QuerySymbolTypeCoercion final {
+	struct KeyFor_QueryValueTypeCoercion final {
 		/**
 		 * @brief The type of the value being coerced.
 		 */
-		SymbolType<> source;
+		ValueType<> source;
 
 		/**
 		 * @brief The type of the location the value is handed to.
 		 */
-		SymbolType<> target;
+		ValueType<> target;
 
 		/**
 		 * @brief Which coercions are allowed at the root of the coercion.
 		 */
 		CoercionMode mode;
 
-		KeyFor_QuerySymbolTypeCoercion(
-			const SymbolType<>& source,
-			const SymbolType<>& target,
-			const CoercionMode  mode = CoercionMode::Default
+		KeyFor_QueryValueTypeCoercion(
+			const ValueType<>& source,
+			const ValueType<>& target,
+			const CoercionMode mode = CoercionMode::Default
 		):
 			  source(source),
 			  target(target),
 			  mode(mode) {}
 
 		[[nodiscard]]
-		auto operator<=>(const KeyFor_QuerySymbolTypeCoercion&) const
+		auto operator<=>(const KeyFor_QueryValueTypeCoercion&) const
 			= default;
 
 		[[nodiscard]]
@@ -81,15 +81,15 @@ namespace compiler::tsh::coercions {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QuerySymbolTypeCoercion,
-		KeyFor_QuerySymbolTypeCoercion,
-		CRef<SymbolTypeCoercion>,
+		QueryValueTypeCoercion,
+		KeyFor_QueryValueTypeCoercion,
+		CRef<ValueTypeCoercion>,
 		({ .uses_qresult = false })
 	)
 
 	/**
 	 * @brief Everything the type system decides about handing one value over to a
-	 * location of the target type. Queries the coercion plan from `QuerySymbolTypeCoercion` and
+	 * location of the target type. Queries the coercion plan from `QueryValueTypeCoercion` and
 	 * decides every `HandOver` of it for @p source.
 	 *
 	 * In the CoercionMode::ImplicitRefOf mode a direct or boxed value may also be taken by `ref`
@@ -98,9 +98,9 @@ namespace compiler::tsh::coercions {
 	 * @return A full coercion that can be performed by HELIoS.
 	 */
 	[[nodiscard]] Coercion coercionOf(
-		query::Context&     ctx,
-		const ValueSource&  source,
-		const SymbolType<>& target,
-		CoercionMode        mode = CoercionMode::Default
+		query::Context&    ctx,
+		const ValueSource& source,
+		const ValueType<>& target,
+		CoercionMode       mode = CoercionMode::Default
 	);
 }

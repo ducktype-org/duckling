@@ -10,7 +10,7 @@ the two layers, the shape of their answers, and how ranks work.
 the logic of `ownership.cpp`.
 
 All the trees below are real `debugPrint` output. To print one yourself, call `debugPrint` on a
-`SymbolTypeCoercion` or a `Coercion`.
+`ValueTypeCoercion` or a `Coercion`.
 
 ---
 
@@ -23,7 +23,7 @@ To coerce a value into a location, the compiler has to answer two different kind
 1. **What happens to the type?** Is `ref i32 -> i64` possible, and how: deref first, then widen?
    Which alternative of `i32 | f64` does an `i16` go into? Can an immutable value go into a mutable
    slot? Which coercions create a need of materializing a value in a new place (hand it over)? 
-   These questions depend only on the two `SymbolType`s.
+   These questions depend only on the two `ValueType`s.
 2. **Who owns the value?** Is a `box i32` passed by moving it out of a temporary? Does the user
    have to write `copy`/`move`? Is the type not copyable at all? These questions depend on where
    the value came from, which is its `ValueCategory`. The type and the category together form an
@@ -31,10 +31,10 @@ To coerce a value into a location, the compiler has to answer two different kind
 
 The design follows this split. `queries.hpp` declares both layers:
 
-- `QuerySymbolTypeCoercion` (implemented in `rules.cpp`) answers question 1. It is a real query,
-  cached on a `(source, target)` pair of `SymbolType`s. That pair is a good cache key: the same
+- `QueryValueTypeCoercion` (implemented in `rules.cpp`) answers question 1. It is a real query,
+  cached on a `(source, target)` pair of `ValueType`s. That pair is a good cache key: the same
   pairs come up over and over, and the rules call the query recursively for subparts, so every
-  sub-plan is memoized too. Its answer is called a **plan** (`SymbolTypeCoercion`).
+  sub-plan is memoized too. Its answer is called a **plan** (`ValueTypeCoercion`).
 - `coercionOf` (implemented in `ownership.cpp`) answers question 2. It is a plain function. It
   takes the plan for the value's type and decides every ownership question in it for one concrete
   value, which gives a **coercion** (`Coercion`). Its input, a `ValueSource`, is too varied to be
@@ -48,7 +48,7 @@ about the value".
 
 Both layers answer with the same structure, `CoercionTree<Source>` (`coercion.hpp`). It is either
 a successful tree rooted in a `CoercionNode`, or a `CoercionError`, and it also stores the
-`Source` it was asked about. The two aliases are `SymbolTypeCoercion = CoercionTree<SymbolType<>>`
+`Source` it was asked about. The two aliases are `ValueTypeCoercion = CoercionTree<ValueType<>>`
 and `Coercion = CoercionTree<ExpressionType<>>`.
 
 ```
@@ -56,14 +56,14 @@ CoercionTree<Source>
 ├─ source: Source                      what was asked about
 └─ outcome: one of
    ├─ CoercionNode                     the coercion succeeded
-   │  ├─ source, target: SymbolType
+   │  ├─ source, target: ValueType
    │  ├─ rank: CoercionRank            the worst thing done in this node, parts included
    │  └─ steps: [CoercionStep]         in the order they happen
    │     ├─ kind: Deref | HandOver | ... | Elementwise { parts: [CoercionNode] }
-   │     └─ result: SymbolType         the type of the value once the step is done
+   │     └─ result: ValueType         the type of the value once the step is done
    └─ CoercionError                    the coercion was refused
       ├─ reason: IncompatibleTypes | SubPartRefused | ...
-      ├─ source, target: SymbolType
+      ├─ source, target: ValueType
       └─ causes: [Cause { at: CoercionPath, error: CoercionError }]
 ```
 
@@ -78,7 +78,7 @@ They are declared in the order of their ranks:
 
 | Step               | Printed as              | Rank                   | Produced by                                                                   |
 | ------------------ | ----------------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| `HandOver`         | `hand over`             | `Identity`             | `SymbolType` coercions only, `handOver()` in `rules.cpp`                      |
+| `HandOver`         | `hand over`             | `Identity`             | `ValueType` coercions only, `handOver()` in `rules.cpp`                      |
 | `ImplicitMove`     | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`     |
 | `MutabilityChange` | `mutability change`     | `MutabilityChange`     | `keepReference`, raw pointers, and a tuple whose parts only change mutability |
 | `RefOf`            | `ref of`                | `RefOf`                | `takeByRef`, only in the `CoercionMode::ImplicitRefOf` mode                   |
@@ -99,7 +99,7 @@ tuple) apart and gives each component a child `CoercionNode` of its own, in `par
 of a child is simply its index in `parts`.
 
 Here is a tuple literal `(makeBox(), &x, 1i32)`, where `x` is a local `i32`, coerced into
-`(box i32, i64 | bool, i64)`. First the plan, which `QuerySymbolTypeCoercion` builds from the
+`(box i32, i64 | bool, i64)`. First the plan, which `QueryValueTypeCoercion` builds from the
 types alone:
 
 ```
@@ -333,7 +333,7 @@ destructible, see `passing.hpp`), because copying their bytes needs no ownership
 
 ### Layer two: deciding ownership (`ownership.cpp`)
 
-`coercionOf` takes the cached plan for `value.getSymbolType() → target`. A refused plan is
+`coercionOf` takes the cached plan for `value.getValueType() → target`. A refused plan is
 returned as it is, so type errors are never hidden behind ownership errors. A successful plan is
 walked by `decideNode`. That walk never asks what a step *does*. It only keeps track of *which
 value* the next step operates on, and keeps that value as a `ValueSource` (`value_source.hpp`).
@@ -399,7 +399,7 @@ nested  ((box i32, i32), (box i32, i32), (box i32, i64), ref i32)  [Temporary]
 
 #### Step 2: layer one plans the types
 
-`coercionOf` asks `QuerySymbolTypeCoercion` for the coercion plan only based on the `SymbolType`s of the root types. In this example those would be `((box i32, i32), (box i32, i32), (box i32, i64), ref i32)` coerced into `((box i32, i64), (box i32, i64 | bool), (box i32, i64), i64)`. This would be the output tree of `QuerySymbolTypeCoercion`:
+`coercionOf` asks `QueryValueTypeCoercion` for the coercion plan only based on the `ValueType`s of the root types. In this example those would be `((box i32, i32), (box i32, i32), (box i32, i64), ref i32)` coerced into `((box i32, i64), (box i32, i64 | bool), (box i32, i64), i64)`. This would be the output tree of `QueryValueTypeCoercion`:
 ```
 plan  Tuple(Tuple(box i32, i32), Tuple(box i32, i32), Tuple(box i32, i64), ref i32)  ->  Tuple(Tuple(box i32, i64), Tuple(box i32, Variant (bool, i64)), Tuple(box i32, i64), i64)
   rank        VariantPack
@@ -445,7 +445,7 @@ plan  Tuple(Tuple(box i32, i32), Tuple(box i32, i32), Tuple(box i32, i64), ref i
 Now we know how to perform the coercion and where the value is passed to another location (it's handed over). We don't know HOW exactly the hand over should be performed. Thats what the second layer decides.
 
 #### Step 3: layer two walks the plan with the value
-Now for the more complex part. After `coercionOf` gets the `SymbolType` plan, it uses the plan together with `ValueSource` and enriches it with ownership information. This essentially means each `HandOver` node is replaced with the correct way to pass the value. The `HandOver` node can be replaced in four different ways:
+Now for the more complex part. After `coercionOf` gets the `ValueType` plan, it uses the plan together with `ValueSource` and enriches it with ownership information. This essentially means each `HandOver` node is replaced with the correct way to pass the value. The `HandOver` node can be replaced in four different ways:
 - by nothing — when copying by bytes is enough (e.g. user wrote a `move`, for a
 literal, an lvalue of a trivially copyable type and without a destructor)
 - by an `ImplicitMove` — when the value is a temporary
@@ -543,10 +543,10 @@ coercion  Tuple(Tuple(box i32, i32), Tuple(box i32, i32), Tuple(box i32, i64), r
   `Tuple(box i32, i32) -> Tuple(box i32, Variant (bool, i64))`, and not the types of the value.
 
 ## FAQ
-### Why do both trees hold only `SymbolType`s, even inside a `Coercion`?
+### Why do both trees hold only `ValueType`s, even inside a `Coercion`?
 
 `CoercionTree` is templated on `Source`, but `CoercionNode`, `CoercionStep::result` and
-`CoercionError` are all written in terms of `SymbolType` only. The `ExpressionType` of a
+`CoercionError` are all written in terms of `ValueType` only. The `ExpressionType` of a
 `Coercion` appears **only once, at the root** (`getSource()`).
 
 The short answer is that no consumer needs anything else. The longer answer has three parts:

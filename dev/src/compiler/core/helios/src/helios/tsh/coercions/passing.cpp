@@ -12,7 +12,7 @@
 
 namespace compiler::tsh::coercions {
 	PassingMethod passingMethod(query::Context& ctx, const ExpressionType<>& value) {
-		const SymbolType<> symbol_type = value.getSymbolType();
+		const ValueType<> symbol_type = value.getValueType();
 
 		// A value that is being moved already is handed over as it is.
 		if (value.getValueCategory().mustMove()) return PassingMethod::ByteCopy;
@@ -38,7 +38,7 @@ namespace compiler::tsh::coercions {
 		}
 	}
 
-	bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type) {
+	bool isCopiedByBytes(query::Context& ctx, const ValueType<>& type) {
 		return type.isTriviallyCopyable(ctx) && type.isTriviallyDestructible(ctx);
 	}
 
@@ -56,7 +56,7 @@ namespace compiler::tsh::coercions {
 		// `REFERENCE` semantics, and keeps the rest of the ones it had as a local.
 		//
 		// @note In the current compiler state the following code could be just:
-		// `return { value.getSymbolType(), ValueCategory(PrimaryCategory::Temporary) }`
+		// `return { value.getValueType(), ValueCategory(PrimaryCategory::Temporary) }`
 		// This is because the allowed semantics of a temporary are the same as the ones of a local,
 		// but without `REINIT` and `REFERENCE`. This may change in the future if we create locals
 		// with a different set of allowed semantics. The current version would preserve them, the
@@ -65,7 +65,7 @@ namespace compiler::tsh::coercions {
 		allows -= REINIT | REFERENCE;
 
 		return {
-			value.getSymbolType(),
+			value.getValueType(),
 			ValueCategory(
 				PrimaryCategory::Temporary, category.isPure(), allows, category.getForceSemantic()
 			),

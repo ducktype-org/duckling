@@ -38,18 +38,18 @@ using base::bytes2bits;
 namespace compiler::tsl {
 	namespace {
 		/**
-		 * @brief Get a vector of TypeLayouts for a vector of SymbolType.
-		 * @param types The input SymbolType vector.
+		 * @brief Get a vector of TypeLayouts for a vector of ValueType.
+		 * @param types The input ValueType vector.
 		 * @param ctx The query context.
 		 * @return The output TypeLayout vector.
 		 */
 		std::vector<CRef<TypeLayout>> getLayoutVector(
-			const std::vector<tsh::SymbolType<>>& types, query::Context& ctx
+			const std::vector<tsh::ValueType<>>& types, query::Context& ctx
 		) {
 			std::vector<CRef<TypeLayout>> layouts;
 			layouts.reserve(types.size());
 			for (const auto& type: types)
-				layouts.emplace_back(&ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow());
+				layouts.emplace_back(&ctx.query<QueryValueTypeLayout>(type)->valueOrThrow());
 			return layouts;
 		}
 
@@ -70,7 +70,7 @@ namespace compiler::tsl {
 		 * @param ctx The Query Context necessary to deduce composite type sizes.
 		 * @return The maximum size of a type in the vector.
 		 */
-		Bits maxTypeSizeInVector(const std::vector<tsh::SymbolType<>>& types, query::Context& ctx) {
+		Bits maxTypeSizeInVector(const std::vector<tsh::ValueType<>>& types, query::Context& ctx) {
 			return maxTypeLayoutSizeInVector(getLayoutVector(types, ctx));
 		}
 
@@ -346,7 +346,7 @@ namespace compiler::tsl {
 	}
 
 	TypeLayoutABC::TypeLayoutABC(
-		const Bits size, const tsh::SymbolType<> source_type, query::Context& ctx
+		const Bits size, const tsh::ValueType<> source_type, query::Context& ctx
 	):
 		  size(size),
 		  alignment(computeDefaultAlignment(size)),
@@ -354,7 +354,7 @@ namespace compiler::tsl {
 		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
 
 	TypeLayoutABC::TypeLayoutABC(
-		Bits size, Bytes alignment, tsh::SymbolType<> source_type, query::Context& ctx
+		Bits size, Bytes alignment, tsh::ValueType<> source_type, query::Context& ctx
 	):
 		  size(size),
 		  alignment(alignment),
@@ -371,18 +371,18 @@ namespace compiler::tsl {
 		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+			  ctx.query<QueryValueTypeLayout>(static_array_type.getElementType())
 					  ->valueOrThrow()
 					  .getSize()
 				  * static_array_type.getSize(),
-			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+			  ctx.query<QueryValueTypeLayout>(static_array_type.getElementType())
 				  ->valueOrThrow()
 				  .getAlignment(),
-			  tsh::SymbolType<>::withDefaultsMut(static_array_type),
+			  tsh::ValueType<>::withDefaultsMut(static_array_type),
 			  ctx
 		  ),
 		  element_layout(
-			  &ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->valueOrThrow()
+			  &ctx.query<QueryValueTypeLayout>(static_array_type.getElementType())->valueOrThrow()
 		  ),
 		  element_count(static_array_type.getSize()) {}
 
@@ -433,7 +433,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(
 			  roundUpToDefaultAlignment(bytes2bits(helper.offsets[1]) + helper.max_component_size),
-			  tsh::SymbolType<>::withDefaultsMut(helper.variant_type),
+			  tsh::ValueType<>::withDefaultsMut(helper.variant_type),
 			  ctx
 		  ),
 		  tag_offset{ 0 },  // 0 bytes
@@ -443,7 +443,7 @@ namespace compiler::tsl {
 		u32 i = 0;
 		for (auto type: helper.variant_type.getUnderlyingTypes()) {
 			type_to_index.put(type, i);
-			index_to_layout.emplace_back(&ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow());
+			index_to_layout.emplace_back(&ctx.query<QueryValueTypeLayout>(type)->valueOrThrow());
 			i++;
 		}
 	}
@@ -514,10 +514,10 @@ namespace compiler::tsl {
 			return fields;
 		}
 
-		static std::vector<tsh::SymbolType<>> getElementTypes(
+		static std::vector<tsh::ValueType<>> getElementTypes(
 			const std::vector<tsh::InterfaceElement>& elements, query::Context& ctx
 		) {
-			std::vector<tsh::SymbolType<>> types;
+			std::vector<tsh::ValueType<>> types;
 			types.reserve(elements.size());
 			for (const auto& element: elements) types.push_back(element.getType(ctx));
 			return types;
@@ -581,7 +581,7 @@ namespace compiler::tsl {
 		  TypeLayoutABC(
 			  helper.total_size,
 			  helper.max_alignment,
-			  tsh::SymbolType<>::withDefaultsMut(helper.type),
+			  tsh::ValueType<>::withDefaultsMut(helper.type),
 			  ctx
 		  ),
 		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
@@ -620,17 +620,17 @@ namespace compiler::tsl {
 	std::string ClassTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::SymbolType<> class_type = getSourceType();
-		std::stringstream       ss{};
+		const tsh::ValueType<> class_type = getSourceType();
+		std::stringstream      ss{};
 
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
 			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
-			const tsh::SymbolType<>     field_type
+			const tsh::ValueType<>      field_type
 				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
 			const auto field_layout
-				= CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(field_type)->valueOrThrow());
+				= CRef<TypeLayout>(&ctx.query<QueryValueTypeLayout>(field_type)->valueOrThrow());
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -649,21 +649,21 @@ namespace compiler::tsl {
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::CPointer) {
 		auto& pointee_cabi_type
@@ -674,9 +674,9 @@ namespace compiler::tsl {
 		}
 	}
 
-	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
+	PointerTypeLayout::PointerTypeLayout(const tsh::ValueType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee_type(tsh::SymbolType<>::withDefaultsMut(symbol_type.getType())),
+		  pointee_type(tsh::ValueType<>::withDefaultsMut(symbol_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
@@ -687,13 +687,13 @@ namespace compiler::tsl {
 
 	CRef<TypeLayout> PointerTypeLayout::getPointee(query::Context& ctx) const {
 		CORE_ASSERT(pointee_type.has_value(), "Untyped pointer layout has no pointee.");
-		return &ctx.query<QuerySymbolTypeLayout>(*pointee_type)->valueOrThrow();
+		return &ctx.query<QueryValueTypeLayout>(*pointee_type)->valueOrThrow();
 	}
 
 	FunctionalTypeLayout::FunctionalTypeLayout(
 		const tsh::FunctionAbstractType function_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(function_type), ctx) {
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(function_type), ctx) {
 		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
 			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(
@@ -717,7 +717,7 @@ namespace compiler::tsl {
 		for (const auto& parameter: function_type.getParameterTypes())
 			if (parameter.getType().carriesInformation(ctx))
 				parameter_layouts.emplace_back(
-					&ctx.query<QuerySymbolTypeLayout>(parameter)->valueOrThrow()
+					&ctx.query<QueryValueTypeLayout>(parameter)->valueOrThrow()
 				);
 		return parameter_layouts;
 	}
@@ -727,7 +727,7 @@ namespace compiler::tsl {
 
 		const auto result_type = function_type.getResultType();
 		if (result_type.getType().carriesInformation(ctx))
-			return &ctx.query<QuerySymbolTypeLayout>(result_type)->valueOrThrow();
+			return &ctx.query<QueryValueTypeLayout>(result_type)->valueOrThrow();
 		return &ctx.query<QueryAbstractTypeLayout>(tsh::getUnitType())->valueOrThrow();
 	}
 
@@ -735,7 +735,7 @@ namespace compiler::tsl {
 
 	Bytes TypeLayout::getAlignment() const { return VISIT(variant, l, return l.getAlignment()); }
 
-	tsh::SymbolType<> TypeLayout::getSourceType() const {
+	tsh::ValueType<> TypeLayout::getSourceType() const {
 		return VISIT(variant, l, return l.getSourceType());
 	}
 

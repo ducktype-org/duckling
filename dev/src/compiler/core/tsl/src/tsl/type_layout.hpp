@@ -9,8 +9,8 @@
 #include "size_constants.hpp"
 
 #include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
@@ -54,7 +54,7 @@ namespace compiler::tsl {
 		 * pointer types might be created directly from symbol type. This is important, because it
 		 * allows to distinguish `T` from `ref T` from `box T` even at the memory layout level.
 		 */
-		tsh::SymbolType<> source_type;
+		tsh::ValueType<> source_type;
 
 
 		/**
@@ -98,7 +98,7 @@ namespace compiler::tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::SymbolType<> getSourceType() const {
+		tsh::ValueType<> getSourceType() const {
 			return source_type;
 		}
 
@@ -137,7 +137,7 @@ namespace compiler::tsl {
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(Bits size, tsh::SymbolType<> source_type, query::Context& ctx);
+		TypeLayoutABC(Bits size, tsh::ValueType<> source_type, query::Context& ctx);
 
 		/**
 		 * @brief Constructor with an explicit alignment override.
@@ -145,7 +145,7 @@ namespace compiler::tsl {
 		 * Use this when the natural alignment of a type differs from the
 		 * alignment implied by its total size (e.g. static arrays).
 		 */
-		TypeLayoutABC(Bits size, Bytes alignment, tsh::SymbolType<> source_type, query::Context& ctx);
+		TypeLayoutABC(Bits size, Bytes alignment, tsh::ValueType<> source_type, query::Context& ctx);
 
 		[[nodiscard]]
 		static auto getIndent(const u32 indent) {
@@ -189,7 +189,7 @@ namespace compiler::tsl {
 	 */
 	class EmptyTypeLayout final: public TypeLayoutABC {
 		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type, query::Context& ctx):
-			  TypeLayoutABC(Bits(0), tsh::SymbolType<>::withDefaultsMut(unit_type), ctx) {}
+			  TypeLayoutABC(Bits(0), tsh::ValueType<>::withDefaultsMut(unit_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -210,7 +210,7 @@ namespace compiler::tsl {
 	 */
 	class MetaTypeLayout final: public TypeLayoutABC {
 		explicit MetaTypeLayout(const tsh::MetaAbstractType meta_type, query::Context& ctx):
-			  TypeLayoutABC(META_SIZE, tsh::SymbolType<>::withDefaultsMut(meta_type), ctx) {}
+			  TypeLayoutABC(META_SIZE, tsh::ValueType<>::withDefaultsMut(meta_type), ctx) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -228,19 +228,19 @@ namespace compiler::tsl {
 	 */
 	class IntegralTypeLayout final: public TypeLayoutABC {
 		explicit IntegralTypeLayout(const tsh::ByteAbstractType byte_type, query::Context& ctx):
-			  TypeLayoutABC(BYTE_SIZE, tsh::SymbolType<>::withDefaultsMut(byte_type), ctx) {}
+			  TypeLayoutABC(BYTE_SIZE, tsh::ValueType<>::withDefaultsMut(byte_type), ctx) {}
 
 		explicit IntegralTypeLayout(const tsh::BoolAbstractType bool_type, query::Context& ctx):
-			  TypeLayoutABC(BOOL_SIZE, tsh::SymbolType<>::withDefaultsMut(bool_type), ctx) {}
+			  TypeLayoutABC(BOOL_SIZE, tsh::ValueType<>::withDefaultsMut(bool_type), ctx) {}
 
 		explicit IntegralTypeLayout(const tsh::CharAbstractType char_type, query::Context& ctx):
-			  TypeLayoutABC(CHAR_SIZE, tsh::SymbolType<>::withDefaultsMut(char_type), ctx) {}
+			  TypeLayoutABC(CHAR_SIZE, tsh::ValueType<>::withDefaultsMut(char_type), ctx) {}
 
 		explicit IntegralTypeLayout(
 			const tsh::IntegralAbstractType integral_type, query::Context& ctx
 		):
 			  TypeLayoutABC(
-				  integral_type.getSize(), tsh::SymbolType<>::withDefaultsMut(integral_type), ctx
+				  integral_type.getSize(), tsh::ValueType<>::withDefaultsMut(integral_type), ctx
 			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
@@ -259,7 +259,7 @@ namespace compiler::tsl {
 	class FloatTypeLayout final: public TypeLayoutABC {
 		explicit FloatTypeLayout(const tsh::FloatAbstractType float_type, query::Context& ctx):
 			  TypeLayoutABC(
-				  float_type.getSize(), tsh::SymbolType<>::withDefaultsMut(float_type), ctx
+				  float_type.getSize(), tsh::ValueType<>::withDefaultsMut(float_type), ctx
 			  ) {}
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
@@ -315,8 +315,8 @@ namespace compiler::tsl {
 		Bytes data_offset;
 		Bits  data_size;
 
-		base::Map<tsh::SymbolType<>, usize> type_to_index;
-		std::vector<CRef<TypeLayout>>       index_to_layout;
+		base::Map<tsh::ValueType<>, usize> type_to_index;
+		std::vector<CRef<TypeLayout>>      index_to_layout;
 
 		// Delegate constructor.
 		explicit VariantTypeLayout(
@@ -357,7 +357,7 @@ namespace compiler::tsl {
 		 * @return The zero-based logical index of the given option.
 		 */
 		[[nodiscard]]
-		usize getIndexOfType(const tsh::SymbolType<> key) const {
+		usize getIndexOfType(const tsh::ValueType<> key) const {
 			return type_to_index.at(key);
 		}
 
@@ -529,7 +529,7 @@ namespace compiler::tsl {
 		// The type of the pointee. Its layout is looked up lazily (see getPointee), so that a
 		// type may hold a pointer to itself (e.g. `class T { t: ptr T; }`) without a query
 		// cycle. Since a pointer may be untyped, the pointee may be unknown, hence the Optional.
-		base::Optional<tsh::SymbolType<>> pointee_type{};
+		base::Optional<tsh::ValueType<>> pointee_type{};
 
 		PointerKind pointer_kind;
 
@@ -540,7 +540,7 @@ namespace compiler::tsl {
 		explicit PointerTypeLayout(
 			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
 		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaultsMut(raw_pointer_type), ctx),
+			  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(raw_pointer_type), ctx),
 			  pointer_kind(PointerKind::SinglePointer) {}
 
 		/**
@@ -565,14 +565,14 @@ namespace compiler::tsl {
 		PointerTypeLayout(tsh::CPointerAbstractType pointer_type, query::Context& ctx);
 
 		/**
-		 * @brief Construct a PointerLayout from a SymbolType, provided that it is not DIRECT.
+		 * @brief Construct a PointerLayout from a ValueType, provided that it is not DIRECT.
 		 * @param symbol_type A type with reference indirection, i.e. not DIRECT reference kind.
 		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
 		 */
-		PointerTypeLayout(tsh::SymbolType<> symbol_type, query::Context& ctx);
+		PointerTypeLayout(tsh::ValueType<> symbol_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
-		friend struct ImplementationOf_QuerySymbolTypeLayout;
+		friend struct ImplementationOf_QueryValueTypeLayout;
 
 	public:
 		/**
@@ -580,7 +580,7 @@ namespace compiler::tsl {
 		 * @return The pointee type, or an empty Optional for an untyped pointer.
 		 */
 		[[nodiscard]]
-		base::Optional<tsh::SymbolType<>> getPointeeTypeOpt() const {
+		base::Optional<tsh::ValueType<>> getPointeeTypeOpt() const {
 			return pointee_type;
 		}
 
@@ -639,15 +639,15 @@ namespace compiler::tsl {
 	 * @note Use getVariant() when matching against the variant's options.
 	 */
 	class TypeLayout final {
-		// Copy constructor needed for QuerySymbolTypeLayout.
+		// Copy constructor needed for QueryValueTypeLayout.
 		TypeLayout(const TypeLayout& other) = default;
 
-		friend struct ImplementationOf_QuerySymbolTypeLayout;
+		friend struct ImplementationOf_QueryValueTypeLayout;
 
 		TypeLayoutDirectVariant variant;
 
 	public:
-		// Move constructor needed for caching in QueryAbstract/SymbolTypeLayout.
+		// Move constructor needed for caching in QueryAbstract/ValueTypeLayout.
 		TypeLayout(TypeLayout&& other) noexcept = default;
 
 		// Copy and move assignments are deleted to avoid accidental copies.
@@ -699,7 +699,7 @@ namespace compiler::tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::SymbolType<> getSourceType() const;
+		tsh::ValueType<> getSourceType() const;
 
 		/**
 		 * @brief Get a string describing the layout in a human-friendly format.

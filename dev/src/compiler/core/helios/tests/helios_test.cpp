@@ -162,7 +162,7 @@ private:
 		));
 	}
 
-	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+	auto getSliceTypeNoContext(compiler::tsh::ValueType<> element_type) {
 		return std::any_cast<compiler::tsh::SliceAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
 				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
@@ -173,19 +173,19 @@ private:
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
-	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType<>::withDefaultsMut(abstract_type);
+	static compiler::tsh::ValueType<> st(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::ValueType<>::withDefaultsMut(abstract_type);
 	}
 
-	static compiler::tsh::SymbolType<> stImm(const compiler::tsh::AbstractType abstract_type) {
+	static compiler::tsh::ValueType<> stImm(const compiler::tsh::AbstractType abstract_type) {
 		return st(abstract_type).withMutability(Immutable);
 	}
 
 	/**
 	 * Shorthand to create a reference to mutable symbol type from an abstract type.
 	 */
-	static compiler::tsh::SymbolType<> refst(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
+	static compiler::tsh::ValueType<> refst(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::ValueType{
 			abstract_type,
 			compiler::tsh::ReferenceKind::Ref,
 			Mutable,
@@ -227,25 +227,25 @@ private:
 		{
 			{
 				auto simple_ref
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_REF", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_REF", root_scope);
 				auto expected = st(i64_type).toRef();
 				ASSERT_EQUAL(expected, simple_ref);
 			}
 			{
 				auto simple_box
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_BOX", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_BOX", root_scope);
 				auto expected = st(i64_type).toBox();
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
 				auto simple_imm
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_IMM", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_IMM", root_scope);
 				auto expected = stImm(i64_type);
 				ASSERT_EQUAL(expected, simple_imm);
 			}
 			{
 				auto simple_variant
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_VARIANT", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_VARIANT", root_scope);
 				auto expected
 					= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
 				                                                                st(f64_type) } }));
@@ -253,7 +253,7 @@ private:
 			}
 			{
 				auto simple_tuple
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_TUPLE", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_TUPLE", root_scope);
 				auto expected
 					= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
 				                                                              st(f64_type) } }));
@@ -274,34 +274,34 @@ private:
 		// Function evaluation.
 		{
 			{
-				auto a_type   = getConstValueAs<compiler::tsh::SymbolType<>>("A", root_scope);
+				auto a_type   = getConstValueAs<compiler::tsh::ValueType<>>("A", root_scope);
 				auto expected = st(unit_type);
 				ASSERT_EQUAL(expected, a_type);
 			}
 			{
-				auto b_type   = getConstValueAs<compiler::tsh::SymbolType<>>("B", root_scope);
+				auto b_type   = getConstValueAs<compiler::tsh::ValueType<>>("B", root_scope);
 				auto expected = st(i32_type).toBox();
 				ASSERT_EQUAL(expected, b_type);
 			}
 			{
-				auto c_type   = getConstValueAs<compiler::tsh::SymbolType<>>("C", root_scope);
+				auto c_type   = getConstValueAs<compiler::tsh::ValueType<>>("C", root_scope);
 				auto expected = st(i32_type).toRef();
 				ASSERT_EQUAL(expected, c_type);
 			}
 			{
-				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
+				auto d_type   = getConstValueAs<compiler::tsh::ValueType<>>("D", root_scope);
 				auto expected = stImm(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
-				auto e_type   = getConstValueAs<compiler::tsh::SymbolType<>>("E", root_scope);
+				auto e_type   = getConstValueAs<compiler::tsh::ValueType<>>("E", root_scope);
 				auto expected = query::entryPoint<compiler::tsh::QueryVariantType>(
 					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
 				);
 				ASSERT_EQUAL(st(expected), e_type);
 			}
 			{
-				auto f_type   = getConstValueAs<compiler::tsh::SymbolType<>>("F", root_scope);
+				auto f_type   = getConstValueAs<compiler::tsh::ValueType<>>("F", root_scope);
 				auto expected = st(query::entryPoint<compiler::tsh::QueryTupleType>(
 					{ { st(i16_type), st(i32_type), st(i64_type), st(i128_type) } }
 				));
@@ -309,7 +309,7 @@ private:
 			}
 			{
 				auto mega_type
-					= getConstValueAs<compiler::tsh::SymbolType<>>("megaGigaType", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("megaGigaType", root_scope);
 
 				auto first  = st(unit_type);
 				auto second = st(i128_type).toBox();
@@ -331,13 +331,13 @@ private:
 				ASSERT_EQUAL(expected, mega_type);
 			}
 			{
-				auto first_type = getConstValueAs<compiler::tsh::SymbolType<>>("FIRST", root_scope);
+				auto first_type = getConstValueAs<compiler::tsh::ValueType<>>("FIRST", root_scope);
 				auto expected   = st(i16_type).toBox();
 				ASSERT_EQUAL(expected, first_type);
 			}
 			{
 				auto second_type
-					= getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
+					= getConstValueAs<compiler::tsh::ValueType<>>("SECOND", root_scope);
 				auto expected = st(i64_type).toRef();
 				ASSERT_EQUAL(expected, second_type);
 			}
@@ -360,11 +360,11 @@ private:
 			                                                                st(f32_type) } }));
 
 			auto picked_variant
-				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_VARIANT", root_scope);
+				= getConstValueAs<compiler::tsh::ValueType<>>("PICKED_VARIANT", root_scope);
 			ASSERT_EQUAL(i32_or_f32, picked_variant);
 
 			auto picked_plain
-				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_PLAIN", root_scope);
+				= getConstValueAs<compiler::tsh::ValueType<>>("PICKED_PLAIN", root_scope);
 			ASSERT_EQUAL(st(i32_type), picked_plain);
 
 			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_IS_VARIANT", root_scope));
@@ -382,9 +382,9 @@ private:
 			using compiler::tsh::Kind;
 
 			auto kind_of
-				= [](const compiler::tsh::SymbolType<>& type) { return type.getType().getKind(); };
+				= [](const compiler::tsh::ValueType<>& type) { return type.getType().getKind(); };
 
-			auto tuple_type = getSymbolTypeOf("TYPE_TUPLE", root_scope);
+			auto tuple_type = getValueTypeOf("TYPE_TUPLE", root_scope);
 			ASSERT_TRUE(kind_of(tuple_type) == Kind::Tuple);
 			auto tuple_components
 				= tuple_type.getType().as<compiler::tsh::TupleAbstractType>().getComponents();
@@ -396,15 +396,15 @@ private:
 				= getConstValueAs<CompileTimeValue::TypeTuple>("TYPE_TUPLE", root_scope);
 			ASSERT_EQUAL(tuple_value.getElements().size(), 2);
 			ASSERT_TRUE(
-				kind_of(v_get(tuple_value.getElements()[0], compiler::tsh::SymbolType<>))
+				kind_of(v_get(tuple_value.getElements()[0], compiler::tsh::ValueType<>))
 				== Kind::Bool
 			);
 			ASSERT_TRUE(
-				kind_of(v_get(tuple_value.getElements()[1], compiler::tsh::SymbolType<>))
+				kind_of(v_get(tuple_value.getElements()[1], compiler::tsh::ValueType<>))
 				== Kind::Slice
 			);
 
-			auto value_type = getSymbolTypeOf("TYPE_TUPLE_VALUE", root_scope);
+			auto value_type = getValueTypeOf("TYPE_TUPLE_VALUE", root_scope);
 			ASSERT_TRUE(kind_of(value_type) == Kind::Tuple);
 			auto value_components
 				= value_type.getType().as<compiler::tsh::TupleAbstractType>().getComponents();
@@ -421,14 +421,14 @@ private:
 				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_pair, i32_pair } }));
 			ASSERT_EQUAL(
 				expected_nested,
-				getConstValueAs<compiler::tsh::SymbolType<>>("NESTED_TYPE_TUPLE", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("NESTED_TYPE_TUPLE", root_scope)
 			);
 
 			auto single_tuple
 				= getConstValueAs<CompileTimeValue::TypeTuple>("SINGLE_TYPE_TUPLE", root_scope);
 			ASSERT_EQUAL(single_tuple.getElements().size(), 1);
 			ASSERT_EQUAL(
-				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::SymbolType<>)
+				st(i32_type), v_get(single_tuple.getElements()[0], compiler::tsh::ValueType<>)
 			);
 		}
 
@@ -439,9 +439,9 @@ private:
 
 			auto i32_st      = st(i32_type);
 			auto bool_st     = st(compiler::tsh::getBoolType());
-			auto function_of = [&](std::vector<compiler::tsh::SymbolType<>> parameters,
-			                       compiler::tsh::SymbolType<>              result,
-			                       FunctionKind                             kind) {
+			auto function_of = [&](std::vector<compiler::tsh::ValueType<>> parameters,
+			                       compiler::tsh::ValueType<>              result,
+			                       FunctionKind                            kind) {
 				return st(query::entryPoint<QueryFunctionType>(
 					{ .parameter_types = std::move(parameters), .result_type = result, .kind = kind }
 				));
@@ -449,37 +449,37 @@ private:
 
 			ASSERT_EQUAL(
 				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_PAIR", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_PAIR", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_st, i32_st }, bool_st, FunctionKind::Closure),
-				getConstValueAs<compiler::tsh::SymbolType<>>("CLOSURE_PAIR", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("CLOSURE_PAIR", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_st }, bool_st, FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_SINGLE", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_SINGLE", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({}, bool_st, FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_NO_PARAMS", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_NO_PARAMS", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_st }, st(compiler::tsh::getUnitType()), FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_UNIT_RESULT", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_UNIT_RESULT", root_scope)
 			);
 			auto i32_pair
 				= st(query::entryPoint<compiler::tsh::QueryTupleType>({ { i32_st, i32_st } }));
 			ASSERT_EQUAL(
 				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_TUPLE_PARAM", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_TUPLE_PARAM", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_st }, bool_st, FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_ONE_ELEMENT_LIST", root_scope)
 			);
 			ASSERT_EQUAL(
 				function_of({ i32_pair }, bool_st, FunctionKind::Raw),
-				getConstValueAs<compiler::tsh::SymbolType<>>("RAW_FROM_ALIAS", root_scope)
+				getConstValueAs<compiler::tsh::ValueType<>>("RAW_FROM_ALIAS", root_scope)
 			);
 		}
 	}
@@ -546,7 +546,7 @@ private:
 		                                      compiler::tsh::AbstractType expected_type,
 		                                      compiler::tsh::Mutability   expected_mutability) {
 			auto var_name    = base::strConcat(keyword, "_", type_suffix);
-			auto symbol_type = getSymbolTypeOf(var_name, root_scope);
+			auto symbol_type = getValueTypeOf(var_name, root_scope);
 			ASSERT_EQUAL(expected_type, symbol_type.getType());
 			ASSERT_EQUAL(expected_mutability, symbol_type.getMutability());
 		};
@@ -580,11 +580,11 @@ private:
 
 		// A literal without a type is the first of `i32`, `u32`, `i64` and `u64` it fits into.
 		const auto i8_type = getIntegralTypeNoContext(8, Signed);
-		ASSERT_EQUAL(i8_type, getSymbolTypeOf("I8_MIN", root_scope).getType());
-		ASSERT_EQUAL(i64_type, getSymbolTypeOf("I64_MIN", root_scope).getType());
-		ASSERT_EQUAL(i32_type, getSymbolTypeOf("UNTYPED_I32_MIN", root_scope).getType());
-		ASSERT_EQUAL(i64_type, getSymbolTypeOf("UNTYPED_I64_MIN", root_scope).getType());
-		ASSERT_EQUAL(u64_type, getSymbolTypeOf("UNTYPED_U64_MAX", root_scope).getType());
+		ASSERT_EQUAL(i8_type, getValueTypeOf("I8_MIN", root_scope).getType());
+		ASSERT_EQUAL(i64_type, getValueTypeOf("I64_MIN", root_scope).getType());
+		ASSERT_EQUAL(i32_type, getValueTypeOf("UNTYPED_I32_MIN", root_scope).getType());
+		ASSERT_EQUAL(i64_type, getValueTypeOf("UNTYPED_I64_MIN", root_scope).getType());
+		ASSERT_EQUAL(u64_type, getValueTypeOf("UNTYPED_U64_MAX", root_scope).getType());
 	}
 
 	void testClassSymbolData() {
@@ -932,9 +932,9 @@ private:
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
 		const auto int32_immut_symbol_type = stImm(int32_type);
 
-		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
-		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
-		ASSERT_EQUAL(int32_mut_symbol_type, getSymbolTypeOf("SimpleIntVar", root_scope));
+		ASSERT_EQUAL(int32_immut_symbol_type, getValueTypeOf("SimpleIntConst", root_scope));
+		ASSERT_EQUAL(int32_immut_symbol_type, getValueTypeOf("SimpleIntLet", root_scope));
+		ASSERT_EQUAL(int32_mut_symbol_type, getValueTypeOf("SimpleIntVar", root_scope));
 
 		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
@@ -1594,7 +1594,7 @@ private:
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
 			auto i32_type              = getIntegralTypeNoContext(32, Signed);
 			auto expected_type         = st(i32_type).toRef();
-			ASSERT_EQUAL(expected_type, getSymbolTypeOf("r", test_simple_ref_scope));
+			ASSERT_EQUAL(expected_type, getValueTypeOf("r", test_simple_ref_scope));
 		}
 		{
 			// Check if RefOfExpr was inserted.
@@ -1738,9 +1738,9 @@ private:
 		{
 			auto scope = getFunctionBodyScope(getChain("test_deduced_from_ref", top_scope).back());
 			auto i32_type = getIntegralTypeNoContext(32, Signed);
-			ASSERT_EQUAL(st(i32_type), getSymbolTypeOf("copied", scope));
+			ASSERT_EQUAL(st(i32_type), getValueTypeOf("copied", scope));
 			ASSERT_EQUAL(
-				st(i32_type).withMutability(Immutable), getSymbolTypeOf("copied_let", scope)
+				st(i32_type).withMutability(Immutable), getValueTypeOf("copied_let", scope)
 			);
 		}
 	}
@@ -2027,7 +2027,7 @@ private:
 			auto i32_type = getIntegralTypeNoContext(
 				32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 			);
-			ASSERT_EQUAL(outer_index->expression_type.getSymbolType().getType(), i32_type);
+			ASSERT_EQUAL(outer_index->expression_type.getValueType().getType(), i32_type);
 		}
 		{
 			// poly.vertices[1].x = 100
@@ -2660,8 +2660,8 @@ private:
 		using compiler::numeric_value::NumericValue;
 
 		const auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
-		const auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
-		const auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
+		const auto symbol_1        = getValueTypeOf("Mspc.Ooo.Cnst", root_scope);
+		const auto symbol_2        = getValueTypeOf("Mspc.Ooo.r", root_scope);
 
 		std::string result;
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -2930,9 +2930,9 @@ private:
 		ASSERT_EQUAL(tuple_si_type, getTypeOf("TupleCSI", root_scope));
 
 		// Differences between const, let, and var
-		const auto const_type = getSymbolTypeOf("const_no_type", root_scope);
-		const auto let_type   = getSymbolTypeOf("let_no_type", root_scope);
-		const auto var_type   = getSymbolTypeOf("var_no_type", root_scope);
+		const auto const_type = getValueTypeOf("const_no_type", root_scope);
+		const auto let_type   = getValueTypeOf("let_no_type", root_scope);
+		const auto var_type   = getValueTypeOf("var_no_type", root_scope);
 		ASSERT_EQUAL(const_type.getType(), int32_type);
 		ASSERT_EQUAL(let_type.getType(), int32_type);
 		ASSERT_EQUAL(var_type.getType(), int32_type);
@@ -3346,9 +3346,9 @@ private:
 		const auto tuple_lift_error = getChain("TupleLiftError", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto check_types = [&](const compiler::helios::SymID     sym_id,
-			                             const compiler::tsh::SymbolType<> expected_type,
-			                             const std::string&                message) -> void {
+			const auto check_types = [&](const compiler::helios::SymID    sym_id,
+			                             const compiler::tsh::ValueType<> expected_type,
+			                             const std::string&               message) -> void {
 				const auto symbol_value
 					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
 				const auto actual_type

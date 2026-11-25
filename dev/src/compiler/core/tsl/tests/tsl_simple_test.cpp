@@ -24,8 +24,8 @@ namespace {
 		return { &ctx.query<QueryAbstractTypeLayout>(type)->valueOrThrow() };
 	}
 
-	CRef<TypeLayout> querySymbolLayout(query::Context& ctx, SymbolType<> type) {
-		return { &ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow() };
+	CRef<TypeLayout> querySymbolLayout(query::Context& ctx, ValueType<> type) {
+		return { &ctx.query<QueryValueTypeLayout>(type)->valueOrThrow() };
 	}
 }
 
@@ -61,8 +61,8 @@ private:
 
 	using enum Mutability;
 
-	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	static ValueType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
+		return ValueType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
 	}
 
 	void basicTypesTest() {
@@ -260,10 +260,10 @@ private:
 
 	void variantTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			SymbolType<> i8_type = st(
+			ValueType<> i8_type = st(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			SymbolType<> f16_type = st(getFloatType(ctx, 16));
+			ValueType<> f16_type = st(getFloatType(ctx, 16));
 
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
@@ -305,7 +305,7 @@ private:
 
 	void variantTagWidthTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			std::vector<SymbolType<>> alternatives;
+			std::vector<ValueType<>> alternatives;
 			alternatives.reserve(256);
 			for (usize count = 1; count <= 256; ++count) {
 				const StaticArrayAbstractType array_type
@@ -340,7 +340,7 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			// `i8 | u8[5]`: a 1-byte tag, then a 5-byte payload placed at offset 8. The 13 bytes
 			// round up to 16, so the next element of an array of these variants stays aligned.
-			const SymbolType<> i8_type = st(
+			const ValueType<> i8_type = st(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			const StaticArrayAbstractType bytes_type
@@ -372,15 +372,15 @@ private:
 
 	void tupleTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const SymbolType<> i8_type = st(
+			const ValueType<> i8_type = st(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			const SymbolType<> f16_type = st(getFloatType(ctx, 16));
-			const SymbolType<> f64_type = st(getFloatType(ctx, 64));
-			const SymbolType<> f16_ref
-				= SymbolType<>{ getFloatType(ctx, 16), ReferenceKind::Ref, Immutable };
-			const SymbolType<> f16_box
-				= SymbolType<>{ getFloatType(ctx, 16), ReferenceKind::Box, Immutable };
+			const ValueType<> f16_type = st(getFloatType(ctx, 16));
+			const ValueType<> f64_type = st(getFloatType(ctx, 64));
+			const ValueType<> f16_ref
+				= ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Ref, Immutable };
+			const ValueType<> f16_box
+				= ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Box, Immutable };
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });
@@ -585,7 +585,7 @@ private:
 
 	void pointerLayoutManglingTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto i64 = SymbolType<>::withDefaultsMut(
+			auto i64 = ValueType<>::withDefaultsMut(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			auto ref_i64 = i64.toRef();

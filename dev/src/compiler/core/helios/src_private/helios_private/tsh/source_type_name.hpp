@@ -7,7 +7,7 @@
 #pragma once
 
 #include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -46,7 +46,7 @@ namespace compiler::tsh {
 	SourceTypeName renderAbstractTypeName(query::Context& ctx, AbstractType type);
 
 	/**
-	 * @brief Renders the source name of @p type, as documented by SymbolType::sourceTypeName.
+	 * @brief Renders the source name of @p type, as documented by ValueType::sourceTypeName.
 	 */
-	SourceTypeName renderSymbolTypeName(query::Context& ctx, SymbolType<> type);
+	SourceTypeName renderValueTypeName(query::Context& ctx, ValueType<> type);
 }

@@ -279,7 +279,7 @@ namespace compiler::helios::defgen {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
+		query::Context& ctx, const tsh::ValueType<>& type, dia::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
 			ctx.log<dia::PlaceholderError>(

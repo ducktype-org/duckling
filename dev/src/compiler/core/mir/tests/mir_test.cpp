@@ -1221,7 +1221,7 @@ private:
 			auto is_unit_type_constant = [](const compiler::mir::MIRValue& argument) {
 				if (!argument.isConstant()) return false;
 				auto stored = argument.get<compiler::mir::MIRConstant>()
-				                  .value.get<compiler::tsh::SymbolType<>>();
+				                  .value.get<compiler::tsh::ValueType<>>();
 				return stored.has_value()
 				    && stored->getType().getKind() == compiler::tsh::Kind::Unit;
 			};

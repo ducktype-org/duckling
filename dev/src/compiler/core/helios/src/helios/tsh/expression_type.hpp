@@ -12,8 +12,8 @@
 #pragma once
 
 #include "abstract_type.hpp"
-#include "symbol_type.hpp"
 #include "value_category.hpp"
+#include "value_type.hpp"
 
 #include <concepts>
 
@@ -50,7 +50,7 @@ namespace compiler::tsh {
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		ExpressionType(ExpressionType<OTHER_ABSTRACT_TYPE> other):
-			  symbol_type(other.getSymbolType()),
+			  symbol_type(other.getValueType()),
 			  value_category(other.getValueCategory()) {}
 
 		/**
@@ -59,7 +59,7 @@ namespace compiler::tsh {
 		 * @param value_category The value category of the described value.
 		 */
 		ExpressionType(
-			const SymbolType<ABSTRACT_TYPE> symbol_type, const ValueCategory value_category
+			const ValueType<ABSTRACT_TYPE> symbol_type, const ValueCategory value_category
 		):
 			  symbol_type(symbol_type),
 			  value_category(value_category) {}
@@ -80,7 +80,7 @@ namespace compiler::tsh {
 		 * @return The underlying symbol type.
 		 */
 		[[nodiscard]]
-		const SymbolType<ABSTRACT_TYPE>& getSymbolType() const {
+		const ValueType<ABSTRACT_TYPE>& getValueType() const {
 			return symbol_type;
 		}
 
@@ -108,7 +108,7 @@ namespace compiler::tsh {
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		[[nodiscard]]
 		auto operator<=>(const ExpressionType<OTHER_ABSTRACT_TYPE>& other) const {
-			if (auto symbol_cmp = symbol_type <=> other.getSymbolType(); symbol_cmp != 0)
+			if (auto symbol_cmp = symbol_type <=> other.getValueType(); symbol_cmp != 0)
 				return symbol_cmp;
 			return value_category <=> other.getValueCategory();
 		}
@@ -139,7 +139,7 @@ namespace compiler::tsh {
 		}
 
 	private:
-		SymbolType<ABSTRACT_TYPE> symbol_type;
-		ValueCategory             value_category;
+		ValueType<ABSTRACT_TYPE> symbol_type;
+		ValueCategory            value_category;
 	};
 }

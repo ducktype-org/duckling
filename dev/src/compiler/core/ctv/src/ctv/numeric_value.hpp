@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
@@ -75,7 +75,7 @@ namespace compiler::numeric_value {
 
 		/**
 		 * @brief Factory method for creating a NumericValue from a specific value, of the given
-		 * tsh::SymbolType.
+		 * tsh::ValueType.
 		 * @return A new NumericValue or an empty optional if the value does not fit in the target
 		 * type.
 		 */
@@ -138,10 +138,10 @@ namespace compiler::numeric_value {
 		}
 
 		/**
-		 * @brief Returns the compiler::tsh::SymbolType based on the value stored in the NumericValue
-		 * @return The compiler::tsh::SymbolType of the value stored in the NumericValue.
+		 * @brief Returns the compiler::tsh::ValueType based on the value stored in the NumericValue
+		 * @return The compiler::tsh::ValueType of the value stored in the NumericValue.
 		 */
-		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
+		[[nodiscard]] tsh::ValueType<> getTypeOfStoredValue(query::Context& ctx) const;
 
 
 		/**

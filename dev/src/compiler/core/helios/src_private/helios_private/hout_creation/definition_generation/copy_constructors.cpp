@@ -85,7 +85,7 @@ namespace compiler::helios::defgen {
 			const tsh::VariantAbstractType& variant_type,
 			const SymID                     copy_sym,
 			const SymID                     source_symbol,
-			const tsh::SymbolType<>&        result_symbol_type
+			const tsh::ValueType<>&         result_symbol_type
 		) {
 			using Variable = GeneratedFunctionVariable;
 
@@ -106,7 +106,7 @@ namespace compiler::helios::defgen {
 				                                       .type            = payload_type },
 				});
 
-				auto copy_through = [&](const tsh::SymbolType<>& value_type) -> Box<code::Expr> {
+				auto copy_through = [&](const tsh::ValueType<>& value_type) -> Box<code::Expr> {
 					if (value_type.isTriviallyCopyable(ctx)) return s.deref(s.ident(payload_sym));
 					return s.call(
 						s.ident(copyConstructorSymForType(ctx, value_type.getType())),
@@ -127,7 +127,7 @@ namespace compiler::helios::defgen {
 						return makeBoxAllocCall(
 							ctx,
 							code::generatedOrigin(),
-							copy_through(alternatives[i].getPointeeSymbolType())
+							copy_through(alternatives[i].getPointeeValueType())
 						);
 					}
 					CORE_UNREACHABLE();
@@ -171,7 +171,7 @@ namespace compiler::helios::defgen {
 
 			const auto i64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_type = tsh::SymbolType<>::withDefaultsMut(i64_abs_type);
+			const auto i64_type = tsh::ValueType<>::withDefaultsMut(i64_abs_type);
 
 			// The elements of the aggregate differ only in the index they copy, so the whole array
 			// is built by a single value that reads the index off a variable, advanced once per

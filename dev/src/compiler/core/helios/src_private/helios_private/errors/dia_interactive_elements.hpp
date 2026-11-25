@@ -8,7 +8,7 @@
 
 #include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
@@ -24,7 +24,7 @@ namespace compiler::helios {
 	 * i.e. the same way the user wrote it in the source code.
 	 */
 	class InteractiveType: public dia::InteractiveElement {
-		tsh::SymbolType<>                                 symbol_type;
+		tsh::ValueType<>                                  symbol_type;
 		base::Optional<pst::Access<pst::LangElement>>     pst_expr;
 		base::HashMap<std::string, Box<dia::MessageBase>> linked_messages;
 		std::string                                       displayed_name;
@@ -34,7 +34,7 @@ namespace compiler::helios {
 	public:
 		InteractiveType(
 			query::Context&                               ctx,
-			tsh::SymbolType<>                             symbol_type,
+			tsh::ValueType<>                              symbol_type,
 			base::Optional<pst::Access<pst::LangElement>> pst_expr = {}
 		);
 	};

@@ -214,7 +214,7 @@ namespace compiler::tsh {
 		 * @param types Vector of symbol types to stringify.
 		 * @return A human-readable string representing a sequence of symbol types.
 		 */
-		std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
+		std::string stringifyTypeVector(const std::vector<ValueType<>>& types) {
 			std::stringstream res;
 			res << "(";
 			if (!types.empty()) res << types[0].toString();
@@ -303,16 +303,16 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
-	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
+	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<ValueType<>> components):
 		  components(std::move(components)) {
 		representation = "Tuple" + stringifyTypeVector(this->components);
 	}
 
 	FunctionAbstractTypeImpl::FunctionAbstractTypeImpl(
-		std::vector<SymbolType<>> parameter_types,
-		const SymbolType<>        result_type,
-		const bool                pure,
-		const FunctionKind        function_kind
+		std::vector<ValueType<>> parameter_types,
+		const ValueType<>        result_type,
+		const bool               pure,
+		const FunctionKind       function_kind
 	):
 		  parameter_types(std::move(parameter_types)),
 		  result_type(result_type),
@@ -324,9 +324,9 @@ namespace compiler::tsh {
 	}
 
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(
-		query::Context&                  ctx,
-		const std::vector<SymbolType<>>& variant_types,
-		const bool                       represents_optional
+		query::Context&                 ctx,
+		const std::vector<ValueType<>>& variant_types,
+		const bool                      represents_optional
 	):
 		  underlying_types(variant_types),
 		  represents_optional(represents_optional) {
@@ -345,7 +345,7 @@ namespace compiler::tsh {
 		// (= index into getUnderlyingTypes()) does not depend on construction order.
 		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
 		// processes, which would make the emitted code non-deterministic.
-		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
+		std::ranges::stable_sort(underlying_types, [](const ValueType<>& a, const ValueType<>& b) {
 			return a.toString() < b.toString();
 		});
 		representation = "Variant " + stringifyTypeVector(underlying_types);

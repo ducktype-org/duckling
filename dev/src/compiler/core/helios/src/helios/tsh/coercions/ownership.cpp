@@ -6,7 +6,7 @@
 
 /**
  * @file ownership.cpp
- * @brief The value layer of a coercion. The `SymbolType` level coercion includes the information on
+ * @brief The value layer of a coercion. The `ValueType` level coercion includes the information on
  * "where the value has to be passed", but based on the types alone it doesn't know HOW to exactly
  * perform the passing. `coercionOf` is what decides HOW to perform the passing of each `HandOver`
  * based on the `ValueSource`(the `ExpressionType`s of the value). This file contains the logic
@@ -104,13 +104,13 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief The plan for handing each part of a value of @p type over into its own place.
 		 */
-		std::vector<CoercionNode> planPartsInPlace(query::Context& ctx, const SymbolType<>& type) {
+		std::vector<CoercionNode> planPartsInPlace(query::Context& ctx, const ValueType<>& type) {
 			std::vector<CoercionNode> plans;
 
 			const TupleAbstractType tuple{ type.getType() };
-			for (const SymbolType<>& slot: tuple.getComponents()) {
-				const base::CRef<SymbolTypeCoercion> plan
-					= ctx.query<QuerySymbolTypeCoercion>({ slot, slot });
+			for (const ValueType<>& slot: tuple.getComponents()) {
+				const base::CRef<ValueTypeCoercion> plan
+					= ctx.query<QueryValueTypeCoercion>({ slot, slot });
 				CORE_ASSERT(plan->isValid(), "A type always coerces into itself.");
 				plans.push_back(plan->getRoot());
 			}
@@ -130,7 +130,7 @@ namespace compiler::tsh::coercions {
 			CoercionNode&       decided
 		) {
 			CORE_ASSERT(
-				value.getValue().getSymbolType() == step.result,
+				value.getValue().getValueType() == step.result,
 				"A value is handed over as what it is at that point."
 			);
 
@@ -232,16 +232,16 @@ namespace compiler::tsh::coercions {
 	}
 
 	Coercion coercionOf(
-		query::Context&     ctx,
-		const ValueSource&  source,
-		const SymbolType<>& target,
-		const CoercionMode  mode
+		query::Context&    ctx,
+		const ValueSource& source,
+		const ValueType<>& target,
+		const CoercionMode mode
 	) {
-		const ExpressionType<>&   value = source.getValue();
-		const SymbolTypeCoercion& plan
-			= *ctx.query<QuerySymbolTypeCoercion>({ value.getSymbolType(), target, mode });
+		const ExpressionType<>&  value = source.getValue();
+		const ValueTypeCoercion& plan
+			= *ctx.query<QueryValueTypeCoercion>({ value.getValueType(), target, mode });
 
-		// If the `SymbolTypeCoercion` failed we return it's error so we don't override it with the
+		// If the `ValueTypeCoercion` failed we return it's error so we don't override it with the
 		// ownership errors.
 		if (plan.isRefused()) return Coercion::refusedCoercion(value, plan.getError());
 

@@ -119,8 +119,8 @@ namespace compiler::helios {
 				auto arg_res = evalHoutExpr(ctx, expr.arguments.at(0).ref());
 				if (arg_res.hasFailed()) return TreeEvalResult{ query::Failed() };
 
-				const auto  type   = arg_res.valueOrThrow().get<tsh::SymbolType<>>().value();
-				const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrThrow();
+				const auto  type   = arg_res.valueOrThrow().get<tsh::ValueType<>>().value();
+				const auto& layout = ctx.query<tsl::QueryValueTypeLayout>(type)->valueOrThrow();
 
 				const i64 value
 					= (builtin.value() == BuiltinKind::SizeOf)
@@ -147,25 +147,25 @@ namespace compiler::helios {
 			 * correctly interpreted as a 2 element array, with each of its element being a 3
 			 * element array.
 			 *
-			 * @return tsh::SymbolType<> A new type with the correctly nested dimension.
+			 * @return tsh::ValueType<> A new type with the correctly nested dimension.
 			 */
-			tsh::SymbolType<> sinkStaticArrayDimension(
-				query::Context& ctx, tsh::SymbolType<> base, usize size
+			tsh::ValueType<> sinkStaticArrayDimension(
+				query::Context& ctx, tsh::ValueType<> base, usize size
 			) {
 				if (base.getType().getKind() == tsh::Kind::StaticArray) {
 					auto static_arr = base.getType().as<tsh::StaticArrayAbstractType>();
 					auto inner_type
 						= sinkStaticArrayDimension(ctx, static_arr.getElementType(), size);
 
-					return tsh::SymbolType<>{
+					return tsh::ValueType<>{
 						ctx.query<tsh::QueryStaticArrayType>({ inner_type, static_arr.getSize() }),
 						base.getRefKind(),
 						base.getMutability()
 					};
 				}
-				return tsh::SymbolType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
-					                      base.getRefKind(),
-					                      base.getMutability() };
+				return tsh::ValueType<>{ ctx.query<tsh::QueryStaticArrayType>({ base, size }),
+					                     base.getRefKind(),
+					                     base.getMutability() };
 			}
 
 			/**
@@ -177,11 +177,11 @@ namespace compiler::helios {
 			 *
 			 * @param base_type The meta-type being indexed.
 			 * @param index_ctv The evaluated CTV used as the index.
-			 * @return A QResult containing the newly constructed SymbolType wrapped in a
+			 * @return A QResult containing the newly constructed ValueType wrapped in a
 			 * CTV.
 			 */
 			auto evaluateTypeIndexing(
-				const tsh::SymbolType<>& base_type, const ctv::CompileTimeValue& index_ctv
+				const tsh::ValueType<>& base_type, const ctv::CompileTimeValue& index_ctv
 			) -> query::QResult<ctv::CompileTimeValue> {
 				auto base_abs = base_type.getType();
 
@@ -224,7 +224,7 @@ namespace compiler::helios {
 				}
 
 				// Index expr on meta is evaluated to a static array type or a list type.
-				const auto base_type = base_res.valueOrThrow().get<tsh::SymbolType<>>().value();
+				const auto base_type = base_res.valueOrThrow().get<tsh::ValueType<>>().value();
 				auto       index_res = evalHoutExpr(ctx, expr.index.ref());
 				if (index_res.hasFailed()) {
 					result = query::Failed();
@@ -242,7 +242,7 @@ namespace compiler::helios {
 					result                = const_val_result.valueOrThrow();
 				} else if (kind(expr.symbol) == SymbolKind::Class) {
 					// Special case for type definitions.
-					result = tsh::SymbolType<>::withDefaultsMut(
+					result = tsh::ValueType<>::withDefaultsMut(
 						ctx.query<tsh::QueryClassType>({ expr.symbol })
 					);
 				} else {
@@ -435,8 +435,8 @@ namespace compiler::helios {
 							default:
 								return CouldNotShortPath{};
 							}
-						} else if constexpr (std::is_same_v<LhsT, tsh::SymbolType<>>
-					                         && std::is_same_v<RhsT, tsh::SymbolType<>>) {
+						} else if constexpr (std::is_same_v<LhsT, tsh::ValueType<>>
+					                         && std::is_same_v<RhsT, tsh::ValueType<>>) {
 							using enum code::BuiltinBinary;
 							switch (expr.operation) {
 							case MetaEq:
@@ -513,7 +513,7 @@ namespace compiler::helios {
 								return CouldNotShortPath{};
 							}
 
-						} else if constexpr (std::is_same_v<T, tsh::SymbolType<>>) {
+						} else if constexpr (std::is_same_v<T, tsh::ValueType<>>) {
 							switch (expr.operation) {
 							case Ref:
 								return ctv::CompileTimeValue{ val.toRef() };
@@ -528,19 +528,19 @@ namespace compiler::helios {
 									val.withMutability(tsh::Mutability::Immutable)
 								};
 							case Ptr:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 									ctx.query<tsh::QueryPointerType>({ val })
 								) };
 							case ManyPtr:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 									ctx.query<tsh::QueryManyPointerType>({ val })
 								) };
 							case CPtr:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 									ctx.query<tsh::QueryCPointerType>({ val })
 								) };
 							case Slice:
-								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 									ctx.query<tsh::QuerySliceType>({ val })
 								) };
 							default:
@@ -615,7 +615,7 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) final {
-				if (not CompileTimeValue::TypeTuple::isValid(expr.expression_type.getSymbolType())) {
+				if (not CompileTimeValue::TypeTuple::isValid(expr.expression_type.getValueType())) {
 					result = CouldNotShortPath{};
 					return;
 				}
@@ -638,7 +638,7 @@ namespace compiler::helios {
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) final {
-				std::vector<tsh::SymbolType<>> subtypes;
+				std::vector<tsh::ValueType<>> subtypes;
 
 				for (auto& sub_type: expr.subtypes) {
 					CORE_ASSERT(
@@ -652,9 +652,8 @@ namespace compiler::helios {
 						return;
 					}
 
-					subtypes.emplace_back(
-						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
-					);
+					subtypes.emplace_back(sub_type_ctv.valueOrThrow().get<tsh::ValueType<>>().value(
+					));
 				}
 
 				for (usize i = 0; i < subtypes.size(); i++) {
@@ -671,7 +670,7 @@ namespace compiler::helios {
 							ctx.log<DuplicateVariantAlternativeError>(
 								position.value(),
 								makeBox<InteractiveType>(
-									ctx, tsh::SymbolType<>::withDefaultsMut(subtypes[i].getType())
+									ctx, tsh::ValueType<>::withDefaultsMut(subtypes[i].getType())
 								)
 							);
 							result = query::Failed();
@@ -680,13 +679,13 @@ namespace compiler::helios {
 					}
 				}
 
-				result = CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+				result = CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 					ctx.query<tsh::QueryVariantType>({ subtypes })
 				) };
 			}
 
 			void visitFunctionTypeExpr(const code::FunctionTypeExpr& expr) final {
-				std::vector<tsh::SymbolType<>> parameter_types;
+				std::vector<tsh::ValueType<>> parameter_types;
 				for (auto& parameter: expr.parameters) {
 					const auto parameter_ctv = evalHoutExpr(ctx, parameter.ref());
 					if (parameter_ctv.hasFailed()) {
@@ -694,7 +693,7 @@ namespace compiler::helios {
 						return;
 					}
 					parameter_types.emplace_back(
-						parameter_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+						parameter_ctv.valueOrThrow().get<tsh::ValueType<>>().value()
 					);
 				}
 
@@ -705,9 +704,9 @@ namespace compiler::helios {
 				}
 
 				result = CompileTimeValue{
-					tsh::SymbolType<>::withDefaultsMut(ctx.query<tsh::QueryFunctionType>({
+					tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = std::move(parameter_types),
-						.result_type = result_ctv.valueOrThrow().get<tsh::SymbolType<>>().value(),
+						.result_type = result_ctv.valueOrThrow().get<tsh::ValueType<>>().value(),
 						.kind        = expr.kind,
 					}))
 				};
@@ -726,7 +725,7 @@ namespace compiler::helios {
 					return;
 				}
 				const auto value_type
-					= value_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+					= value_type_ctv.valueOrThrow().get<tsh::ValueType<>>().value();
 
 				if (value_type.getType() == getOptionalNoneType(ctx).getType()) {
 					const auto position = expr.origin.getStablePosition();
@@ -736,14 +735,14 @@ namespace compiler::helios {
 					ctx.log<DuplicateVariantAlternativeError>(
 						position.value(),
 						makeBox<InteractiveType>(
-							ctx, tsh::SymbolType<>::withDefaultsMut(value_type.getType())
+							ctx, tsh::ValueType<>::withDefaultsMut(value_type.getType())
 						)
 					);
 					result = query::Failed();
 					return;
 				}
 
-				result = CompileTimeValue{ tsh::SymbolType<>::withDefaultsMut(
+				result = CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 					ctx.query<tsh::QueryOptionalType>({ value_type })
 				) };
 			}
@@ -824,22 +823,22 @@ namespace compiler::helios {
 			 * @note Assumes that the CTV can be lifted to a type, because it assumes that
 			 * this has been checked beforehand (e.g. by coercions). Panics if this is not the case.
 			 */
-			static tsh::SymbolType<> liftCTVToTypeRecursively(
+			static tsh::ValueType<> liftCTVToTypeRecursively(
 				query::Context& ctx, const CompileTimeValue& ctv
 			) {
 				variant_match(ctv.getStorage()) {
-					variant_case(tsh::SymbolType<>, symbol_type) { return symbol_type; }
+					variant_case(tsh::ValueType<>, symbol_type) { return symbol_type; }
 					variant_case_novalue(CompileTimeValue::UnitCTV) {
-						return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+						return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 					}
 					variant_case(CompileTimeValue::TypeTuple, tuple) {
-						std::vector<tsh::SymbolType<>> element_types;
+						std::vector<tsh::ValueType<>> element_types;
 						element_types.reserve(tuple.getElements().size());
 						for (const auto& element: tuple.getElements())
 							element_types.emplace_back(liftCTVToTypeRecursively(
 								ctx, CompileTimeValue::TypeTuple::elementToCtv(element)
 							));
-						return tsh::SymbolType<>::withDefaultsMut(
+						return tsh::ValueType<>::withDefaultsMut(
 							ctx.query<tsh::QueryTupleType>({ std::move(element_types) })
 						);
 					}
@@ -1010,7 +1009,7 @@ namespace compiler::helios {
 			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
 
 			// Retrieve the functions return type.
-			auto callee_abs_type = call_expr->callee->expression_type.getSymbolType().getType();
+			auto callee_abs_type = call_expr->callee->expression_type.getValueType().getType();
 			CORE_ASSERT(
 				callee_abs_type.getKind() == tsh::Kind::Function,
 				"Attempting to call a non_function type during VM compile time evaluation"
@@ -1092,7 +1091,7 @@ namespace compiler::helios {
 			);
 			UNPACK_QRESULT(auto lir_build =, prepareLIRForDVM(ctx, function_sym_id));
 			const auto& [func_to_call_name, lir_unit] = std::move(lir_build);
-			auto return_type                          = expr->expression_type.getSymbolType();
+			auto return_type                          = expr->expression_type.getValueType();
 			auto vm_eval_result = executeInVm(ctx, func_to_call_name, lir_unit, {}, return_type);
 
 			if (!vm_eval_result) {
@@ -1152,7 +1151,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx, pst_expr, tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType())
+			ctx, pst_expr, tsh::ValueType<>::withDefaultsMut(tsh::getMetaType())
 		);
 
 		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
@@ -1164,7 +1163,7 @@ namespace compiler::helios {
 		query::Context& ctx, pst::GenericPSTQueryKey<pst::ExprElement> pst_expr
 	) {
 		const auto hout_qresult = getHoutOfExprWithExpectedType(
-			ctx, pst_expr, tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType())
+			ctx, pst_expr, tsh::ValueType<>::withDefaultsMut(tsh::getBoolType())
 		);
 		UNPACK_QRESULT_MOVE(const auto& hout =, hout_qresult);
 		UNPACK_QRESULT(auto ctv =, ctx.query<QueryEvaluateHOUTExpression>({ hout.ref() }));

@@ -54,7 +54,7 @@ namespace compiler::helios {
 		const std::string&                        func_name,
 		const lir::LIRUnit&                       lir_unit,
 		const std::vector<ctv::CompileTimeValue>& args,
-		const tsh::SymbolType<>&                  return_type
+		const tsh::ValueType<>&                   return_type
 	);
 
 }

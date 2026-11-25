@@ -357,8 +357,8 @@ private:
 
 	using enum Mutability;
 
-	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	static ValueType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
+		return ValueType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
 	}
 
 	/**
@@ -497,7 +497,7 @@ private:
 			);
 
 			// Test non-default-constructible static array with ref element)
-			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref, Mutability::Immutable);
 			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
 			assertFalse(
 				st(arr_of_refs).isDefaultConstructible(ctx),
@@ -563,7 +563,7 @@ private:
 			);
 
 			// Test non-default-constructible tuple with Ref element.
-			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref, Mutability::Immutable);
 			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, st(int_32) } });
 			assertFalse(
 				st(tup_of_refs).isDefaultConstructible(ctx),
@@ -592,7 +592,7 @@ private:
 				mixed_tuple.carriesInformation(ctx),
 				"Tuple with an int component should carry information"
 			);
-			const auto unit_ref  = SymbolType(unit, ReferenceKind::Ref, Mutability::Immutable);
+			const auto unit_ref  = ValueType(unit, ReferenceKind::Ref, Mutability::Immutable);
 			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, st(unit) } });
 			assertTrue(
 				ref_tuple.carriesInformation(ctx),

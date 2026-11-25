@@ -183,7 +183,7 @@ namespace {
 				}
 				return llvm::ConstantInt::get(llvm_type.get(), val ? 1 : 0, false);
 			}
-			variant_case_novalue(compiler::tsh::SymbolType<>) {
+			variant_case_novalue(compiler::tsh::ValueType<>) {
 				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
 				// using compile time operations on types to compile. This should never be used in
 				// runtime.
@@ -1058,7 +1058,7 @@ namespace compiler::backend_llvm {
 			const auto dst_bits
 				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout->getSize()));
 
-			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+			auto is_signed = [](const tsh::ValueType<>& type) -> bool {
 				if (type.getType().getKind() == tsh::Kind::Integral) {
 					return (
 						tsh::IntegralAbstractType(type.getType()).getSignedness()

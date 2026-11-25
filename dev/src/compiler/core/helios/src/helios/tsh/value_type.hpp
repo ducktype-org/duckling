@@ -66,36 +66,34 @@ namespace compiler::tsh {
 	};
 
 	/**
-	 * @brief The SymbolType class contains information about the type of a symbol,
-	 * which is an AbstractType expanded with information about referencing and mutability.
+	 * @brief The ValueType class describes how a value is held, which is an AbstractType expanded
+	 * with information about referencing and mutability.
 	 *
-	 * A SymbolType<AbstractType> object will contain information about any type,
-	 * while a SymbolType<IntegralAbstractType> object is guaranteed to contain information
+	 * A ValueType<AbstractType> object will contain information about any type,
+	 * while a ValueType<IntegralAbstractType> object is guaranteed to contain information
 	 * about some Integral type described with an IntegralAbstractType object.
 	 *
-	 * It's called "SymbolType" because it is used to type symbols, like variables and parameters.
-	 * However, it is also used as components of composite types, like tuples and variants.
-	 * Note, that function and class types are also composite types, but in their case, the
-	 * components are more obviously associated with symbols.
+	 * It types symbols, like variables and parameters, and the components of composite types,
+	 * like tuples and variants.
 	 *
 	 * @tparam ABSTRACT_TYPE The underlying class from the AbstractType hierarchy.
 	 */
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE = AbstractType>
-	class SymbolType {
+	class ValueType {
 	public:
 		/**
-		 * @brief Constructs the SymbolType from another SymbolType.
+		 * @brief Constructs the ValueType from another ValueType.
 		 *
-		 * The source SymbolType must hold an abstract type which is dynamically convertible
-		 * to the abstract type expected by the target SymbolType. Otherwise,
+		 * The source ValueType must hold an abstract type which is dynamically convertible
+		 * to the abstract type expected by the target ValueType. Otherwise,
 		 * the dynamic cast, and then the constructor, will fail.
 		 *
 		 * @tparam OTHER_ABSTRACT_TYPE The type of the source abstract type,
 		 * from the AbstractType hierarchy.
-		 * @param other The source SymbolType.
+		 * @param other The source ValueType.
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
-		SymbolType(const SymbolType<OTHER_ABSTRACT_TYPE>& other):
+		ValueType(const ValueType<OTHER_ABSTRACT_TYPE>& other):
 			  abstract_type(other.getType()),
 			  reference_kind(other.getRefKind()),
 			  mutability(other.getMutability()),
@@ -103,14 +101,14 @@ namespace compiler::tsh {
 			  uniqueness(other.getUniqueness()) {}
 
 		/**
-		 * @brief Constructs the SymbolType directly from its contents.
+		 * @brief Constructs the ValueType directly from its contents.
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
 		 * @param reference_kind The reference kind.
 		 * @param mutability The mutability.
 		 * @param leakage The leakage.
 		 * @param uniqueness The uniqueness.
 		 */
-		SymbolType(
+		ValueType(
 			const ABSTRACT_TYPE abstract_type,
 			const ReferenceKind reference_kind,
 			const Mutability    mutability,
@@ -124,21 +122,21 @@ namespace compiler::tsh {
 			  uniqueness(uniqueness) {}
 
 		/**
-		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
+		 * @brief Creates a ValueType from an AbstractType with a set of default symbol properties.
 		 *
-		 * This static factory method makes a SymbolType<> that has Direct reference kind, is
+		 * This static factory method makes a ValueType<> that has Direct reference kind, is
 		 * Immutable, NonLeaking and NonUnique and wraps the given abstract type. Use
 		 * withDefaultsMut() when the symbol has to be Mutable.
 		 *
 		 * @warning Do not wrap this method in "convenience" functions or implicit conversions.
 		 * Hiding this call behind a shorter or automated wrapper defeats its purpose of making the
-		 * transition from AbstractType to SymbolType explicit and conscious decision.
+		 * transition from AbstractType to ValueType explicit and conscious decision.
 		 *
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
-		 * @return A SymbolType<ABSTRACT_TYPE> with default (immutable) symbol properties.
+		 * @return A ValueType<ABSTRACT_TYPE> with default (immutable) symbol properties.
 		 */
-		static SymbolType<ABSTRACT_TYPE> withDefaults(const ABSTRACT_TYPE abstract_type) {
-			return SymbolType<ABSTRACT_TYPE>(
+		static ValueType<ABSTRACT_TYPE> withDefaults(const ABSTRACT_TYPE abstract_type) {
+			return ValueType<ABSTRACT_TYPE>(
 				abstract_type,
 				ReferenceKind::Direct,
 				Mutability::Immutable,
@@ -148,12 +146,12 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Same as withDefaults(), but the resulting SymbolType is Mutable.
+		 * @brief Same as withDefaults(), but the resulting ValueType is Mutable.
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
-		 * @return A SymbolType<ABSTRACT_TYPE> with default symbol properties, but Mutable.
+		 * @return A ValueType<ABSTRACT_TYPE> with default symbol properties, but Mutable.
 		 */
-		static SymbolType<ABSTRACT_TYPE> withDefaultsMut(const ABSTRACT_TYPE abstract_type) {
-			return SymbolType<ABSTRACT_TYPE>(
+		static ValueType<ABSTRACT_TYPE> withDefaultsMut(const ABSTRACT_TYPE abstract_type) {
+			return ValueType<ABSTRACT_TYPE>(
 				abstract_type,
 				ReferenceKind::Direct,
 				Mutability::Mutable,
@@ -298,46 +296,46 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Copies this SymbolType with the reference kind replaced. Prefer toDirect(),
+		 * @brief Copies this ValueType with the reference kind replaced. Prefer toDirect(),
 		 * toBox() or toRef() when the new reference kind is known at the call site.
 		 * @param new_reference_kind The reference kind of the result.
-		 * @return This SymbolType with the given reference kind.
+		 * @return This ValueType with the given reference kind.
 		 */
 		[[nodiscard]]
-		SymbolType withReferenceKind(const ReferenceKind new_reference_kind) const {
-			return SymbolType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
+		ValueType withReferenceKind(const ReferenceKind new_reference_kind) const {
+			return ValueType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
 		}
 
 		/**
-		 * @brief Copies this SymbolType with the reference kind set to Direct.
-		 * @return This SymbolType as a Direct (non-reference) value.
+		 * @brief Copies this ValueType with the reference kind set to Direct.
+		 * @return This ValueType as a Direct (non-reference) value.
 		 */
 		[[nodiscard]]
-		SymbolType toDirect() const {
+		ValueType toDirect() const {
 			return withReferenceKind(ReferenceKind::Direct);
 		}
 
 		/**
-		 * @brief Copies this SymbolType with the reference kind set to Box.
-		 * @return This SymbolType as an owning Box reference.
+		 * @brief Copies this ValueType with the reference kind set to Box.
+		 * @return This ValueType as an owning Box reference.
 		 */
 		[[nodiscard]]
-		SymbolType toBox() const {
+		ValueType toBox() const {
 			return withReferenceKind(ReferenceKind::Box);
 		}
 
 		/**
-		 * @brief Copies this SymbolType with the reference kind set to Ref.
-		 * @return This SymbolType as a non-owning Ref reference.
+		 * @brief Copies this ValueType with the reference kind set to Ref.
+		 * @return This ValueType as a non-owning Ref reference.
 		 */
 		[[nodiscard]]
-		SymbolType toRef() const {
+		ValueType toRef() const {
 			return withReferenceKind(ReferenceKind::Ref);
 		}
 
 		[[nodiscard]]
-		SymbolType withMutability(const Mutability new_mutability) const {
-			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
+		ValueType withMutability(const Mutability new_mutability) const {
+			return ValueType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
 		}
 
 		/**
@@ -347,22 +345,22 @@ namespace compiler::tsh {
 		 * if the RefKind is Direct.
 		 */
 		[[nodiscard]]
-		SymbolType getPointeeSymbolType() const;
+		ValueType getPointeeValueType() const;
 
 		/**
-		 * @brief Three-way comparison with another SymbolType.
+		 * @brief Three-way comparison with another ValueType.
 		 *
 		 * This comparison is arbitrary, and just as is the case with AbstractType,
 		 * should only be used to index ordered data structures or compare for equality.
 		 *
 		 * @tparam OTHER_ABSTRACT_TYPE The type of the source type description,
 		 * from the AbstractType hierarchy.
-		 * @param other The other SymbolType.
+		 * @param other The other ValueType.
 		 * @return Result of comparison, as std::strong_ordering.
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		[[nodiscard]]
-		auto operator<=>(const SymbolType<OTHER_ABSTRACT_TYPE>& other) const {
+		auto operator<=>(const ValueType<OTHER_ABSTRACT_TYPE>& other) const {
 			if (auto type_cmp = abstract_type <=> other.getType(); type_cmp != 0) return type_cmp;
 			if (auto ref_cmp = reference_kind <=> other.getRefKind(); ref_cmp != 0) return ref_cmp;
 			if (auto mut_cmp = mutability <=> other.getMutability(); mut_cmp != 0) return mut_cmp;
@@ -375,12 +373,12 @@ namespace compiler::tsh {
 		 * does not work very well for deducing other comparison operators.
 		 * @tparam OTHER_ABSTRACT_TYPE The type of the source type description,
 		 * from the AbstractType hierarchy.
-		 * @param other The other SymbolType.
+		 * @param other The other ValueType.
 		 * @return Result of comparison, as bool.
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		[[nodiscard]]
-		bool operator==(const SymbolType<OTHER_ABSTRACT_TYPE>& other) const {
+		bool operator==(const ValueType<OTHER_ABSTRACT_TYPE>& other) const {
 			return *this <=> other == 0;
 		}
 
@@ -392,7 +390,7 @@ namespace compiler::tsh {
 		}
 
 		friend constexpr void addToHash(
-			hashing::hash_algorithm auto& h, const SymbolType& t
+			hashing::hash_algorithm auto& h, const ValueType& t
 		) noexcept {
 			addToHash(h, t.queryUnstablePerfectHash());
 		}
@@ -437,7 +435,7 @@ namespace compiler::tsh {
 		Uniqueness    uniqueness;
 	};
 
-	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const
-		-> SymbolType<AbstractType>;
-	extern template std::string SymbolType<AbstractType>::sourceTypeName(query::Context&) const;
+	extern template auto ValueType<AbstractType>::getPointeeValueType() const
+		-> ValueType<AbstractType>;
+	extern template std::string ValueType<AbstractType>::sourceTypeName(query::Context&) const;
 }
