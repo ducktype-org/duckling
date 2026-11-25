@@ -283,7 +283,6 @@ private:
 				ASSERT_EQUAL(expected, c_type);
 			}
 			{
-				// @TODO: Until views carry their right to write, `ref mut T` is `ref T`.
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
 				auto expected = st(i32_type).toRef();
 				ASSERT_EQUAL(expected, d_type);

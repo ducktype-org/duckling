@@ -19,11 +19,9 @@ namespace pst::expr {
 			// log a more specific error.
 			if (state[1].isKeyword()
 			    && lang_def::writableViewOperator(state[1].asKeyword()).has_value()) {
-				state.logSafeError(
-					makeBox<error::MutBeforeViewError>(
-						state.getPosition(), lang_def::keywordToStr(state[1].asKeyword()).str()
-					)
-				);
+				state.logSafeError(makeBox<error::MutBeforeViewError>(
+					state.getPosition(), lang_def::keywordToStr(state[1].asKeyword()).str()
+				));
 			} else {
 				state.logSafeError(makeBox<error::MisplacedMutError>(state.getPosition()));
 			}
