@@ -10,8 +10,7 @@ use quackpack::core::{AllowGlobalPackage, PackageLoader};
 use quackpack::subcommands::clean_storage::{CleanStorageMode, CleanStorageOptions, clean_storage};
 
 use crate::cli::{flag, optional, subcommand};
-use crate::error::HintMessage;
-use crate::{DuckContext, QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `clean-storage` subcommand.
 pub fn get_parser() -> Command {
@@ -29,9 +28,11 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let storage_path = if matches.get_flag("global-storage") {
         ctx.default_storage_root().into_not_locked_path()
     } else {
-        let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).with_context(|| {
-            HintMessage::new("to clean the global storage use `global-storage` flag")
-        })?;
+        let pcx =
+            PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).map_err(|mut err| {
+                err.add_hint("to clean the global storage use `--global-storage` flag");
+                err
+            })?;
         pcx.storage_path().to_path_buf()
     };
     let clean_mode = match matches.get_one::<String>("venv") {
