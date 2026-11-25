@@ -311,3 +311,9 @@ Before running this command make sure you build folder has enabled coverage.
 ./toolbox.py setup-build --coverage
 ./toolbox.py coverage
 ```
+
+By default coverage uses gcov. With clang you can choose source-based coverage instead, which stays accurate in optimised builds:
+
+```bash
+./toolbox.py setup-build -t DevOpt --coverage --coverage-backend llvm
+```

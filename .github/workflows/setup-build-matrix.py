@@ -39,18 +39,55 @@ MACOS_CLANG: dict[str, Any] = {
     "platform": "macos",
 }
 
+COVERAGE_GATE: dict[str, Any] = {
+    "build-type": "Dev",
+    "compiler": LINUX_GCC,
+    "coverage": "gcov",
+    "coverage-gate": True,
+}
+
+# Optimised coverage candidates, run next to the gate to compare timings and percentages.
+# They use their own ccache entries and the gate's runners, so the comparison is fair.
+COVERAGE_EXPERIMENTS: list[dict[str, Any]] = [
+    {
+        "build-type": "DevOpt",
+        "compiler": {**LINUX_GCC, "cache-prefix": "gcc-cov-O1-build"},
+        "coverage": "gcov",
+        "coverage-opt-level": "1",
+        "runner": "debug",
+        "experiment": "gcov -O1",
+    },
+    {
+        "build-type": "DevOpt",
+        "compiler": {**LINUX_CLANG, "cache-prefix": "clang-cov-O1-build"},
+        "coverage": "llvm",
+        "coverage-opt-level": "1",
+        "runner": "debug",
+        "experiment": "llvm-cov -O1",
+    },
+    {
+        "build-type": "DevOpt",
+        "compiler": {**LINUX_CLANG, "cache-prefix": "clang-cov-O3-build"},
+        "coverage": "llvm",
+        "runner": "debug",
+        "experiment": "llvm-cov -O3",
+    },
+]
+
 FULL_MATRIX: dict[str, list[Any]] = {
     "include": [
-        {"build-type": "Dev", "compiler": LINUX_GCC},
+        COVERAGE_GATE,
         {"build-type": "Dev", "compiler": MACOS_CLANG},
         {"build-type": "DevOpt", "compiler": LINUX_GCC},
         {"build-type": "DevOpt", "compiler": LINUX_CLANG},
+        *COVERAGE_EXPERIMENTS,
     ],
 }
 
 PR_MATRIX: dict[str, list[Any]] = {
     "include": [
-        {"build-type": "Dev", "compiler": LINUX_GCC},
+        COVERAGE_GATE,
+        *COVERAGE_EXPERIMENTS,
     ],
 }
 

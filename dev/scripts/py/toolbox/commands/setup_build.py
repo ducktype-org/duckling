@@ -152,6 +152,18 @@ def configure_presets(ctx, param, value):
     cls=PromptForCoverageIfBuildNotOptimised,
 )
 @option(
+    "--coverage-backend",
+    help="Coverage instrumentation: gcov, or llvm for clang source-based coverage (stays accurate in optimised builds).",
+    type=Choice(["gcov", "llvm"], case_sensitive=False),
+    default="gcov",
+)
+@option(
+    "--coverage-opt-level",
+    help="Optimisation level of a coverage build. If not specified, the build type's own level is used.",
+    type=Choice(["0", "1", "2", "3"]),
+    default=None,
+)
+@option(
     "-d",
     "--docs/--no-docs",
     help="Whether or not to build the docs.",
