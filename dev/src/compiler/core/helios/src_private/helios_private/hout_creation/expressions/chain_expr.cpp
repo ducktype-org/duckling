@@ -580,7 +580,8 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				// A value, like the `self` of `self(10)`.
+				// Any other keyword literal is treated as a value,
+				// and handled normally (probably reporting an error)
 				auto call_result = processValueCall(
 					std::move(hout_expr), multiplePstOriginOrdered({ keyword, call_expr }), call_expr
 				);

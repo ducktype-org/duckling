@@ -1562,8 +1562,7 @@ private:
 	}
 
 	/**
-	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
-	 * that a class does not declare at all.
+	 * @brief Errors of the bracket operators of a class: their specifiers and visibility.
 	 */
 	void testBracketOperatorErrors() {
 		// The bracket operators are called on a value, so they cannot be static.
@@ -1605,6 +1604,10 @@ private:
 		);
 	}
 
+	/**
+	 * @brief Errors of the members of a class: their specifiers, their visibility and the names
+	 * that a class does not declare at all.
+	 */
 	void testClassErrors() {
 		// ==================== Duplicated member specifiers ====================
 		{

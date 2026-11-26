@@ -991,13 +991,13 @@ namespace compiler::helios::code {
 		);
 	}
 
-	query::QResult<std::vector<SymID>> findBracketOperatorCandidates(
+	auto findBracketOperatorCandidates(
 		query::Context&              ctx,
-		const Expr&                  self_arg,
-		base::StrID                  name,
+		const CRef<Expr>             self_arg,
+		const base::StrID                  name,
 		pst::Access<pst::expr::Call> call_expr
-	) {
-		const auto self_type = self_arg.expression_type.getType();
+	) -> query::QResult<std::vector<SymID>> {
+		const auto self_type = self_arg->expression_type.getType();
 		if (self_type.getKind() != tsh::Kind::Class) return std::vector<SymID>{};
 
 		const auto lookup_qresult = HInterface::ofTypeInstance(self_type).lookup(
