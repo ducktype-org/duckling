@@ -233,12 +233,15 @@ namespace compiler::helios::mangler {
 					std::vector<std::string_view> modules;
 					modules.push_back(frontend::moduleName(module_id).strView());
 
-					for (auto current_module = module_id;
-					     auto parent_module
-					     = ctx.query<frontend::QueryParentModule>(current_module);) {
-						current_module = parent_module.value();
-						modules.push_back(frontend::moduleName(current_module).strView());
-					}
+					// The parent of a REPL statement module is the previous statement, not an
+					// enclosing module, so its module path is only its own name.
+					if (not ctx.query<frontend::QueryIsReplModule>(module_id))
+						for (auto current_module = module_id;
+						     auto parent_module
+						     = ctx.query<frontend::QueryParentModule>(current_module);) {
+							current_module = parent_module.value();
+							modules.push_back(frontend::moduleName(current_module).strView());
+						}
 
 					for (auto mod: modules | std::views::reverse) identifier(ret_ss, mod);
 				}
