@@ -8,9 +8,11 @@
 
 #include <diagnostic/message.hpp>
 
+#include <string>
+
 namespace pst::error {
 	class BlockStartError final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
@@ -22,7 +24,7 @@ namespace pst::error {
 	};
 
 	class DuplicateSemicolon final: public dia::MessageWithCodeFragmentAndCause {
-		dia::Metadata getMetadata() const final {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "warning",
 				     .family        = "parser",
@@ -31,5 +33,32 @@ namespace pst::error {
 
 	public:
 		DuplicateSemicolon(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class MisplacedMutError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "misplaced_mut" };
+		}
+
+	public:
+		MisplacedMutError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	class MutBeforeViewError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]] dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "mut_before_view" };
+		}
+
+	public:
+		MutBeforeViewError(dia::SourcePosition pos, std::string view):
+			  dia::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia::TextArgument>("view", std::move(view));
+		}
 	};
 }

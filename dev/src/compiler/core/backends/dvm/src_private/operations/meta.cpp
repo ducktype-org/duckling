@@ -23,8 +23,6 @@ namespace comptime_func_names {
 	constexpr auto GLOBAL_QUERY_CONTEXT     = "comptime_query_ctx";
 	constexpr auto CREATE_BOX               = "comptime_create_box";
 	constexpr auto CREATE_REF               = "comptime_create_ref";
-	constexpr auto CREATE_MUT               = "comptime_create_mut";
-	constexpr auto CREATE_IMM               = "comptime_create_imm";
 	constexpr auto CREATE_PTR               = "comptime_create_ptr";
 	constexpr auto CREATE_MANY_PTR          = "comptime_create_many_ptr";
 	constexpr auto CREATE_CPTR              = "comptime_create_cptr";
@@ -118,14 +116,6 @@ namespace compiler::backend_vm::internal {
 		case lir::MetaKind::CreateRef:
 			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateRef expects 1 argument");
 			lower_single_call(base::StrID(comptime_func_names::CREATE_REF), op.args, op.dest);
-			break;
-		case lir::MetaKind::CreateMut:
-			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateMut expects 1 argument");
-			lower_single_call(base::StrID(comptime_func_names::CREATE_MUT), op.args, op.dest);
-			break;
-		case lir::MetaKind::CreateImm:
-			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateImm expects 1 argument");
-			lower_single_call(base::StrID(comptime_func_names::CREATE_IMM), op.args, op.dest);
 			break;
 		case lir::MetaKind::CreatePtr:
 			lower_ctx_call(base::StrID(comptime_func_names::CREATE_PTR));

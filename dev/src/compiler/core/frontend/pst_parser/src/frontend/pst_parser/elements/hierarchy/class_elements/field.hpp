@@ -14,13 +14,14 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public Stmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, Stmt);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, Stmt, is_let);
 		CLONE_SUBELEMENTS();
 
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, CommaNoBlockExprHolder);
 		NAMED_CHILD_OPT(init, CommaExprHolder);
+		bool is_let = false;
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
@@ -44,6 +45,14 @@ namespace pst {
 		[[nodiscard]]
 		AccessLocked<ExprHolder> getType() const {
 			return type.give();
+		}
+
+		/**
+		 * @brief Whether the field is declared with `let`.
+		 */
+		[[nodiscard]]
+		bool isLet() const {
+			return is_let;
 		}
 
 		[[nodiscard]]

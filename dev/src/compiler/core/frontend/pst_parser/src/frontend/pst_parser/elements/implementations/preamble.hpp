@@ -77,4 +77,19 @@ namespace pst {
 		}
 		return OperatorFixity::None;
 	}
+
+	/**
+	 * @brief Parses an optional `let` or `var` written before the name of a parameter, a field, a
+	 * binding of a `match` case or the iterator of a `for` loop.
+	 *
+	 * @return Whether the place is declared with `let`.
+	 */
+	inline bool parseLetPrefix(LangParserState& state) {
+		if (state[0].is(Keyword::Let)) {
+			state.tokens().skip();
+			return true;
+		}
+		if (state[0].is(Keyword::Var)) state.tokens().skip();
+		return false;
+	}
 }

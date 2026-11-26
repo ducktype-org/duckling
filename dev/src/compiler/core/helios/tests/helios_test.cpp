@@ -238,10 +238,10 @@ private:
 				ASSERT_EQUAL(expected, simple_box);
 			}
 			{
-				auto simple_imm
-					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_IMM", root_scope);
-				auto expected = vtImm(i64_type);
-				ASSERT_EQUAL(expected, simple_imm);
+				auto simple_ref_mut
+					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_REF_MUT", root_scope);
+				auto expected = vt(i64_type).toRef();
+				ASSERT_EQUAL(expected, simple_ref_mut);
 			}
 			{
 				auto simple_variant
@@ -260,14 +260,8 @@ private:
 				ASSERT_EQUAL(expected, simple_tuple);
 			}
 			{
-				auto cmp_1 = getConstValueAs<bool>("CMP_1", root_scope);
-				ASSERT_EQUAL(cmp_1, true);
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
-				auto cmp_3 = getConstValueAs<bool>("CMP_3", root_scope);
-				ASSERT_EQUAL(cmp_3, true);
-				auto cmp_4 = getConstValueAs<bool>("CMP_4", root_scope);
-				ASSERT_EQUAL(cmp_4, true);
 			}
 		}
 
@@ -290,7 +284,7 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::ValueType<>>("D", root_scope);
-				auto expected = vtImm(i32_type);
+				auto expected = vt(i32_type).toRef();
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{

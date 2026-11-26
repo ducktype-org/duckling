@@ -97,9 +97,10 @@ namespace lang_def {
 			{ Keyword::Then, "then", KeywordFlags() },
 			{ Keyword::Else, "else", KeywordFlags() },
 
+			// `mut` only follows a view keyword (`ref mut T`) or starts a `mut fun`.
+			{ Keyword::Mut, "mut", KeywordFlags() },
+
 			// This is the list of keywords that are general prefix operators
-			{ Keyword::Mut, "mut", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Imm, "imm", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
@@ -430,6 +431,23 @@ namespace lang_def {
 	}
 
 	KeywordFlags keywordFlags(Keyword key) { return keyword_flags[key]; }
+
+	base::Optional<base::StrID> writableViewOperator(const Keyword view) {
+		switch (view) {
+		case Keyword::Ref:
+			return base::StrID("ref mut");
+		case Keyword::Ptr:
+			return base::StrID("ptr mut");
+		case Keyword::ManyPtr:
+			return base::StrID("manyptr mut");
+		case Keyword::CPtr:
+			return base::StrID("cptr mut");
+		case Keyword::Slice:
+			return base::StrID("slice mut");
+		default:
+			return {};
+		}
+	}
 
 	std::vector<Keyword> getKeywords() {
 		std::vector<Keyword> result;

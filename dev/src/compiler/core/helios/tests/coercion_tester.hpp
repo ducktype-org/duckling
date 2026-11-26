@@ -334,10 +334,6 @@ fun makeBoxAndInt() -> (box i32, i32) = {
     return (new 1, 2);
 }
 
-fun makeBoxAndConstInt() -> (box i32, imm i32) = {
-    return (new 1, 2);
-}
-
 var global_box: box i32 = new 1;
 var global_pair: (box i32, i32) = (new 1, 2);
 )";
@@ -350,7 +346,6 @@ var global_pair: (box i32, i32) = (new 1, 2);
     var b: box i32 = new 1;
     var t: (box i32, i32) = (new 1, 2);
     var r: ref (box i32, i32) = &t;
-    var c: (box i32, imm i32) = (new 1, 2);
     var o: Owner;
     let lb: box i32 = new 1;
     let lr: ref i32 = &x;

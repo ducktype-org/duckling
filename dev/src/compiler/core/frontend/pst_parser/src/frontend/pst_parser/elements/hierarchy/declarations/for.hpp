@@ -15,7 +15,7 @@ namespace pst {
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(For, CodeDecl);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(For, CodeDecl, is_let);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -24,7 +24,7 @@ namespace pst {
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrAnyStmt);
-		base::Optional<bool> is_const;
+		bool is_let = false;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -65,7 +65,10 @@ namespace pst {
 
 		[[nodiscard]] AccessLocked<CodeBlockOrStmt> getBody() const { return body.give(); }
 
-		[[nodiscard]] base::Optional<bool> getIsConst() const { return is_const; }
+		/**
+		 * @brief Whether the iterator is declared with `let`.
+		 */
+		[[nodiscard]] bool isLet() const { return is_let; }
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};

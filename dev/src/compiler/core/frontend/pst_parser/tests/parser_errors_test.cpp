@@ -165,7 +165,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
 	Example<pst::Variable, true>  ref_var{ "var x: ref i32 = 5" };
 	Example<pst::Variable, true>  ref_op_type_var{ "var a: ref = foo()" };
-	Example<pst::Variable, true>  mut_op_type_let{ "let a: mut = foo()" };
+	Example<pst::Variable, true>  ptr_op_type_let{ "let a: ptr = foo()" };
+	Example<pst::Variable, false> mut_op_type_let{ "let a: mut = foo()" };
 	Example<pst::Stmt, true>      ref_op_type_var_stmt{ "var a : ref = foo();" };
 	Example<pst::Variable, true>  type_var{ "var x: i32" };
 	Example<pst::Variable, true>  value_var{ "var x = 5" };
@@ -195,15 +196,24 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  standalone_fref{ "fref" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> standalone_symbol_op{ "-" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> only_prefix_ops{ "ref mut" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder> keyword_ops_as_args{ "foo(ref, mut)" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder> nested_fref{ "fref ref i64" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> keyword_ops_as_args{ "foo(ref, ptr)" };
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> mut_as_arg{ "foo(ref, mut)" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  nested_fref{ "fref ref i64" };
 
-	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
-	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
-	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
-	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
-	Example<pst::Fun, false>     bad_fun_expr{ "fun foo(t: type) -> type = return t;" };
-	Example<pst::Fun, true>      good_fun_expr{ "fun foo(t: type) -> type = ref t;" };
+	Example<pst::Fun, true>  simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
+	Example<pst::Fun, true>  simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
+	Example<pst::Fun, true>  simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
+	Example<pst::Fun, false> bad_function{ "fun foo(x: i32, y) = {}" };
+	Example<pst::Fun, false> bad_fun_expr{ "fun foo(t: type) -> type = return t;" };
+	Example<pst::Fun, true>  good_fun_expr{ "fun foo(t: type) -> type = ref t;" };
+	Example<pst::Fun, true>  let_param{ "fun foo(let x: i32, y: i32) = {}" };
+	Example<pst::Fun, true>  var_param{ "fun foo(var x: i32) = {}" };
+	Example<pst::Fun, true>  writable_views{
+        "fun foo(a: ref mut i32, b: ptr mut i32, c: manyptr mut i32, d: cptr mut i32, "
+		 "e: slice mut i32) = {}"
+	};
+	Example<pst::Fun, false>     mut_before_view{ "fun foo(a: mut ref i32) = {}" };
+	Example<pst::Fun, false>     mut_alone{ "fun foo(a: mut i32) = {}" };
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
@@ -305,9 +315,18 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, true>          call_arg_block_value{ "foo({ bar(); 1 }, 2);" };
 	Example<pst::Stmt, true>          array_item_block_value{ "x = [{1}, 2];" };
 	Example<pst::Stmt, true>          match_value_block{ "x = match ({ y }) { case _ = 1; };" };
-	Example<pst::Stmt, true>          for_iterable_block{ "for (i in { xs }) {}" };
-	Example<pst::Stmt, true>          param_default_block{ "fun f(a: i64 = {1}) = {}" };
-	Example<pst::Stmt, false>         fun_missing_assign{ "fun f() -> i64 { return 1; }" };
+	Example<pst::Stmt, true>          match_let_binding{
+        "x = match (v) { case let i : i32 = i; case _ = 0; };"
+	};
+	Example<pst::Stmt, true> match_var_binding{
+		"x = match (v) { case var i : i32 = i; case _ = 0; };"
+	};
+	Example<pst::Stmt, true>  for_iterable_block{ "for (i in { xs }) {}" };
+	Example<pst::Stmt, true>  for_let_iterator{ "for (let i: i32 in xs) {}" };
+	Example<pst::Stmt, true>  for_var_iterator{ "for (var i in xs) {}" };
+	Example<pst::Stmt, false> for_const_iterator{ "for (const i in xs) {}" };
+	Example<pst::Stmt, true>  param_default_block{ "fun f(a: i64 = {1}) = {}" };
+	Example<pst::Stmt, false> fun_missing_assign{ "fun f() -> i64 { return 1; }" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 	Example<pst::TopLevel, true> template_expr_fun_then_stmt{
@@ -415,20 +434,18 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::Stmt, true> class_using_as{ "using std.math.sqrt as sqrt;" };
 
-	ClassStmtExample<pst::Stmt, true>  public_access_block{ "public {}" };
-	ClassStmtExample<pst::Stmt, true>  private_access_block{ "private {}" };
-	ClassStmtExample<pst::Stmt, true>  protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::Stmt, true>  multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::Stmt, true>  simple_specified_field{ "public global x: i32 = 5;" };
-	ClassStmtExample<pst::Stmt, true>  global_imm_field{ "global x: imm i32 = 5;" };
-	ClassStmtExample<pst::Stmt, false> global_var_field{ "global var x: i32 = 5;" };
-	ClassStmtExample<pst::Stmt, false> global_let_field{ "global let x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public global x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> global_var_field{ "global var x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> global_let_field{ "global let x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
-	ClassStmtExample<pst::Field, false> var_field{ "var x: i32 = 5" };
-	ClassStmtExample<pst::Field, false> let_field{ "let x: i32 = 5" };
-	ClassStmtExample<pst::Field, false> let_field_without_init{ "let x: i32" };
-	ClassStmtExample<pst::Field, true>  imm_field{ "x: imm i32" };
+	ClassStmtExample<pst::Field, true>  var_field{ "var x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  let_field{ "let x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  let_field_without_init{ "let x: i32" };
 	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
 	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 
@@ -719,6 +736,12 @@ class PSTErrorTests: public tester::TestSuite {
 		testDiagnosticMessage<pst::error::BlockStartError>(ss, dia::SourcePosition::fakePosition());
 		testDiagnosticMessage<pst::error::DuplicateSemicolon>(
 			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::error::MisplacedMutError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::error::MutBeforeViewError>(
+			ss, dia::SourcePosition::fakePosition(), "ref"
 		);
 		testDiagnosticMessage<pst::BadStatementChoice<pst::Using>>(
 			ss, dia::SourcePosition::fakePosition()

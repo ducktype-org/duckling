@@ -298,10 +298,6 @@ namespace compiler::lir {
 				return lir::MetaKind::CreateBox;
 			case CreateRef:
 				return lir::MetaKind::CreateRef;
-			case CreateMut:
-				return lir::MetaKind::CreateMut;
-			case CreateImm:
-				return lir::MetaKind::CreateImm;
 			case CreatePtr:
 				return lir::MetaKind::CreatePtr;
 			case CreateManyPtr:

@@ -31,6 +31,12 @@ namespace pst {
 		 */
 		static bool isStandaloneKeywordOperator(const LangParserState& state);
 
+		/**
+		 * @brief Whether the token at @p fwd is a part of a prefix operator: a prefix operator
+		 * itself, or the `mut` of a writable view like `ref mut`, `ptr mut`, etc.
+		 */
+		static bool isPrefixOperatorPart(const LangParserState& state, i64 fwd);
+
 		ELEMENT_CLONE_DECL(ExprElement, PRECEDENCE);
 
 		explicit ExprElement(LangElementConstructionData state, i64 precedence):

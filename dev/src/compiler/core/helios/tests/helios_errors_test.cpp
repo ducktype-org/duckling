@@ -552,7 +552,7 @@ private:
 				class MyClass {
 					x:i64 = 0;
 
-					MyClass.copy(other: imm MyClass) = {
+					MyClass.copy(let other: MyClass) = {
 						return MyClass(1);
 					}
 				}
@@ -613,9 +613,28 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class A {
-					y: imm i64 = 2;
+					let y: i64 = 2;
 					fun setY() = { y = 10; return; }
 				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun f(let x: i64) = { x = 10; }
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun f(v: i64 | bool) = match (v) {
+					case let i : i64 = { i = 10; };
+					case _ = {};
+				};
 			)",
 				{ "Left side of assignment can't be immutable." },
 				1

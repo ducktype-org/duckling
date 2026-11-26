@@ -519,14 +519,6 @@ namespace compiler::helios {
 								return ctv::CompileTimeValue{ val.toRef() };
 							case Box:
 								return ctv::CompileTimeValue{ val.toBox() };
-							case Mut:
-								return ctv::CompileTimeValue{
-									val.withMutability(tsh::Mutability::Mutable)
-								};
-							case Imm:
-								return ctv::CompileTimeValue{
-									val.withMutability(tsh::Mutability::Immutable)
-								};
 							case Ptr:
 								return ctv::CompileTimeValue{ tsh::ValueType<>::withDefaultsMut(
 									ctx.query<tsh::QueryPointerType>({ val })

@@ -14,14 +14,7 @@ namespace pst {
 	MBox<Field> Field::parse(LangParserState& state) {
 		auto out = makeBox<Field>(state);
 
-		// A field takes its mutability from its type, so it has no `let`/`var`. People will still
-		// write them out of habit, so we report the keyword and parse the rest of the field.
-		if (state[0].is(Keyword::Let) || state[0].is(Keyword::Var)) {
-			state.logSafeError(makeBox<FieldBindingKeywordError>(
-				state.getPosition(), lang_def::keywordToStr(state[0].asKeyword()).str()
-			));
-			state.tokens().skip();
-		}
+		out->is_let = parseLetPrefix(state);
 
 		PARSE().all(&out->name, NamedOperator::Colon);
 		PARSE().one(&out->type);
@@ -34,6 +27,7 @@ namespace pst {
 	void Field::dprint(std::ostream& out) const {
 		out << "{";
 
+		if (is_let) out << R"("is_let": true, )";
 		out << R"("name": )";
 		nullAwareDprint(name, out);
 		out << R"(, "type": )";
@@ -47,7 +41,10 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
+	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, is_let);
+		return partial_hash;
+	}
 
 	void Field::acceptVisitor(PstVisitor& visitor) const { visitor.visitField(*this); }
 }

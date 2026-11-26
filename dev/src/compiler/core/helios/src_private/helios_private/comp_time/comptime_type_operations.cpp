@@ -95,26 +95,6 @@ namespace compiler::helios::comptime_ops {
 	DEF_VM_EXT_C_FUNC(
 		tsh::ValueType<>*,
 		"opaque_ptr",
-		comptime_create_mut,
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = type_ptr->withMutability(tsh::Mutability::Mutable);
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_imm,
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
 		comptime_create_ptr,
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
@@ -275,8 +255,6 @@ namespace compiler::helios::comptime_ops {
 			return {
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_mut, comptime_create_mut, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_imm, comptime_create_imm, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_ptr, comptime_create_ptr, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),

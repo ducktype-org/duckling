@@ -49,13 +49,12 @@ namespace compiler::helios {
 				symbol_type_qresult = tsh::ValueType<>::withDefaultsMut(type);
 			}
 
-			void setSymbolTypeByTypeExpr(const pst::AccessLocked<pst::ExprElement> expr) {
-				const auto type_ctv = getTypeCTVFromPST(ctx, expr);
-				if (type_ctv.hasFailed()) {
-					setFailed();
-					return;
-				}
-				setTypeOfSymbol(type_ctv.valueOrThrow().get<tsh::ValueType<>>().value());
+			/**
+			 * @brief The mutability of a parameter, a field, a match binding or a `for` iterator.
+			 * Only `let` makes it immutable.
+			 */
+			static tsh::Mutability mutabilityOfLet(const bool is_let) {
+				return is_let ? tsh::Mutability::Immutable : tsh::Mutability::Mutable;
 			}
 
 			void setSymbolTypeByTypeExpr(
@@ -127,7 +126,9 @@ namespace compiler::helios {
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
-				setSymbolTypeByTypeExpr(field->getType().unlock(ctx)->getExpr());
+				setSymbolTypeByTypeExpr(
+					field->getType().unlock(ctx)->getExpr(), mutabilityOfLet(field->isLet())
+				);
 			}
 
 			void visitClass(pst::Access<pst::Class>) final {
@@ -143,9 +144,8 @@ namespace compiler::helios {
 			}
 
 			void visitParam(pst::Access<pst::Param> param) final {
-				// @TODO: #1396 Handle parameter mutability.
 				setSymbolTypeByTypeExpr(
-					param->getType().unlock(ctx)->getExpr(), tsh::Mutability::Mutable
+					param->getType().unlock(ctx)->getExpr(), mutabilityOfLet(param->isLet())
 				);
 			}
 
@@ -199,7 +199,9 @@ namespace compiler::helios {
 					return;
 				}
 
-				setSymbolTypeByTypeExpr(constraint.value().unlock(ctx)->getExpr());
+				setSymbolTypeByTypeExpr(
+					constraint.value().unlock(ctx)->getExpr(), mutabilityOfLet(binding->isLet())
+				);
 			}
 
 			void handleForIterator(pst::Access<pst::For> stmt) {
@@ -249,16 +251,7 @@ namespace compiler::helios {
 					}
 				}
 
-				if (auto maybe_is_const = stmt->getIsConst(); maybe_is_const.has_value()) {
-					iter_type = iter_type.withMutability(
-						maybe_is_const.value() ? tsh::Mutability::Immutable
-											   : tsh::Mutability::Mutable
-					);
-				} else {
-					// If no let/var exists the element type is the same as the array element type.
-					// If the array stores a const than the iterator is const.
-				}
-				setTypeOfSymbol(iter_type);
+				setTypeOfSymbol(iter_type.withMutability(mutabilityOfLet(stmt->isLet())));
 			}
 		};
 
@@ -267,7 +260,8 @@ namespace compiler::helios {
 			auto& declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
 			std::vector<tsh::ValueType<>> param_types{};
 			param_types.reserve(declaration.parameters.size());
-			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
+			for (auto& param: declaration.parameters)
+				param_types.emplace_back(param.type.withMutability(tsh::Mutability::Mutable));
 
 			return tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryFunctionType>(
 				{ .parameter_types = param_types, .result_type = declaration.return_type }
