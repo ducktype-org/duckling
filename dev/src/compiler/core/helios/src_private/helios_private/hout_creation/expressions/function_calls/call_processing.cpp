@@ -994,7 +994,7 @@ namespace compiler::helios::code {
 	auto findBracketOperatorCandidates(
 		query::Context&              ctx,
 		const CRef<Expr>             self_arg,
-		const base::StrID                  name,
+		const base::StrID            name,
 		pst::Access<pst::expr::Call> call_expr
 	) -> query::QResult<std::vector<SymID>> {
 		const auto self_type = self_arg->expression_type.getType();
