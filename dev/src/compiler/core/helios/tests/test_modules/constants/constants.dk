@@ -165,3 +165,9 @@ const CHAR_WRAPPED: char = 300 as char; # 44, out of range: evaluated by the VM
 const CHAR_NEGATIVE: char = -1 as char; # 255, out of range: evaluated by the VM
 const CHAR_TO_I64: i64 = (200u8 as char) as i64; # 200, zero-extended
 const CHAR_TO_F32: f32 = 'A' as f32; # 65.0
+
+const BOOL_TO_I64: i64 = true as i64; # 1
+const BOOL_TO_I32: i32 = false as i32; # 0
+const I64_TO_BOOL: bool = 5 as bool; # true, `x != 0`
+const F64_TO_BOOL: bool = 0.0 as bool; # false, `x != 0.0`
+const CHAR_TO_BOOL: bool = 'A' as bool; # true, `(x as u8) != 0`

@@ -768,21 +768,19 @@ namespace compiler::helios {
 					return;
 				}
 
-				// To void N x M like cases and make the logic simpler, we unify the cast target for
-				// numeric values, bools and chars as numeric value
+				// To avoid handling every source x target pair, a numeric, `char` or `bool` source
+				// is first turned into a `NumericValue`. `char` and `bool` are stored as `u8`.
 				auto numeric_equivalent = [&]() -> base::Optional<NumericValue> {
 					if (const auto maybe_numeric = ctv.get<NumericValue>()) return maybe_numeric;
 					if (const auto maybe_char = ctv.get<char>())
 						return NumericValue{ static_cast<std::uint8_t>(maybe_char.value()) };
 					if (const auto maybe_bool = ctv.get<bool>())
-						return NumericValue{ static_cast<std::uint8_t>(maybe_bool.value()
-						) };  // we store bool as u8 here
+						return NumericValue{ static_cast<std::uint8_t>(maybe_bool.value()) };
 					return std::nullopt;
 				}();
 
-
 				if (!numeric_equivalent
-				    and cast.target_type.getRefKind() == tsh::ReferenceKind::Direct) {
+				    or cast.target_type.getRefKind() != tsh::ReferenceKind::Direct) {
 					result = CouldNotShortPath{};
 					return;
 				}
@@ -806,9 +804,9 @@ namespace compiler::helios {
 					break;
 				}
 				case tsh::Kind::Bool: {
-					auto maybe_u8 = numeric_equivalent->coerceTo<bool>();
-					if (maybe_u8.has_value())
-						result = CompileTimeValue{ static_cast<bool>(maybe_u8.value()) };
+					auto maybe_bool = numeric_equivalent->coerceTo<bool>();
+					if (maybe_bool.has_value())
+						result = CompileTimeValue{ maybe_bool.value() };
 					else
 						result = CouldNotShortPath{};
 					break;

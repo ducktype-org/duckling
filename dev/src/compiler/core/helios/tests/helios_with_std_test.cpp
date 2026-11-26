@@ -558,6 +558,13 @@ private:
 		ASSERT_EQUAL('\xFF', getConstValueAs<char>("CHAR_NEGATIVE", root_scope));
 		ASSERT_EQUAL(200, getConstValueAs<i64>("CHAR_TO_I64", root_scope));
 		ASSERT_EQUAL(65.0f, getConstValueAs<f32>("CHAR_TO_F32", root_scope));
+
+		// A `bool` source is read as 0 or 1. A cast to `bool` is a check against zero.
+		ASSERT_EQUAL(1, getConstValueAs<i64>("BOOL_TO_I64", root_scope));
+		ASSERT_EQUAL(0, getConstValueAs<i32>("BOOL_TO_I32", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("I64_TO_BOOL", root_scope));
+		ASSERT_EQUAL(false, getConstValueAs<bool>("F64_TO_BOOL", root_scope));
+		ASSERT_EQUAL(true, getConstValueAs<bool>("CHAR_TO_BOOL", root_scope));
 	}
 
 	/**
