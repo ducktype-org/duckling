@@ -79,7 +79,7 @@ namespace duck_ls {
 		 * expression, like `a + b`, the text is just the type of the expression.
 		 */
 		std::string describeExpression(query::Context& ctx, const code::Expr& expr) {
-			std::string expression_type = expr.expression_type.getSymbolType().sourceTypeName(ctx);
+			std::string expression_type = expr.expression_type.getValueType().sourceTypeName(ctx);
 
 			if (const auto* identifier = dynamic_cast<const code::IdentifierExpr*>(&expr))
 				return describeSymbol(ctx, identifier->symbol, expression_type);
