@@ -767,12 +767,21 @@ namespace compiler::helios {
 					result = ctv;
 					return;
 				}
-				// A `char` is an unsigned 8-bit integer to the backends: it zero-extends when cast
-				// to a wider type, so it is folded as a `u8`.
-				base::Optional<NumericValue> numeric = ctv.get<NumericValue>();
-				if (const auto maybe_char = ctv.get<char>())
-					numeric = NumericValue{ static_cast<std::uint8_t>(maybe_char.value()) };
-				if (!numeric) {
+				
+				// To void N x M like cases and make the logic simpler, we unify the cast target for
+				// numeric values, bools and chars as numeric value
+				auto numeric_equivalent = [&]() -> base::Optional<NumericValue> {
+					if (const auto maybe_numeric = ctv.get<NumericValue>())
+						return maybe_numeric;
+					if (const auto maybe_char = ctv.get<char>())
+						return NumericValue{ static_cast<std::uint8_t>(maybe_char.value()) };
+					if (const auto maybe_bool = ctv.get<bool>())
+						return NumericValue{ static_cast<std::uint8_t>(maybe_bool.value()) }; // we store bool as u8 here
+					return std::nullopt;
+				}();
+			
+
+				if (!numeric_equivalent and cast.target_type.getRefKind() == tsh::ReferenceKind::Direct) {
 					result = CouldNotShortPath{};
 					return;
 				}
@@ -780,7 +789,7 @@ namespace compiler::helios {
 				switch (cast.target_type.getType().getKind()) {
 				case tsh::Kind::Integral:
 				case tsh::Kind::Float: {
-					auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
+					auto maybe_new_numeric = numeric_equivalent->castTo(cast.target_type.getType());
 					if (maybe_new_numeric.has_value())
 						result = CompileTimeValue{ maybe_new_numeric.value() };
 					else
@@ -788,12 +797,17 @@ namespace compiler::helios {
 					break;
 				}
 				case tsh::Kind::Char: {
-					// `char` is not a `NumericValue`, so `castTo` cannot produce it. Only exact
-					// casts are folded here. A value outside the `u8` range wraps at runtime, and
-					// the VM evaluation reproduces that.
-					auto maybe_u8 = numeric->coerceTo<std::uint8_t>();
+					auto maybe_u8 = numeric_equivalent->coerceTo<std::uint8_t>();
 					if (maybe_u8.has_value())
 						result = CompileTimeValue{ static_cast<char>(maybe_u8.value()) };
+					else
+						result = CouldNotShortPath{};
+					break;
+				}
+				case tsh::Kind::Bool: {
+					auto maybe_u8 = numeric_equivalent->coerceTo<bool>();
+					if (maybe_u8.has_value())
+						result = CompileTimeValue{ static_cast<bool>(maybe_u8.value()) };
 					else
 						result = CouldNotShortPath{};
 					break;
