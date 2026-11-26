@@ -8,12 +8,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use itertools::Itertools;
-
 use crate::core::compile::compiler_package::CompilerPackage;
 use crate::core::compile::missing_depenendcy_in_graph;
 use crate::core::identity::Identity;
-use crate::core::lints::errors::{Errors, NoStdPackageDependsOnStdPackage};
 use crate::{QuackResult, StrId};
 
 pub mod creating_graph;
@@ -143,37 +140,6 @@ impl EarlyGraph {
     /// Get the underlying [`DependencyGraph`].
     pub fn graph(&self) -> &DependencyGraph {
         &self.graph
-    }
-
-    /// Report every package that does not use the standard library but depends on a package
-    /// that does. Packages are visited in a stable order, so the errors are too.
-    pub fn no_std_dependency_errors(&self) -> Errors {
-        let mut errors = Errors::new();
-        let packages = self
-            .graph
-            .keys()
-            .copied()
-            .sorted_by(|left, right| Identity::stable_compare(*left, *right));
-        for identity in packages {
-            let package = self.package(&identity).package();
-            if package.manifest().build_options().use_std {
-                continue;
-            }
-            for (_ename, dep_identity) in self
-                .graph
-                .dependencies_for_package(&identity)
-                .dependencies()
-            {
-                let dependency = self.package(dep_identity).package();
-                if dependency.manifest().build_options().use_std {
-                    errors.push(NoStdPackageDependsOnStdPackage {
-                        package: package.name(),
-                        dependency: dependency.name(),
-                    });
-                }
-            }
-        }
-        errors
     }
 
     /// Decompose this [`EarlyGraph`].

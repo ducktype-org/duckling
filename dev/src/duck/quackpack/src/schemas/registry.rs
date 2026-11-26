@@ -55,17 +55,12 @@ pub struct Metadata {
     /// Directories searched for [`Metadata::external_libs`], relative to the package's root.
     #[serde(default)]
     pub external_lib_paths: Vec<PathBuf>,
-    /// Whether the package is compiled with the standard library.
-    #[serde(default = "default_use_std")]
-    pub use_std: bool,
+    /// Whether the package is compiled with the standard library (`true` when omitted).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_std: Option<bool>,
     /// Whether the package can only be compiled as a dependency.
     #[serde(default)]
     pub always_dep: bool,
-}
-
-/// The value of [`Metadata::use_std`] when the registry does not send it.
-fn default_use_std() -> bool {
-    true
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -201,7 +196,7 @@ mod tests {
 }"#,
         )
         .unwrap();
-        assert!(metadata.use_std);
+        assert_eq!(metadata.use_std, None);
         assert!(!metadata.always_dep);
     }
 
@@ -219,7 +214,7 @@ mod tests {
 }"#,
         )
         .unwrap();
-        assert!(!metadata.use_std);
+        assert_eq!(metadata.use_std, Some(false));
         assert!(metadata.always_dep);
     }
 }

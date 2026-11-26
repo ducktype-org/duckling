@@ -80,16 +80,19 @@ impl PackageId {
                 id: request_id,
                 version: self.version(),
                 features: [].into(),
+                no_std_parent: None,
             })),
             FullKind::Git { .. } => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                 id: request_id,
                 versions: Some(vec![self.version()]),
                 features: [].into(),
+                no_std_parent: None,
             })),
             FullKind::Local => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                 id: request_id,
                 versions: Some(vec![self.version()]),
                 features: [].into(),
+                no_std_parent: None,
             })),
         }
     }

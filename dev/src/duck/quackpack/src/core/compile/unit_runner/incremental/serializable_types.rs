@@ -71,14 +71,7 @@ pub struct SerializablePackageData {
     pub identity: Identity,
     pub version: Version,
     /// Whether the package is compiled with the standard library.
-    /// Missing in fingerprints written before it existed, which all used it.
-    #[serde(default = "default_use_std")]
     pub use_std: bool,
-}
-
-/// The value of [`SerializablePackageData::use_std`] in fingerprints without it.
-fn default_use_std() -> bool {
-    true
 }
 
 impl SerializableGraphNodeData {

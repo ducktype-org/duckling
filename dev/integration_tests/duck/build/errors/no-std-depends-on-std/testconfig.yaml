@@ -13,7 +13,4 @@ Tests:
         ExitCode: 1
         Err:
           String: |+
-            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
-            info: successfully synchronized venv \`foo\`
-            error: package \`foo\` does not use the standard library, so it cannot depend on \`bar\`, which does
-            error: emitted 1 error
+            error: package \`foo\` does not use the standard library, so it cannot depend on \`bar\` version \`1.0.0\`, which does

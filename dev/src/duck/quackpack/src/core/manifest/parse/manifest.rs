@@ -157,7 +157,7 @@ pub(crate) fn parse(
             };
 
             let mut guard = scope.push("metadata".into());
-            let build_options = parse_build_options(metadata, &dependencies, &mut guard)
+            let build_options = parse_build_options(metadata, &mut guard)
                 .with_context(move || guard.make_context_string())?;
             Ok(Manifest::new(
                 name.into(),
@@ -267,11 +267,9 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }
 
-/// Parse a [`BuildOptions`] from the `metadata` part of the schema, checking that a package
-/// with `always-dep` set has no dependencies.
+/// Parse a [`BuildOptions`] from the `metadata` part of the schema.
 fn parse_build_options(
     input: &MetadataSchema,
-    dependencies: &Dependencies,
     scope: &mut ScopeGuard<'_>,
 ) -> QuackResult<BuildOptions> {
     if input.links.is_some() {
@@ -287,12 +285,6 @@ fn parse_build_options(
     let defaults = BuildOptions::default();
     let use_std = input.use_std.unwrap_or(defaults.use_std);
     let always_dep = input.always_dep.unwrap_or(defaults.always_dep);
-    if always_dep && !dependencies.all_dependencies().is_empty() {
-        let guard = scope.push("always-dep".into());
-        let mut err = qp_err!("a package with `always-dep` set to `true` cannot have dependencies");
-        err.add_hint("remove the `dependencies` and `dev-dependencies` of this package");
-        return Err(err).with_context(move || guard.make_context_string());
-    }
     Ok(BuildOptions {
         external_libs,
         external_lib_paths,

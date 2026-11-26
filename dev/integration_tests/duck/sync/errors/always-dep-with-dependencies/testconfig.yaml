@@ -1,0 +1,17 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  printf '  always-dep: true\ndependencies:\n  bar:\n    source:\n      path: ../bar\n' >> foo/quackconfig.yaml
+
+Tests:
+  always-dep-with-dependencies:
+    Description: errors when a package that can only be a dependency has dependencies
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          String: |+
+            error: a package with \`metadata.always-dep\` set to \`true\` cannot have \`dependencies\` or \`dev-dependencies\`
+            error: emitted 1 error

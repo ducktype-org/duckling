@@ -11,7 +11,7 @@ use std::path::Path;
 use itertools::Itertools;
 
 use crate::core::Package;
-use crate::core::lints::errors::{Errors, UnusedKey};
+use crate::core::lints::errors::{AlwaysDepWithDependencies, Errors, UnusedKey};
 use crate::core::lints::warnings::Warnings;
 use crate::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::filesystem::read_from_path_to_string;
@@ -188,7 +188,8 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<(Package, Warnings
 }
 
 /// Turn YAML string into the [`ManifestSchema`].
-/// This function also collects unused items in the [`ManifestSchema`].
+/// This function also collects unused items in the [`ManifestSchema`], and reports a package
+/// with `metadata.always-dep` set to `true` which has dependencies.
 pub fn parse_schema(yaml_content: &str, errors: &mut Errors) -> QuackResult<ManifestSchema> {
     // Reject duplicate keys.
     // As of 26.10.2026, map-typed fields (`dependencies`, `features`, …) silently keep the last
@@ -202,7 +203,24 @@ pub fn parse_schema(yaml_content: &str, errors: &mut Errors) -> QuackResult<Mani
         stringify_unused_path(&mut buffer, &path);
         errors.push(UnusedKey { key: buffer });
     })?;
+    if is_always_dep_with_dependencies(&schema) {
+        errors.push(AlwaysDepWithDependencies {});
+    }
     Ok(schema)
+}
+
+/// Check whether the schema sets `metadata.always-dep` to `true` and has any dependencies.
+fn is_always_dep_with_dependencies(schema: &ManifestSchema) -> bool {
+    let always_dep = schema
+        .metadata
+        .as_ref()
+        .and_then(|metadata| metadata.always_dep)
+        .unwrap_or(false);
+    let has_dependencies = [&schema.dependencies, &schema.dev_dependencies]
+        .into_iter()
+        .flatten()
+        .any(|dependencies| !dependencies.0.is_empty());
+    always_dep && has_dependencies
 }
 
 fn stringify_unused_path(buffer: &mut String, path: &serde_ignored::Path<'_>) {
