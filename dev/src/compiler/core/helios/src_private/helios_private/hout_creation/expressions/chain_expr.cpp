@@ -1046,8 +1046,9 @@ namespace compiler::helios::code {
 		auto processValueCall(
 			Box<Expr> callee, ElementOrigin whole_call_origin, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<Box<Expr>> {
-			auto candidates_result
-				= findBracketOperatorCandidates(query_ctx, *callee, base::StrID("()"), call_expr);
+			auto candidates_result = findBracketOperatorCandidates(
+				query_ctx, callee.ref(), base::StrID("()"), call_expr
+			);
 			// Fails only when the operators exist, but are inaccessible.
 			UNPACK_QRESULT_MOVE(const auto candidates =, candidates_result);
 

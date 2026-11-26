@@ -84,7 +84,7 @@ namespace compiler::helios::code {
 	 */
 	query::QResult<std::vector<SymID>> findBracketOperatorCandidates(
 		query::Context&              ctx,
-		const Expr&                  self_arg,
+		CRef<Expr>                   self_arg,
 		base::StrID                  name,
 		pst::Access<pst::expr::Call> call_expr
 	);

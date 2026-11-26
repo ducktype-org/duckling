@@ -123,7 +123,7 @@ namespace compiler::helios::code {
 
 		// A value of a class with a `[]` operator calls the operator, with the value as `self`.
 		auto candidates_result
-			= findBracketOperatorCandidates(ctx, *base, base::StrID("[]"), call_expr);
+			= findBracketOperatorCandidates(ctx, base.ref(), base::StrID("[]"), call_expr);
 		UNPACK_QRESULT_MOVE(const auto candidates =, candidates_result);
 		if (not candidates.empty())
 			return processBracketOperatorCall(ctx, candidates, call_expr, std::move(base));
