@@ -145,7 +145,7 @@ namespace compiler::helios::coercions {
 			[&](const IncompatibleTypes&) -> Message {
 				return makeBox<IncompatibleTypesError>(
 					source_position,
-					makeBox<InteractiveType>(ctx, failed.getSource().getSymbolType()),
+					makeBox<InteractiveType>(ctx, failed.getSource().getValueType()),
 					makeBox<InteractiveType>(ctx, failed.getTarget()),
 					coercion_expects_pos
 				);
@@ -245,7 +245,7 @@ namespace compiler::helios::coercions {
 
 		auto error = makeBox<NoMatchingExpectedTypeError>(
 			source_position,
-			makeBox<InteractiveType>(ctx, failed_coercions.front().getSource().getSymbolType())
+			makeBox<InteractiveType>(ctx, failed_coercions.front().getSource().getValueType())
 		);
 
 		// Every accepted type was tried, so each of them gets an explore link pointing to the error

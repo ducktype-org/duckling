@@ -22,6 +22,8 @@
 #include <helios/queries/queries.hpp>
 #include <lsp_interface/compiler.hpp>
 #include <lsp_interface/diagnostics.hpp>
+#include <lsp_interface/hover.hpp>
+#include <lsp_interface/positions.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <diagnostic/core/common_classes.hpp>
@@ -438,6 +440,35 @@ namespace duck_ls {
 			session->pushDiagnostics(published_uri, diagnostics);
 
 		last_published_diagnostics = std::move(published);
+	}
+
+	lsp::TextDocumentHoverResult Compiler::hover(const lsp::Uri& uri, const lsp::Position& position) {
+		if (!files->isOpened(uri)) return nullptr;
+
+		auto cache_path = files->cachePathFor(uri);
+		if (cache_path.empty()) return nullptr;
+
+		auto source_files = SourceFile::getSourceFilesFromPath(cache_path.value());
+		if (source_files.empty()) return nullptr;
+		auto source_file = source_files.back();
+
+		const auto content = source_file->getFileIllegalAccess().getContent();
+		auto       offset  = toCodePointOffset(content.view().stringView(), position);
+		if (offset.empty()) return nullptr;
+
+		auto hover = hoverAt(source_file, offset.value());
+		if (hover.empty()) return nullptr;
+
+		lsp::Hover result{
+			.contents = lsp::MarkupContent{
+				.kind  = lsp::MarkupKind::Markdown,
+				.value = std::move(hover.value().markdown),
+			},
+		};
+		if (hover.value().position.has_value())
+			result.range = toLspRange(hover.value().position.value());
+
+		return result;
 	}
 
 	bool Compiler::stdActive() const { return options.stdlib_options.stdActive(); }

@@ -34,8 +34,7 @@ namespace compiler::helios::defgen {
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name
-				= ctx.query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaultsMut(tuple_type
-			                                           ))
+				= ctx.query<mangler::QueryMangledType>(tsh::ValueType<>::withDefaultsMut(tuple_type))
 			          ->valueOrThrow(),
 				.generated_symbol_data
 				= Constructor{ .type = tuple_type, .kind = Constructor::Kind::Implicit },

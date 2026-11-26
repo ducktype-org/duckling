@@ -59,13 +59,13 @@ namespace compiler::tsh {
 
 	bool RawPointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
-	SymbolType<> PointerAbstractType::getPointee() const { return toCPimpl(pimpl)->getPointee(); }
+	ValueType<> PointerAbstractType::getPointee() const { return toCPimpl(pimpl)->getPointee(); }
 
 	AbstractType PointerAbstractType::getUnderlyingType() const {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
-	SymbolType<> ManyPointerAbstractType::getPointee() const {
+	ValueType<> ManyPointerAbstractType::getPointee() const {
 		return toCPimpl(pimpl)->getPointee();
 	}
 
@@ -73,13 +73,13 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
-	SymbolType<> CPointerAbstractType::getPointee() const { return toCPimpl(pimpl)->getPointee(); }
+	ValueType<> CPointerAbstractType::getPointee() const { return toCPimpl(pimpl)->getPointee(); }
 
 	AbstractType CPointerAbstractType::getUnderlyingType() const {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
-	SymbolType<> SliceAbstractType::getElementType() const {
+	ValueType<> SliceAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
@@ -95,20 +95,20 @@ namespace compiler::tsh {
 	|  COMPOSITE TYPES  |
 	\*******************/
 
-	const std::vector<SymbolType<>>& TupleAbstractType::getComponents() const {
+	const std::vector<ValueType<>>& TupleAbstractType::getComponents() const {
 		return toCPimpl(pimpl)->getComponents();
 	}
 
 	std::vector<AbstractType> TupleAbstractType::getComponentAbstractTypes() const {
-		const std::vector<SymbolType<>>& components = getComponents();
-		std::vector<AbstractType>        component_types;
+		const std::vector<ValueType<>>& components = getComponents();
+		std::vector<AbstractType>       component_types;
 		component_types.reserve(components.size());
 		for (const auto& component: components) component_types.push_back(component.getType());
 		return component_types;
 	}
 
 	bool TupleAbstractType::isTupleOfTypes() const {
-		return std::ranges::all_of(getComponents(), [](const SymbolType<>& component) {
+		return std::ranges::all_of(getComponents(), [](const ValueType<>& component) {
 			if (component.getRefKind() != ReferenceKind::Direct) return false;
 
 			const Kind kind = component.getType().getKind();
@@ -126,13 +126,11 @@ namespace compiler::tsh {
 		auto operator<=>(const FunctionConstructionRecord&) const = default;
 	};
 
-	const std::vector<SymbolType<>>& FunctionAbstractType::getParameterTypes() const {
+	const std::vector<ValueType<>>& FunctionAbstractType::getParameterTypes() const {
 		return toCPimpl(pimpl)->getParameterTypes();
 	}
 
-	SymbolType<> FunctionAbstractType::getResultType() const {
-		return toCPimpl(pimpl)->getResult();
-	}
+	ValueType<> FunctionAbstractType::getResultType() const { return toCPimpl(pimpl)->getResult(); }
 
 	bool FunctionAbstractType::isPure() const { return toCPimpl(pimpl)->isPure(); }
 
@@ -140,7 +138,7 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getFunctionKind();
 	}
 
-	SymbolType<> StaticArrayAbstractType::getElementType() const {
+	ValueType<> StaticArrayAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();
 	}
 
@@ -154,11 +152,11 @@ namespace compiler::tsh {
 	|  NOMINAL TYPES  |
 	\*****************/
 
-	const std::vector<SymbolType<>>& VariantAbstractType::getUnderlyingTypes() const {
+	const std::vector<ValueType<>>& VariantAbstractType::getUnderlyingTypes() const {
 		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
-	SymbolType<> VariantAbstractType::getMember(const usize index) const {
+	ValueType<> VariantAbstractType::getMember(const usize index) const {
 		return toCPimpl(pimpl)->getMember(index);
 	}
 
@@ -166,7 +164,7 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->representsOptionalType();
 	}
 
-	SymbolType<> VariantAbstractType::getOptionalValueType() const {
+	ValueType<> VariantAbstractType::getOptionalValueType() const {
 		return toCPimpl(pimpl)->getOptionalValueType();
 	}
 

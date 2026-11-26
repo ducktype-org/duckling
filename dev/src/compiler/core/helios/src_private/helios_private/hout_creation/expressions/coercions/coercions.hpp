@@ -15,7 +15,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/tsh/coercions/coercion_mode.hpp>
 #include <helios/tsh/coercions/value_source.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/pointers/box_or_ref.hpp>
 
@@ -46,11 +46,11 @@ namespace compiler::helios::coercions {
 	 * implicitly taken by `ref`).
 	 */
 	[[nodiscard]] Coercion coercionOf(
-		query::Context&          ctx,
-		CRef<code::Expr>         from,
-		const tsh::SymbolType<>& target,
-		HandOverKind             kind = HandOverKind::Regular,
-		CoercionMode             mode = CoercionMode::Default
+		query::Context&         ctx,
+		CRef<code::Expr>        from,
+		const tsh::ValueType<>& target,
+		HandOverKind            kind = HandOverKind::Regular,
+		CoercionMode            mode = CoercionMode::Default
 	);
 
 	/**
@@ -67,7 +67,7 @@ namespace compiler::helios::coercions {
 	query::QResult<Coercion> validCoercionOf(
 		query::Context&                     ctx,
 		CRef<code::Expr>                    from,
-		const tsh::SymbolType<>&            target,
+		const tsh::ValueType<>&             target,
 		dia::StablePosition                 source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos = {},
 		const CoercionErrorOverrides&       error_overrides      = {},
@@ -81,7 +81,7 @@ namespace compiler::helios::coercions {
 	query::QResult<Coercion> validCoercionOf(
 		query::Context&                     ctx,
 		const tsh::coercions::ValueSource&  from,
-		const tsh::SymbolType<>&            target,
+		const tsh::ValueType<>&             target,
 		dia::StablePosition                 source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos = {},
 		const CoercionErrorOverrides&       error_overrides      = {}
@@ -120,7 +120,7 @@ namespace compiler::helios::coercions {
 	query::QResult<Box<code::Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<code::Expr>                     expr,
-		const tsh::SymbolType<>&            expected_type,
+		const tsh::ValueType<>&             expected_type,
 		dia::StablePosition                 source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos = {},
 		const CoercionErrorOverrides&       error_overrides      = {}

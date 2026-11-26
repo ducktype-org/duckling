@@ -270,7 +270,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type) {
+	SymID moveInSymForType(query::Context& ctx, tsh::ValueType<> element_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::MoveIn),
 			.generated_symbol_data
@@ -285,7 +285,7 @@ namespace compiler::helios {
 		using namespace code::shorthands;
 		const Shorthand s{ ctx };
 		const auto      pointee_type
-			= tsh::SymbolType<>::withDefaultsMut(inner->expression_type.getSymbolType().getType());
+			= tsh::ValueType<>::withDefaultsMut(inner->expression_type.getValueType().getType());
 		const SymID alloc_symbol
 			= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { pointee_type });
 

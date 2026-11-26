@@ -9,7 +9,7 @@
 #include <ctv/ctv_fd.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <hashing/hash_algorithm_utils.hpp>
 #include <query_framework/query_int.hpp>
@@ -64,11 +64,11 @@ namespace compiler::helios::mangler {
 	DECLARE_QUERY(QueryMangledSymbol, KeyOf_MangledSymbol, base::StrID, ({ .uses_qresult = false }));
 
 	/**
-	 * @brief Gets the mangled name of a type. The type can either be AbstractType or SymbolType.
+	 * @brief Gets the mangled name of a type. The type can either be AbstractType or ValueType.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryMangledType, tsh::SymbolType<>, CRef<query::QResult<base::StrID>>, ({}));
+	DECLARE_QUERY(QueryMangledType, tsh::ValueType<>, CRef<query::QResult<base::StrID>>, ({}));
 
 	base::StrID getSimpleMangledName(query::Context& ctx, SymID sym_id);
 
