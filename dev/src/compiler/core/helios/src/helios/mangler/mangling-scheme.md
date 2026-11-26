@@ -82,14 +82,9 @@ either in the scheme or it's implementation, they should be reflected here.
          | <class-type>
          | <function-type>
          | <unnamed-type-name>
-         | <type-modifier>* <type>
+         | <type-modifier> <type>
          | <back-reference>
-// there could possibly be more qualifiers
-// should not repeat
-<type-modifier> ::= "N"                                     // const
-                  | "M"                                     // unique
-                  | "L"                                     // leaking
-                  | "R"                                     // reference
+<type-modifier> ::= "R"                                     // reference
                   | "X"                                     // box
 
 // more types could be added in the future
