@@ -40,6 +40,10 @@ class Pair {
 
 fun makeGrid() -> Grid = Grid(1, 2);
 
+namespace ns {
+	var grid: Grid = Grid(5, 6);
+}
+
 fun throughRef(g: ref Grid) -> i64 = g[1] + g(5);
 
 fun main() -> i64 = {
@@ -68,6 +72,8 @@ fun main() -> i64 = {
 	var h = Holder(Grid(7, 8));
 	builtin_output_i64(h.grid(1)); # 8
 	builtin_output_i64(h.grid[0]); # 7
+	builtin_output_i64(ns.grid(3)); # 8
+	builtin_output_i64(ns.grid[1]); # 6
 
 	# Templated classes too.
 	var p = Pair[i64](3, 4);

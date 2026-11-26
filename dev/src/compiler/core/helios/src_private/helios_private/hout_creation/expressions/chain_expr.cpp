@@ -897,6 +897,7 @@ namespace compiler::helios::code {
 		 * and current state is a namespace.
 		 * For example:
 		 * - `my_ns.foo()` - this may result in function overload.
+		 * - `my_ns.value()` - a call through a value, like a call of the `()` operator of a class.
 		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
@@ -918,6 +919,22 @@ namespace compiler::helios::code {
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
+					auto value_result = processNamespaceOrValue(
+						lookup_result->leaves.front(),
+						pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access),
+						expr_access
+					);
+					UNPACK_QRESULT_MOVE(auto value_state =, value_result);
+					auto res = processValueCall(
+						value_state.getExpr(),
+						multiplePstOriginOrdered({ expr_access, call_expr }),
+						call_expr
+					);
+					UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+					return ChainState::ofExpr(std::move(expr));
+				}
 
 				auto expr_result
 					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
