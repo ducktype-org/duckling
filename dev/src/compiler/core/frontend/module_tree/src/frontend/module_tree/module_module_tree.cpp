@@ -11,14 +11,6 @@ namespace compiler::frontend {
 		CORE_PANIC("makeAbstract called on ModuleModuleTreeNode!");
 	}
 
-	Ref<base::Optional<base::Ref<SourceFile>>> ModuleModuleTreeNode::mainSourceFileSlot() {
-		return &m_main_source_file;
-	}
-
-	CRef<base::Optional<base::Ref<SourceFile>>> ModuleModuleTreeNode::mainSourceFileSlot() const {
-		return &m_main_source_file;
-	}
-
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleModuleTreeNode::getOtherFiles(
 	) const {
 		return m_other_files;

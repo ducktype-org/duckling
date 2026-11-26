@@ -32,6 +32,7 @@ namespace compiler::frontend {
 		 */
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
+		friend class ModuleTree;
 		friend class SyntheticReplChainModuleTreeBuilder;
 		friend class SyntheticReplChainModuleTreeModifier;
 		friend class ModuleTreeModifierCommon;
@@ -39,10 +40,6 @@ namespace compiler::frontend {
 		void makeAbstract() final;
 
 	protected:
-		Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
-
-		CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
-
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;

@@ -87,14 +87,26 @@ namespace compiler::frontend {
 	}
 
 	bool ModuleTree::hasMainSourceFile() const {
-		// Scripts have no main source file slot at all.
-		if (getKind() == ModuleKind::Script) return false;
-		return mainSourceFileSlot()->has_value();
+		switch (getKind()) {
+		case ModuleKind::Module:
+			return as<ModuleModuleTreeNode>()->m_main_source_file.has_value();
+		case ModuleKind::ReplChain:
+			return as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file.has_value();
+		case ModuleKind::Script:
+			// A script owns no source file, its synthetic REPL chain modules do.
+			return false;
+		default:
+			CORE_PANIC("hasMainSourceFile called on a module with an invalid kind!");
+		}
 	}
 
 	FileAccessLocked ModuleTree::getMainSourceFile() const {
 		CORE_ASSERT(hasMainSourceFile(), "Main source file does not exist!");
-		return FileAccessLocked(mainSourceFileSlot()->value()->getFileID());
+		const auto& main_source_file
+			= getKind() == ModuleKind::Module
+		        ? as<ModuleModuleTreeNode>()->m_main_source_file
+		        : as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file;
+		return FileAccessLocked(main_source_file.value()->getFileID());
 	}
 
 	// PR: remove this impl? or add a todo to switch to panic mode in new PR
@@ -113,14 +125,6 @@ namespace compiler::frontend {
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
 		CORE_PANIC("getOtherFiles called on a module that does not support other files!");
-	}
-
-	Ref<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() {
-		CORE_PANIC("mainSourceFileSlot called on a module that does not have a main source file!");
-	}
-
-	CRef<base::Optional<base::Ref<SourceFile>>> ModuleTree::mainSourceFileSlot() const {
-		CORE_PANIC("mainSourceFileSlot called on a module that does not have a main source file!");
 	}
 
 	base::StrID ModuleTree::getName() const { return m_name; }

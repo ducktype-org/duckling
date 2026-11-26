@@ -34,15 +34,12 @@ namespace compiler::frontend {
 
 		void makeAbstract() final;
 
+		friend class ModuleTree;
 		friend class ModuleModuleTreeBuilder;
 		friend class ModuleModuleTreeModifier;
 		friend class ModuleTreeModifierCommon;
 
 	protected:
-		Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() override;
-
-		CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const override;
-
 		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;

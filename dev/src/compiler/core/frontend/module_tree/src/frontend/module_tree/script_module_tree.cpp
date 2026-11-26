@@ -11,16 +11,6 @@ namespace compiler::frontend {
 		CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
 	}
 
-	Ref<base::Optional<base::Ref<SourceFile>>> SyntheticReplChainModuleTreeNode::mainSourceFileSlot(
-	) {
-		return &m_synthetic_source_file;
-	}
-
-	CRef<base::Optional<base::Ref<SourceFile>>> SyntheticReplChainModuleTreeNode::mainSourceFileSlot(
-	) const {
-		return &m_synthetic_source_file;
-	}
-
 	std::vector<base::Ref<ModuleTree>> SyntheticReplChainModuleTreeNode::collectChildrenModules(
 	) const {
 		std::vector<base::Ref<ModuleTree>> children;

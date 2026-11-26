@@ -163,6 +163,9 @@ namespace compiler::frontend {
 
 		/**
 		 * Checks if a module contains main source file.
+		 * For a standard module this is ModuleModuleTreeNode::m_main_source_file, for a synthetic
+		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
+		 * A script module never has one.
 		 * @return True if the main source file exists, false otherwise.
 		 */
 		[[nodiscard]]
@@ -316,21 +319,6 @@ namespace compiler::frontend {
 		 * Dummy function to make this class abstract.
 		 */
 		virtual void makeAbstract() = 0;
-
-		/**
-		 * @brief Access the slot holding the source file that acts as the main source file of this
-		 * module.
-		 *
-		 * For a standard module this is ModuleModuleTreeNode::m_main_source_file, for a synthetic
-		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
-		 * @note Panics for module types that have no main source file (scripts). Check the module
-		 * kind before calling this.
-		 */
-		[[nodiscard]]
-		virtual Ref<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot();
-
-		[[nodiscard]]
-		virtual CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const;
 
 		/**
 		 * @brief Collects all child modules of this module.
