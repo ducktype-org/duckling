@@ -282,6 +282,26 @@ namespace compiler::frontend {
 			return node;
 		}
 
+		/**
+		 * @brief Downcasts this module to the node class T, if it is one.
+		 * @return The node as a T, or an empty optional when the module is of another kind.
+		 */
+		template<class T>
+		base::Optional<Ref<T>> tryAs() {
+			if (auto* node = dynamic_cast<T*>(this)) return Ref<T>(node);
+			return {};
+		}
+
+		/**
+		 * @brief Downcasts this module to the node class T, if it is one.
+		 * @return The node as a T, or an empty optional when the module is of another kind.
+		 */
+		template<class T>
+		base::Optional<CRef<T>> tryAs() const {
+			if (const auto* node = dynamic_cast<const T*>(this)) return CRef<T>(node);
+			return {};
+		}
+
 		ModuleTree(const ModuleTree&)                = delete;
 		ModuleTree& operator=(const ModuleTree&)     = delete;
 		ModuleTree(ModuleTree&&) noexcept            = delete;

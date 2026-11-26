@@ -33,10 +33,9 @@ namespace compiler::frontend {
 		base::Optional<ModuleID> findSubmodule(
 			query::Context& ctx, ModuleID module, base::StrID name
 		) {
-			auto module_ref = getModuleRef(module);
-			if (module_ref->getKind() != ModuleKind::Module) return {};
-			auto maybe_child
-				= module_ref->as<ModuleModuleTreeNode>()->getSubmoduleByName(name).unlock(ctx);
+			const auto module_node = getModuleRef(module)->tryAs<ModuleModuleTreeNode>();
+			if (not module_node.has_value()) return {};
+			auto maybe_child = module_node.value()->getSubmoduleByName(name).unlock(ctx);
 			if (not maybe_child.has_value()) return {};
 			return maybe_child.value().unlock(ctx).getID();
 		}

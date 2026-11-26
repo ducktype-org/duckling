@@ -318,9 +318,9 @@ namespace compiler::frontend {
 
 			// PR: this should use child modules insted of getSubmodules
 			// but collectChildrenModules is private, figure this out
-			if (module_tree->getKind() != ModuleKind::Module) return;
-			const auto module_node = module_tree->as<ModuleModuleTreeNode>();
-			for (const auto& submodule: module_node->getSubmodules().illegalAccess())
+			const auto module_node = module_tree->tryAs<ModuleModuleTreeNode>();
+			if (not module_node.has_value()) return;
+			for (const auto& submodule: module_node.value()->getSubmodules().illegalAccess())
 				self(submodule.illegalAccess().getID());
 		};
 		collect_files(module_id);
