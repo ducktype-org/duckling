@@ -612,6 +612,11 @@ private:
 			check_meta_function("createCPtr", MK::CreateCPtr, 1);
 			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
 			check_meta_function("createSlice", MK::CreateSlice, 1);
+			check_meta_function("createRefMut", MK::CreateRefMut, 1);
+			check_meta_function("createPtrMut", MK::CreatePtrMut, 1);
+			check_meta_function("createCPtrMut", MK::CreateCPtrMut, 1);
+			check_meta_function("createManyPtrMut", MK::CreateManyPtrMut, 1);
+			check_meta_function("createSliceMut", MK::CreateSliceMut, 1);
 			check_meta_function("createOptional", MK::CreateOptional, 1);
 			check_meta_function("createVariant", MK::CreateVariant, 4);
 

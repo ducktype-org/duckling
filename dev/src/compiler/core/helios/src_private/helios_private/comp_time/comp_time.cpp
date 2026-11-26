@@ -516,25 +516,52 @@ namespace compiler::helios {
 						} else if constexpr (std::is_same_v<T, tsh::ValueType<>>) {
 							switch (expr.operation) {
 							case Ref:
-								return ctv::CompileTimeValue{ val.toRef() };
+								return ctv::CompileTimeValue{ val.toRef(tsh::ViewAccess::ReadOnly) };
+							case RefMut:
+								return ctv::CompileTimeValue{ val.toRef(tsh::ViewAccess::ReadWrite
+								) };
 							case Box:
 								return ctv::CompileTimeValue{ val.toBox() };
 							case Ptr:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
-									ctx.query<tsh::QueryPointerType>({ val })
-								) };
+							case PtrMut:
+								return ctv::CompileTimeValue{
+									tsh::ValueType<>::direct(ctx.query<tsh::QueryPointerType>({
+										.pointee = val,
+										.access  = expr.operation == PtrMut
+								                     ? tsh::ViewAccess::ReadWrite
+								                     : tsh::ViewAccess::ReadOnly,
+									}))
+								};
 							case ManyPtr:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
-									ctx.query<tsh::QueryManyPointerType>({ val })
-								) };
+							case ManyPtrMut:
+								return ctv::CompileTimeValue{
+									tsh::ValueType<>::direct(ctx.query<tsh::QueryManyPointerType>({
+										.pointee = val,
+										.access  = expr.operation == ManyPtrMut
+								                     ? tsh::ViewAccess::ReadWrite
+								                     : tsh::ViewAccess::ReadOnly,
+									}))
+								};
 							case CPtr:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
-									ctx.query<tsh::QueryCPointerType>({ val })
-								) };
+							case CPtrMut:
+								return ctv::CompileTimeValue{
+									tsh::ValueType<>::direct(ctx.query<tsh::QueryCPointerType>({
+										.pointee = val,
+										.access  = expr.operation == CPtrMut
+								                     ? tsh::ViewAccess::ReadWrite
+								                     : tsh::ViewAccess::ReadOnly,
+									}))
+								};
 							case Slice:
-								return ctv::CompileTimeValue{ tsh::ValueType<>::direct(
-									ctx.query<tsh::QuerySliceType>({ val })
-								) };
+							case SliceMut:
+								return ctv::CompileTimeValue{
+									tsh::ValueType<>::direct(ctx.query<tsh::QuerySliceType>({
+										.pointee = val,
+										.access  = expr.operation == SliceMut
+								                     ? tsh::ViewAccess::ReadWrite
+								                     : tsh::ViewAccess::ReadOnly,
+									}))
+								};
 							default:
 								return CouldNotShortPath{};
 							}

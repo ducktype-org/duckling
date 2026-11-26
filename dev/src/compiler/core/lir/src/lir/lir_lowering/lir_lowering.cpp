@@ -299,14 +299,24 @@ namespace compiler::lir {
 				return lir::MetaKind::CreateBox;
 			case CreateRef:
 				return lir::MetaKind::CreateRef;
+			case CreateRefMut:
+				return lir::MetaKind::CreateRefMut;
 			case CreatePtr:
 				return lir::MetaKind::CreatePtr;
+			case CreatePtrMut:
+				return lir::MetaKind::CreatePtrMut;
 			case CreateManyPtr:
 				return lir::MetaKind::CreateManyPtr;
+			case CreateManyPtrMut:
+				return lir::MetaKind::CreateManyPtrMut;
 			case CreateCPtr:
 				return lir::MetaKind::CreateCPtr;
+			case CreateCPtrMut:
+				return lir::MetaKind::CreateCPtrMut;
 			case CreateSlice:
 				return lir::MetaKind::CreateSlice;
+			case CreateSliceMut:
+				return lir::MetaKind::CreateSliceMut;
 			case CreateTuple:
 				return lir::MetaKind::CreateTuple;
 			case CreateVariant:

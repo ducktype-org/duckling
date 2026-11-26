@@ -526,17 +526,16 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(Keyword::Slice), { meta_t }, meta_t, Slice, Prefix);
 
 			// Mutable view constructors.
-			// @TODO: #2104 These do nothing yet.
 			const auto writable_view = [&](const Keyword view, const BuiltinUnary op) {
 				builtin_op(
 					lang_def::writableViewOperator(view).value(), { meta_t }, meta_t, op, Prefix
 				);
 			};
-			writable_view(Keyword::Ref, Ref);
-			writable_view(Keyword::Ptr, Ptr);
-			writable_view(Keyword::ManyPtr, ManyPtr);
-			writable_view(Keyword::CPtr, CPtr);
-			writable_view(Keyword::Slice, Slice);
+			writable_view(Keyword::Ref, RefMut);
+			writable_view(Keyword::Ptr, PtrMut);
+			writable_view(Keyword::ManyPtr, ManyPtrMut);
+			writable_view(Keyword::CPtr, CPtrMut);
+			writable_view(Keyword::Slice, SliceMut);
 
 			/// Meta comparisons ///
 			builtin_op(base::StrID("=="), { meta_t, meta_t }, bool_t, MetaEq, Infix);

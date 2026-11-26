@@ -85,7 +85,17 @@ namespace compiler::helios::comptime_ops {
 		comptime_create_ref,
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = type_ptr->toRef();
+		auto new_type = type_ptr->toRef(tsh::ViewAccess::ReadOnly);
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::ValueType<>*,
+		"opaque_ptr",
+		comptime_create_ref_mut,
+		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = type_ptr->toRef(tsh::ViewAccess::ReadWrite);
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -96,8 +106,22 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type
-			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr }));
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryPointerType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadOnly }
+		));
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::ValueType<>*,
+		"opaque_ptr",
+		comptime_create_ptr_mut,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryPointerType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadWrite }
+		));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -119,8 +143,22 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type
-			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr }));
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryManyPointerType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadOnly }
+		));
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::ValueType<>*,
+		"opaque_ptr",
+		comptime_create_many_ptr_mut,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryManyPointerType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadWrite }
+		));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -131,8 +169,22 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type
-			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr }));
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryCPointerType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadOnly }
+		));
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::ValueType<>*,
+		"opaque_ptr",
+		comptime_create_cptr_mut,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryCPointerType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadWrite }
+		));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -143,8 +195,22 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type
-			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr }));
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QuerySliceType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadOnly }
+		));
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		tsh::ValueType<>*,
+		"opaque_ptr",
+		comptime_create_slice_mut,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::ValueType<>::direct(ctx_ptr->query<tsh::QuerySliceType>(
+			{ .pointee = *type_ptr, .access = tsh::ViewAccess::ReadWrite }
+		));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -249,10 +315,17 @@ namespace compiler::helios::comptime_ops {
 			return {
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_ref_mut, comptime_create_ref_mut, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_ptr, comptime_create_ptr, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_ptr_mut, comptime_create_ptr_mut, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
+				VM_INSTANCE_EXT_C_FUNC(
+					comptime_create_many_ptr_mut, comptime_create_many_ptr_mut, pid
+				),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr_mut, comptime_create_cptr_mut, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_slice, comptime_create_slice, pid),
+				VM_INSTANCE_EXT_C_FUNC(comptime_create_slice_mut, comptime_create_slice_mut, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_create_optional, comptime_create_optional, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_size_of, comptime_size_of, pid),
 				VM_INSTANCE_EXT_C_FUNC(comptime_align_of, comptime_align_of, pid),

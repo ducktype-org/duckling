@@ -907,11 +907,16 @@ namespace compiler::helios::code {
 			case BuiltinUnary::IntegerBitNot:
 			case BuiltinUnary::BooleanNot:
 			case BuiltinUnary::Ref:
+			case BuiltinUnary::RefMut:
 			case BuiltinUnary::Box:
 			case BuiltinUnary::Ptr:
+			case BuiltinUnary::PtrMut:
 			case BuiltinUnary::CPtr:
+			case BuiltinUnary::CPtrMut:
 			case BuiltinUnary::ManyPtr:
+			case BuiltinUnary::ManyPtrMut:
 			case BuiltinUnary::Slice:
+			case BuiltinUnary::SliceMut:
 				// For most of the unary operators the result is the same as their argument type:
 				// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
 				return argument_type;
@@ -963,6 +968,10 @@ namespace compiler::helios::code {
 			out << "ref ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::RefMut:
+			out << "ref mut ";
+			expr->debugPrint(out);
+			break;
 		case BuiltinUnary::Box:
 			out << "box ";
 			expr->debugPrint(out);
@@ -971,16 +980,32 @@ namespace compiler::helios::code {
 			out << "ptr ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::PtrMut:
+			out << "ptr mut ";
+			expr->debugPrint(out);
+			break;
 		case BuiltinUnary::CPtr:
 			out << "cptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::CPtrMut:
+			out << "cptr mut ";
 			expr->debugPrint(out);
 			break;
 		case BuiltinUnary::ManyPtr:
 			out << "manyptr ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::ManyPtrMut:
+			out << "manyptr mut ";
+			expr->debugPrint(out);
+			break;
 		case BuiltinUnary::Slice:
 			out << "slice ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::SliceMut:
+			out << "slice mut ";
 			expr->debugPrint(out);
 			break;
 		case BuiltinUnary::SizeOf:

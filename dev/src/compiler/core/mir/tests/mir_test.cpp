@@ -1017,6 +1017,16 @@ private:
 					check_meta_function(fun, MK::CreateManyPtr, 1);
 				} else if (fun->declaration->original_name.str() == "createSlice") {
 					check_meta_function(fun, MK::CreateSlice, 1);
+				} else if (fun->declaration->original_name.str() == "createRefMut") {
+					check_meta_function(fun, MK::CreateRefMut, 1);
+				} else if (fun->declaration->original_name.str() == "createPtrMut") {
+					check_meta_function(fun, MK::CreatePtrMut, 1);
+				} else if (fun->declaration->original_name.str() == "createCPtrMut") {
+					check_meta_function(fun, MK::CreateCPtrMut, 1);
+				} else if (fun->declaration->original_name.str() == "createManyPtrMut") {
+					check_meta_function(fun, MK::CreateManyPtrMut, 1);
+				} else if (fun->declaration->original_name.str() == "createSliceMut") {
+					check_meta_function(fun, MK::CreateSliceMut, 1);
 				} else if (fun->declaration->original_name.str() == "createVariant") {
 					check_meta_function(fun, MK::CreateVariant, 4);
 				} else if (fun->declaration->original_name.str() == "createTuple") {

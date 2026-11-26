@@ -23,10 +23,15 @@ namespace comptime_func_names {
 	constexpr auto GLOBAL_QUERY_CONTEXT     = "comptime_query_ctx";
 	constexpr auto CREATE_BOX               = "comptime_create_box";
 	constexpr auto CREATE_REF               = "comptime_create_ref";
+	constexpr auto CREATE_REF_MUT           = "comptime_create_ref_mut";
 	constexpr auto CREATE_PTR               = "comptime_create_ptr";
+	constexpr auto CREATE_PTR_MUT           = "comptime_create_ptr_mut";
 	constexpr auto CREATE_MANY_PTR          = "comptime_create_many_ptr";
+	constexpr auto CREATE_MANY_PTR_MUT      = "comptime_create_many_ptr_mut";
 	constexpr auto CREATE_CPTR              = "comptime_create_cptr";
+	constexpr auto CREATE_CPTR_MUT          = "comptime_create_cptr_mut";
 	constexpr auto CREATE_SLICE             = "comptime_create_slice";
+	constexpr auto CREATE_SLICE_MUT         = "comptime_create_slice_mut";
 	constexpr auto SIZE_OF                  = "comptime_size_of";
 	constexpr auto ALIGN_OF                 = "comptime_align_of";
 	constexpr auto TYPES_EQUAL              = "comptime_types_equal";
@@ -117,17 +122,33 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateRef expects 1 argument");
 			lower_single_call(base::StrID(comptime_func_names::CREATE_REF), op.args, op.dest);
 			break;
+		case lir::MetaKind::CreateRefMut:
+			CORE_ASSERT(op.args.size() == 1, "MetaKind::CreateRefMut expects 1 argument");
+			lower_single_call(base::StrID(comptime_func_names::CREATE_REF_MUT), op.args, op.dest);
+			break;
 		case lir::MetaKind::CreatePtr:
 			lower_ctx_call(base::StrID(comptime_func_names::CREATE_PTR));
+			break;
+		case lir::MetaKind::CreatePtrMut:
+			lower_ctx_call(base::StrID(comptime_func_names::CREATE_PTR_MUT));
 			break;
 		case lir::MetaKind::CreateManyPtr:
 			lower_ctx_call(base::StrID(comptime_func_names::CREATE_MANY_PTR));
 			break;
+		case lir::MetaKind::CreateManyPtrMut:
+			lower_ctx_call(base::StrID(comptime_func_names::CREATE_MANY_PTR_MUT));
+			break;
 		case lir::MetaKind::CreateCPtr:
 			lower_ctx_call(base::StrID(comptime_func_names::CREATE_CPTR));
 			break;
+		case lir::MetaKind::CreateCPtrMut:
+			lower_ctx_call(base::StrID(comptime_func_names::CREATE_CPTR_MUT));
+			break;
 		case lir::MetaKind::CreateSlice:
 			lower_ctx_call(base::StrID(comptime_func_names::CREATE_SLICE));
+			break;
+		case lir::MetaKind::CreateSliceMut:
+			lower_ctx_call(base::StrID(comptime_func_names::CREATE_SLICE_MUT));
 			break;
 		case lir::MetaKind::CreateTuple: {
 			auto builder = BuilderSequence{
