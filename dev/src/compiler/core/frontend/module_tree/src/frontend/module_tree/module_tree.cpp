@@ -123,22 +123,6 @@ namespace compiler::frontend {
 		CORE_PANIC("mainSourceFileSlot called on a module that does not have a main source file!");
 	}
 
-	Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleTree::submodulesSlot() {
-		CORE_PANIC("submodulesSlot called on a module that does not support submodules!");
-	}
-
-	CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleTree::submodulesSlot() const {
-		CORE_PANIC("submodulesSlot called on a module that does not support submodules!");
-	}
-
-	Ref<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleTree::otherFilesSlot() {
-		CORE_PANIC("otherFilesSlot called on a module that does not support other files!");
-	}
-
-	CRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleTree::otherFilesSlot() const {
-		CORE_PANIC("otherFilesSlot called on a module that does not support other files!");
-	}
-
 	base::StrID ModuleTree::getName() const { return m_name; }
 
 	std::string ModuleTree::humanReadableID(query::Context& ctx) const {
@@ -332,7 +316,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTree(const fs::File& file, base::StrID package_id) {
-		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
+		return ModuleModuleTreeBuilder::create(file, package_id)->getModuleID();
 	}
 
 	void parseAllFilesInModuleTree(ModuleID module_id) {
@@ -411,7 +395,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {
-		return ModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
+		return ModuleModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
 	}
 
 	ModuleID createModuleTreeFromContents(
@@ -450,16 +434,15 @@ namespace compiler::frontend {
 			auto module_tree = GetModuleID_Functor::get(key);
 			if (!module_tree->isReplModule()) return {};
 
-			auto repl_parent = dynamic_cast<const SyntheticReplChainModuleTreeNode*>(&*module_tree)->getReplModuleParent();
-			
+			auto repl_parent
+				= module_tree->as<SyntheticReplChainModuleTreeNode>()->getReplModuleParent();
+
 			if (repl_parent.has_value()) {
 				// Register dependency on the parent module contents so incremental rebuilds propagate
 				ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
-					ModuleTree::getModuleHash(repl_parent.value()->getModuleID()) });
+					ModuleTree::getModuleHash(repl_parent.value()) });
 			}
-			return repl_parent.map([](const auto& node) {
-				return node->getModuleID();
-			});
+			return repl_parent;
 		}
 
 		QUERY_AUTO_CACHE_COPY

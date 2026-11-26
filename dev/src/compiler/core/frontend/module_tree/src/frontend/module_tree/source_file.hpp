@@ -24,7 +24,7 @@
 
 namespace compiler::frontend {
 
-	class ModuleTreeModifier;
+	class ModuleTreeModifierCommon;
 	class ModuleTree;
 	struct GetFileID_Functor;
 
@@ -85,7 +85,7 @@ namespace compiler::frontend {
 		 */
 		void invalidateComponentHash();
 
-		friend class ModuleTreeModifier;
+		friend class ModuleTreeModifierCommon;
 		friend class ModuleTree;
 		friend struct GetFileID_Functor;
 		friend struct FileID;
@@ -183,7 +183,8 @@ namespace compiler::frontend {
 		/**
 		 * @brief Remove SourceFile.
 		 * @note This will invalidate all references!
-		 * In principle it should only be used in ModuleTreeModifier in pair with query invalidations.
+		 * In principle it should only be used in the module tree modifiers in pair with query
+		 * invalidations.
 		 */
 		static void removeSourceFileFromStorage(Ref<SourceFile> source_file);
 

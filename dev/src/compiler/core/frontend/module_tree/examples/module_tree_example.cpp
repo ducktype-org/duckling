@@ -21,7 +21,7 @@ int main() {
 
 	// First argument is some kind of a path to a module we want to parse.
 	// It returns a std::shared_ptr.
-	Ref<ModuleTree> module_tree = compiler::frontend::ModuleTreeBuilder::create(
+	Ref<ModuleTree> module_tree = compiler::frontend::ModuleModuleTreeBuilder::create(
 		fs::File("../tests/test_module"), base::StrID("test_package_id")
 	);
 

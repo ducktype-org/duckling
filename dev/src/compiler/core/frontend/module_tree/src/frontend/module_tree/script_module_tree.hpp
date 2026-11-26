@@ -16,10 +16,9 @@ namespace compiler::frontend {
 	 * Represents a single node in the synthetic REPL chain.
 	 * Only used for repl modules.
 	 *
-	 * @note Those nodes embed into module tree parent structure normally.
-	 *
-	 * @note: Parent of this module is either the REPL module higher in the chain or the script
-	 * module itself.
+	 * @note Those nodes embed into module tree parent structure normally: m_parent is the previous
+	 * node of the chain or the script module that starts the chain, and this node is the REPL child
+	 * (m_repl_module_child) of its parent. The first statement of a REPL session has no parent.
 	 */
 	class SyntheticReplChainModuleTreeNode final: public ModuleTree {
 		/**
@@ -28,12 +27,14 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 
+		/**
+		 * The next node of the chain, if any.
+		 */
+		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
-		// HERE: we delete it probably, SyntheticReplChainModuleTreeNode uses normal module parent for its structure.
-		// /**
-		//  * TODO: (issue?) the parent less structure is sub optimal, but it has to wait for future PRs to address it.
-		//  */
-		// base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_parent;
+		friend class SyntheticReplChainModuleTreeBuilder;
+		friend class SyntheticReplChainModuleTreeModifier;
+		friend class ModuleTreeModifierCommon;
 
 		void makeAbstract() final;
 
@@ -52,17 +53,22 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const;
 
+		/**
+		 * @brief The previous statement of the chain.
+		 * @return The parent module if it is a REPL chain node, empty if the parent is the script
+		 * that starts the chain or if there is no parent.
+		 */
 		[[nodiscard]]
-		const base::Optional<Ref<SyntheticReplChainModuleTreeNode>>& getReplModuleParent() const;
+		base::Optional<ModuleID> getReplModuleParent() const;
 
 		SubmodulesAccessLocked getSubmodules() const override {
-			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
-			return SubmodulesAccessLocked{getModuleID(), {}};
+			// REPL chain modules have no submodules, so we return an empty SubmodulesAccessLocked.
+			return SubmodulesAccessLocked{ getModuleID(), {} };
 		}
 
 		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
-			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
-			return ModuleChildAccessLocked{getModuleID(), name, {}};
+			// REPL chain modules have no submodules, so we return an empty ModuleChildAccessLocked.
+			return ModuleChildAccessLocked{ getModuleID(), name, {} };
 		}
 	};
 
@@ -71,15 +77,20 @@ namespace compiler::frontend {
 	 *
 	 * @note Scripts dont have a main source file like standard modules.
 	 * Instead, a synthetic module chain is created to represent the script module.
+	 * @note The parent of a script is a standard module (or none), like for standard modules.
 	 */
 	class ScriptModuleTreeNode final: public ModuleTree {
 		base::Optional<fs::File> m_script_file;
 
-		// We might want to keep refs to all synthetic REPL chain modules associated with this script here
-		// to be able to modify them as needed in the future.
-
-		// this will have to be set somehow in builder/modifier:
+		/**
+		 * The first node of the synthetic REPL chain of this script, if any.
+		 * It is set by SyntheticReplChainModuleTreeModifier::setParent.
+		 */
 		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
+
+		friend class ScriptModuleTreeBuilder;
+		friend class ScriptModuleTreeModifier;
+		friend class ModuleTreeModifierCommon;
 
 		void makeAbstract() final;
 
@@ -97,12 +108,12 @@ namespace compiler::frontend {
 
 		SubmodulesAccessLocked getSubmodules() const override {
 			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
-			return SubmodulesAccessLocked{getModuleID(), {}};
+			return SubmodulesAccessLocked{ getModuleID(), {} };
 		}
 
 		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
 			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
-			return ModuleChildAccessLocked{getModuleID(), name, {}};
+			return ModuleChildAccessLocked{ getModuleID(), name, {} };
 		}
 	};
 

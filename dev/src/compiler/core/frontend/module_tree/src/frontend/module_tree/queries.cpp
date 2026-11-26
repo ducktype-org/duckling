@@ -46,7 +46,7 @@ namespace compiler::frontend {
 		// 		return from_module_ref->getSubmoduleByName(path.at(0)).unlock(ctx);
 		// 	return ModuleChildAccessLocked{from, path.at(0), {}}.unlock(ctx);
 		// }();
-		
+
 		if (maybe_child.has_value()) current_module = maybe_child.value().unlock(ctx).getID();
 
 		if (not current_module.has_value()) {

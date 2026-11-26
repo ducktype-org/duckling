@@ -32,17 +32,16 @@ namespace compiler::repl {
 		std::string_view                          module_name_prefix,
 		ReplSessionID                             session_id
 	) {
-		auto builder = frontend::ModuleTreeBuilder::create();
+		auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
-		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
-		builder->setKind(frontend::ModuleKind::ReplChain);
+		builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
 		auto module_name = base::strConcat(
 			module_name_prefix, std::to_string(session_id.asInt()), "_", std::to_string(line_counter)
 		);
 		builder->setName(base::StrID(module_name));
 
-		builder->setReplModuleData({ .parent = parent_module_id });
+		if_opt_some(parent_module_id, parent) { builder->setParent(parent); }
 
 		return builder->finalize();
 	}

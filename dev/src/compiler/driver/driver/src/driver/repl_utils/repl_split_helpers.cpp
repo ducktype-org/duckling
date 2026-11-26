@@ -53,15 +53,12 @@ namespace compiler::repl {
 		 * @note: This is similar to createReplModule, but without parent and history.
 		 */
 		base::Ref<frontend::ModuleTree> createProbeReplModule(std::string_view input) {
-			auto builder = frontend::ModuleTreeBuilder::create();
-			builder->setKind(frontend::ModuleKind::ReplChain);
+			auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
 			builder->setPackageID(base::StrID("repl_session"));
-			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
+			builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile(input));
 			builder->setName(base::StrID(
 				base::strConcat("repl_probe_", std::to_string(ReplSessionID::next().asInt()))
 			));
-			
-			builder->setReplModuleData({ .parent = std::nullopt });
 
 			return builder->finalize();
 		}

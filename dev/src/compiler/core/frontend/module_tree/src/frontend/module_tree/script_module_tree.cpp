@@ -45,6 +45,12 @@ namespace compiler::frontend {
 		return m_synthetic_source_file;
 	}
 
+	base::Optional<ModuleID> SyntheticReplChainModuleTreeNode::getReplModuleParent() const {
+		if (!m_parent.has_value() or m_parent.value()->getKind() != ModuleKind::ReplChain)
+			return {};
+		return m_parent.value()->getModuleID();
+	}
+
 	void ScriptModuleTreeNode::makeAbstract() {
 		CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!");
 	}

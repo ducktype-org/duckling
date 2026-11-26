@@ -194,7 +194,7 @@ namespace duck_ls {
 	void Compiler::loadPackage(
 		const fs::FilePath& package_root, const packages::RawPackageInfo& raw_package_info
 	) {
-		auto module_id = ModuleTreeBuilder::create(
+		auto module_id = ModuleModuleTreeBuilder::create(
 							 fs::File(package_root), raw_package_info.package_id, getResolver()
 		)
 		                     ->getModuleID();
@@ -236,7 +236,7 @@ namespace duck_ls {
 			std::erase(tracked_packages, module_ref->getModuleID());
 			raw_package_infos.erase(raw_package_it);
 
-			ModuleTreeModifier::removeModuleRecursive(module_ref);
+			ModuleModuleTreeModifier::removeModuleRecursive(module_ref);
 		} else {
 			auto package_id = packageIdForRoot(*package_root);
 
@@ -274,8 +274,8 @@ namespace duck_ls {
 			);
 		collectInputsFor(current, previous_inputs);
 
-		ModuleTreeModifier::removeMainSourceFile(module);
-		ModuleTreeModifier::setMainSourceFile(module, replacement);
+		ModuleModuleTreeModifier::removeMainSourceFile(module);
+		ModuleModuleTreeModifier::setMainSourceFile(module, replacement);
 
 		std::vector<query::external::InputData> new_inputs;
 		collectInputsFor(replacement, new_inputs);
@@ -337,7 +337,7 @@ namespace duck_ls {
 
 		if (files->updateDocument(uri, version, changes).isBad()) return base::BAD;
 
-		ModuleTreeModifier::fileModified(file);
+		ModuleModuleTreeModifier::fileModified(file);
 
 		std::vector<query::external::InputData> new_inputs;
 		collectInputsFor(file, new_inputs);

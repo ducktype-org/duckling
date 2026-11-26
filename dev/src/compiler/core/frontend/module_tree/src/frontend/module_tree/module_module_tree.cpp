@@ -19,24 +19,6 @@ namespace compiler::frontend {
 		return &m_main_source_file;
 	}
 
-	Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot() {
-		return &m_submodules;
-	}
-
-	CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> ModuleModuleTreeNode::submodulesSlot(
-	) const {
-		return &m_submodules;
-	}
-
-	Ref<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot() {
-		return &m_other_files;
-	}
-
-	CRef<base::HashMap<base::StrID, std::vector<fs::File>>> ModuleModuleTreeNode::otherFilesSlot(
-	) const {
-		return &m_other_files;
-	}
-
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleModuleTreeNode::getOtherFiles(
 	) const {
 		return m_other_files;

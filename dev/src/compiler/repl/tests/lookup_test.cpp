@@ -8,6 +8,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/script_module_tree.hpp>
 #include <frontend/pst_parser/pst/pst.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
@@ -27,20 +28,25 @@ public:
 
 private:
 	/**
+	 * Package ID shared by every module of the chain built by this test.
+	 */
+	base::StrID m_package_id = base::StrID(base::generateRandomString(32));
+
+	/**
 	 * Helper to create a REPL module from source code
 	 */
 	frontend::ModuleID createReplModule(
 		const std::string& source_code, base::Optional<frontend::ModuleID> parent = {}
 	) {
-		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::StrID(base::generateRandomString(32)));
-		builder->setKind(frontend::ModuleKind::ReplChain);
+		auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
+		// Every node of a chain has the package ID of its parent.
+		builder->setPackageID(m_package_id);
 
 		auto virtual_file = fs::FileManager::createRandomVirtualFile(source_code);
-		builder->setMainSourceFile(virtual_file);
+		builder->setSyntheticSourceFile(virtual_file);
 		builder->setName(base::StrID("test_repl_module"));
 
-		builder->setReplModuleData({ .parent = parent });
+		if (parent.has_value()) builder->setParent(parent.value());
 
 		return builder->finalize()->getModuleID();
 	}
@@ -67,10 +73,16 @@ private:
 		auto module2  = createReplModule("var y: i32 = x + 10;", module1);
 		auto mod2_ref = frontend::GetModuleID_Functor::get(module2);
 		assertTrue(mod2_ref->isReplModule(), "Statement 2 should be REPL module");
-		ASSERT_HAS_VALUE(mod2_ref->getReplModuleParent(), "Statement 2 should have parent linkage");
+		ASSERT_HAS_VALUE(
+			mod2_ref->as<frontend::SyntheticReplChainModuleTreeNode>()->getReplModuleParent(),
+			"Statement 2 should have parent linkage"
+		);
 
 		// Verify parent is module1
-		const auto parent_hash = mod2_ref->getReplModuleParent().value().queryUnstablePerfectHash();
+		const auto parent_hash = mod2_ref->as<frontend::SyntheticReplChainModuleTreeNode>()
+		                             ->getReplModuleParent()
+		                             .value()
+		                             .queryUnstablePerfectHash();
 		const auto expected_hash = module1.queryUnstablePerfectHash();
 		assertTrue(parent_hash == expected_hash, "Statement 2's parent should be Statement 1");
 
@@ -97,15 +109,19 @@ private:
 		auto mod3_ref = frontend::GetModuleID_Functor::get(module3);
 		assertTrue(mod3_ref->isReplModule(), "Statement 3 should be REPL module");
 		assertTrue(
-			mod3_ref->getReplModuleParent().value().queryUnstablePerfectHash()
+			mod3_ref->as<frontend::SyntheticReplChainModuleTreeNode>()
+					->getReplModuleParent()
+					.value()
+					.queryUnstablePerfectHash()
 				== module2.queryUnstablePerfectHash(),
 			"Statement 3's parent should be Statement 2"
 		);
 
 		// === Verify the full chain is intact for lookups ===
 		// Query module 3 to verify it's properly set up for lookup propagation
-		auto mod3_queried    = frontend::GetModuleID_Functor::get(module3);
-		auto mod3_parent_opt = mod3_queried->getReplModuleParent();
+		auto mod3_queried = frontend::GetModuleID_Functor::get(module3);
+		auto mod3_parent_opt
+			= mod3_queried->as<frontend::SyntheticReplChainModuleTreeNode>()->getReplModuleParent();
 		ASSERT_HAS_VALUE(
 			mod3_parent_opt, "Queried module 3 should have parent linkage for lookup propagation"
 		);
@@ -119,17 +135,22 @@ private:
 
 			// Verify module 2's parent exists for further chain traversal
 			ASSERT_HAS_VALUE(
-				mod2_from_parent->getReplModuleParent(),
+				mod2_from_parent->as<frontend::SyntheticReplChainModuleTreeNode>()
+					->getReplModuleParent(),
 				"Module 2 should have module 1 as parent for full lookup chain"
 			);
 		}
 
 		// === Verify lookup chain: module3 -> module2 -> module1 ===
 		// This validates the actual lookup path that scopes.cpp will traverse
-		auto mod2_from_mod3
-			= frontend::GetModuleID_Functor::get(module3)->getReplModuleParent().value();
-		auto mod1_from_mod2
-			= frontend::GetModuleID_Functor::get(mod2_from_mod3)->getReplModuleParent().value();
+		auto mod2_from_mod3 = frontend::GetModuleID_Functor::get(module3)
+		                          ->as<frontend::SyntheticReplChainModuleTreeNode>()
+		                          ->getReplModuleParent()
+		                          .value();
+		auto mod1_from_mod2 = frontend::GetModuleID_Functor::get(mod2_from_mod3)
+		                          ->as<frontend::SyntheticReplChainModuleTreeNode>()
+		                          ->getReplModuleParent()
+		                          .value();
 
 		assertTrue(
 			module2.queryUnstablePerfectHash() == mod2_from_mod3.queryUnstablePerfectHash(),

@@ -61,8 +61,14 @@ namespace compiler::frontend {
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
 
-	class ModuleTreeBuilder;
-	class ModuleTreeModifier;
+	class ModuleTreeBuilderCommon;
+	class ModuleModuleTreeBuilder;
+	class ScriptModuleTreeBuilder;
+	class SyntheticReplChainModuleTreeBuilder;
+	class ModuleTreeModifierCommon;
+	class ModuleModuleTreeModifier;
+	class ScriptModuleTreeModifier;
+	class SyntheticReplChainModuleTreeModifier;
 	struct GetModuleID_Functor;
 
 	/**
@@ -73,17 +79,17 @@ namespace compiler::frontend {
 		 * Uninitialized state.
 		 */
 		Invalid,
-		
+
 		/**
 		 * Standard module.
 		 */
 		Module,
-		
+
 		/**
 		 * Script module.
 		 */
 		Script,
-		
+
 		/**
 		 * Synthetic REPL chain module.
 		 */
@@ -99,6 +105,16 @@ namespace compiler::frontend {
 	 * @note This is an abstract class, the instances include:
 	 * - ModuleModuleTreeNode: Represents a standard module.
 	 * - ScriptModuleTreeNode / SyntheticReplChainModuleTreeNode: script and REPL nodes.
+	 *
+	 * @note Parent structure (m_parent):
+	 * - a standard module or a script module has a standard module as parent, or none (root);
+	 *   it is one of the parent's submodules.
+	 * - a synthetic REPL chain module has the previous chain module or the script module that
+	 *   starts the chain as parent, or none (first statement of a REPL session); it is the
+	 *   parent's REPL child.
+	 * Each node is built with the builder of its kind (ModuleModuleTreeBuilder,
+	 * ScriptModuleTreeBuilder, SyntheticReplChainModuleTreeBuilder) and modified with the
+	 * matching modifier.
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
 	 * including its main source file, submodules, and other files.
@@ -121,8 +137,14 @@ namespace compiler::frontend {
 	 * under concurrency.
 	 */
 	class ModuleTree {
-		friend class ModuleTreeBuilder;
-		friend class ModuleTreeModifier;
+		friend class ModuleTreeBuilderCommon;
+		friend class ModuleModuleTreeBuilder;
+		friend class ScriptModuleTreeBuilder;
+		friend class SyntheticReplChainModuleTreeBuilder;
+		friend class ModuleTreeModifierCommon;
+		friend class ModuleModuleTreeModifier;
+		friend class ScriptModuleTreeModifier;
+		friend class SyntheticReplChainModuleTreeModifier;
 		friend struct GetModuleID_Functor;
 		friend struct ModuleID;
 
@@ -260,9 +282,31 @@ namespace compiler::frontend {
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
 
-		ModuleTree(const ModuleTree&)            = delete;
-		ModuleTree& operator=(const ModuleTree&) = delete;
-		ModuleTree(ModuleTree&&) noexcept        = delete;
+		/**
+		 * @brief Downcasts this module to the node class of its kind.
+		 * @note Panics if the module is not a T. Check the module kind before calling this.
+		 */
+		template<class T>
+		Ref<T> as() {
+			auto* node = dynamic_cast<T*>(this);
+			CORE_ASSERT(node != nullptr, "ModuleTree::as<T>() called on a module of another kind");
+			return node;
+		}
+
+		/**
+		 * @brief Downcasts this module to the node class of its kind.
+		 * @note Panics if the module is not a T. Check the module kind before calling this.
+		 */
+		template<class T>
+		CRef<T> as() const {
+			const auto* node = dynamic_cast<const T*>(this);
+			CORE_ASSERT(node != nullptr, "ModuleTree::as<T>() called on a module of another kind");
+			return node;
+		}
+
+		ModuleTree(const ModuleTree&)                = delete;
+		ModuleTree& operator=(const ModuleTree&)     = delete;
+		ModuleTree(ModuleTree&&) noexcept            = delete;
 		ModuleTree& operator=(ModuleTree&&) noexcept = delete;
 
 	protected:
@@ -272,16 +316,6 @@ namespace compiler::frontend {
 		 * Dummy function to make this class abstract.
 		 */
 		virtual void makeAbstract() = 0;
-
-		template<class T>
-		Ref<T> as() {
-			return dynamic_cast<Ref<T>>(this);
-		}
-
-		template<class T>
-		CRef<T> as() const {
-			return dynamic_cast<CRef<T>>(this);
-		}
 
 		/**
 		 * @brief Access the slot holding the source file that acts as the main source file of this
@@ -297,17 +331,6 @@ namespace compiler::frontend {
 
 		[[nodiscard]]
 		virtual CRef<base::Optional<base::Ref<SourceFile>>> mainSourceFileSlot() const;
-
-		/**
-		 * @brief Access the submodules of this module.
-		 * @note Panics for module types that cannot have submodules. Check the module kind before
-		 * calling this.
-		 */
-		[[nodiscard]]
-		virtual Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot(); // this is kind of dumb, only normal modules have submodules, we can just use dynamic_cast to normal modules to access this
-
-		[[nodiscard]]
-		virtual CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const;
 
 		/**
 		 * @brief Collects all child modules of this module.
@@ -330,17 +353,6 @@ namespace compiler::frontend {
 		 * but the interface returns a vector for ease of use and future extensibility.
 		 */
 		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const = 0;
-
-		/**
-		 * @brief Access the other files of this module.
-		 * @note Panics for module types that cannot have other files. Check the module kind before
-		 * calling this.
-		 */
-		[[nodiscard]]
-		virtual Ref<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot(); // same here as with submoduleslot
-
-		[[nodiscard]]
-		virtual CRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const; // same here as with submoduleslot
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
@@ -416,7 +428,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Parent module, if any.
-		 * @note empty if this is a root module.
+		 * @note empty if this is a root module. See the class doc for which kinds can be parents.
 		 */
 		base::Optional<base::Ref<ModuleTree>> m_parent;
 

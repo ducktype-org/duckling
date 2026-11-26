@@ -10,7 +10,9 @@
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/script_module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/repl_utils/extractors.hpp>
@@ -972,7 +974,9 @@ namespace compiler::repl {
 						", isRepl=",
 						module_ref->isReplModule(),
 						", hasParent=",
-						module_ref->getReplModuleParent().has_value(),
+						module_ref->as<frontend::SyntheticReplChainModuleTreeNode>()
+							->getReplModuleParent()
+							.has_value(),
 						"\n"
 					);
 					m_session_history.emplace_back(stmt_source, module_id);
@@ -980,6 +984,9 @@ namespace compiler::repl {
 					last_result = executeSingleStatement(module_id);
 					if (last_result.status == ReplResult::Status::Error) {
 						m_session_history.pop_back();
+						// The next statement continues the chain from the last good statement.
+						if (module_ref->getParentModule().has_value())
+							frontend::ModuleTreeModifierCommon::removeParent(module_ref);
 						return last_result;
 					}
 				}
