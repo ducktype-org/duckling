@@ -1,0 +1,19 @@
+import core.builtins.*;
+import sqlite3.*;
+
+fun main() -> i64 = {
+    var null_ptr: cptr u8;
+    var db: cptr sqlite3;
+    if (sqlite3_open(ptr_from_slice[char](":memory:\0") as cptr char, &db as cptr cptr sqlite3) != SQLITE_OK) { return 1i64; }
+    let setup = ptr_from_slice[char]("create table t(x int); insert into t values (20), (22);\0") as cptr char;
+    if (sqlite3_exec(db, setup, null_ptr, null_ptr, null_ptr as cptr cptr char) != SQLITE_OK) { return 2i64; }
+    var stmt: cptr sqlite3_stmt;
+    let query = ptr_from_slice[char]("select sum(x) from t;\0") as cptr char;
+    if (sqlite3_prepare_v2(db, query, -1i32, &stmt as cptr cptr sqlite3_stmt, null_ptr as cptr cptr char) != SQLITE_OK) { return 3i64; }
+    if (sqlite3_step(stmt) != SQLITE_ROW) { return 4i64; }
+    if (sqlite3_column_int(stmt, 0i32) != 42i32) { return 5i64; }
+    if (sqlite3_step(stmt) != SQLITE_DONE) { return 6i64; }
+    sqlite3_finalize(stmt);
+    if (sqlite3_close(db) != SQLITE_OK) { return 7i64; }
+    return 0i64;
+}

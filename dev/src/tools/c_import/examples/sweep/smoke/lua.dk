@@ -1,0 +1,12 @@
+import core.builtins.*;
+import lua.*;
+
+fun main() -> i64 = {
+    var null_ptr: cptr u8;
+    let state = luaL_newstate();
+    if (luaL_loadstring(state, ptr_from_slice[char]("return 6 * 7\0") as cptr char) != LUA_OK) { return 1i64; }
+    if (lua_pcallk(state, 0i32, 1i32, 0i32, 0i64, null_ptr) != LUA_OK) { return 2i64; }
+    if (lua_tointegerx(state, -1i32, null_ptr as cptr i32) != 42i64) { return 3i64; }
+    lua_close(state);
+    return 0i64;
+}

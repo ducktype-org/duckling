@@ -1,0 +1,18 @@
+import core.builtins.*;
+import zstd.*;
+
+fun main() -> i64 = {
+    var src: u8[1024];
+    var i: i64 = 0i64;
+    while (i < 1024i64) { src[i] = (i % 13i64) as u8; i = i + 1i64; }
+    var packed: u8[2048];
+    let packed_len = ZSTD_compress(&packed as cptr u8, 2048u64, &src as cptr u8, 1024u64, 3i32);
+    if (ZSTD_isError(packed_len) != 0u32) { return 1i64; }
+    if (packed_len >= 1024u64) { return 2i64; }
+    var back: u8[1024];
+    let back_len = ZSTD_decompress(&back as cptr u8, 1024u64, &packed as cptr u8, packed_len);
+    if (ZSTD_isError(back_len) != 0u32) { return 3i64; }
+    if (back_len != 1024u64) { return 4i64; }
+    if (back[1000] != src[1000]) { return 5i64; }
+    return 0i64;
+}

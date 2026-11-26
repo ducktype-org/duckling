@@ -1,0 +1,21 @@
+import core.builtins.*;
+import curl.*;
+
+fun main() -> i64 = {
+    let info = curl_version_info(CURLVERSION_NOW as u32);
+    if (info[0].age < 1u32) { return 1i64; }
+    if (info[0].version_num < 0x070000u32) { return 2i64; }
+    let handle = curl_easy_init();
+    let escaped = curl_easy_escape(handle, ptr_from_slice[char]("a b\0") as cptr char, 3i32);
+    let bytes = escaped as cptr u8;
+    # "a%20b"
+    if (bytes[0] != 97u8) { return 3i64; }
+    if (bytes[1] != 37u8) { return 4i64; }
+    if (bytes[2] != 50u8) { return 5i64; }
+    if (bytes[3] != 48u8) { return 6i64; }
+    if (bytes[4] != 98u8) { return 7i64; }
+    if (bytes[5] != 0u8) { return 8i64; }
+    curl_free(escaped as cptr u8);
+    curl_easy_cleanup(handle);
+    return 0i64;
+}

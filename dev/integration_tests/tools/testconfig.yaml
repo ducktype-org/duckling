@@ -3,4 +3,5 @@
 PreNode: ""
 
 SubDirs:
+  - duckbind
   - formatter
