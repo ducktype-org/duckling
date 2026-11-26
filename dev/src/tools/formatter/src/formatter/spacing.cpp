@@ -73,6 +73,8 @@ namespace formatter {
 				// A keyword used as a member name is a method call: `Counter.destroy()`.
 				if (isKeyword(*prev) && prev2 != nullptr && isMemberAccessOperator(*prev2))
 					return false;
+				// `self` is a value, which can be called and indexed: `self(x)`, `self[i]`.
+				if (isKeyword(*prev) && isStr(*prev, "self")) return false;
 				if (isKeyword(*prev)) return true;       // `if (...)`, `return [...]`
 				if (isValueCloser(*prev)) return false;  // `foo(...)`, `a[...]`
 			}

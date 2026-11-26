@@ -1,7 +1,7 @@
 {
 	"position": {
 		"sourceStart": 0,
-		"sourceEnd": 208
+		"sourceEnd": 274
 	},
 	"Top Level": [
 		{
@@ -585,7 +585,7 @@
 		{
 			"position": {
 				"sourceStart": 139,
-				"sourceEnd": 208
+				"sourceEnd": 274
 			},
 			"Class": {
 				"name": {
@@ -602,7 +602,7 @@
 				"body": {
 					"position": {
 						"sourceStart": 149,
-						"sourceEnd": 208
+						"sourceEnd": 274
 					},
 					"Code Block": [
 						{
@@ -785,6 +785,312 @@
 												}
 											}
 										]
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 210,
+								"sourceEnd": 235
+							},
+							"Class Method": {
+								"name": {
+									"position": {
+										"sourceStart": 214,
+										"sourceEnd": 215
+									},
+									"Identifier Wrapper": {
+										"value": "()"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 216,
+										"sourceEnd": 223
+									},
+									"parameter list": [
+										{
+											"position": {
+												"sourceStart": 217,
+												"sourceEnd": 222
+											},
+											"Parameter": {
+												"Parameter": {
+													"name": {
+														"position": {
+															"sourceStart": 217,
+															"sourceEnd": 217
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
+													},
+													"type": {
+														"position": {
+															"sourceStart": 220,
+															"sourceEnd": 222
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 220,
+																	"sourceEnd": 222
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 220,
+																			"sourceEnd": 222
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									]
+								},
+								"return": {
+									"position": {
+										"sourceStart": 228,
+										"sourceEnd": 230
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 228,
+												"sourceEnd": 230
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 228,
+														"sourceEnd": 230
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 234,
+										"sourceEnd": 235
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 234,
+											"sourceEnd": 235
+										},
+										"Expr Stmt": {
+											"position": {
+												"sourceStart": 234,
+												"sourceEnd": 234
+											},
+											"Top Level Expression": {
+												"expr": {
+													"position": {
+														"sourceStart": 234,
+														"sourceEnd": 234
+													},
+													"Identifier Expression": {
+														"name": {
+															"position": {
+																"sourceStart": 234,
+																"sourceEnd": 234
+															},
+															"Identifier Wrapper": {
+																"value": "a"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 239,
+								"sourceEnd": 272
+							},
+							"Class Method": {
+								"name": {
+									"position": {
+										"sourceStart": 243,
+										"sourceEnd": 244
+									},
+									"Identifier Wrapper": {
+										"value": "[]"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 245,
+										"sourceEnd": 260
+									},
+									"parameter list": [
+										{
+											"position": {
+												"sourceStart": 246,
+												"sourceEnd": 251
+											},
+											"Parameter": {
+												"Parameter": {
+													"name": {
+														"position": {
+															"sourceStart": 246,
+															"sourceEnd": 246
+														},
+														"Identifier Wrapper": {
+															"value": "i"
+														}
+													},
+													"type": {
+														"position": {
+															"sourceStart": 249,
+															"sourceEnd": 251
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 249,
+																	"sourceEnd": 251
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 249,
+																			"sourceEnd": 251
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 254,
+												"sourceEnd": 259
+											},
+											"Parameter": {
+												"Parameter": {
+													"name": {
+														"position": {
+															"sourceStart": 254,
+															"sourceEnd": 254
+														},
+														"Identifier Wrapper": {
+															"value": "j"
+														}
+													},
+													"type": {
+														"position": {
+															"sourceStart": 257,
+															"sourceEnd": 259
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 257,
+																	"sourceEnd": 259
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 257,
+																			"sourceEnd": 259
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									]
+								},
+								"return": {
+									"position": {
+										"sourceStart": 265,
+										"sourceEnd": 267
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 265,
+												"sourceEnd": 267
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 265,
+														"sourceEnd": 267
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 271,
+										"sourceEnd": 272
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 271,
+											"sourceEnd": 272
+										},
+										"Expr Stmt": {
+											"position": {
+												"sourceStart": 271,
+												"sourceEnd": 271
+											},
+											"Top Level Expression": {
+												"expr": {
+													"position": {
+														"sourceStart": 271,
+														"sourceEnd": 271
+													},
+													"Identifier Expression": {
+														"name": {
+															"position": {
+																"sourceStart": 271,
+																"sourceEnd": 271
+															},
+															"Identifier Wrapper": {
+																"value": "i"
+															}
+														}
+													}
+												}
+											}
+										}
 									}
 								}
 							}
