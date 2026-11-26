@@ -12,7 +12,7 @@ namespace pst {
 
 	MBox<IdentifierWrapper> IdentifierWrapper::parse(LangParserState& state) {
 		auto name = state[0].getValue();
-		bool good = state[0].isIdentifier();
+		bool good = state[0].isIdentifierLike();
 
 		if (not good) {
 			state.logInt(base::makeBox<tpc::NoIdentifierError>(

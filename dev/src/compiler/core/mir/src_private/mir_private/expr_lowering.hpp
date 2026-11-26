@@ -61,7 +61,7 @@ namespace compiler::mir {
 		struct Finalizer final {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
-			tsh::SymbolType<>             type;
+			tsh::ValueType<>              type;
 		};
 
 		/**
@@ -97,7 +97,7 @@ namespace compiler::mir {
 		 * @brief helper function returning type of result. Can be used if MIRValue is not stored.
 		 */
 		[[nodiscard]]
-		tsh::SymbolType<> getResultType();
+		tsh::ValueType<> getResultType();
 
 		/**
 		 * @brief Helper function that returns MIRvalue if it is already stored in structure.

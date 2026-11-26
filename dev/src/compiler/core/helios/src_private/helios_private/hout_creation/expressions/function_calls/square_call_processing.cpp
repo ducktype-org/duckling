@@ -37,7 +37,7 @@ namespace compiler::helios::code {
 			base::Box<Expr>               current_expr,
 			pst::Access<pst::ExprElement> index_pst
 		) {
-			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
+			if (auto expr_kind = current_expr->expression_type.getValueType().getType().getKind();
 			    not tsh::isIndexable(expr_kind)) {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
 					index_pst->getStablePosition()
@@ -47,7 +47,7 @@ namespace compiler::helios::code {
 			}
 
 			// Base has to be direct for array access.
-			if (current_expr->expression_type.getSymbolType().getRefKind()
+			if (current_expr->expression_type.getValueType().getRefKind()
 			    != tsh::ReferenceKind::Direct)
 				current_expr = makeBox<DerefExpr>(
 					ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
@@ -55,7 +55,7 @@ namespace compiler::helios::code {
 
 			// @TODO: #1532 This i64 coercion should be handled by the `[]` operator.
 			// @TODO: #2754 Possibly adjust the type based on the actual type of the index expression.
-			auto i64_type = tsh::SymbolType<>::withDefaults(
+			auto i64_type = tsh::ValueType<>::withDefaults(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			auto index_res = subExprFromPSTWithType(ctx, index_pst, i64_type);
@@ -87,19 +87,19 @@ namespace compiler::helios::code {
 			// If base is a type template, we expect meta in the index arguments for baking the
 			// template type. Otherwise we expect an integer for StaticArray type creation.
 			// @TODO: #1532 This u64/meta coercions should be handled by the `[]` operator.
-			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
+			auto expected_index_arg_type = [&]() -> tsh::ValueType<> {
 				// @TODO: #1918 This logic should be generalized to handle any expressions with
 				// TypeTemplate type, not just literals.
 				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
 					if (literal_type_expr->value_type.getType().getKind()
 					    == tsh::Kind::TypeTemplate) {
-						return tsh::SymbolType<>::withDefaults(tsh::getMetaType());
+						return tsh::ValueType<>::withDefaults(tsh::getMetaType());
 					}
 				}
 
 				// @TODO: #2754 Possibly adjust the type based on the actual type of the index
 				// expression.
-				return tsh::SymbolType<>::withDefaults(
+				return tsh::ValueType<>::withDefaults(
 					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 				);
 			}();

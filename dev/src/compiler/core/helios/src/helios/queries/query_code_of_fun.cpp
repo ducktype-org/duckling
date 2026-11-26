@@ -19,8 +19,8 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
@@ -53,9 +53,7 @@ namespace compiler::helios {
 		 * Should only be used for the whole function body.
 		 */
 		static code::CodeBlock queryCodeOfSingleStmtFunctionBody(
-			query::Context&                   ctx,
-			pst::Access<pst::CodeBlockOrStmt> body,
-			tsh::SymbolType<>                 return_type
+			query::Context& ctx, pst::Access<pst::CodeBlockOrStmt> body, tsh::ValueType<> return_type
 		) {
 			CORE_ASSERT(body->getType() == pst::CodeBlockOrStmt::Type::SingleStmt, "Bad body type!");
 

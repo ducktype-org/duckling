@@ -654,7 +654,7 @@ namespace compiler::helios::mangler {
 							// distinguishes the implicit, default and copy constructors.
 							const auto mangled_type
 								= ctx.query<QueryMangledType>(
-										 tsh::SymbolType<>::withDefaultsMut(ctor.type)
+										 tsh::ValueType<>::withDefaultsMut(ctor.type)
 								)
 							          ->valueOrThrow()
 							          .str();
@@ -919,7 +919,7 @@ namespace compiler::helios::mangler {
 					ret += mangleCTV(ctx, TypeTuple::elementToCtv(elem));
 				return ret += "E";
 			}
-			variant_case(tsh::SymbolType<>, sym) {
+			variant_case(tsh::ValueType<>, sym) {
 				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
 			}
 			variant_case(compiler::ctv::CompileTimeValue::VMValue, vm_value) {

@@ -259,7 +259,7 @@ public:
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::SymbolType<>::withDefaultsMut(
+			const auto i64_sym_type = tsh::ValueType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 
@@ -274,12 +274,12 @@ public:
 			// `refof x` has reference type; s.dereferencing it recovers the (direct) pointee.
 			const auto ref = s.refOf(s.litNum(5));
 			ASSERT_EQUAL(dprint(ref), std::string("refof(5)"));
-			ASSERT_EQUAL(ref->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Ref);
+			ASSERT_EQUAL(ref->expression_type.getValueType().getRefKind(), tsh::ReferenceKind::Ref);
 
 			const auto derefed = s.deref(s.refOf(s.litNum(5)));
 			ASSERT_EQUAL(dprint(derefed), std::string("deref(refof(5))"));
 			ASSERT_EQUAL(
-				derefed->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Direct
+				derefed->expression_type.getValueType().getRefKind(), tsh::ReferenceKind::Direct
 			);
 			ASSERT_EQUAL(derefed->expression_type.getType().getKind(), tsh::Kind::Integral);
 
@@ -369,7 +369,7 @@ public:
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::SymbolType<>::withDefaultsMut(i64_type);
+			const auto i64_sym_type = tsh::ValueType<>::withDefaultsMut(i64_type);
 
 			// Simple statements wrap their expression operand.
 			const auto decl = s.var(dummy_symbol, i64_sym_type, s.litNum(0, i64_type));
@@ -444,7 +444,7 @@ public:
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = tsh::SymbolType<>::withDefaultsMut(
+			const auto i64_sym_type = tsh::ValueType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 
@@ -460,7 +460,7 @@ public:
 			// Coercing to the operand's own type is an identity coercion: the operand is returned
 			// unwrapped (no cast node is introduced).
 			const auto literal   = s.litNum(5, i32_type);
-			const auto self_type = literal->expression_type.getSymbolType();
+			const auto self_type = literal->expression_type.getValueType();
 			const auto unchanged = s.coerce(s.litNum(5, i32_type), self_type);
 			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(unchanged.get()) != nullptr);
 			ASSERT_EQUAL(dprint(unchanged), std::string("5"));

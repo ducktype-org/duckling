@@ -724,7 +724,7 @@ namespace compiler::helios::code {
 						return ChainState::ofExpr(std::move(node));
 					} else if (kind(sym) == SymbolKind::Field) {
 						// Insert a deref if source of field access is not a direct type.
-						if (current_expr->expression_type.getSymbolType().getRefKind()
+						if (current_expr->expression_type.getValueType().getRefKind()
 						    != tsh::ReferenceKind::Direct) {
 							current_expr = makeBox<DerefExpr>(
 								query_ctx,
@@ -1149,7 +1149,7 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
 
 			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
-			auto self_type = self_expr->expression_type.getSymbolType().getType();
+			auto self_type = self_expr->expression_type.getValueType().getType();
 
 			auto fields = self_type.getInterface(query_ctx)->getFieldsView();
 			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)

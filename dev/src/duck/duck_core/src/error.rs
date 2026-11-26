@@ -1,0 +1,599 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+//! The home of [`QuackError`] struct and [`QuackResultContext`] trait, which are building blocks
+//! of error handling in duck and quackpack.
+
+use std::backtrace::Backtrace;
+// NOTE: In this file, we avoid generics as much as possible.
+//
+// On the first sight, `create_messages_errors!` could produce `$name<M>(pub M)`, and
+// `ContextError` could be generic over `<C, E>`, but this leads to some difficulties with
+// downcasting and/or is:
+// 1. When downcasting, we would have to provide all generic arguments, even if we want to check
+//    "is it this type, with any generics",
+// 2. especially, this makes `error_type` implementation harder: because of the use of contexts,
+//    most of the error stack is `ContextError`, and at the end we have some first error, and
+//    when checking `is`, we really want to call downcast/is on the `context` field in the
+//    `ContextError` struct, not on the entire `ContextError` struct.
+use std::borrow::Cow;
+use std::error::Error;
+use std::fmt;
+
+use crate::QuackResult;
+
+type BoxError = Box<dyn Error + Send + Sync + 'static>;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+/// A type of a single [`Error`] on the errors' stack.
+///
+/// Used for printing.
+///
+/// The underlying options represent:
+/// * [`Error`](ErrorType::Error) - error at the user side (wrong usage of the program).
+/// * [`Internal`](ErrorType::Internal) - program's internal logic error, means a critical bug is present.
+/// * [`Hint`](ErrorType::Hint) - a suggestion for the user how to fix the error.
+/// * [`Note`](ErrorType::Note) - any additional information that the user should know.
+/// * [`BareMessage`](ErrorType::BareMessage) - a non-error message, which does not classify as hint nor note.
+///
+/// # Usage
+/// The errors are added on a stack, so when adding an error with a hint, the hint should be added before the error.
+pub enum ErrorType {
+    Internal,
+    Error,
+    Note,
+    Hint,
+    BareMessage,
+}
+
+#[derive(Debug)]
+/// Quackpack error type, contains a stack of messages for the user.
+pub struct QuackError {
+    errors: Vec<BoxError>,
+}
+
+impl QuackError {
+    /// Creates a [`QuackError`] with a single error message.
+    #[inline]
+    pub fn new<T>(err: T) -> Self
+    where
+        T: Error + Send + Sync + 'static,
+    {
+        Self {
+            errors: vec![Box::new(err)],
+        }
+    }
+
+    /// Create a [`QuackError`] from a message.
+    #[inline]
+    pub fn message<M: fmt::Display>(m: M) -> Self {
+        Self::new(MessageError(m.to_string().into()))
+    }
+
+    /// Add a context to this [`QuackError`].
+    #[inline]
+    pub fn context<C: Error + Send + Sync + 'static>(&mut self, context: C) -> &mut Self {
+        self.errors.push(Box::new(context));
+        self
+    }
+
+    /// Try to downcast a reference in errors' chain.
+    pub fn downcast_ref_in_chain<T: Error + 'static>(&self) -> Option<&T> {
+        self.sources().filter_map(<dyn Error>::downcast_ref).next()
+    }
+
+    /// Check, if errors' chain contains `T`.
+    /// Any [`ContextError`] is silently *ignored* (it's treated as its context).
+    pub fn has_in_chain<T: Error + 'static>(&self) -> bool {
+        self.downcast_ref_in_chain::<T>().is_some()
+    }
+
+    /// Gets the exit code of the error.
+    pub fn exit_code(&self) -> i32 {
+        match self.downcast_ref_in_chain::<clap::Error>() {
+            Some(clap_err) if !clap_err.use_stderr() => 0,
+            _ => 1,
+        }
+    }
+
+    /// Iterates over the messages stack, from the top to the bottom.
+    pub fn sources<'a>(&'a self) -> impl Iterator<Item = &'a (dyn Error + 'static)> {
+        self.errors
+            .iter()
+            .rev()
+            .flat_map(|error| (**error).sources())
+    }
+
+    /// Add a note at the bottom of this errors' chain.
+    #[inline]
+    pub fn add_note<C: Into<Cow<'static, str>>>(&mut self, note: C) -> &mut Self {
+        let note = NoteMessage::new(note);
+        self.errors.insert(0, Box::new(note));
+        self
+    }
+
+    /// Add a hint at the bottom of this errors' chain.
+    #[inline]
+    pub fn add_hint<C: Into<Cow<'static, str>>>(&mut self, hint: C) -> &mut Self {
+        let hint = HintMessage::new(hint);
+        self.errors.insert(0, Box::new(hint));
+        self
+    }
+}
+
+macro_rules! create_messages_errors {
+    ($($struct_vis: vis $name:ident)*) => {
+        $(
+            #[derive(PartialEq, Eq)]
+            /// A message wrapped in an [`Error`]-like struct.
+            $struct_vis struct $name(pub Cow<'static, str>);
+
+            impl $name {
+                #[doc = concat!("Create a new [`", stringify!($name), "`] from a message.")]
+                pub fn new(message: impl Into<Cow<'static, str>>) -> Self {
+                    Self(message.into())
+                }
+            }
+
+            impl fmt::Debug for $name {
+                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    fmt::Debug::fmt(&self.0, f)
+                }
+            }
+
+            impl fmt::Display for $name {
+                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    fmt::Display::fmt(&self.0, f)
+                }
+            }
+
+            impl Error for $name {}
+        )*
+    };
+}
+
+create_messages_errors!(pub MessageError NoteMessage HintMessage);
+
+/// A message wrapped in an [`Error`]-like struct, which captures backtraces.
+pub struct InternalError {
+    message: Cow<'static, str>,
+    backtrace: Backtrace,
+}
+
+impl InternalError {
+    #[inline(always)] // Try not to mess up the backtrace.
+    /// Create a new [`InternalError`].
+    pub fn new(message: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            message: message.into(),
+            backtrace: Backtrace::force_capture(),
+        }
+    }
+
+    /// Get the captured [`Backtrace`] when creating this error.
+    pub fn backtrace(&self) -> &Backtrace {
+        &self.backtrace
+    }
+}
+
+impl fmt::Debug for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.message, f)
+    }
+}
+
+impl fmt::Display for InternalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.message, f)
+    }
+}
+
+impl Error for InternalError {}
+
+pub trait SourcesExt {
+    fn sources(&self) -> Sources<'_>;
+}
+
+impl<T: Error + 'static> SourcesExt for T {
+    fn sources(&self) -> Sources<'_> {
+        Sources {
+            current: Some(self),
+        }
+    }
+}
+
+impl SourcesExt for dyn Error + Send + Sync + 'static {
+    fn sources(&self) -> Sources<'_> {
+        Sources {
+            current: Some(self),
+        }
+    }
+}
+
+/// Iterator over `.source()`s of an [`Error`].
+pub struct Sources<'a> {
+    current: Option<&'a (dyn Error + 'static)>,
+}
+
+impl<'a> Iterator for Sources<'a> {
+    type Item = &'a (dyn Error + 'static);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.current?;
+        self.current = current.source();
+        Some(current)
+    }
+}
+
+impl fmt::Display for QuackError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let errors = self.sources().collect::<Vec<_>>();
+        for (i, x) in errors.iter().enumerate() {
+            if i < errors.len() - 1 {
+                writeln!(f, "{x}")?;
+            } else {
+                write!(f, "{x}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Returns with a single error message [`QuackError`] wrapped in [`Err`].
+#[macro_export]
+macro_rules! qp_bail {
+    ($msg:literal $(,)?) => {{
+        return Err($crate::qp_err!($msg))
+    }};
+    ($err:expr $(,)?) => {{
+        return Err($crate::qp_err!($err))
+    }};
+    ($fmt:expr, $($args:tt)*) => {
+        return Err($crate::qp_err!($fmt, $($args)*))
+    };
+}
+
+/// Returns with a single internal error message [`QuackError`] wrapped in [`Err`].
+#[macro_export]
+macro_rules! qp_bail_internal {
+    ($msg:literal $(,)?) => {
+        return Err($crate::qp_internal!($msg))
+    };
+    ($err:expr $(,)?) => {
+        return Err($crate::qp_internal!($err))
+    };
+    ($fmt:expr, $($args:tt)*) => {
+        return Err($crate::qp_internal!($fmt, $($args)*))
+    };
+}
+
+/// Creates a single error message [`QuackError`].
+#[macro_export]
+macro_rules! qp_err {
+    ($msg:literal $(,)?) => {{
+        let args = format_args!($msg);
+        if let Some(static_msg) = args.as_str() {
+            $crate::QuackError::new($crate::error::MessageError::new(static_msg))
+        } else {
+            $crate::QuackError::message(format!($msg))
+        }
+    }};
+    ($err:expr $(,)?) => {
+        $crate::QuackError::from($err)
+    };
+    ($fmt:expr, $($args:tt)*) => {
+        $crate::QuackError::message(format!($fmt, $($args)*))
+    };
+}
+
+/// Creates a single internal error message [`QuackError`].
+#[macro_export]
+macro_rules! qp_internal {
+    ($msg:literal $(,)?) => {{
+        let args = format_args!($msg);
+        if let Some(static_msg) = args.as_str() {
+            $crate::QuackError::from($crate::error::InternalError::new(static_msg))
+        } else {
+            $crate::QuackError::from($crate::error::InternalError::new(format!($msg)))
+        }
+    }};
+    ($err:expr $(,)?) => {
+        $crate::QuackError::from($err)
+    };
+    ($fmt:expr, $($args:tt)*) => {
+         $crate::QuackError::from($crate::error::InternalError::new(format!($fmt, $($args)*)))
+    };
+}
+
+/// A trait for adding contexts to results.
+pub trait QuackResultContext<T, E> {
+    /// Transforms self into a [`QuackResult`] and adds context.
+    fn context<C>(self, ctx: C) -> QuackResult<T>
+    where
+        C: fmt::Display;
+
+    /// Transforms self into a [`QuackResult`] and adds internal error context.
+    fn context_internal<C>(self, ctx: C) -> QuackResult<T>
+    where
+        C: fmt::Display;
+
+    /// Transforms self into a [`QuackResult`], computes and adds context.
+    fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
+    where
+        C: fmt::Display,
+        F: FnOnce() -> C;
+
+    /// Transforms self into a [`QuackResult`], computes and adds internal error context.
+    fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
+    where
+        C: fmt::Display,
+        F: FnOnce() -> C;
+}
+
+impl<T, E> QuackResultContext<T, E> for Result<T, E>
+where
+    E: Into<QuackError>,
+{
+    #[inline]
+    fn context<C>(self, ctx: C) -> QuackResult<T>
+    where
+        C: fmt::Display,
+    {
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(MessageError::new(ctx.to_string()));
+            e
+        })
+    }
+
+    #[inline]
+    fn context_internal<C>(self, ctx: C) -> QuackResult<T>
+    where
+        C: fmt::Display,
+    {
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(InternalError::new(ctx.to_string()));
+            e
+        })
+    }
+
+    #[inline]
+    fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
+    where
+        C: fmt::Display,
+        F: FnOnce() -> C,
+    {
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(MessageError::new(ctx().to_string()));
+            e
+        })
+    }
+
+    #[inline]
+    fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
+    where
+        C: fmt::Display,
+        F: FnOnce() -> C,
+    {
+        self.map_err(|e| {
+            let mut e = e.into();
+            e.context(InternalError::new(ctx().to_string()));
+            e
+        })
+    }
+}
+
+impl<T> QuackResultContext<T, QuackError> for Option<T> {
+    #[inline]
+    fn context<C>(self, ctx: C) -> QuackResult<T>
+    where
+        C: fmt::Display,
+    {
+        self.ok_or_else(|| QuackError::message(ctx.to_string()))
+    }
+
+    #[inline]
+    fn context_internal<C>(self, ctx: C) -> QuackResult<T>
+    where
+        C: fmt::Display,
+    {
+        self.ok_or_else(|| InternalError::new(ctx.to_string()).into())
+    }
+
+    #[inline]
+    fn with_context<C, F>(self, ctx: F) -> QuackResult<T>
+    where
+        C: fmt::Display,
+        F: FnOnce() -> C,
+    {
+        self.ok_or_else(|| QuackError::message(ctx().to_string()))
+    }
+
+    #[inline]
+    fn with_context_internal<C, F>(self, ctx: F) -> QuackResult<T>
+    where
+        C: fmt::Display,
+        F: FnOnce() -> C,
+    {
+        self.ok_or_else(|| InternalError::new(ctx().to_string()).into())
+    }
+}
+
+impl<E> From<E> for QuackError
+where
+    E: Error + 'static + Send + Sync,
+{
+    fn from(value: E) -> Self {
+        Self::new(value)
+    }
+}
+
+pub trait ErrorExt {
+    /// Get the [`ErrorType`] of this error.
+    fn error_type(&self) -> ErrorType;
+}
+
+impl ErrorExt for dyn Error + 'static {
+    fn error_type(&self) -> ErrorType {
+        if self.is::<InternalError>() {
+            ErrorType::Internal
+        } else if self.is::<NoteMessage>() {
+            ErrorType::Note
+        } else if self.is::<HintMessage>() {
+            ErrorType::Hint
+        } else if let Some(clap_err) = self.downcast_ref::<clap::Error>()
+            && !clap_err.use_stderr()
+        {
+            ErrorType::BareMessage
+        } else {
+            ErrorType::Error
+        }
+    }
+}
+
+impl ErrorExt for dyn Error + Send + 'static {
+    fn error_type(&self) -> ErrorType {
+        <dyn Error + 'static>::error_type(self)
+    }
+}
+
+impl ErrorExt for dyn Error + Send + Sync + 'static {
+    fn error_type(&self) -> ErrorType {
+        <dyn Error + 'static>::error_type(self)
+    }
+}
+
+/// Structure for gathering errors.
+/// Should be used in situations when encountering many errors should not end the execution of the program.
+#[derive(Debug)]
+pub struct ErrorsLogger(Vec<QuackError>);
+
+impl ErrorsLogger {
+    /// Create a new [`ErrorsLogger`].
+    pub fn new(errors: Vec<QuackError>) -> Self {
+        Self(errors)
+    }
+
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn has_errors(&self) -> bool {
+        !self.is_empty()
+    }
+
+    /// If `result` is `Ok(t)`, returns `Some(t)`.
+    ///
+    /// Otherwise logs [`QuackError`] from `result` and returns [`None`].
+    pub fn log_result<T>(&mut self, result: QuackResult<T>) -> Option<T> {
+        match result {
+            Ok(t) => Some(t),
+            Err(err) => {
+                self.log(err);
+                None
+            }
+        }
+    }
+
+    /// Get the number of logged [`QuackError`]s.
+    pub fn logged_errors(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Add an error to the [`ErrorsLogger`].
+    pub fn log(&mut self, error: QuackError) {
+        self.0.push(error);
+    }
+
+    /// Get the first error of the [`ErrorsLogger`].
+    ///
+    /// Panics
+    /// ------
+    /// Panics when there are no errors logged.
+    pub fn unwrap_first(self) -> QuackError {
+        self.0.into_iter().next().unwrap()
+    }
+}
+
+impl Default for ErrorsLogger {
+    fn default() -> Self {
+        Self::new(vec![])
+    }
+}
+
+impl IntoIterator for ErrorsLogger {
+    type Item = QuackError;
+
+    type IntoIter = std::vec::IntoIter<QuackError>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+/// Split an iterator of `QuackResult<T>` into vectors of `T`s and [`QuackError`]s.
+pub fn split_results<T>(
+    results: impl IntoIterator<Item = QuackResult<T>>,
+) -> (Vec<T>, Vec<QuackError>) {
+    let mut oks = vec![];
+    let mut errors = vec![];
+    for result in results {
+        match result {
+            Ok(ok) => oks.push(ok),
+            Err(err) => errors.push(err),
+        }
+    }
+    (oks, errors)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn context_downcasting() {
+        let error: QuackResult<()> = Err(QuackError::new(std::io::Error::other("my error")))
+            .context("my context")
+            .context_internal("my internal context");
+        let mut error = error.unwrap_err();
+        error.add_note("my note").add_hint("my hint");
+
+        assert_eq!(
+            error.sources().map(ToString::to_string).collect::<Vec<_>>(),
+            [
+                "my internal context",
+                "my context",
+                "my error",
+                "my note",
+                "my hint",
+            ]
+        );
+        assert!(error.has_in_chain::<InternalError>());
+        assert!(error.has_in_chain::<MessageError>());
+        assert!(error.has_in_chain::<std::io::Error>());
+        assert!(error.has_in_chain::<NoteMessage>());
+        assert!(error.has_in_chain::<HintMessage>());
+        let types = error
+            .sources()
+            .map(ErrorExt::error_type)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            types,
+            [
+                ErrorType::Internal,
+                ErrorType::Error,
+                ErrorType::Error,
+                ErrorType::Note,
+                ErrorType::Hint,
+            ]
+        );
+    }
+}

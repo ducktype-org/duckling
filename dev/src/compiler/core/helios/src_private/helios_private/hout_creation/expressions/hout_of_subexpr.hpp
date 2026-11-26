@@ -44,7 +44,7 @@ namespace compiler::helios::code {
 	query::QResult<Box<code::Expr>> subExprFromPSTWithType(
 		query::Context&                          ctx,
 		pst::Access<pst::ExprElement>            element,
-		tsh::SymbolType<>                        expected_type,
+		tsh::ValueType<>                         expected_type,
 		base::Optional<dia::StablePosition>      coercion_expects_pos = {},
 		const coercions::CoercionErrorOverrides& error_overrides      = {}
 	);

@@ -8,7 +8,7 @@ class Wrapper {
 
 fun records1() -> () = {
 	var w = Wrapper(Point(1, 2));
-	let ref_w = &w;
+	let ref_w: ref mut Wrapper = &w;
 
 	# Auto deref should get inserted.
 	builtin_output_i64(ref_w.p.x); # 1
@@ -30,13 +30,13 @@ fun records2() -> () = {
 	var y: i64 = 456;
 
 	var point = RefPoint(&x, &y);
-	var ref_point = &point;
+	var ref_point: ref mut RefPoint = &point;
 
 	builtin_output_i64(ref_point.x);
 	builtin_output_i64(ref_point.y);
 
 	var wrapper = RefWrapper(&point);
-	var ref_wrapper = &wrapper;
+	var ref_wrapper: ref mut RefWrapper = &wrapper;
 
 	ref_wrapper.p.x = 0;
 	ref_wrapper.p.y = 1;

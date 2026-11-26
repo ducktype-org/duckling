@@ -108,8 +108,8 @@ namespace compiler::helios::templates {
 	 */
 	struct TemplateDeclarationSignature final {
 		struct Parameter final {
-			base::StrID       name;
-			tsh::SymbolType<> type;
+			base::StrID      name;
+			tsh::ValueType<> type;
 
 			// Not yet supported:
 			// base::Optional<ctv::CompileTimeValue> default_value;

@@ -39,7 +39,7 @@ namespace compiler::tsh::coercions {
 	 * @brief Whether every value of @p type is handed over as `ByteCopy`, whatever its value
 	 * category.
 	 */
-	[[nodiscard]] bool isCopiedByBytes(query::Context& ctx, const SymbolType<>& type);
+	[[nodiscard]] bool isCopiedByBytes(query::Context& ctx, const ValueType<>& type);
 
 	/**
 	 * @brief The ValueCategory of the value after it has been handed over (e.g. implicitly moved by

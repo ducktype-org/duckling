@@ -26,7 +26,7 @@ namespace compiler::backend_vm::internal {
 		const auto& source_type   = cast_params.source_type;
 		const auto& target_type   = cast_params.target_type;
 
-		auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+		auto is_signed = [](const tsh::ValueType<>& type) -> bool {
 			if (type.getType().getKind() == tsh::Kind::Integral) {
 				return (
 					tsh::IntegralAbstractType(type.getType()).getSignedness()

@@ -91,7 +91,7 @@ namespace compiler::repl {
 	 * @return Formatted output string on success, error message on failure
 	 */
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
-		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
+		vm::PID pid, std::string_view func_name, const tsh::ValueType<>& return_type
 	);
 
 }  // namespace compiler::repl

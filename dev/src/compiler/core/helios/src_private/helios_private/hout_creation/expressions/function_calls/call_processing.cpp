@@ -15,8 +15,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios/tsh/coercions/coercion_rank.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
@@ -228,8 +228,8 @@ namespace compiler::helios::code {
 
 			// Go over positional arguments.
 			for (usize i{ 0 }; i < positional_arguments.size(); i++) {
-				const tsh::SymbolType expected_type = decl.parameters[i].type;
-				Coercion              coercion      = coercions::coercionOf(
+				const tsh::ValueType expected_type = decl.parameters[i].type;
+				Coercion             coercion      = coercions::coercionOf(
                     ctx,
                     positional_arguments[i].ref(),
                     expected_type,
@@ -280,9 +280,9 @@ namespace compiler::helios::code {
 										  .argument_index = positional_arguments.size() + i,
 										  .function       = fun } };
 
-				const usize           param_idx     = param_idx_with_matching_name.value();
-				const tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-				Coercion              coercion      = coercions::coercionOf(
+				const usize          param_idx     = param_idx_with_matching_name.value();
+				const tsh::ValueType expected_type = decl.parameters[param_idx].type;
+				Coercion             coercion      = coercions::coercionOf(
                     ctx, std::get<1>(named_arguments[i]).ref(), expected_type
                 );
 
@@ -527,7 +527,7 @@ namespace compiler::helios::code {
 
 							auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
 								coercion.getTarget().toString(),
-								coercion.getSource().getSymbolType().toString()
+								coercion.getSource().getValueType().toString()
 							);
 							auto pm_message_id = dia::MessageBase::getUniqueID();
 							result->addLinkedMessage(pm_message_id, std::move(pm));
@@ -869,7 +869,7 @@ namespace compiler::helios::code {
 		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
 			ctx.log<CallNotCallableError>(
 				call_expr->getStablePosition(),
-				makeBox<InteractiveType>(ctx, callee->expression_type.getSymbolType())
+				makeBox<InteractiveType>(ctx, callee->expression_type.getValueType())
 			);
 			return query::Failed();
 		}
@@ -877,11 +877,11 @@ namespace compiler::helios::code {
 		const tsh::FunctionAbstractType function_type   = callee->expression_type.getType();
 		const auto&                     parameter_types = function_type.getParameterTypes();
 
-		if (callee->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct) {
+		if (callee->expression_type.getValueType().getRefKind() != tsh::ReferenceKind::Direct) {
 			auto direct_callee = coercions::coerceFromBox(
 				ctx,
 				std::move(callee),
-				tsh::SymbolType<>::withDefaultsMut(function_type),
+				tsh::ValueType<>::withDefaultsMut(function_type),
 				call_expr->getStablePosition()
 			);
 			UNPACK_QRESULT_MOVE(callee =, direct_callee);

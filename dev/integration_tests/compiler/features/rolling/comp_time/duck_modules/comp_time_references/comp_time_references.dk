@@ -1,6 +1,6 @@
 fun foo(condition: i64) -> i64 = {
 	var a: i64 = 123;
-	var ref_a = &a;
+	var ref_a: ref mut i64 = &a;
 
 	if (condition as bool) {
 		ref_a = ref_a + 1;
@@ -16,7 +16,7 @@ fun doSomethingWithAType(typ: ref mut type) -> () = {
 
 fun getType() -> type = {
 	var a: type = i32;
-	var reference_to_type_omg = &a;
+	var reference_to_type_omg: ref mut type = &a;
 	doSomethingWithAType(reference_to_type_omg);
 	return a;
 }

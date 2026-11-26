@@ -10,7 +10,7 @@
 
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/box_or_ref.hpp>
@@ -78,7 +78,7 @@ namespace compiler::helios::code {
 	 */
 	struct Parameter final {
 		base::StrID                     name;
-		tsh::SymbolType<>               type;
+		tsh::ValueType<>                type;
 		base::Optional<BoxOrCRef<Expr>> initial_value;
 		SymID                           helios_symbol;
 		ElementOrigin                   origin;
@@ -94,17 +94,17 @@ namespace compiler::helios::code {
 	 * @brief Represents `var/let a : T = ..;` statement in HOUT
 	 */
 	struct VariableStmt final: public Stmt {
-		BoxOrCRef<Expr>   initial_value;
-		tsh::SymbolType<> type;
+		BoxOrCRef<Expr>  initial_value;
+		tsh::ValueType<> type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;
 
 		VariableStmt(
-			ElementOrigin           origin,
-			BoxOrCRef<Expr>         initial_value,
-			const tsh::SymbolType<> type,
-			const SymID             helios_symbol
+			ElementOrigin          origin,
+			BoxOrCRef<Expr>        initial_value,
+			const tsh::ValueType<> type,
+			const SymID            helios_symbol
 		):
 			  Stmt(origin),
 			  initial_value(std::move(initial_value)),
