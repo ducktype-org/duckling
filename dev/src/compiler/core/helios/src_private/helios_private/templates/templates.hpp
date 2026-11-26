@@ -131,7 +131,8 @@ namespace compiler::helios::templates {
 	);
 
 	/**
-	 * @brief Whether the template declares a function, like `template(T: type) fun f(x: T)`.
+	 * @brief Whether the template declares a function, a function declaration or a method, like
+	 * `template(T: type) fun f(x: T)`.
 	 */
 	bool isFunctionTemplate(query::Context& ctx, SymID template_sym_id);
 

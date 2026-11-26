@@ -2,6 +2,7 @@
 
 import core.builtins.*;
 import core.optional.*;
+import core.containers.*;
 
 template(T: type)
 fun ident(x: T) -> T = {
@@ -134,5 +135,14 @@ fun main() -> i64 = {
 	builtin_output_i64(operatorOf(by_ref));
 	builtin_output_i64(operatorOf(move by_box));
 	builtin_output_i64(operatorOf(&s));
+
+	# Builtin function templates are deduced like any other.
+	var p = allocation[i64].many_alloc(2);
+	p[0] = 23;
+	p[1] = 24;
+	let sl = slice_from_ptr_len(p, 2i64);
+	builtin_output_i64(sl[0]);
+	builtin_output_i64(ptr_from_slice(sl)[1]);
+	allocation[i64].many_free(p);
 	return 0;
 }

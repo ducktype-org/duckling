@@ -89,8 +89,14 @@ namespace compiler::helios::templates {
 
 		const auto template_statement
 			= stmt(ctx, template_sym_id).value().dynamicCast<pst::TemplateStmt>().value();
-		return template_statement->getInnerStatement().unlock(ctx)->getElementKind()
-		    == pst::ElementKind::Fun;
+		switch (template_statement->getInnerStatement().unlock(ctx)->getElementKind()) {
+		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
+		case pst::ElementKind::ClassMethod:
+			return true;
+		default:
+			return false;
+		}
 	}
 
 	struct TemplateBakeStorage final {

@@ -6,14 +6,21 @@
 
 #include "template_deduction.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/templates/templates.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -56,6 +63,24 @@ namespace compiler::helios::templates {
 		}
 
 		/**
+		 * @brief The declared parameters of a function, a function declaration or a method.
+		 */
+		pst::AccessLocked<pst::ParamList> getFunctionLikeParams(
+			const pst::Access<pst::LangElement>& function_like
+		) {
+			switch (function_like->getElementKind()) {
+			case pst::ElementKind::Fun:
+				return function_like.dynamicCast<pst::Fun>().value()->getParams();
+			case pst::ElementKind::FunDecl:
+				return function_like.dynamicCast<pst::FunDecl>().value()->getParams();
+			case pst::ElementKind::ClassMethod:
+				return function_like.dynamicCast<pst::Method>().value()->getParams();
+			default:
+				CORE_PANIC("Deduction on a template of a non-function");
+			}
+		}
+
+		/**
 		 * @brief Bakes the function template with a placeholder for each of its parameters and
 		 * returns the parameters of the baked function.
 		 */
@@ -77,14 +102,11 @@ namespace compiler::helios::templates {
 					);
 			}
 
-			const SymID baked = ctx.query<QueryBakeTemplateSymID>(key).valueOrThrow();
-			CORE_ASSERT(
-				kind(baked) == SymbolKind::Function, "Deduction on a template of a non-function"
-			);
-			const auto fun = stmt(ctx, baked).value().dynamicCast<pst::Fun>().value();
+			const SymID baked  = ctx.query<QueryBakeTemplateSymID>(key).valueOrThrow();
+			const auto  params = getFunctionLikeParams(stmt(ctx, baked).value()).unlock(ctx);
 
 			std::vector<ParameterPattern> patterns;
-			for (auto param_locked: *fun->getParams().unlock(ctx)) {
+			for (auto param_locked: *params) {
 				const auto param        = param_locked.unlock(ctx);
 				const auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param }).valueOrThrow();
 				patterns.push_back({
@@ -93,6 +115,49 @@ namespace compiler::helios::templates {
 				});
 			}
 			return patterns;
+		}
+
+		/**
+		 * @brief The template instance data of @p type, if it is a class baked from a class
+		 * template.
+		 */
+		base::Optional<CRef<TemplateInstanceSemantics>> classTemplateInstanceOf(
+			const tsh::AbstractType& type
+		) {
+			if (type.getKind() != tsh::Kind::Class) return {};
+			return getSymRef(tsh::ClassAbstractType(type).getSymbol())
+			    ->getDataOpt<TemplateInstanceSemantics>();
+		}
+
+		/**
+		 * @brief The value of the constant holding a template argument of a template instance.
+		 */
+		const ctv::CompileTimeValue& templateArgumentValue(SymID argument_symbol) {
+			return getSymRef(argument_symbol)->getData<defgen::GeneratedConstant>()->value;
+		}
+
+		bool containsPlaceholder(const tsh::AbstractType& type);
+
+		/**
+		 * @brief Whether a placeholder occurs anywhere in the template argument @p value.
+		 */
+		bool containsPlaceholder(const ctv::CompileTimeValue& value) {
+			variant_match(value.getStorage()) {
+				variant_case(tsh::ValueType<>, type) { return containsPlaceholder(type.getType()); }
+				variant_case(ctv::CompileTimeValue::TypeOperator, type_operator) {
+					return std::holds_alternative<tsh::TemplateDeductionPlaceholderAbstractType>(
+						type_operator.op
+					);
+				}
+				variant_case(ctv::CompileTimeValue::TypeTuple, tuple) {
+					return std::ranges::any_of(tuple.getElements(), [](const auto& element) {
+						return containsPlaceholder(
+							ctv::CompileTimeValue::TypeTuple::elementToCtv(element)
+						);
+					});
+				}
+			}
+			return false;
 		}
 
 		/**
@@ -128,6 +193,16 @@ namespace compiler::helios::templates {
 				const tsh::FunctionAbstractType function(type);
 				return any_of(function.getParameterTypes())
 				    or containsPlaceholder(function.getResultType().getType());
+			}
+			case tsh::Kind::Class: {
+				const auto instance = classTemplateInstanceOf(type);
+				return instance.has_value()
+				   and std::ranges::any_of(
+						   instance.value()->template_arguments_symbols,
+						   [](SymID argument) {
+							   return containsPlaceholder(templateArgumentValue(argument));
+						   }
+				   );
 			}
 			default:
 				return false;
@@ -272,6 +347,69 @@ namespace compiler::helios::templates {
 			}
 
 			/**
+			 * @brief Matches a template argument of a class instance with the corresponding
+			 * template argument of another instance of the same class template.
+			 */
+			void deduceTemplateArgument(
+				const ctv::CompileTimeValue& param, const ctv::CompileTimeValue& arg
+			) {
+				if (not containsPlaceholder(param)) return;
+
+				variant_match(param.getStorage()) {
+					variant_case(tsh::ValueType<>, param_type) {
+						const auto arg_type = arg.get<tsh::ValueType<>>();
+						if (arg_type.has_value()) deduceNested(param_type, arg_type.value());
+					}
+					variant_case(TypeOperator, param_operator) {
+						const auto arg_operator = arg.get<TypeOperator>();
+						if (arg_operator.has_value()
+						    and std::holds_alternative<TypeOperator::Kind>(arg_operator->op))
+							bind(
+								std::get<tsh::TemplateDeductionPlaceholderAbstractType>(
+									param_operator.op
+								)
+									.getParameterIndex(),
+								arg_operator.value()
+							);
+					}
+					variant_case(ctv::CompileTimeValue::TypeTuple, param_tuple) {
+						const auto arg_tuple = arg.get<ctv::CompileTimeValue::TypeTuple>();
+						if (not arg_tuple.has_value()
+						    or param_tuple.getElements().size() != arg_tuple->getElements().size())
+							return;
+						for (const auto& [param_element, arg_element]:
+						     std::views::zip(param_tuple.getElements(), arg_tuple->getElements()))
+							deduceTemplateArgument(
+								ctv::CompileTimeValue::TypeTuple::elementToCtv(param_element),
+								ctv::CompileTimeValue::TypeTuple::elementToCtv(arg_element)
+							);
+					}
+				}
+			}
+
+			/**
+			 * @brief Matches the template arguments of two instances of the same class template.
+			 */
+			void deduceClassTemplateInstance(
+				const tsh::AbstractType& param, const tsh::AbstractType& arg
+			) {
+				const auto param_instance = classTemplateInstanceOf(param);
+				const auto arg_instance   = classTemplateInstanceOf(arg);
+				if (not param_instance.has_value() or not arg_instance.has_value()
+				    or param_instance.value()->template_symbol
+				           != arg_instance.value()->template_symbol)
+					return;
+
+				for (const auto& [param_argument, arg_argument]: std::views::zip(
+						 param_instance.value()->template_arguments_symbols,
+						 arg_instance.value()->template_arguments_symbols
+					 ))
+					deduceTemplateArgument(
+						templateArgumentValue(param_argument), templateArgumentValue(arg_argument)
+					);
+			}
+
+			/**
 			 * @brief Peels off the same kind of type from the parameter and the argument, and
 			 * matches their components.
 			 */
@@ -331,6 +469,9 @@ namespace compiler::helios::templates {
 					deduceNested(param_function.getResultType(), arg_function.getResultType());
 					return;
 				}
+				case tsh::Kind::Class:
+					deduceClassTemplateInstance(param, arg);
+					return;
 				default:
 					return;
 				}

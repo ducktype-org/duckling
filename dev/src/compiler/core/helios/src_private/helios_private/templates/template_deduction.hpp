@@ -77,9 +77,9 @@ namespace compiler::helios::templates {
 	 * types of the baked declaration are matched against the argument types, from left to right.
 	 * A template parameter is determined by the first argument it is matched with; later arguments
 	 * are left to the coercions of the call. The deduction is structural: references, pointers,
-	 * slices, arrays, tuples, function types and variants are peeled off until a placeholder is
-	 * reached, like `T` in `ref T` matched with `ref i64`, or in `T | None` matched with
-	 * `i64 | None`.
+	 * slices, arrays, tuples, function types, variants and instances of class templates are peeled
+	 * off until a placeholder is reached, like `T` in `ref T` matched with `ref i64`, in
+	 * `T | None` matched with `i64 | None`, or in `Pair[T, i64]` matched with `Pair[bool, i64]`.
 	 *
 	 * @pre The template is a function template (see isFunctionTemplate).
 	 * @return The deduced arguments, ready to bake the template, or the reason why they could not

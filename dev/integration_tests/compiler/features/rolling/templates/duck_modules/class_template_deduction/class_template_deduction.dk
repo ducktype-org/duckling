@@ -1,0 +1,66 @@
+# A called function template deduces its template arguments from the template arguments of the
+# class template instances it is called with.
+
+import core.builtins.*;
+
+template(T: type)
+class Box1 {
+	v: T;
+}
+
+template(A: type, B: type)
+class Pair {
+	a: A;
+	b: B;
+}
+
+template(T: type)
+fun unbox(x: Box1[T]) -> T = x.v;
+
+template(A: type, B: type)
+fun pairSecond(p: Pair[A, B]) -> B = p.b;
+
+template(A: type)
+fun pairFirstFixed(p: Pair[A, bool]) -> A = p.a;
+
+template(T: type)
+fun nestedUnbox(x: Box1[Box1[T]]) -> T = x.v.v;
+
+template(T: type)
+fun unboxRef(x: ref Box1[T]) -> T = x.v;
+
+template(T: type)
+fun tupleOfBoxes(x: (Box1[T], i64)) -> T = x._1.v;
+
+template(T: type)
+fun boxOfPair(x: Box1[Pair[T, i64]]) -> T = x.v.a;
+
+fun main() -> i64 = {
+	var b: Box1[i64];
+	b.v = 1;
+	builtin_output_i64(unbox(b));
+
+	var p: Pair[bool, i64];
+	p.a = true;
+	p.b = 2;
+	builtin_output_i64(pairSecond(p));
+
+	var q: Pair[i64, bool];
+	q.a = 3;
+	q.b = false;
+	builtin_output_i64(pairFirstFixed(q));
+
+	var bb: Box1[Box1[i64]];
+	bb.v.v = 4;
+	builtin_output_i64(nestedUnbox(bb));
+
+	builtin_output_i64(unboxRef(&b) + 4);
+
+	builtin_output_i64(tupleOfBoxes((b, 0i64)) + 5);
+
+	var bp: Box1[Pair[i64, i64]];
+	bp.v.a = 7;
+	bp.v.b = 0;
+	builtin_output_i64(boxOfPair(bp));
+	return 0;
+}

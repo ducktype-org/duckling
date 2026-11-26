@@ -2531,6 +2531,26 @@ private:
 		      "call." },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type)
+				class A { v: T; }
+
+				template(T: type)
+				class B { v: T; }
+
+				template(T: type)
+				fun f(x: A[T]) -> i64 = 0;
+
+				fun main() -> i64 = {
+					var b: B[i64];
+					return f(b);
+				}
+			)",
+			{ "Cannot deduce the template parameter `T` of `f` from the arguments of the call." },
+			1
+		);
 	}
 
 	/// @brief `move` only accepts values that own themselves, i.e. locals and temporaries.
