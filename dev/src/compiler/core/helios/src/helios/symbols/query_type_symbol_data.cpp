@@ -168,7 +168,7 @@ namespace compiler::helios {
 			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
 			const auto& params  = fn_type.getParameterTypes();
 			// The parameters are `self` and the right-hand side, both taken by `ref`.
-			const auto is_ref = [](const tsh::SymbolType<>& param) {
+			const auto is_ref = [](const tsh::ValueType<>& param) {
 				return param.getRefKind() == tsh::ReferenceKind::Ref;
 			};
 			if (params.size() == 2 && is_ref(params.at(0)) && is_ref(params.at(1))
@@ -198,7 +198,7 @@ namespace compiler::helios {
 						// parameterTypes.size() == 1 means method has not params except self.
 						if (fn_type.getParameterTypes().size() == 1
 						    && fn_type.getResultType()
-						           == tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx)))
+						           == tsh::ValueType<>::withDefaultsMut(tsh::getStringType(ctx)))
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}
@@ -326,12 +326,18 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief A class carries information when it declares at least one field.
+		 * @brief A class carries information when at least one of its fields does. A reference or
+		 * a box field always does, as it is stored as a pointer. So a class without fields, or
+		 * with only `()` or empty-class fields, carries no information, like `()`.
 		 */
-		static bool carriesInformation(const tsh::TypeInterface& class_interface) {
-			// this should probably be changed/expanded in the future:
-			auto fields = class_interface.getFieldsView();
-			return fields.begin() != fields.end();
+		static bool carriesInformation(
+			query::Context& ctx, const tsh::TypeInterface& class_interface
+		) {
+			return std::ranges::any_of(class_interface.getFieldsView(), [&](const auto& field) {
+				const auto field_type = field.getType(ctx);
+				return field_type.getRefKind() != tsh::ReferenceKind::Direct
+				    || field_type.getType().carriesInformation(ctx);
+			});
 		}
 
 		/**
@@ -415,7 +421,7 @@ namespace compiler::helios {
 				= isTriviallyCopyable(ctx, tmp_interface, user_members);
 			class_info.is_trivially_destructible
 				= isTriviallyDestructible(ctx, tmp_interface, user_members);
-			class_info.carries_information = carriesInformation(tmp_interface);
+			class_info.carries_information = carriesInformation(ctx, tmp_interface);
 
 			pushConstructors(
 				ctx, interface_builder, class_type, class_info.is_default_constructible
@@ -432,8 +438,8 @@ namespace compiler::helios {
 				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
 				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 				// type of the base class has any specifiers.
-				class_info.base = ctv.get<tsh::SymbolType<>>()->getType();
-				class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
+				class_info.base = ctv.get<tsh::ValueType<>>()->getType();
+				class_info.implements.push_back(ctv.get<tsh::ValueType<>>()->getType());
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
@@ -443,7 +449,7 @@ namespace compiler::helios {
 					);
 					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
 					// type of the base class has any specifiers.
-					class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
+					class_info.implements.push_back(ctv.get<tsh::ValueType<>>()->getType());
 				}
 			}
 

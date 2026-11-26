@@ -15,7 +15,7 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/coercions/coercion.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>

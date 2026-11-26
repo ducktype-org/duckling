@@ -13,6 +13,8 @@
 #include "generated_symbol_data.hpp"
 
 #include <ctv/ctv.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/elements/common/elements_list.hpp>
 #include <frontend/pst_parser/pst_query/generic_pst_query_key.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -38,6 +40,15 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache_and_struct
 	 */
 	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, query::QResult<SymID>, ({}));
+
+	/**
+	 * @brief The selector of the `using`/`import` @p stmt its symbol is made of: the first one.
+	 *
+	 * @TODO: #2791 One statement should give one symbol per selector. Until then a list of
+	 * several selectors is reported as not supported when the symbol is created and only the
+	 * first one is used.
+	 */
+	pst::Access<pst::Selector> usingImportSelector(query::Context& ctx, pst::Access<pst::Stmt> stmt);
 
 	/**
 	 * @brief Calculates a value of a constant. Returns a CTV containing the result value.

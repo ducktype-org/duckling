@@ -8,6 +8,8 @@
 
 #include "exceptions.hpp"
 
+#include <cctype>
+
 /**
  * Basic helper functions.
  */
@@ -44,7 +46,7 @@ namespace {
 		for (char c: args) {
 			if (c == '"') {
 				in_quotes = !in_quotes;
-			} else if (std::isspace(c) && not in_quotes) {
+			} else if (std::isspace(static_cast<unsigned char>(c)) && not in_quotes) {
 				if (!current_arg.empty()) {
 					result.push_back(current_arg);
 					current_arg.clear();
@@ -120,17 +122,57 @@ namespace clah {
 	}
 
 	void ParsingState::parseParameter(const std::vector<clah::Parameter>& params) {
-		auto [param_name, name_type] = parseName();
-		if (name_type == NameType::EmptyName)
+		CORE_ASSERT(frontChar() == '-', "parseParameter expected '-'");
+		usize hyphen_count = advanceUntilInWord([](char c) { return c != '-'; });
+		if (isEnd()) {
+			// We reached the end of arguments while parsing the name, which means that there is no
+			// name after dashes, which is invalid.
+			throw clah::exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
+		}
+
+		if (hyphen_count == 1)
+			parseShortParameters(params);
+		else
+			parseLongParameter(params);
+	}
+
+	void ParsingState::parseLongParameter(const std::vector<clah::Parameter>& params) {
+		std::string name       = frontWord();
+		usize       name_count = advanceUntilInWord([](char c) { return c == '='; });
+		name                   = name.substr(0, name_count);
+
+		if (not isEnd() && frontChar() == '=') advanceChar();
+
+		if (name.empty())
 			throw clah::exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
 
-		if (name_type == NameType::LongName) {
-			if (!findParameterAndParse(params, param_name, name_type))
-				throw clah::exceptions::InvalidParameterName(param_name);
-		} else {
-			for (char c: param_name)
-				if (!findParameterAndParse(params, { c }, name_type))
-					throw clah::exceptions::InvalidParameterName(param_name);
+		const auto parameter = findParameter(params, name, NameType::LongName);
+		if (!parameter) throw clah::exceptions::InvalidParameterName(name);
+		parseWithParameter(*parameter.value(), name);
+	}
+
+	void ParsingState::parseShortParameters(const std::vector<clah::Parameter>& params) {
+		const usize group_word = current_word;
+		while (not isEnd() && current_word == group_word) {
+			const std::string name(1, frontChar());
+			if (name == "=")
+				throw exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
+
+			const auto maybe_parameter = findParameter(params, name, NameType::ShortName);
+			if (!maybe_parameter) throw clah::exceptions::InvalidParameterName(name);
+			const CRef<clah::Parameter> parameter = maybe_parameter.value();
+			advanceChar();
+
+			if (parameter->getValueParser() == nullptr) {
+				parseWithParameter(*parameter, name);
+				continue;
+			}
+
+			// A value parameter ends the group: its value is the rest of the word (`-O3`, `-O=3`)
+			// or, when the word ends right after the name, the next word (`-O 3`).
+			if (not isEnd() && frontChar() == '=') advanceChar();
+			parseWithParameter(*parameter, name);
+			return;
 		}
 	}
 
@@ -140,47 +182,23 @@ namespace clah {
 		return not is_inside;
 	}
 
-	std::pair<std::string, NameType> ParsingState::parseName() {
-		CORE_ASSERT(frontChar() == '-', "parseName expected '-'");
-		usize hyphen_count = advanceUntilInWord([](char c) { return c != '-'; });
-		if (isEnd()) {
-			// We reached the end of arguments while parsing the name, which means that there is no
-			// name after dashes, which is invalid.
-			throw clah::exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
-		}
-
-		std::string name       = frontWord();
-		usize       name_count = advanceUntilInWord([](char c) { return c == '='; });
-		name                   = name.substr(0, name_count);
-
-		if (not isEnd() && frontChar() == '=') advanceChar();
-
-		if (name.empty()) return { "", NameType::EmptyName };
-		return { name, hyphen_count == 1 ? NameType::ShortName : NameType::LongName };
-	}
-
-	bool ParsingState::findParameterAndParse(
+	base::Optional<CRef<clah::Parameter>> ParsingState::findParameter(
 		const std::vector<clah::Parameter>& parameters,
 		const std::string&                  param_name,
 		NameType                            name_type
 	) {
-		for (auto& parameter: parameters) {
-			bool found_parameter = false;
+		for (const auto& parameter: parameters) {
 			if (name_type == NameType::LongName) {
 				if_opt_some(parameter.getLongName(), name) {
-					if (name == param_name.c_str()) found_parameter = true;
+					if (name == param_name.c_str()) return &parameter;
 				}
 			} else {
 				if_opt_some(parameter.getShortName(), name) {
-					if (name == param_name[0]) found_parameter = true;
+					if (name == param_name[0]) return &parameter;
 				}
 			}
-			if (found_parameter) {
-				parseWithParameter(parameter, param_name);
-				return true;
-			}
 		}
-		return false;
+		return {};
 	}
 
 	void ParsingState::parseWithParameter(const clah::Parameter& parameter, const std::string& name) {

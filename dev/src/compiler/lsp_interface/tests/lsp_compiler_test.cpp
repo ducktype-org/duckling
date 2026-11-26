@@ -29,6 +29,8 @@ public:
 		TESTER_ADD_TEST(loadedPackageDependsOnStdTest);
 		TESTER_ADD_TEST(stdTypesDiagnosticsTest);
 		TESTER_ADD_TEST(reloadedStdPackageKeepsItsIdTest);
+		TESTER_ADD_TEST(semanticErrorRangeInUtf16Test);
+		TESTER_ADD_TEST(decodeErrorRangeAtFileStartTest);
 		// @TODO: #4032 Restore this test once the compile-time DVM no longer reuses code lowered
 		// before a reload. It crashes intermittently on the dangling types that code returns.
 		// TESTER_ADD_TEST(reloadingStdUsedByLoadedPackageTest);
@@ -219,6 +221,59 @@ private:
 		);
 		compiler.publishDiagnostics({});
 		assertTrue(session.noErrors(main_uri), "Using std after its reload must not report errors");
+	}
+
+	/**
+	 * @brief The range of an error after emoji on its line is sent in UTF-16 code units, each
+	 * emoji taking two, for a diagnostic whose location is refreshed through its PST hash.
+	 */
+	void semanticErrorRangeInUtf16Test() {
+		constexpr auto CONTENT
+			= "fun main() -> i64 = {\n"
+			  "    let s = \"😀😀\"; return x;\n"
+			  "}\n";
+		duck_ls_test::VfsWorkspace workspace("lsp_compiler_utf16_semantic_ws");
+		workspace.add("pkg/pkg.dk", CONTENT);
+		const auto main_uri = workspace.uriOf("pkg/pkg.dk");
+
+		compiler.addWorkspace(workspace.uriOf());
+		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
+		compiler.publishDiagnostics(main_uri);
+
+		assertTrue(session.hasErrors(main_uri), "The undefined name must report an error");
+		const auto& range = session.pushed.at(main_uri).front().range;
+		assertTrue(
+			range.start.line == 1 && range.start.character == 27 && range.end.line == 1
+				&& range.end.character == 28,
+			"The range must be 1:27-1:28 in UTF-16 code units"
+		);
+	}
+
+	/**
+	 * @brief A UTF-8 decoding error, which names its file but no line, is published at the
+	 * start of the file.
+	 */
+	void decodeErrorRangeAtFileStartTest() {
+		constexpr auto CONTENT
+			= "fun main() -> i64 = {\n"
+			  "    return 0; \xff\n"
+			  "}\n";
+		duck_ls_test::VfsWorkspace workspace("lsp_compiler_decode_error_ws");
+		workspace.add("pkg/pkg.dk", CONTENT);
+		const auto main_uri = workspace.uriOf("pkg/pkg.dk");
+
+		compiler.addWorkspace(workspace.uriOf());
+		compiler.openDocument(main_uri, "duckling", 1, CONTENT);
+		compiler.publishDiagnostics(main_uri);
+
+		assertTrue(session.hasErrors(main_uri), "The invalid byte must report an error");
+		assertTrue(
+			std::ranges::all_of(
+				session.pushed.at(main_uri),
+				[](const lsp::Diagnostic& diagnostic) { return diagnostic.range.end.line <= 2; }
+			),
+			"Every range must lie within the file"
+		);
 	}
 
 	/**

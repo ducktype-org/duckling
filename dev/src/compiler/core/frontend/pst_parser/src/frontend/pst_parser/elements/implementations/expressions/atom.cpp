@@ -25,10 +25,10 @@ namespace pst::expr {
 
 		if (state[0].is(Keyword::Match)) {
 			return MatchExpr::parse(state);
+		} else if (state[0].isIdentifierLike()) {
+			return IdentifierLiteral::parse(state);
 		} else if (state[0].isKeyword()) {
 			return KeywordLiteral::parse(state);
-		} else if (state[0].isIdentifier()) {
-			return IdentifierLiteral::parse(state);
 		} else if (state[0].isNumLiteralGroup()) {
 			return ExprNumericValue::parse(state);
 		} else if (state[0].isString()) {

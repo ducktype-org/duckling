@@ -6,6 +6,9 @@
 
 #include "bit256.hpp"
 
+#include <ostream>
+#include <string>
+
 #include <ranges>
 
 namespace base {

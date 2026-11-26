@@ -174,7 +174,7 @@ namespace compiler::repl {
 	// Instead of extracting the exit value manually based on type,
 	// print would be called inside the DVM execution.
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
-		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
+		vm::PID pid, std::string_view func_name, const tsh::ValueType<>& return_type
 	) {
 		if (return_type.getRefKind() != tsh::ReferenceKind::Direct)
 			return std::unexpected("Unsupported return type for REPL: " + return_type.toString());

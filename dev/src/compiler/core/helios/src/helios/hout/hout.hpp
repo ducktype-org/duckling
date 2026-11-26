@@ -80,7 +80,7 @@ namespace compiler::helios {
 
 		Operatoriness operatoriness;
 
-		tsh::SymbolType<> return_type;
+		tsh::ValueType<> return_type;
 
 		std::vector<code::Parameter> parameters;
 
@@ -95,7 +95,7 @@ namespace compiler::helios {
 		HOUTFunctionDeclaration(
 			SymID                        symbol,
 			Operatoriness                operatoriness,
-			tsh::SymbolType<>            ret_type,
+			tsh::ValueType<>             ret_type,
 			std::vector<code::Parameter> parameters,
 			code::ElementOrigin          origin
 		);
@@ -179,7 +179,7 @@ namespace compiler::helios {
 
 		std::variant<HOUTGlobalConst, HOUTGlobalVariable> value;
 
-		tsh::SymbolType<> type;
+		tsh::ValueType<> type;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

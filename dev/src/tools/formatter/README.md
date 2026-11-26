@@ -173,15 +173,19 @@ ignored, missing keys keep their default:
 ## The `duckfmt` CLI
 
 ```
-duckfmt <file> [options]
+duckfmt <file> [file...] [options]
   -c, --config <path>   JSON formatter config file
-  -i, --in-place        write the result back to the file instead of stdout
-  -k, --check           report on stderr; exit non-zero if the file is not formatted
+  -i, --in-place        write the result back to the files instead of stdout
+  -k, --check           report on stderr; exit non-zero if a file is not formatted
 ```
 
-By default it prints the formatted file to stdout. `--check` is the CI-friendly
-mode: stdout stays empty, the name of an unformatted file goes to stderr, and the
-exit code reports whether the file is already formatted. Unlike `duckc`,
+By default it prints the formatted file to stdout. With several files, each
+output starts with a `==> <file> <==` header line and two outputs are separated
+by a blank line; a single file is printed without a header. `--check` is the
+CI-friendly mode: stdout stays empty, the name of every unformatted file goes to
+stderr, and the exit code reports whether all files are already formatted.
+Every file is processed even when one of them fails, and the exit code is
+non-zero if any of them did. Unlike `duckc`,
 `duckfmt` does not initialize the compiler driver — it only tokenizes and
 formats.
 
@@ -202,6 +206,23 @@ The unit tests are golden tests: each feeds an input string (or a
 `tests/snippets/*.duck` file) through `formatTokens` and compares against the
 expected output, also asserting idempotence (formatting the output again is a
 no-op) and round-trip safety (the significant token stream is unchanged).
+
+## Keeping the repository formatted
+
+Every `.dk` and `.dks` file in the repository is kept formatted with `duckfmt`. Both helpers
+below find the binary in `build/bin/duckfmt` by default, so build it first.
+
+```sh
+# format the files this branch changed (plus untracked ones); --all for every file
+./scripts/formatting/format_repo_duckling.sh [--all] [--check] [path/to/duckfmt]
+
+# check only; --auto-fix formats the offending files, --no-fix just reports them
+python3 toolbox.py duckfmt -b build [--all] [--no-fix | --auto-fix]
+```
+
+Both skip the files listed in `scripts/formatting/duckfmt_excluded.txt`, which are left
+unformatted on purpose (the formatter's own test fixtures, for example). `pr-validate` runs
+the same check right after its build step.
 
 ## Limitations
 

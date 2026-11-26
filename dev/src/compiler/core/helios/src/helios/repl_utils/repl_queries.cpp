@@ -48,7 +48,7 @@ namespace compiler::repl {
 					= std::make_shared<helios::code::CodeBlock>(helios::compileSingleStatement(
 						ctx,
 						element.dynamicCast<pst::Stmt>(),
-						tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType())
+						tsh::ValueType<>::withDefaultsMut(tsh::getUnitType())
 					));
 
 				code_block->statements.emplace_back(
@@ -66,7 +66,7 @@ namespace compiler::repl {
 				const coercions::Coercion coercion = coercions::coercionOf(
 					ctx,
 					expr.expr.ref(),
-					expr.expr->expression_type.getSymbolType(),
+					expr.expr->expression_type.getValueType(),
 					coercions::HandOverKind::LastUse
 				);
 				BoxOrCRef<helios::code::Expr> hout_expr = expr.expr.ref();

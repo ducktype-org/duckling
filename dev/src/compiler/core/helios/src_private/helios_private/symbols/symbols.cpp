@@ -9,10 +9,12 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/selector_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/visitors/pst_visitor.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -20,10 +22,11 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -180,6 +183,10 @@ namespace compiler::helios {
 				case pst::ElementKind::Const:
 					return false;
 
+				case pst::ElementKind::ExprElement:
+					if (el.dynamicCast<pst::expr::BlockExpr>().has_value()) return false;
+					[[fallthrough]];
+
 				// For other elements we go up the PST tree:
 				case pst::ElementKind::CodeBlock:
 				case pst::ElementKind::CodeBlockOrStmt:
@@ -188,7 +195,6 @@ namespace compiler::helios {
 				case pst::ElementKind::StmtSpecifier:
 				case pst::ElementKind::SpecifierBlock:
 				case pst::ElementKind::Block:
-				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt:
 				case pst::ElementKind::RoundGroupExpr:
@@ -410,17 +416,22 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The first selector of a `using`/`import`, which is the one the symbol is made of.
-		 *
-		 * @TODO: #2791 One statement should give one symbol per selector. Until then a list of
-		 * several selectors is reported as not supported and only the first one is used.
+		 * @brief The selector list of a `using`/`import` statement.
+		 */
+		pst::AccessLocked<pst::SelectorList> selectorsOf(pst::Access<pst::Stmt> stmt) {
+			if (auto using_stmt = stmt.dynamicCast<pst::Using>())
+				return using_stmt.value()->getSelectors();
+			return stmt.dynamicCast<pst::Import>().value()->getSelectors();
+		}
+
+		/**
+		 * @brief The selector of a `using`/`import`, logs when the statement has more of them.
 		 */
 		pst::Access<pst::Selector> firstSelector(
-			query::Context& ctx, pst::AccessLocked<pst::SelectorList> list, std::string_view keyword
+			query::Context& ctx, pst::Access<pst::Stmt> stmt, std::string_view keyword
 		) {
-			auto selectors = list.unlock(ctx);
-			auto first     = (*selectors->begin()).unlock(ctx);
-			if (selectors->size() > 1)
+			auto first = usingImportSelector(ctx, stmt);
+			if (selectorsOf(stmt).unlock(ctx)->size() > 1)
 				logSelectorNotSupported(
 					ctx, first, base::strConcat("More than one selector in `", keyword, "`")
 				);
@@ -472,8 +483,7 @@ namespace compiler::helios {
 				};
 			}
 			case pst::StmtKind::Using: {
-				auto using_stmt = stmt.dynamicCast<pst::Using>().value();
-				auto selector   = firstSelector(ctx, using_stmt->getSelectors(), "using");
+				auto selector   = firstSelector(ctx, stmt, "using");
 				auto first_name = selector->getNameByIndex(0).unlock(ctx)->unwrap();
 				auto last_name
 					= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
@@ -516,8 +526,7 @@ namespace compiler::helios {
 				// logic with other similar constructs (e.g. usings), and because imports may
 				// introduce multiple names now. We could extend wildcard machinery to keep the
 				// general assumption of one-stmt=one-symbol while handling the above.
-				auto import   = stmt.dynamicCast<pst::Import>().value();
-				auto selector = firstSelector(ctx, import->getSelectors(), "import");
+				auto selector = firstSelector(ctx, stmt, "import");
 				auto last_name
 					= selector->getNameByIndex(selector->numberOfNames() - 1).unlock(ctx)->unwrap();
 
@@ -730,6 +739,10 @@ namespace compiler::helios {
 		}
 	}
 
+	pst::Access<pst::Selector> usingImportSelector(query::Context& ctx, pst::Access<pst::Stmt> stmt) {
+		return (*selectorsOf(stmt).unlock(ctx)->begin()).unlock(ctx);
+	}
+
 	struct IMPLEMENT_QUERY(QuerySymbolOfSTMT, query::QResult<SymbolData>) {
 		/**
 		 * @brief Return the scope, that symbol created from given PST element
@@ -805,16 +818,24 @@ namespace compiler::helios {
 				variant_case(PstImplementedSemantics, pst_data) {
 					const auto pst
 						= pst_data.getElement().unlock(ctx).dynamicCast<pst::Const>().value();
+					// The parser accepts `const x: T;`, but a const needs a value.
+					const auto value_holder = pst->getValue();
+					if (!value_holder.has_value()) {
+						ctx.log<ConstWithoutValueError>(pst->getStablePosition());
+						return query::Failed();
+					}
+
 					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
 					// Get the coerced HOUT expression
 					const auto hout_qresult = getHoutOfExprWithExpectedType(
 						ctx,
-						pst->getValue().value().unlock(ctx)->getExpr(),
+						value_holder.value().unlock(ctx)->getExpr(),
 						type,
 						pst->getName().unlock(ctx)->getStablePosition()
 					);
 					if (hout_qresult.hasFailed()) return query::Failed();
+					refuseBlockExpr(ctx, *hout_qresult.valueOrThrow(), "a const initializer");
 
 					// Evaluate the HOUT expression at compile-time
 					auto ctv = ctx.query<QueryEvaluateHOUTExpression>(

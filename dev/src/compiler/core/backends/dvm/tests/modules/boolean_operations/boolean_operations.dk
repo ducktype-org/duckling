@@ -1,8 +1,16 @@
 fun main() -> i64 = {
 	var a: bool = true;
-    var b: bool = false;
-    if (not a) return 0i64;
-    if (not (a or b)) return 0i64;
-    if (a and b) return 0i64;
-    return 1i64;
+	var b: bool = false;
+	if (not a) return 0i64;
+	if (not (a or b)) return 0i64;
+	if (a and b) return 0i64;
+
+	# A `bool` takes a whole byte in the VM, so a cast to an 8-bit integer is a plain move.
+	if ((a as u8) != 1u8) return 0i64;
+	if ((b as u8) != 0u8) return 0i64;
+	if ((a as i8) != 1i8) return 0i64;
+	if ((b as i8) != 0i8) return 0i64;
+	if ((a as u16) != 1u16) return 0i64;
+	if ((a as i64) != 1i64) return 0i64;
+	return 1i64;
 }

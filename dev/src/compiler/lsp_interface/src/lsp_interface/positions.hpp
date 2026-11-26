@@ -11,6 +11,9 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/source_position.hpp>
+#include <token_source/source.hpp>
+
 #include <string_view>
 
 namespace duck_ls {
@@ -48,4 +51,21 @@ namespace duck_ls {
 	 * @return Empty when `text` has no such line.
 	 */
 	base::Optional<usize> toByteOffset(std::string_view text, const lsp::Position& position);
+
+	/**
+	 * @brief The LSP `character`, in UTF-16 code units, of the position after the first
+	 * @p code_points code points of the 1-based @p line of @p source.
+	 *
+	 * The compiler counts columns in code points while the protocol counts them in UTF-16 code
+	 * units, where a code point above U+FFFF takes two. A code point past the end of the source
+	 * counts as one unit, and a line @p source does not have leaves @p code_points unchanged.
+	 */
+	lsp::Uint codePointsToUtf16Units(
+		const tokenizer::TokenSource& source, usize line, usize code_points
+	);
+
+	/**
+	 * @brief The LSP range of @p position, the place a node takes in the source.
+	 */
+	lsp::Range toLspRange(const dia::SourcePosition& position);
 }

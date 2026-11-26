@@ -9,6 +9,8 @@
 namespace duck_ls {
 
 	namespace {
+		constexpr UChar32 LAST_SINGLE_UNIT_CODE_POINT = 0xFF'FF;
+
 		/**
 		 * @brief The number of bytes in the UTF-8 character whose first byte is `lead`.
 		 *
@@ -98,4 +100,31 @@ namespace duck_ls {
 		return offset.value().bytes;
 	}
 
+	lsp::Uint codePointsToUtf16Units(
+		const tokenizer::TokenSource& source, usize line, usize code_points
+	) {
+		if (line == 0 || line > source.getLines().size())
+			return base::safeIntConv<lsp::Uint>(code_points);
+
+		const auto& chars = source.getChars();
+		const usize begin = source.getLine(line).first;
+
+		lsp::Uint units = 0;
+		for (usize i = begin; i < begin + code_points; ++i)
+			units += i < chars.size() && chars[i].value > LAST_SINGLE_UNIT_CODE_POINT ? 2 : 1;
+		return units;
+	}
+
+	lsp::Range toLspRange(const dia::SourcePosition& position) {
+		const auto& source                    = *position.getSource();
+		const auto [start_line, start_column] = position.getStartLineColumn();
+		const auto [end_line, end_column]     = position.getEndLineColumn();
+
+		return {
+			.start = { .line      = static_cast<lsp::Uint>(start_line - 1),
+			           .character = codePointsToUtf16Units(source, start_line, start_column - 1) },
+			.end   = { .line      = static_cast<lsp::Uint>(end_line - 1),
+			           .character = codePointsToUtf16Units(source, end_line, end_column) },
+		};
+	}
 }

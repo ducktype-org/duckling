@@ -1,3 +1,7 @@
-fun f() = { return 12 }
-fun g() = { return f() + 30 }
+fun f() = {
+	return 12
+}
+fun g() = {
+	return f() + 30
+}
 builtin_output_i64(g())

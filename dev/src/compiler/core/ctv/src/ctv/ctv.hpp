@@ -7,7 +7,7 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -42,7 +42,7 @@ namespace compiler::ctv {
 		 */
 		struct VMValue {
 			base::CRef<vm::IVMValue> val;
-			tsh::SymbolType<>        type;
+			tsh::ValueType<>         type;
 		};
 
 		/**
@@ -52,7 +52,7 @@ namespace compiler::ctv {
 		 * a type without the VM. Every other tuple value is represented as a VMValue.
 		 */
 		struct TypeTuple {
-			using Element = std::variant<TypeTuple, tsh::SymbolType<>, UnitCTV>;
+			using Element = std::variant<TypeTuple, tsh::ValueType<>, UnitCTV>;
 
 			explicit TypeTuple(std::vector<Element> elements);
 
@@ -62,7 +62,7 @@ namespace compiler::ctv {
 			 * (@see `TupleAbstractType::isTupleOfTypes`).
 			 */
 			[[nodiscard]]
-			static bool isValid(const tsh::SymbolType<>& tuple_type);
+			static bool isValid(const tsh::ValueType<>& tuple_type);
 
 			/**
 			 * @brief Converts `ctv` to an Element.
@@ -99,7 +99,7 @@ namespace compiler::ctv {
 			StringClassValue,
 			UnitCTV,
 			TypeTuple,
-			tsh::SymbolType<>,
+			tsh::ValueType<>,
 			VMValue>;
 		Storage value;
 
@@ -151,11 +151,11 @@ namespace compiler::ctv {
 		}
 
 		/**
-		 * @brief Returns the compiler::tsh::SymbolType based on the value stored in the CTV.
+		 * @brief Returns the compiler::tsh::ValueType based on the value stored in the CTV.
 		 * @param ctx The query context for lifting unit value to unit type.
 		 * @return The type of the value stored in the CTV.
 		 */
-		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
+		[[nodiscard]] tsh::ValueType<> getTypeOfStoredValue(query::Context& ctx) const;
 
 		/**
 		 * @brief Computes a hash identifying the stored value within a single compilation.

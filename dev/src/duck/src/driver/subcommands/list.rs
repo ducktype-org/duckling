@@ -1,0 +1,62 @@
+// Copyright 2026 DuckType LLC
+//
+// This file is part of the Duckling project, licensed under the DuckType
+// Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
+// of this repository or https://ducktype.org/licenses/DTCL-1.0
+
+use clap::{ArgMatches, Command};
+use quackpack::core::{AllowGlobalPackage, PackageLoader};
+use quackpack::subcommands::list::{ListOptions, VenvOrderings, list};
+
+use crate::cli::{flag, optional, subcommand};
+use crate::{DuckContext, QuackResult};
+
+/// Creates parser for the `list` subcommand.
+pub fn get_parser() -> Command {
+    subcommand("list")
+        .about("Lists all the virtual environments in the storage")
+        .arg(
+            optional("sort-by", "Properties to sort the output by")
+                .value_parser(["name", "previous-access", "last-modification"])
+                .default_value("name"),
+        )
+        .arg(flag("sort-reverse", "Display output in reverse order"))
+        .arg(flag(
+            "global-storage",
+            "Display all the venvs in the global storage",
+        ))
+}
+
+/// Logic for executing the `list` subcommand.
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    let storage_path = if matches.get_flag("global-storage") {
+        ctx.default_storage_root().into_not_locked_path()
+    } else {
+        let pcx =
+            PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).map_err(|mut err| {
+                err.add_hint(
+                    "to display the venvs in the global storage use `global-storage` flag",
+                );
+                err
+            })?;
+        pcx.storage_path().to_path_buf()
+    };
+    let output_ordering = match matches
+        .get_one::<String>("sort-by")
+        .expect("defaulted in cli")
+        .as_str()
+    {
+        "name" => VenvOrderings::Name,
+        "previous-access" => VenvOrderings::Access,
+        "last-modification" => VenvOrderings::Modification,
+        ordering => panic!("guarded by the parser; unknown output ordering `{ordering}`"),
+    };
+    let reverse_order = matches.get_flag("sort-reverse");
+    let options = ListOptions {
+        ctx,
+        output_ordering,
+        reverse_order,
+        storage_path,
+    };
+    list(options)
+}

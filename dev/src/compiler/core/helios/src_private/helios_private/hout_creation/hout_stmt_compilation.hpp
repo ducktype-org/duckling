@@ -10,9 +10,10 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <memory>
 
@@ -40,7 +41,7 @@ namespace compiler::helios {
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
 		query::Context&                   ctx,
 		pst::Access<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                 return_type
+		tsh::ValueType<>                  return_type
 	);
 
 	/**
@@ -51,7 +52,17 @@ namespace compiler::helios {
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
 		query::Context&                   ctx,
 		pst::AccessLocked<pst::CodeBlock> container,
-		tsh::SymbolType<>                 return_type
+		tsh::ValueType<>                  return_type
+	);
+
+	/**
+	 * @brief Compile a PST block expression `{ stmts; tail }` into a HOUT BlockExpr.
+	 *
+	 * The trailing expression without a semicolon gives the block its value, a block without one
+	 * evaluates to a unit.
+	 */
+	query::QResult<Box<code::Expr>> compileBlockExpr(
+		query::Context& ctx, pst::Access<pst::expr::BlockExpr> block_expr
 	);
 
 	/**
@@ -71,7 +82,7 @@ namespace compiler::helios {
 	 * @return CodeBlock containing the compiled statement
 	 */
 	code::CodeBlock compileSingleStatement(
-		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, tsh::SymbolType<> return_type
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, tsh::ValueType<> return_type
 	);
 
 }

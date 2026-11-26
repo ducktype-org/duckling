@@ -135,10 +135,10 @@ namespace compiler::tsh::coercions {
 			CORE_UNREACHABLE();
 		}
 
-		void print(std::ostream& out, const SymbolType<>& source) { out << source.toString(); }
+		void print(std::ostream& out, const ValueType<>& source) { out << source.toString(); }
 
 		void print(std::ostream& out, const ExpressionType<>& source) {
-			out << source.getSymbolType().toString() << " [" << source.getValueCategory().toString()
+			out << source.getValueType().toString() << " [" << source.getValueCategory().toString()
 				<< "]";
 		}
 
@@ -223,6 +223,6 @@ namespace compiler::tsh::coercions {
 
 	// `debugPrint` is the only member of a tree that is not written in the header, so it is the
 	// only one instantiated here.
-	template void CoercionTree<SymbolType<>>::debugPrint(std::ostream&, std::string_view) const;
+	template void CoercionTree<ValueType<>>::debugPrint(std::ostream&, std::string_view) const;
 	template void CoercionTree<ExpressionType<>>::debugPrint(std::ostream&, std::string_view) const;
 }

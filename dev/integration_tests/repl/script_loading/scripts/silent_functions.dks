@@ -1,5 +1,5 @@
 var base: i32 = 6;
 
 fun twice_base() = {
-    return base * 2;
+	return base * 2;
 }

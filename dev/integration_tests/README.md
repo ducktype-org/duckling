@@ -123,7 +123,7 @@ General variables (not tied to any context):
 - `PostTest` - Bash command executed **after** running a test.
 - `PreCase` - Bash command executed **before** running a test case.
 - `PostCase` - Bash command executed **after** running a test case.
-- `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
+- `TimeOut` - Maximum time given for the execution in seconds - the root `testconfig.yaml` sets it to 180 for every test - On timeout the process exits with exit code 124.
 - `NeededThreads` - How many machine threads one case of this test occupies while it runs - defaults to 1. See [Concurrency](#concurrency).
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
@@ -198,7 +198,7 @@ per-case temporary environment below for anything a case writes.
 another case only once the remainder covers it. Cases that spawn their own
 threads or processes should declare it, otherwise `-j 22` runs 22 of them at
 once and the machine ends up with several times that many runnable threads —
-everything then slows down and the tight `TimeOut`s start failing:
+everything then slows down and cases may hit their `TimeOut`:
 
 ```yaml
 duckc_worker_count: "3"
@@ -217,7 +217,7 @@ A test can opt out of parallelism entirely with `NoParallel: true` (settable on 
 from any ancestor node): all such tests are deferred to a second phase after
 every other test has finished, where their cases run **strictly one at a time
 on an otherwise idle machine**. Use it sparingly, for tests sensitive to
-machine load, e.g. tight timeouts. A `PostNode` above a `NoParallel` test
+machine load. A `PostNode` above a `NoParallel` test
 correctly waits for that second phase.
 
 Every command runs with core dumps disabled (`ulimit -c 0`): a crashing case
@@ -225,8 +225,8 @@ would otherwise not exit until the system core-dump handler drains its core,
 which can take seconds on a busy machine and stalls unrelated tests behind a
 system-wide handler. Pass `--core-dumps` to keep cores when debugging a crash.
 
-`TimeOut`s are wall-clock and tuned for a lightly loaded machine; on slow or
-busy machines scale them all with `--timeout-scale <factor>`.
+`TimeOut` is wall-clock. The single global value of 180 seconds is a guard
+against hangs, not a speed check, so it also holds on slow or busy machines.
 
 Each finished test prints its output as one atomic section, by default in
 completion order; pass `--deterministic-output` to print in the definition

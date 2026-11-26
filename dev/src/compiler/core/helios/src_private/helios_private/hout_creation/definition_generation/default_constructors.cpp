@@ -7,6 +7,7 @@
 #include "default_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -77,6 +78,7 @@ namespace compiler::helios::defgen {
 								  ctx, field_init.unlock(ctx)->getExpr(), field_type
 							)
 						          .valueOrThrow();
+						refuseBlockExpr(ctx, *field_init_hout, "a field initializer");
 						field_values.emplace_back(
 							field_init_hout.isBox() ? std::move(field_init_hout.getBox())
 													: field_init_hout->clone()
@@ -224,19 +226,19 @@ namespace compiler::helios::defgen {
 	//                      TOP LEVEL QUERY
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
-		static PResult provide(Context& ctx, const QKey sym_type) {
+		static PResult provide(Context& ctx, const QKey value_type) {
 			CORE_ASSERT(
-				sym_type.isDefaultConstructible(ctx),
+				value_type.isDefaultConstructible(ctx),
 				"QueryDefaultInitializerExpr called on non default constructible type"
 			);
 			const Shorthand s{ ctx };
 
 			// For types that are trivially zero initializable, we just insert a default value expr
 			// which will map to ZeroInitialize.
-			if (sym_type.isTriviallyZeroInitializable(ctx))
-				return s.defaultValue(sym_type.getType());
+			if (value_type.isTriviallyZeroInitializable(ctx))
+				return s.defaultValue(value_type.getType());
 
-			const auto& type = sym_type.getType();
+			const auto& type = value_type.getType();
 			switch (type.getKind()) {
 			case tsh::Kind::StaticArray: {
 				auto array_type = type.as<tsh::StaticArrayAbstractType>();
@@ -277,7 +279,7 @@ namespace compiler::helios::defgen {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
+		query::Context& ctx, const tsh::ValueType<>& type, dia::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
 			ctx.log<dia::PlaceholderError>(

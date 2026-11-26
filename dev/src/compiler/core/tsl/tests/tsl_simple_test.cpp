@@ -24,8 +24,8 @@ namespace {
 		return { &ctx.query<QueryAbstractTypeLayout>(type)->valueOrThrow() };
 	}
 
-	CRef<TypeLayout> querySymbolLayout(query::Context& ctx, SymbolType<> type) {
-		return { &ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow() };
+	CRef<TypeLayout> queryValueTypeLayout(query::Context& ctx, ValueType<> type) {
+		return { &ctx.query<QueryValueTypeLayout>(type)->valueOrThrow() };
 	}
 }
 
@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(basicTypesTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(variantTagWidthTest);
+		TESTER_ADD_TEST(variantSizeIsMultipleOfAlignmentTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(classTest);
@@ -60,8 +61,8 @@ private:
 
 	using enum Mutability;
 
-	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	static ValueType<> vt(const AbstractType abstract_type, const bool is_mutable = false) {
+		return ValueType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
 	}
 
 	void basicTypesTest() {
@@ -145,7 +146,7 @@ private:
 			}
 
 			const FunctionAbstractType function_type
-				= ctx.query<QueryFunctionType>({ {}, st(unit_type) });
+				= ctx.query<QueryFunctionType>({ {}, vt(unit_type) });
 			auto functional_layout = queryLayout(ctx, function_type);
 			assertTrue(
 				functional_layout->getSize() == POINTER_SIZE,
@@ -181,7 +182,7 @@ private:
 			testPrinting(raw_pointer_layout, ctx);
 
 			const PointerAbstractType unit_pointer_type
-				= ctx.query<QueryPointerType>({ st(unit_type) });
+				= ctx.query<QueryPointerType>({ vt(unit_type) });
 			auto unit_pointer_layout = queryLayout(ctx, unit_pointer_type);
 			assertTrue(
 				unit_pointer_layout->getSize() == POINTER_SIZE,
@@ -214,7 +215,7 @@ private:
 			const usize count      = 10;
 
 			const StaticArrayAbstractType static_array_type
-				= ctx.query<QueryStaticArrayType>({ st(i32_type), count });
+				= ctx.query<QueryStaticArrayType>({ vt(i32_type), count });
 
 			const auto static_array_layout = queryLayout(ctx, static_array_type);
 
@@ -259,10 +260,10 @@ private:
 
 	void variantTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			SymbolType<> i8_type = st(
+			ValueType<> i8_type = vt(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			SymbolType<> f16_type = st(getFloatType(ctx, 16));
+			ValueType<> f16_type = vt(getFloatType(ctx, 16));
 
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
@@ -304,12 +305,12 @@ private:
 
 	void variantTagWidthTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			std::vector<SymbolType<>> alternatives;
+			std::vector<ValueType<>> alternatives;
 			alternatives.reserve(256);
 			for (usize count = 1; count <= 256; ++count) {
 				const StaticArrayAbstractType array_type
-					= ctx.query<QueryStaticArrayType>({ st(getByteType()), count });
-				alternatives.push_back(st(array_type));
+					= ctx.query<QueryStaticArrayType>({ vt(getByteType()), count });
+				alternatives.push_back(vt(array_type));
 
 				if (count != 255 && count != 256) continue;
 
@@ -335,17 +336,51 @@ private:
 		});
 	}
 
-	void tupleTest() {
+	void variantSizeIsMultipleOfAlignmentTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const SymbolType<> i8_type = st(
+			// `i8 | u8[5]`: a 1-byte tag, then a 5-byte payload placed at offset 8. The 13 bytes
+			// round up to 16, so the next element of an array of these variants stays aligned.
+			const ValueType<> i8_type = vt(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			const SymbolType<> f16_type = st(getFloatType(ctx, 16));
-			const SymbolType<> f64_type = st(getFloatType(ctx, 64));
-			const SymbolType<> f16_ref
-				= SymbolType<>{ getFloatType(ctx, 16), ReferenceKind::Ref, Immutable };
-			const SymbolType<> f16_box
-				= SymbolType<>{ getFloatType(ctx, 16), ReferenceKind::Box, Immutable };
+			const StaticArrayAbstractType bytes_type
+				= ctx.query<QueryStaticArrayType>({ vt(getByteType()), 5 });
+			const VariantAbstractType variant_type
+				= ctx.query<QueryVariantType>({ { i8_type, vt(bytes_type) } });
+			const auto layout = queryLayout(ctx, variant_type);
+
+			assertEqual(
+				layout->getAlignment(), Bytes(8), "The variant alignment comes from its size."
+			);
+			assertEqual(
+				layout->getSize(),
+				base::bytes2bits(Bytes(16)),
+				"The variant size must be a multiple of its alignment."
+			);
+			variant_match(layout->getVariant()) {
+				variant_case(VariantTypeLayout, variant_layout) {
+					assertEqual(
+						variant_layout.getDataOffset(),
+						Bytes(8),
+						"The payload offset does not change."
+					);
+				}
+				variant_default { fail("Layout of variant type should be variant-like."); }
+			}
+		});
+	}
+
+	void tupleTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const ValueType<> i8_type = vt(
+				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+			);
+			const ValueType<> f16_type = vt(getFloatType(ctx, 16));
+			const ValueType<> f64_type = vt(getFloatType(ctx, 64));
+			const ValueType<> f16_ref
+				= ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Ref, Immutable };
+			const ValueType<> f16_box
+				= ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Box, Immutable };
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });
@@ -532,13 +567,13 @@ private:
 
 	void mutabilityTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto int_symbol_type = st(
+			auto int_value_type = vt(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed),
 				true
 			);
-			auto const_int_symbol_type = int_symbol_type.withMutability(Immutable);
-			auto int_layout            = querySymbolLayout(ctx, int_symbol_type);
-			auto const_int_layout      = querySymbolLayout(ctx, const_int_symbol_type);
+			auto const_int_value_type = int_value_type.withMutability(Immutable);
+			auto int_layout           = queryValueTypeLayout(ctx, int_value_type);
+			auto const_int_layout     = queryValueTypeLayout(ctx, const_int_value_type);
 			assertTrue(
 				*int_layout == *const_int_layout, "Symbol mutability should not affect type layout"
 			);
@@ -550,15 +585,15 @@ private:
 
 	void pointerLayoutManglingTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto i64 = SymbolType<>::withDefaultsMut(
+			auto i64 = ValueType<>::withDefaultsMut(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			auto ref_i64 = i64.toRef();
 			auto box_i64 = i64.toBox();
 
-			auto i64_layout     = querySymbolLayout(ctx, i64);
-			auto ref_i64_layout = querySymbolLayout(ctx, ref_i64);
-			auto box_i64_layout = querySymbolLayout(ctx, box_i64);
+			auto i64_layout     = queryValueTypeLayout(ctx, i64);
+			auto ref_i64_layout = queryValueTypeLayout(ctx, ref_i64);
+			auto box_i64_layout = queryValueTypeLayout(ctx, box_i64);
 
 			auto i64_name     = i64_layout->getMangledName();
 			auto ref_i64_name = ref_i64_layout->getMangledName();

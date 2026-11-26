@@ -20,8 +20,8 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>

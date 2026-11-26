@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "  external-libs: [sqlite]" >> foo/quackconfig.yaml
+  echo "  external-libs: [only-in-bar, sqlite]" >> bar/quackconfig.yaml
+  @{duck-exe} -C foo add bar --local ../bar
+Tests:
+  duplicate-libs:
+    Description: errors when two packages have the same external libraries
+    Cases:
+      duplicate-libs:
+        test-cmd: duck -C foo build
+        ExitCode: 1
+        Err:
+          String: |+
+            info: loaded source codes of 2 packages, 0 were downloaded, 2 were already present
+            info: successfully synchronized venv \`foo\`
+            error: two different packages foo version 1.0.0 and bar version 1.0.0 both link against external library \`sqlite\`

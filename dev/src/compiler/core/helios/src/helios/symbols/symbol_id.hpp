@@ -17,7 +17,7 @@
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/collections/hashmap.hpp>
 #include <base/pointers/ref.hpp>

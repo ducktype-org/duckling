@@ -17,7 +17,7 @@
 
 #include "expression_type.hpp"
 #include "mutability.hpp"
-#include "symbol_type.hpp"
+#include "value_type.hpp"
 
 namespace compiler::tsh::deductions {
 	/**
@@ -27,6 +27,10 @@ namespace compiler::tsh::deductions {
 	 * the expected mutability based on the declaration context (e.g., var/let/const).
 	 * This is commonly used when inferring the type of a variable declaration from
 	 * its initializer expression.
+	 *
+	 * The declaration gets the abstract type of the initializer with default symbol properties, so
+	 * `var x = list.at(0)` declares a copy of the element, not an alias to it. A `ref` or `box`
+	 * declaration needs the type written out (see declarationTypeFromProvidedType()).
 	 *
 	 * @param expr_type The expression type of the initializer value.
 	 * @param expected_mutability The mutability expected by the declaration context.
@@ -39,7 +43,7 @@ namespace compiler::tsh::deductions {
 	 * auto symbol_type = declarationTypeFromInitializer(expr_type, Mutability::Immutable);
 	 */
 	[[nodiscard]]
-	SymbolType<> declarationTypeFromInitializer(
+	ValueType<> declarationTypeFromInitializer(
 		const ExpressionType<>& expr_type, Mutability expected_mutability
 	);
 
@@ -60,7 +64,7 @@ namespace compiler::tsh::deductions {
 	 * auto decl_type = declarationTypeFromProvidedType(given_type, Mutability::Immutable);
 	 */
 	[[nodiscard]]
-	SymbolType<> declarationTypeFromProvidedType(
-		const SymbolType<>& given_type, Mutability expected_mutability
+	ValueType<> declarationTypeFromProvidedType(
+		const ValueType<>& given_type, Mutability expected_mutability
 	);
 }

@@ -790,6 +790,11 @@ class FunctionValidator {
 				Op_ptrParts_p64_p64_pptr, Op_cast_pcptr_pcptr, Op_add_pcptr_imm, Op_cmpNull_pcptr
 			) {}
 
+			instr_case(Op_cast_p64_pcptr, instr) {
+				if (current_stack.at(instr.dst.var_name)->getName() != "i64")
+					throw ArgumentMismatchError(instruction);
+			}
+
 			instr_case(Op_add_pcptr_p64, instr) {
 				if (current_stack.at(instr.offset.var_name)->getName() != "i64")
 					throw ArgumentMismatchError(instruction);

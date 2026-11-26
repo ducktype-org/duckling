@@ -130,25 +130,25 @@ private:
 				unit_1.isTriviallyDestructible(ctx), "Unit should be trivially destructible."
 			);
 
-			const auto unit_st = st(unit_1);
-			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
+			const auto unit_vt = vt(unit_1);
+			assertTrue(unit_vt.isDefaultConstructible(ctx), "Unit should be default constructible.");
 			assertFalse(
-				unit_st.isTriviallyZeroInitializable(ctx),
+				unit_vt.isTriviallyZeroInitializable(ctx),
 				"Unit shouldn't be trivially zero-initializable."
 			);
-			assertTrue(unit_st.isCopyable(ctx), "Unit should be copyable.");
-			assertTrue(unit_st.isTriviallyCopyable(ctx), "Unit should be trivially copyable.");
+			assertTrue(unit_vt.isCopyable(ctx), "Unit should be copyable.");
+			assertTrue(unit_vt.isTriviallyCopyable(ctx), "Unit should be trivially copyable.");
 
-			const auto void_st = st(void_1);
+			const auto void_vt = vt(void_1);
 			assertFalse(
-				void_st.isDefaultConstructible(ctx), "Void should be default constructible."
+				void_vt.isDefaultConstructible(ctx), "Void should be default constructible."
 			);
 			assertFalse(
-				void_st.isTriviallyZeroInitializable(ctx),
+				void_vt.isTriviallyZeroInitializable(ctx),
 				"Void should be trivially zero-initializable."
 			);
-			assertFalse(void_st.isCopyable(ctx), "Void should be copyable.");
-			assertFalse(void_st.isTriviallyCopyable(ctx), "void should be trivially copyable.");
+			assertFalse(void_vt.isCopyable(ctx), "Void should be copyable.");
+			assertFalse(void_vt.isTriviallyCopyable(ctx), "void should be trivially copyable.");
 		});
 	}
 
@@ -195,32 +195,32 @@ private:
 		assertTrue(char_3.getKind() == Char, "Byte should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto bool_st = st(bool_1);
-			assertTrue(bool_st.isDefaultConstructible(ctx), "Bool should be default constructible.");
+			const auto bool_vt = vt(bool_1);
+			assertTrue(bool_vt.isDefaultConstructible(ctx), "Bool should be default constructible.");
 			assertTrue(
-				bool_st.isTriviallyZeroInitializable(ctx),
+				bool_vt.isTriviallyZeroInitializable(ctx),
 				"Bool should be trivially zero-initializable."
 			);
-			assertTrue(bool_st.isCopyable(ctx), "Bool should be copyable.");
-			assertTrue(bool_st.isTriviallyCopyable(ctx), "Bool should be trivially copyable.");
+			assertTrue(bool_vt.isCopyable(ctx), "Bool should be copyable.");
+			assertTrue(bool_vt.isTriviallyCopyable(ctx), "Bool should be trivially copyable.");
 
-			const auto byte_st = st(byte_1);
-			assertTrue(byte_st.isDefaultConstructible(ctx), "Byte should be default constructible.");
+			const auto byte_vt = vt(byte_1);
+			assertTrue(byte_vt.isDefaultConstructible(ctx), "Byte should be default constructible.");
 			assertTrue(
-				byte_st.isTriviallyZeroInitializable(ctx),
+				byte_vt.isTriviallyZeroInitializable(ctx),
 				"Byte should be trivially zero-initializable."
 			);
-			assertTrue(byte_st.isCopyable(ctx), "Byte should be copyable.");
-			assertTrue(byte_st.isTriviallyCopyable(ctx), "Byte should be trivially copyable.");
+			assertTrue(byte_vt.isCopyable(ctx), "Byte should be copyable.");
+			assertTrue(byte_vt.isTriviallyCopyable(ctx), "Byte should be trivially copyable.");
 
-			const auto char_st = st(char_1);
-			assertTrue(char_st.isDefaultConstructible(ctx), "Char should be default constructible.");
+			const auto char_vt = vt(char_1);
+			assertTrue(char_vt.isDefaultConstructible(ctx), "Char should be default constructible.");
 			assertTrue(
-				char_st.isTriviallyZeroInitializable(ctx),
+				char_vt.isTriviallyZeroInitializable(ctx),
 				"Char should be trivially zero-initializable."
 			);
-			assertTrue(char_st.isCopyable(ctx), "Char should be copyable.");
-			assertTrue(char_st.isTriviallyCopyable(ctx), "Char should be trivially copyable.");
+			assertTrue(char_vt.isCopyable(ctx), "Char should be copyable.");
+			assertTrue(char_vt.isTriviallyCopyable(ctx), "Char should be trivially copyable.");
 		});
 	}
 
@@ -270,41 +270,41 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto int_st = st(getIntegralType(ctx, 32, Signed));
-			assertTrue(int_st.isDefaultConstructible(ctx), "Int should be default constructible.");
+			const auto int_vt = vt(getIntegralType(ctx, 32, Signed));
+			assertTrue(int_vt.isDefaultConstructible(ctx), "Int should be default constructible.");
 			assertTrue(
-				int_st.isTriviallyZeroInitializable(ctx),
+				int_vt.isTriviallyZeroInitializable(ctx),
 				"Int should be trivially zero-initializable."
 			);
-			assertTrue(int_st.isCopyable(ctx), "Int should be copyable.");
-			assertTrue(int_st.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
+			assertTrue(int_vt.isCopyable(ctx), "Int should be copyable.");
+			assertTrue(int_vt.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
 
-			const auto int_ref_st = int_st.toRef();
+			const auto int_ref_vt = int_vt.toRef();
 			assertFalse(
-				int_ref_st.isDefaultConstructible(ctx),
+				int_ref_vt.isDefaultConstructible(ctx),
 				"Reference to Int should NOT be default constructible."
 			);
 			assertFalse(
-				int_ref_st.isTriviallyZeroInitializable(ctx),
+				int_ref_vt.isTriviallyZeroInitializable(ctx),
 				"Reference to Int should NOT be trivially zero-initializable."
 			);
-			assertTrue(int_ref_st.isCopyable(ctx), "Reference to Int should be copyable.");
+			assertTrue(int_ref_vt.isCopyable(ctx), "Reference to Int should be copyable.");
 			assertTrue(
-				int_ref_st.isTriviallyCopyable(ctx), "Reference to Int should be trivially copyable."
+				int_ref_vt.isTriviallyCopyable(ctx), "Reference to Int should be trivially copyable."
 			);
 
-			const auto int_box_st = int_st.toBox();
+			const auto int_box_vt = int_vt.toBox();
 			assertFalse(
-				int_box_st.isDefaultConstructible(ctx),
+				int_box_vt.isDefaultConstructible(ctx),
 				"Box of Int should NOT be default constructible."
 			);
 			assertFalse(
-				int_box_st.isTriviallyZeroInitializable(ctx),
+				int_box_vt.isTriviallyZeroInitializable(ctx),
 				"Box of Int should NOT be trivially zero-initializable."
 			);
-			assertTrue(int_box_st.isCopyable(ctx), "Box of Int should be copyable.");
+			assertTrue(int_box_vt.isCopyable(ctx), "Box of Int should be copyable.");
 			assertFalse(
-				int_box_st.isTriviallyCopyable(ctx), "Box of Int should not be trivially copyable."
+				int_box_vt.isTriviallyCopyable(ctx), "Box of Int should not be trivially copyable."
 			);
 		});
 	}
@@ -342,23 +342,23 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto float_st = st(getFloatType(ctx, 64));
+			const auto float_vt = vt(getFloatType(ctx, 64));
 			assertTrue(
-				float_st.isDefaultConstructible(ctx), "Float should be default constructible."
+				float_vt.isDefaultConstructible(ctx), "Float should be default constructible."
 			);
 			assertTrue(
-				float_st.isTriviallyZeroInitializable(ctx),
+				float_vt.isTriviallyZeroInitializable(ctx),
 				"Float should be trivially zero-initializable."
 			);
-			assertTrue(float_st.isCopyable(ctx), "Float should be copyable.");
-			assertTrue(float_st.isTriviallyCopyable(ctx), "Float should be trivially copyable.");
+			assertTrue(float_vt.isCopyable(ctx), "Float should be copyable.");
+			assertTrue(float_vt.isTriviallyCopyable(ctx), "Float should be trivially copyable.");
 		});
 	}
 
 	using enum Mutability;
 
-	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	static ValueType<> vt(const AbstractType abstract_type, const bool is_mutable = false) {
+		return ValueType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
 	}
 
 	/**
@@ -382,13 +382,13 @@ private:
 		const RawPointerAbstractType raw_5    = type_raw;
 		assertTrue(raw_5.getKind() == RawPointer, "Raw Pointer should survive casting.");
 
-		const auto ptr_1 = query::entryPoint<QueryPointerType>({ st(raw_1) });
+		const auto ptr_1 = query::entryPoint<QueryPointerType>({ vt(raw_1) });
 		assertTrue(ptr_1.getKind() == Pointer, "Pointer should have kind Pointer.");
-		const auto ptr_2 = query::entryPoint<QueryPointerType>(st(raw_1));
+		const auto ptr_2 = query::entryPoint<QueryPointerType>(vt(raw_1));
 		assertTrue(ptr_1 == ptr_2, "Pointers to the same type and mutability should be equal.");
-		const auto ptr_3 = query::entryPoint<QueryPointerType>(st(raw_2));
+		const auto ptr_3 = query::entryPoint<QueryPointerType>(vt(raw_2));
 		assertTrue(ptr_1 != ptr_3, "Pointers to different types should be different.");
-		const auto ptr_4 = query::entryPoint<QueryPointerType>(st(raw_1, true));
+		const auto ptr_4 = query::entryPoint<QueryPointerType>(vt(raw_1, true));
 		assertTrue(ptr_1 != ptr_4, "Pointers of different mutability should be different.");
 
 		const AbstractType        type_ptr = ptr_4;
@@ -399,26 +399,26 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto raw_st = st(raw_1);
+			const auto raw_vt = vt(raw_1);
 			assertTrue(
-				raw_st.isDefaultConstructible(ctx), "RawPointer should be default constructible."
+				raw_vt.isDefaultConstructible(ctx), "RawPointer should be default constructible."
 			);
 			assertTrue(
-				raw_st.isTriviallyZeroInitializable(ctx), "RawPointer should be zero initializable."
+				raw_vt.isTriviallyZeroInitializable(ctx), "RawPointer should be zero initializable."
 			);
-			assertTrue(raw_st.isCopyable(ctx), "RawPointer should be copyable.");
-			assertTrue(raw_st.isTriviallyCopyable(ctx), "RawPointer should be trivially copyable.");
+			assertTrue(raw_vt.isCopyable(ctx), "RawPointer should be copyable.");
+			assertTrue(raw_vt.isTriviallyCopyable(ctx), "RawPointer should be trivially copyable.");
 
-			const auto pointer_st = st(ptr_1);
+			const auto pointer_vt = vt(ptr_1);
 			assertTrue(
-				pointer_st.isDefaultConstructible(ctx), "Pointer should be default constructible."
+				pointer_vt.isDefaultConstructible(ctx), "Pointer should be default constructible."
 			);
 			assertTrue(
-				pointer_st.isTriviallyZeroInitializable(ctx),
+				pointer_vt.isTriviallyZeroInitializable(ctx),
 				"Pointer should be trivially zero-initializable."
 			);
-			assertTrue(pointer_st.isCopyable(ctx), "Pointer should be copyable.");
-			assertTrue(pointer_st.isTriviallyCopyable(ctx), "Pointer should be trivially copyable.");
+			assertTrue(pointer_vt.isCopyable(ctx), "Pointer should be copyable.");
+			assertTrue(pointer_vt.isTriviallyCopyable(ctx), "Pointer should be trivially copyable.");
 		});
 	}
 
@@ -428,10 +428,10 @@ private:
 		const auto int_32
 			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
 
-		const auto arr_1 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
+		const auto arr_1 = query::entryPoint<QueryStaticArrayType>({ vt(int_16), 10 });
 
 		assertTrue(arr_1.getKind() == StaticArray, "StaticArray should have kind StaticArray.");
-		assertTrue(arr_1.getElementType() == st(int_16), "Element type should be as constructed.");
+		assertTrue(arr_1.getElementType() == vt(int_16), "Element type should be as constructed.");
 		assertTrue(arr_1.getSize() == 10, "Size should be as constructed.");
 
 		const AbstractType            type_arr = arr_1;
@@ -439,24 +439,24 @@ private:
 		assertTrue(arr_2.getKind() == StaticArray, "StaticArray should survive casting.");
 		assertTrue(arr_2.getSize() == 10, "Size should survive casting.");
 
-		const auto arr_3 = query::entryPoint<QueryStaticArrayType>({ st(int_16), 10 });
+		const auto arr_3 = query::entryPoint<QueryStaticArrayType>({ vt(int_16), 10 });
 		assertTrue(
 			arr_1 == arr_3, "StaticArrays with the same element type and size should be equal."
 		);
 
-		const auto arr_4_diff_type = query::entryPoint<QueryStaticArrayType>({ st(int_32), 10 });
+		const auto arr_4_diff_type = query::entryPoint<QueryStaticArrayType>({ vt(int_32), 10 });
 		assertTrue(
 			arr_1 != arr_4_diff_type,
 			"StaticArrays with different element types should be different."
 		);
 
-		const auto arr_5_diff_size = query::entryPoint<QueryStaticArrayType>({ st(int_16), 20 });
+		const auto arr_5_diff_size = query::entryPoint<QueryStaticArrayType>({ vt(int_16), 20 });
 		assertTrue(
 			arr_1 != arr_5_diff_size, "StaticArrays with different sizes should be different."
 		);
 
 		const auto arr_6_diff_mut
-			= query::entryPoint<QueryStaticArrayType>({ st(int_16, true), 10 });
+			= query::entryPoint<QueryStaticArrayType>({ vt(int_16, true), 10 });
 		assertTrue(
 			arr_1 != arr_6_diff_mut,
 			"StaticArrays with element with different mutability should be different."
@@ -471,17 +471,17 @@ private:
 			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
 			const auto unit = getUnitType();
 
-			const auto unit_array = ctx.query<QueryStaticArrayType>({ st(unit), 10 });
+			const auto unit_array = ctx.query<QueryStaticArrayType>({ vt(unit), 10 });
 			assertFalse(
 				unit_array.carriesInformation(ctx), "Array of units should not carry information"
 			);
 
-			const auto empty_array = ctx.query<QueryStaticArrayType>({ st(int_16), 0 });
+			const auto empty_array = ctx.query<QueryStaticArrayType>({ vt(int_16), 0 });
 			assertFalse(
 				empty_array.carriesInformation(ctx), "Empty array should not carry information"
 			);
 
-			const auto arr_st_trivial = st(arr_1);
+			const auto arr_st_trivial = vt(arr_1);
 			assertTrue(
 				arr_st_trivial.isDefaultConstructible(ctx),
 				"StaticArray of Ints should be default constructible."
@@ -497,14 +497,14 @@ private:
 			);
 
 			// Test non-default-constructible static array with ref element)
-			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref, Mutability::Immutable);
 			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
 			assertFalse(
-				st(arr_of_refs).isDefaultConstructible(ctx),
+				vt(arr_of_refs).isDefaultConstructible(ctx),
 				"StaticArray of references should not be default constructible."
 			);
 			assertTrue(
-				st(arr_of_refs).isTriviallyCopyable(ctx),
+				vt(arr_of_refs).isTriviallyCopyable(ctx),
 				"StaticArray of references should be trivially copyable."
 			);
 		});
@@ -519,10 +519,10 @@ private:
 		const auto int_16 = getIntegralTypeNoContext(16, Signed);
 		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
-		const auto tup_1 = query::entryPoint<QueryTupleType>({ { st(int_16), st(int_32) } });
+		const auto tup_1 = query::entryPoint<QueryTupleType>({ { vt(int_16), vt(int_32) } });
 
 		assertTrue(
-			tup_1.getComponents() == std::vector({ st(int_16), st(int_32) }),
+			tup_1.getComponents() == std::vector({ vt(int_16), vt(int_32) }),
 			"Component types should be as constructed."
 		);
 		assertTrue(tup_1.getKind() == Tuple, "Tuple should have kind Tuple.");
@@ -531,13 +531,13 @@ private:
 		const TupleAbstractType tup_2    = type_tup;
 		assertTrue(tup_2.getKind() == Tuple, "Tuple should survive casting.");
 
-		const auto tup_3 = query::entryPoint<QueryTupleType>({ { st(int_16), st(int_32) } });
+		const auto tup_3 = query::entryPoint<QueryTupleType>({ { vt(int_16), vt(int_32) } });
 		assertTrue(tup_1 == tup_3, "Tuples constructed the same way should be equal.");
 
-		const auto tup_4 = query::entryPoint<QueryTupleType>({ { st(int_32), st(int_32) } });
+		const auto tup_4 = query::entryPoint<QueryTupleType>({ { vt(int_32), vt(int_32) } });
 		assertTrue(tup_1 != tup_4, "Tuples with different types should be different.");
 
-		const auto tup_5 = query::entryPoint<QueryTupleType>({ { st(int_16, true), st(int_32) } });
+		const auto tup_5 = query::entryPoint<QueryTupleType>({ { vt(int_16, true), vt(int_32) } });
 		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
 
 
@@ -547,7 +547,7 @@ private:
 					&& tup_5.isTriviallyDestructible(ctx),
 				"Tuples of Ints should be trivially destructible."
 			);
-			const auto tup_st_trivial = st(tup_1);
+			const auto tup_st_trivial = vt(tup_1);
 			assertTrue(
 				tup_st_trivial.isDefaultConstructible(ctx),
 				"Tuple of Ints should be default constructible."
@@ -563,15 +563,40 @@ private:
 			);
 
 			// Test non-default-constructible tuple with Ref element.
-			const auto ref_type    = SymbolType(int_16, ReferenceKind::Ref, Mutability::Immutable);
-			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, st(int_32) } });
+			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, vt(int_32) } });
 			assertFalse(
-				st(tup_of_refs).isDefaultConstructible(ctx),
+				vt(tup_of_refs).isDefaultConstructible(ctx),
 				"Tuple with reference should not be default constructible."
 			);
 			assertTrue(
-				st(tup_of_refs).isTriviallyCopyable(ctx),
+				vt(tup_of_refs).isTriviallyCopyable(ctx),
 				"Tuple with reference should not be trivially copyable."
+			);
+
+			// A tuple carries information only if one of its components does.
+			assertTrue(tup_1.carriesInformation(ctx), "Tuple of ints should carry information");
+			const auto unit       = getUnitType();
+			const auto unit_tuple = ctx.query<QueryTupleType>({ { vt(unit), vt(unit) } });
+			assertFalse(
+				unit_tuple.carriesInformation(ctx), "Tuple of units should not carry information"
+			);
+			const auto nested_unit_tuple
+				= ctx.query<QueryTupleType>({ { vt(unit_tuple), vt(unit) } });
+			assertFalse(
+				nested_unit_tuple.carriesInformation(ctx),
+				"Nested tuple of units should not carry information"
+			);
+			const auto mixed_tuple = ctx.query<QueryTupleType>({ { vt(unit), vt(int_16) } });
+			assertTrue(
+				mixed_tuple.carriesInformation(ctx),
+				"Tuple with an int component should carry information"
+			);
+			const auto unit_ref  = ValueType(unit, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, vt(unit) } });
+			assertTrue(
+				ref_tuple.carriesInformation(ctx),
+				"Tuple with a reference component should carry information"
 			);
 		});
 	}
@@ -585,10 +610,10 @@ private:
 		const auto int_16 = getIntegralTypeNoContext(16, Signed);
 		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
-		const auto var_1 = query::entryPoint<QueryVariantType>({ { st(int_16), st(int_32) } });
+		const auto var_1 = query::entryPoint<QueryVariantType>({ { vt(int_16), vt(int_32) } });
 
 		assertTrue(
-			var_1.getUnderlyingTypes() == std::vector({ st(int_16), st(int_32) }),
+			var_1.getUnderlyingTypes() == std::vector({ vt(int_16), vt(int_32) }),
 			"Underlying types should be as constructed."
 		);
 		assertTrue(var_1.getKind() == Variant, "Variant should have kind Variant.");
@@ -597,14 +622,14 @@ private:
 		const VariantAbstractType var_2    = type_var;
 		assertTrue(var_2.getKind() == Variant, "Tuple should survive casting.");
 
-		const auto var_3 = query::entryPoint<QueryVariantType>({ { st(int_16), st(int_32) } });
+		const auto var_3 = query::entryPoint<QueryVariantType>({ { vt(int_16), vt(int_32) } });
 		assertTrue(var_1 == var_3, "Variants constructed the same way should be equal.");
 
-		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
+		const auto var_4 = query::entryPoint<QueryVariantType>({ { vt(int_32), vt(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
 		const auto var_boxed = query::entryPoint<QueryVariantType>({
-			{ st(int_16), st(int_32).toBox() },
+			{ vt(int_16), vt(int_32).toBox() },
 		});
 
 
@@ -613,18 +638,18 @@ private:
 				var_1.isTriviallyDestructible(ctx) && var_4.isTriviallyDestructible(ctx),
 				"Variants of Ints should be trivially destructible."
 			);
-			const auto var_st = st(var_1);
+			const auto var_vt = vt(var_1);
 			assertFalse(
-				var_st.isDefaultConstructible(ctx),
+				var_vt.isDefaultConstructible(ctx),
 				"Variant of Ints should NOT be default constructible."
 			);
 			assertFalse(
-				var_st.isTriviallyZeroInitializable(ctx),
+				var_vt.isTriviallyZeroInitializable(ctx),
 				"Variant should not be trivially zero-initializable (variant tag)."
 			);
-			assertTrue(var_st.isCopyable(ctx), "Variant of Ints should be copyable.");
+			assertTrue(var_vt.isCopyable(ctx), "Variant of Ints should be copyable.");
 			assertTrue(
-				var_st.isTriviallyCopyable(ctx),
+				var_vt.isTriviallyCopyable(ctx),
 				"Variant of Ints should be trivially copyable (if all components are)."
 			);
 
@@ -633,7 +658,7 @@ private:
 				"Variant with a boxed alternative should NOT be trivially destructible."
 			);
 			assertFalse(
-				st(var_boxed).isTriviallyCopyable(ctx),
+				vt(var_boxed).isTriviallyCopyable(ctx),
 				"Variant with a boxed alternative should NOT be trivially copyable."
 			);
 		});
@@ -649,13 +674,13 @@ private:
 		const auto int_32 = getIntegralTypeNoContext(32, Signed);
 
 		const auto fun_1
-			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_32) });
+			= query::entryPoint<QueryFunctionType>({ { vt(int_16), vt(int_32) }, vt(int_32) });
 
 		assertTrue(
-			fun_1.getParameterTypes() == std::vector({ st(int_16), st(int_32) }),
+			fun_1.getParameterTypes() == std::vector({ vt(int_16), vt(int_32) }),
 			"Parameter types should be as constructed."
 		);
-		assertTrue(fun_1.getResultType() == st(int_32), "Result type should be as constructed.");
+		assertTrue(fun_1.getResultType() == vt(int_32), "Result type should be as constructed.");
 		assertTrue(!fun_1.isPure(), "Purity should be as constructed.");
 		assertTrue(
 			fun_1.getFunctionKind() == FunctionKind::Raw, "Function kind should be as constructed."
@@ -666,29 +691,29 @@ private:
 		assertTrue(fun2.getKind() == Function, "Function should survive casting.");
 
 		const auto fun_identical
-			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_32) });
+			= query::entryPoint<QueryFunctionType>({ { vt(int_16), vt(int_32) }, vt(int_32) });
 		assertTrue(
 			fun_1 == fun_identical, "Function types constructed the same way should be equal."
 		);
 		const auto fun_different_input
-			= query::entryPoint<QueryFunctionType>({ { st(int_32), st(int_32) }, st(int_32) });
+			= query::entryPoint<QueryFunctionType>({ { vt(int_32), vt(int_32) }, vt(int_32) });
 		assertTrue(
 			fun_1 != fun_different_input, "Functions of different input types should be different."
 		);
 		const auto fun_different_output
-			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_16) });
+			= query::entryPoint<QueryFunctionType>({ { vt(int_16), vt(int_32) }, vt(int_16) });
 		assertTrue(
 			fun_1 != fun_different_output, "Functions of different output types should be different."
 		);
 		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
-			{ { st(int_16), st(int_32) }, st(int_32), true, FunctionKind::Closure }
+			{ { vt(int_16), vt(int_32) }, vt(int_32), true, FunctionKind::Closure }
 		);
 		assertTrue(
 			fun_1 != fun_different_flags, "Functions with different flags should be different."
 		);
 
 		const auto fun_closure = query::entryPoint<QueryFunctionType>(
-			{ { st(int_16), st(int_32) }, st(int_32), false, FunctionKind::Closure }
+			{ { vt(int_16), vt(int_32) }, vt(int_32), false, FunctionKind::Closure }
 		);
 		assertTrue(fun_1 != fun_closure, "Raw functions and closures should be different.");
 		assertTrue(
@@ -703,16 +728,16 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto fun_st = st(fun_1);
+			const auto fun_vt = vt(fun_1);
 			assertFalse(
-				fun_st.isDefaultConstructible(ctx),
+				fun_vt.isDefaultConstructible(ctx),
 				"Function type should not be default constructible."
 			);
 			assertFalse(
-				fun_st.isTriviallyZeroInitializable(ctx),
+				fun_vt.isTriviallyZeroInitializable(ctx),
 				"Function type should not be trivially zero-initializable."
 			);
-			assertTrue(fun_st.isCopyable(ctx), "Function type should be copyable.");
+			assertTrue(fun_vt.isCopyable(ctx), "Function type should be copyable.");
 		});
 	}
 
@@ -751,15 +776,15 @@ private:
 				);
 			)
 
-			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
+			assertFalse(vt(nspace).isCopyable(ctx), "Namespace should not be copyable.");
 			assertFalse(
-				st(nspace).isDefaultConstructible(ctx),
+				vt(nspace).isDefaultConstructible(ctx),
 				"Namespace should not be default constructible."
 			);
 
-			assertFalse(st(module).isCopyable(ctx), "Module should not be copyable.");
+			assertFalse(vt(module).isCopyable(ctx), "Module should not be copyable.");
 			assertFalse(
-				st(module).isDefaultConstructible(ctx), "Module should not be default constructible."
+				vt(module).isDefaultConstructible(ctx), "Module should not be default constructible."
 			);
 		});
 	}
@@ -781,15 +806,15 @@ private:
 				meta.isTriviallyDestructible(ctx), "MetaType should be trivially destructible."
 			);
 			assertTrue(
-				st(meta).isDefaultConstructible(ctx),
+				vt(meta).isDefaultConstructible(ctx),
 				"Meta type should be default constructible (e.g. to void)."
 			);
-			assertTrue(st(meta).isCopyable(ctx), "Meta type should be copyable.");
+			assertTrue(vt(meta).isCopyable(ctx), "Meta type should be copyable.");
 			assertFalse(
-				st(meta).isTriviallyZeroInitializable(ctx),
+				vt(meta).isTriviallyZeroInitializable(ctx),
 				"Meta type should not be trivially zero initializable."
 			);
-			assertTrue(st(meta).isTriviallyCopyable(ctx), "Meta type should be trivially copyable.");
+			assertTrue(vt(meta).isTriviallyCopyable(ctx), "Meta type should be trivially copyable.");
 		});
 	}
 
@@ -799,11 +824,11 @@ private:
 		const auto void_i = getVoidType();
 		const auto int_i  = getIntegralTypeNoContext(8, Signed);
 
-		const ExpressionType int_desc(st(int_i), ValueCategory(PrimaryCategory::Local));
+		const ExpressionType int_desc(vt(int_i), ValueCategory(PrimaryCategory::Local));
 
 		try {
 			ExpressionType<IntegralAbstractType>{
-				st(void_i),
+				vt(void_i),
 				ValueCategory(PrimaryCategory::Local),
 			};
 			fail("Created IntegralDesc for Void type.");
@@ -811,7 +836,7 @@ private:
 			// expected
 		}
 
-		ExpressionType{ st(void_i), ValueCategory(PrimaryCategory::Local) };
+		ExpressionType{ vt(void_i), ValueCategory(PrimaryCategory::Local) };
 
 		const ExpressionType really_int_desc = int_desc;
 

@@ -31,6 +31,9 @@
 #include <query_framework/query_result.hpp>
 #include <tester/tester.hpp>
 
+#include <sstream>
+#include <variant>
+
 using namespace compiler;
 using namespace compiler::helios;
 
@@ -41,6 +44,7 @@ class HoutStmtCompilationTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testControlFlowStatements);
+		TESTER_ADD_TEST(testActionStatements);
 		TESTER_ADD_TEST(testConstIfStatements);
 		TESTER_ADD_TEST(testVariableDeclarations);
 		TESTER_ADD_TEST(testReturnStatements);
@@ -86,10 +90,10 @@ private:
 	 * The caller must be inside a query::utils::withContextDo lambda.
 	 */
 	static code::CodeBlock compileSingleStatementOfFirstFun(
-		query::Context&                   ctx,
-		frontend::ModuleID                module_id,
-		usize                             stmt_index         = 0,
-		base::Optional<tsh::SymbolType<>> custom_return_type = {}
+		query::Context&                  ctx,
+		frontend::ModuleID               module_id,
+		usize                            stmt_index         = 0,
+		base::Optional<tsh::ValueType<>> custom_return_type = {}
 	) {
 		// Locate the function symbol
 		auto root_scope = queryRootScopeOfMainModuleFile(ctx, module_id);
@@ -114,7 +118,7 @@ private:
 		// Compile the first body statement in isolation
 		auto return_type = custom_return_type.has_value()
 		                     ? custom_return_type.value()
-		                     : tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+		                     : tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 		body_stmts.at(stmt_index)->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
@@ -179,6 +183,169 @@ private:
 				StmtKindCounter c;
 				block.statements.at(0)->acceptVisitor(c);
 				ASSERT_EQUAL(c.if_count, 1u);
+			});
+		}
+	}
+
+	/** @brief Targets of `break` and `continue` as written: a name, a construct kind or none. */
+	void testActionStatements() {
+		// Named and implicit targets select the same loop using different selectors.
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					while target (true) {
+						break target;
+						continue target;
+						break;
+						continue;
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+				ASSERT_EQUAL(block.statements.size(), 1u);
+
+				auto* while_stmt
+					= dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(while_stmt != nullptr);
+				ASSERT_HAS_VALUE(while_stmt->control_flow_id);
+				ASSERT_EQUAL(while_stmt->body.statements.size(), 4u);
+
+				auto* break_stmt
+					= dynamic_cast<const code::BreakStmt*>(while_stmt->body.statements.at(0).get());
+				auto* continue_stmt = dynamic_cast<const code::ContinueStmt*>(
+					while_stmt->body.statements.at(1).get()
+				);
+				ASSERT_TRUE(break_stmt != nullptr);
+				ASSERT_TRUE(continue_stmt != nullptr);
+				auto* break_target = std::get_if<code::NamedTarget>(&break_stmt->target_selector);
+				auto* continue_target
+					= std::get_if<code::NamedTarget>(&continue_stmt->target_selector);
+				ASSERT_TRUE(break_target != nullptr);
+				ASSERT_TRUE(continue_target != nullptr);
+				ASSERT_TRUE(break_target->name == base::StrID("target"));
+				ASSERT_TRUE(continue_target->name == base::StrID("target"));
+				auto* implicit_break
+					= dynamic_cast<const code::BreakStmt*>(while_stmt->body.statements.at(2).get());
+				auto* implicit_continue = dynamic_cast<const code::ContinueStmt*>(
+					while_stmt->body.statements.at(3).get()
+				);
+				ASSERT_TRUE(implicit_break != nullptr);
+				ASSERT_TRUE(implicit_continue != nullptr);
+				ASSERT_TRUE(
+					std::holds_alternative<code::NearestLoop>(implicit_break->target_selector)
+				);
+				ASSERT_TRUE(
+					std::holds_alternative<code::NearestLoop>(implicit_continue->target_selector)
+				);
+				auto  cloned = block.clone();
+				auto* cloned_while
+					= dynamic_cast<const code::WhileStmt*>(cloned->statements.at(0).get());
+				ASSERT_TRUE(cloned_while != nullptr);
+				ASSERT_HAS_VALUE(cloned_while->control_flow_id);
+				ASSERT_EQUAL(
+					while_stmt->control_flow_id.value(), cloned_while->control_flow_id.value()
+				);
+				std::stringstream original_print, clone_print;
+				block.statements.at(0)->debugPrint(original_print);
+				cloned->statements.at(0)->debugPrint(clone_print);
+				ASSERT_EQUAL(original_print.str(), clone_print.str());
+				auto printed = clone_print.str();
+				ASSERT_TRUE(printed.find("break target;") != std::string::npos);
+				ASSERT_TRUE(printed.find("continue target;") != std::string::npos);
+				ASSERT_TRUE(printed.find("break;") != std::string::npos);
+				ASSERT_TRUE(printed.find("continue;") != std::string::npos);
+			});
+		}
+
+		// Explicit kinds select the requested construct through intervening constructs.
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(
+				fun foo() = {
+					while target (true) {
+						if region (true) {
+							break while;
+							continue while;
+							break if;
+						}
+					}
+				}
+			)",
+				"test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto  block = compileSingleStatementOfFirstFun(ctx, module_id);
+				auto* loop  = dynamic_cast<const code::WhileStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(loop != nullptr);
+				auto* branch = dynamic_cast<const code::IfStmt*>(loop->body.statements.at(0).get());
+				ASSERT_TRUE(branch != nullptr);
+				auto* break_loop
+					= dynamic_cast<const code::BreakStmt*>(branch->then_body.statements.at(0).get());
+				auto* continue_loop = dynamic_cast<const code::ContinueStmt*>(
+					branch->then_body.statements.at(1).get()
+				);
+				auto* break_if
+					= dynamic_cast<const code::BreakStmt*>(branch->then_body.statements.at(2).get());
+				ASSERT_TRUE(break_loop != nullptr);
+				ASSERT_TRUE(continue_loop != nullptr);
+				ASSERT_TRUE(break_if != nullptr);
+				auto* break_loop_target
+					= std::get_if<code::KindTarget>(&break_loop->target_selector);
+				auto* continue_loop_target
+					= std::get_if<code::KindTarget>(&continue_loop->target_selector);
+				auto* break_if_target = std::get_if<code::KindTarget>(&break_if->target_selector);
+				ASSERT_TRUE(break_loop_target != nullptr);
+				ASSERT_TRUE(continue_loop_target != nullptr);
+				ASSERT_TRUE(break_if_target != nullptr);
+				ASSERT_EQUAL(code::ControlFlowKind::While, break_loop_target->kind);
+				ASSERT_EQUAL(code::ControlFlowKind::While, continue_loop_target->kind);
+				ASSERT_EQUAL(code::ControlFlowKind::If, break_if_target->kind);
+				auto  cloned = block.clone();
+				auto* cloned_loop
+					= dynamic_cast<const code::WhileStmt*>(cloned->statements.at(0).get());
+				ASSERT_TRUE(cloned_loop != nullptr);
+				auto* cloned_branch
+					= dynamic_cast<const code::IfStmt*>(cloned_loop->body.statements.at(0).get());
+				ASSERT_TRUE(cloned_branch != nullptr);
+				ASSERT_HAS_VALUE(branch->control_flow_id);
+				ASSERT_HAS_VALUE(cloned_branch->control_flow_id);
+				ASSERT_EQUAL(
+					branch->control_flow_id.value(), cloned_branch->control_flow_id.value()
+				);
+				std::stringstream printed;
+				cloned->statements.at(0)->debugPrint(printed);
+				ASSERT_TRUE(printed.str().find("break while;") != std::string::npos);
+				ASSERT_TRUE(printed.str().find("continue while;") != std::string::npos);
+				ASSERT_TRUE(printed.str().find("break if;") != std::string::npos);
+			});
+		}
+		// An unnamed block can be selected by its kind.
+		{
+			auto module_id = frontend::createModuleTreeFromContents(
+				R"(fun foo() = { block { break block; } })", "test_pkg"
+			);
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto  block  = compileSingleStatementOfFirstFun(ctx, module_id);
+				auto* region = dynamic_cast<const code::BlockStmt*>(block.statements.at(0).get());
+				ASSERT_TRUE(region != nullptr);
+				auto* break_stmt
+					= dynamic_cast<const code::BreakStmt*>(region->body.statements.at(0).get());
+				ASSERT_TRUE(break_stmt != nullptr);
+				auto* break_target = std::get_if<code::KindTarget>(&break_stmt->target_selector);
+				ASSERT_TRUE(break_target != nullptr);
+				ASSERT_EQUAL(code::ControlFlowKind::Block, break_target->kind);
+				auto  cloned = block.clone();
+				auto* cloned_region
+					= dynamic_cast<const code::BlockStmt*>(cloned->statements.at(0).get());
+				ASSERT_TRUE(cloned_region != nullptr);
+				ASSERT_EQUAL(region->control_flow_kind, cloned_region->control_flow_kind);
+				std::stringstream printed;
+				cloned->statements.at(0)->debugPrint(printed);
+				ASSERT_TRUE(printed.str().find("break block;") != std::string::npos);
 			});
 		}
 	}
@@ -325,7 +492,7 @@ private:
 				"test_pkg"
 			);
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto int_type = tsh::SymbolType<>::withDefaultsMut(
+				auto int_type = tsh::ValueType<>::withDefaultsMut(
 					tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed)
 				);
 				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 0, int_type);
