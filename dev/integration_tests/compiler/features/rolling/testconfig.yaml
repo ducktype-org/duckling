@@ -30,5 +30,6 @@ SubDirs:
   - packages
   - custom_operators
   - generated_comparisons
+  - bracket_operators
   - standard_library
   - conditional_compilation
