@@ -30,3 +30,10 @@ Tests:
     Cases:
       dvm: {}
       llvm: {}
+
+  # The only operator with this name is a template.
+  operator_template:
+    expected_error: "Feature not implemented(.|\\n)*Operator call on a template: \\+-"
+    Cases:
+      dvm: {}
+      llvm: {}

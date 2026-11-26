@@ -24,10 +24,13 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/maps.hpp>
+#include <base/collections/optional.hpp>
 
+#include <diagnostic/placeholder.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -176,6 +179,45 @@ namespace {
 			if (not isFunctionLike(kind(sym))) return false;
 			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
 		});
+	}
+
+	/**
+	 * @brief Returns the first template among the looked-up symbols, if there is one.
+	 * @param syms The looked-up symbols, before they are filtered by operatoriness
+	 */
+	base::Optional<SymID> findOperatorTemplate(const std::vector<SymID>& syms) {
+		const auto it = std::ranges::find_if(syms, [](const SymID sym) {
+			return kind(sym) == SymbolKind::Template;
+		});
+		if (it == syms.end()) return {};
+		return *it;
+	}
+
+	/**
+	 * @brief Fails the query with a not-yet-implemented error when the operator name only matches
+	 * a template.
+	 * @note Templates are never operator candidates: an operator call cannot pass template
+	 * arguments and they are not deduced. Nothing is reported while another candidate is left.
+	 * @param ctx The context of the query
+	 * @param operator_template The template found by the lookup, if any
+	 * @param candidates The candidates left after filtering by operatoriness
+	 */
+	void failIfOnlyOperatorTemplate(
+		query::Context&              ctx,
+		const base::Optional<SymID>& operator_template,
+		const std::vector<SymID>&    candidates
+	) {
+		if (not candidates.empty()) return;
+		if_opt_some(operator_template, template_sym) {
+			base::Optional<dia::StablePosition> position;
+			if_opt_some(stmt(ctx, template_sym), template_stmt) {
+				position = template_stmt->getStablePosition();
+			}
+			ctx.log<dia::NotYetImplementedCodeError>(
+				base::strConcat("Operator call on a template: ", name(template_sym)), position
+			);
+			query::throwFailed();
+		}
 	}
 }
 
@@ -329,6 +371,7 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
+		auto operator_template = findOperatorTemplate(all_candidates);
 		filterFunctionsByOperatoriness(
 			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 		);
@@ -341,6 +384,8 @@ namespace compiler::helios::code {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			if (not operator_template.has_value())
+				operator_template = findOperatorTemplate(method_candidates);
 			filterFunctionsByOperatoriness(
 				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 			);
@@ -349,6 +394,8 @@ namespace compiler::helios::code {
 				if (not std::ranges::contains(all_candidates, method_candidate))
 					all_candidates.push_back(method_candidate);
 		}
+
+		failIfOnlyOperatorTemplate(ctx, operator_template, all_candidates);
 
 		return processBinaryOperatorCall(
 				   ctx, all_candidates, method_candidates, std::move(lhs), std::move(rhs), op_origin
@@ -402,6 +449,7 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
+		auto operator_template = findOperatorTemplate(all_candidates);
 		filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
 
 		// Step 2b. — Look for operator methods declared on the operand's own type (classes only)
@@ -410,12 +458,16 @@ namespace compiler::helios::code {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(inner_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			if (not operator_template.has_value())
+				operator_template = findOperatorTemplate(method_candidates);
 			filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
 
 			for (const auto method_candidate: method_candidates)
 				if (not std::ranges::contains(all_candidates, method_candidate))
 					all_candidates.push_back(method_candidate);
 		}
+
+		failIfOnlyOperatorTemplate(ctx, operator_template, all_candidates);
 
 		return processUnaryOperatorCall(
 				   ctx, all_candidates, method_candidates, std::move(inner), op_origin, operatoriness
