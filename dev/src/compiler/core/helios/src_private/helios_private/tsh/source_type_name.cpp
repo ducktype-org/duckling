@@ -204,7 +204,7 @@ namespace compiler::tsh {
 			if (variant.representsOptionalType())
 				return {
 					.text = "?"
-					      + renderSymbolTypeName(ctx, variant.getOptionalValueType())
+					      + renderValueTypeName(ctx, variant.getOptionalValueType())
 					            .nestedIn(TypeNamePrecedence::Prefix),
 					.precedence = TypeNamePrecedence::Prefix,
 				};
