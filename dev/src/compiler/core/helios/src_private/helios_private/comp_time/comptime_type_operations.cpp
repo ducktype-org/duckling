@@ -56,9 +56,7 @@ namespace compiler::helios::comptime_ops {
 			std::vector<tsh::ValueType<>> subtypes;
 
 			tsh::ValueType<> finalize(query::Context& ctx) {
-				return tsh::ValueType<>::withDefaultsMut(
-					ctx.query<tsh::QueryVariantType>({ subtypes })
-				);
+				return tsh::ValueType<>::direct(ctx.query<tsh::QueryVariantType>({ subtypes }));
 			}
 		};
 
@@ -66,8 +64,7 @@ namespace compiler::helios::comptime_ops {
 			std::vector<tsh::ValueType<>> subtypes;
 
 			tsh::ValueType<> finalize(query::Context& ctx) {
-				return tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryTupleType>({ subtypes }
-				));
+				return tsh::ValueType<>::direct(ctx.query<tsh::QueryTupleType>({ subtypes }));
 			}
 		};
 	}
@@ -100,8 +97,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type
-			= tsh::ValueType<>::withDefaultsMut(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr })
-		    );
+			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr }));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -112,7 +108,7 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = tsh::ValueType<>::withDefaultsMut(getOptionalType(*ctx_ptr, *type_ptr));
+		auto new_type = tsh::ValueType<>::direct(getOptionalType(*ctx_ptr, *type_ptr));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -123,9 +119,8 @@ namespace compiler::helios::comptime_ops {
 		(query::Context*, "opaque_ptr", ctx_ptr),
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
-		auto new_type = tsh::ValueType<>::withDefaultsMut(
-			ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr })
-		);
+		auto new_type
+			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr }));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -137,8 +132,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type
-			= tsh::ValueType<>::withDefaultsMut(ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr }
-		    ));
+			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr }));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
@@ -150,7 +144,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
 	) {
 		auto new_type
-			= tsh::ValueType<>::withDefaultsMut(ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr }));
+			= tsh::ValueType<>::direct(ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr }));
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 

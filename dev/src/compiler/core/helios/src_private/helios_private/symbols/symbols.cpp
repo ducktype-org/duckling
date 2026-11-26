@@ -825,7 +825,8 @@ namespace compiler::helios {
 						return query::Failed();
 					}
 
-					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
+					const auto type
+						= ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow().getValueType();
 
 					// Get the coerced HOUT expression
 					const auto hout_qresult = getHoutOfExprWithExpectedType(

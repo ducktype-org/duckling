@@ -165,10 +165,10 @@ namespace compiler::helios {
 			};
 		}
 		case BuiltinKind::SliceFromPtrLen: {
-			auto&      decl            = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
-			const auto result_sym_type = decl.return_type;
-			auto       slice_type      = result_sym_type.getType().as<tsh::SliceAbstractType>();
-			auto       slice_fields    = ctx.query<QuerySliceTypeData>(slice_type);
+			auto&      decl              = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto result_value_type = decl.return_type;
+			auto       slice_type        = result_value_type.getType().as<tsh::SliceAbstractType>();
+			auto       slice_fields      = ctx.query<QuerySliceTypeData>(slice_type);
 
 			using Variable = defgen::GeneratedFunctionVariable;
 
@@ -177,13 +177,13 @@ namespace compiler::helios {
 				.name                  = base::StrID("__result"),
 				.generated_symbol_data = Variable{ .function_symbol = symbol,
 			                                       .variable_index  = 0,
-			                                       .type            = result_sym_type },
+			                                       .type = tsh::SymbolType::var(result_value_type) },
 			});
 
 			auto body = StmtPack{
 				// var __result: slice T = <default>;
 				s.var(
-					result_symbol, result_sym_type, s.defaultValue(result_sym_type.getType())
+					result_symbol, result_value_type, s.defaultValue(result_value_type.getType())
 				),
 				// __result.ptr = p;
 				s.assign(
@@ -285,7 +285,7 @@ namespace compiler::helios {
 		using namespace code::shorthands;
 		const Shorthand s{ ctx };
 		const auto      pointee_type
-			= tsh::ValueType<>::withDefaultsMut(inner->expression_type.getValueType().getType());
+			= tsh::ValueType<>::direct(inner->expression_type.getValueType().getType());
 		const SymID alloc_symbol
 			= bakeLanguagePrimitiveWithTypes(ctx, LanguagePrimitive::BoxAlloc, { pointee_type });
 

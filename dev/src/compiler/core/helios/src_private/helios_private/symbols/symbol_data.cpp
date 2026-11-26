@@ -86,7 +86,7 @@ namespace compiler::helios {
 		tsh::ValueType<> ReplInputWrapper::getReturnType() const {
 			variant_match(element) {
 				variant_case_novalue(Instruction) {
-					return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
+					return tsh::ValueType<>::direct(tsh::getUnitType());
 				}
 				variant_case(Expression, expr) { return expr.expr->expression_type.getValueType(); }
 			}

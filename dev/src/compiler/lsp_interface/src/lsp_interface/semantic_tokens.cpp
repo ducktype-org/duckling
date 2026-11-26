@@ -269,8 +269,8 @@ namespace lsp {
 				auto qresult
 					= ctx.query<compiler::helios::QueryTypeOfSymbol>({ symbol.valueOrPanic() });
 				if (qresult->hasFailed()) return;
-				auto symbol_type = qresult->valueOrPanic();
-				if (symbol_type.getType().getKind() == compiler::tsh::Kind::Meta)
+				auto value_type = qresult->valueOrPanic().getValueType();
+				if (value_type.getType().getKind() == compiler::tsh::Kind::Meta)
 					token_type = StandardTokenType::Type;
 			});
 			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
@@ -365,8 +365,8 @@ namespace lsp {
 			case SymbolKind::Const: {
 				auto qresult = query::entryPoint<QueryTypeOfSymbol>({ elem.symbol });
 				if (qresult->hasValue()) {
-					auto symbol_type = qresult->valueOrPanic();
-					if (symbol_type.getType().getKind() == compiler::tsh::Kind::Meta) {
+					auto value_type = qresult->valueOrPanic().getValueType();
+					if (value_type.getType().getKind() == compiler::tsh::Kind::Meta) {
 						out(position, StandardTokenType::Type);
 						return;
 					}

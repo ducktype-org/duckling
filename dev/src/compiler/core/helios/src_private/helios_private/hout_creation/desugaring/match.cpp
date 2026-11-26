@@ -14,7 +14,6 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/coercions/value_source.hpp>
-#include <helios/tsh/mutability.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
@@ -176,8 +175,6 @@ namespace compiler::helios::desugaring {
 			// @TODO: #1488 sorry Piotrek, we will have to check const-ness here someday, maybe
 			// it will be automatic by using a coercion.
 			auto source_type = alternatives[index];
-			if (match_subject.whole_type.getMutability() == tsh::Mutability::Immutable)
-				source_type = source_type.withMutability(tsh::Mutability::Immutable);
 
 			// If the subject moves ownership we keep the original ref kind of the variant
 			// alternative. If not, then the cases coerce from ref type (subject is also a
@@ -403,8 +400,7 @@ namespace compiler::helios::desugaring {
 		}
 
 		// Every case returns void, so the match itself never produces a value either.
-		if (common_type.empty())
-			common_type = tsh::ValueType<>::withDefaultsMut(tsh::getVoidType());
+		if (common_type.empty()) common_type = tsh::ValueType<>::direct(tsh::getVoidType());
 
 		// The cases that never produce a value (`void`) are coerced to the type the others
 		// agreed on. Type `void` is uninhabited, so the coercion only reconciles the types:

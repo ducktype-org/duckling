@@ -37,6 +37,8 @@ namespace compiler::tsh {
 			out += base::strConcat(", allows ", allows_semantic.toString());
 		if (not force_semantic.toString().empty())
 			out += base::strConcat(", forces ", force_semantic.toString());
+		if (place_access != PlaceAccess::Mutable)
+			out += base::strConcat(", ", base::enumToStr(place_access));
 
 		return out;
 	}

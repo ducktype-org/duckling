@@ -192,7 +192,7 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
-			const auto unit = tsh::ValueType<>::withDefaults(tsh::getUnitType());
+			const auto unit = tsh::ValueType<>::direct(tsh::getUnitType());
 			if (!returnTypeMatches(unit, function.getResultType()))
 				failReturnType(stmt.getPosition(), "()");
 

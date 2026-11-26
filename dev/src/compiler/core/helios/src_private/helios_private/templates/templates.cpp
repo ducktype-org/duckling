@@ -61,11 +61,7 @@ namespace compiler::helios::templates {
 			auto type_ctv        = getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr());
 			if (type_ctv.hasFailed()) return query::Failed();
 
-			// Template parameters are baked to constants so the type of the parameter is always
-			// immutable.
-			auto type = type_ctv.valueOrPanic().get<tsh::ValueType<>>().value().withMutability(
-				tsh::Mutability::Immutable
-			);
+			auto type = type_ctv.valueOrPanic().get<tsh::ValueType<>>().value();
 
 			if (param_unlocked->getValue().has_value()) {
 				ctx.log<dia::NotYetImplementedCodeError>(
@@ -115,8 +111,7 @@ namespace compiler::helios::templates {
 				i++;
 
 				CORE_ASSERT(
-					ctv.getTypeOfStoredValue(ctx).withMutability(tsh::Mutability::Immutable)
-						== param.type,
+					ctv.getTypeOfStoredValue(ctx) == param.type,
 					"Template argument type does not match template parameter type: ",
 					ctv.getTypeOfStoredValue(ctx).toString(),
 					" vs ",

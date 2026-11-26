@@ -45,7 +45,6 @@ namespace compiler::helios::code {
 		if (from == to) return value;  // trivial cast, always valid
 
 		using tsh::Kind;
-		using tsh::Mutability;
 		using tsh::ReferenceKind;
 
 		auto cast_expr = [&](Box<Expr> val) {

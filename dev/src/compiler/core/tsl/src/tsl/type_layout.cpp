@@ -378,7 +378,7 @@ namespace compiler::tsl {
 			  ctx.query<QueryValueTypeLayout>(static_array_type.getElementType())
 				  ->valueOrThrow()
 				  .getAlignment(),
-			  tsh::ValueType<>::withDefaultsMut(static_array_type),
+			  tsh::ValueType<>::direct(static_array_type),
 			  ctx
 		  ),
 		  element_layout(
@@ -433,7 +433,7 @@ namespace compiler::tsl {
 	):
 		  TypeLayoutABC(
 			  roundUpToDefaultAlignment(bytes2bits(helper.offsets[1]) + helper.max_component_size),
-			  tsh::ValueType<>::withDefaultsMut(helper.variant_type),
+			  tsh::ValueType<>::direct(helper.variant_type),
 			  ctx
 		  ),
 		  tag_offset{ 0 },  // 0 bytes
@@ -579,10 +579,7 @@ namespace compiler::tsl {
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(
-			  helper.total_size,
-			  helper.max_alignment,
-			  tsh::ValueType<>::withDefaultsMut(helper.type),
-			  ctx
+			  helper.total_size, helper.max_alignment, tsh::ValueType<>::direct(helper.type), ctx
 		  ),
 		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
 		  layout_idx_to_sym_id(std::move(helper).layout_idx_to_sym_id) {
@@ -628,7 +625,7 @@ namespace compiler::tsl {
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
 			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
 			const tsh::ValueType<>      field_type
-				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
+				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow().getValueType();
 			const auto field_layout
 				= CRef<TypeLayout>(&ctx.query<QueryValueTypeLayout>(field_type)->valueOrThrow());
 			if (recursive)
@@ -649,21 +646,21 @@ namespace compiler::tsl {
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::direct(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::direct(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(pointer_type), ctx),
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::direct(pointer_type), ctx),
 		  pointee_type(pointer_type.getPointee()),
 		  pointer_kind(PointerKind::CPointer) {
 		auto& pointee_cabi_type
@@ -676,7 +673,7 @@ namespace compiler::tsl {
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::ValueType<> value_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, value_type, ctx),
-		  pointee_type(tsh::ValueType<>::withDefaultsMut(value_type.getType())),
+		  pointee_type(tsh::ValueType<>::direct(value_type.getType())),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			value_type.getRefKind() != tsh::ReferenceKind::Direct,
@@ -693,7 +690,7 @@ namespace compiler::tsl {
 	FunctionalTypeLayout::FunctionalTypeLayout(
 		const tsh::FunctionAbstractType function_type, query::Context& ctx
 	):
-		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(function_type), ctx) {
+		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::direct(function_type), ctx) {
 		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
 			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(

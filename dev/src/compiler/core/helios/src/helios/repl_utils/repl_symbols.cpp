@@ -115,7 +115,7 @@ namespace compiler::repl {
 		std::string queryTypeDetails(query::Context& ctx, helios::SymID symbol) {
 			auto type = ctx.query<helios::QueryTypeOfSymbol>(symbol);
 			if (type->hasFailed()) return {};
-			return type->valueOrPanic().toString();
+			return type->valueOrPanic().getValueType().toString();
 		}
 
 		/**

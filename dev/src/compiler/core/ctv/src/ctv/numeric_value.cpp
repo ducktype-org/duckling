@@ -42,15 +42,15 @@ namespace compiler::numeric_value {
 				constexpr bool IS_SIGNED   = std::is_signed_v<T>;
 
 				if constexpr (IS_INTEGRAL && IS_SIGNED) {
-					return ValueType<>::withDefaultsMut(getIntegralType(
+					return ValueType<>::direct(getIntegralType(
 						ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Signed
 					));
 				} else if constexpr (IS_INTEGRAL && !IS_SIGNED) {
-					return ValueType<>::withDefaultsMut(getIntegralType(
+					return ValueType<>::direct(getIntegralType(
 						ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned
 					));
 				} else {  // Floating point.
-					return ValueType<>::withDefaultsMut(getFloatType(ctx, sizeof(T) * 8));
+					return ValueType<>::direct(getFloatType(ctx, sizeof(T) * 8));
 				}
 			},
 			value

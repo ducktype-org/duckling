@@ -96,14 +96,13 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a reference-like
 				// alternative is the stored reference itself.
-				const auto payload_type
-					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
+				const auto payload_type = alternatives[i].toRef();
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name                  = base::StrID(base::strConcat("__alternative_", i)),
 					.generated_symbol_data = Variable{ .function_symbol = copy_sym,
 				                                       .variable_index  = i,
-				                                       .type            = payload_type },
+				                                       .type = tsh::SymbolType::var(payload_type) },
 				});
 
 				auto copy_through = [&](const tsh::ValueType<>& value_type) -> Box<code::Expr> {
@@ -171,16 +170,17 @@ namespace compiler::helios::defgen {
 
 			const auto i64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_type = tsh::ValueType<>::withDefaultsMut(i64_abs_type);
+			const auto i64_type = tsh::ValueType<>::direct(i64_abs_type);
 
 			// The elements of the aggregate differ only in the index they copy, so the whole array
 			// is built by a single value that reads the index off a variable, advanced once per
 			// element by the per-element statements.
 			// var __i: i64 = 0;
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				   .name = base::StrID("__i"),
-				   .generated_symbol_data
-                = Variable{ .function_symbol = copy_sym, .variable_index = 0, .type = i64_type },
+				   .name                  = base::StrID("__i"),
+				   .generated_symbol_data = Variable{ .function_symbol = copy_sym,
+			                                          .variable_index  = 0,
+			                                          .type = tsh::SymbolType::var(i64_type) },
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
 			                    .expect("i64 creation failed");

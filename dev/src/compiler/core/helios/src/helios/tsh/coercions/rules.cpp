@@ -117,8 +117,7 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief The location keeps a reference kind.
 		 *
-		 * Nothing converts behind a reference. Only mutability may differ, and only in the
-		 * direction that promises less about the value.
+		 * Nothing converts behind a reference.
 		 */
 		ValueTypeCoercion keepReference(
 			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
@@ -130,17 +129,9 @@ namespace compiler::tsh::coercions {
 			if (source.getType() != target.getType())
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 
-			// @TODO: #1488 Take `points_to_source` into consideration and enable this check when
-			// the compiler will be const-safe everywhere.
-			// if (source.getMutability() == Mutability::Immutable
-			//     && target.getMutability() == Mutability::Mutable)
-			// 	return refused(source, target, coercion_error::MutabilityMismatch{});
-
 			// A `box` is copied or moved, a `ref` is only rebound.
 			CoercionNode node = startNode(source, target);
 			handOver(ctx, node);
-			if (source.getMutability() != target.getMutability())
-				node.append({ .kind = coercion_step::MutabilityChange{}, .result = target });
 			return accepted(std::move(node));
 		}
 
@@ -330,11 +321,9 @@ namespace compiler::tsh::coercions {
 				// A more complex coercion like `(ref type, ())`. We coerce it into a tuple of types
 				// first and then lift it. If this fails the error names the components that can't
 				// be coerced to a type.
-				const ValueType<> tuple_of_types{
-					ctx.query<QueryTupleType>({ std::vector(components.size(), target) }),
-					ReferenceKind::Direct,
-					Mutability::Mutable,
-				};
+				const auto tuple_of_types = ValueType<>::direct(
+					ctx.query<QueryTupleType>({ std::vector(components.size(), target) })
+				);
 				const base::CRef<ValueTypeCoercion> into_types
 					= planPart(ctx, source, tuple_of_types);
 

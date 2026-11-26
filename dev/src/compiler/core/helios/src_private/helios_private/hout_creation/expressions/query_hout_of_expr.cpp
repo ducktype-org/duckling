@@ -613,7 +613,7 @@ namespace compiler::helios::code {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					const auto meta_type = tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
+					const auto meta_type = tsh::ValueType<>::direct(tsh::getMetaType());
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
@@ -663,8 +663,8 @@ namespace compiler::helios::code {
 					kind            = tsh::FunctionKind::Raw;
 				}
 
-				const ElementOrigin origin = pstOrigin(arrow);
-				const auto meta_type       = tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
+				const ElementOrigin origin    = pstOrigin(arrow);
+				const auto          meta_type = tsh::ValueType<>::direct(tsh::getMetaType());
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
@@ -845,7 +845,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				const auto bool_type     = tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
+				const auto bool_type     = tsh::ValueType<>::direct(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
                 );
@@ -867,16 +867,14 @@ namespace compiler::helios::code {
 				const auto false_type = if_false->expression_type.getValueType();
 				const bool true_void  = true_type.getType().getKind() == tsh::Kind::Void;
 				const bool false_void = false_type.getType().getKind() == tsh::Kind::Void;
-				if (!true_void and !false_void
-				    and true_type.withMutability(tsh::Mutability::Mutable)
-				            != false_type.withMutability(tsh::Mutability::Mutable)) {
+				if (!true_void and !false_void and true_type != false_type) {
 					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
 							"Both branches of an `if ... then ... else ...` expression have to be "
 							"of the same type, but the `then` branch is `",
-							true_type.withMutability(tsh::Mutability::Mutable).toString(),
+							true_type.toString(),
 							"` and the `else` branch is `",
-							false_type.withMutability(tsh::Mutability::Mutable).toString(),
+							false_type.toString(),
 							"`."
 						),
 						stmt->getStablePosition(),
@@ -959,8 +957,8 @@ namespace compiler::helios::code {
 						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
 					);
 
-				auto location_mutability = location_type.getMutability();
-				if (location_mutability == tsh::Mutability::Immutable) {
+				if (location_expr->expression_type.getValueCategory().getPlaceAccess()
+				    == tsh::PlaceAccess::Immutable) {
 					ctx.log<dia::PlaceholderError>(
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
 					);
@@ -1008,11 +1006,11 @@ namespace compiler::helios::code {
 				// Some type had to be chosen. `void` would perhaps make more sense,
 				// but it seemed to break some assumptions of the compiler and cause panics.
 				// @TODO: #3707 When fixed, think about making this `void`.
-				auto elem_type_of_empty_array
-					= tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
+				auto elem_type_of_empty_array = tsh::ValueType<>::direct(tsh::getUnitType());
 
 				auto type = ctx.query<tsh::QueryStaticArrayType>(
-					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }
+					{ .element_type = elem_type.copyValueOr(elem_type_of_empty_array),
+				      .size         = elems.size() }
 				);
 				node = makeBox<CreateAggregateExpr>(ctx, pstOrigin(stmt), type, std::move(elems));
 			}

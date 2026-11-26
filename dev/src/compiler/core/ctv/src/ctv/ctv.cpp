@@ -142,26 +142,20 @@ namespace compiler::ctv {
 
 	tsh::ValueType<> CompileTimeValue::getTypeOfStoredValue(query::Context& ctx) const {
 		variant_match(value) {
-			variant_case_novalue(bool) {
-				return tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
-			}
+			variant_case_novalue(bool) { return tsh::ValueType<>::direct(tsh::getBoolType()); }
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
-			variant_case_novalue(char) {
-				return tsh::ValueType<>::withDefaultsMut(tsh::getCharType());
-			}
+			variant_case_novalue(char) { return tsh::ValueType<>::direct(tsh::getCharType()); }
 			variant_case_novalue(CharSliceValue) {
-				return tsh::ValueType<>::withDefaults(tsh::getCharSliceType(ctx));
+				return tsh::ValueType<>::direct(tsh::getCharSliceType(ctx));
 			}
 			variant_case_novalue(StringClassValue) {
 				CORE_ASSERT(
 					tsh::isStringTypePresent(ctx),
 					"A String CTV cannot exist without the String type."
 				);
-				return tsh::ValueType<>::withDefaults(tsh::getStringType(ctx));
+				return tsh::ValueType<>::direct(tsh::getStringType(ctx));
 			}
-			variant_case_novalue(UnitCTV) {
-				return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
-			}
+			variant_case_novalue(UnitCTV) { return tsh::ValueType<>::direct(tsh::getUnitType()); }
 			variant_case(TypeTuple, tuple) {
 				std::vector<tsh::ValueType<>> component_types;
 				component_types.reserve(tuple.getElements().size());
@@ -170,13 +164,13 @@ namespace compiler::ctv {
 						TypeTuple::elementToCtv(element).getTypeOfStoredValue(ctx)
 					);
 
-				return tsh::ValueType<>::withDefaultsMut(
+				return tsh::ValueType<>::direct(
 					ctx.query<tsh::QueryTupleType>({ std::move(component_types) })
 				);
 			}
 
 			variant_case(tsh::ValueType<>, val) {
-				return tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
+				return tsh::ValueType<>::direct(tsh::getMetaType());
 			}
 			variant_case(VMValue, vm_value) { return vm_value.type; }
 		}

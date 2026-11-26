@@ -474,7 +474,7 @@ namespace compiler::helios::code {
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {
 		static auto provide(Context& ctx, QKey) -> PResult {
 			// Preamble
-			const auto bool_t = tsh::ValueType<>::withDefaults(tsh::getBoolType());
+			const auto bool_t = tsh::ValueType<>::direct(tsh::getBoolType());
 			using enum HOUTFunctionDeclaration::Operatoriness;
 			using enum BuiltinUnary;
 			using enum BuiltinBinary;
@@ -515,7 +515,7 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
 
 			/// Meta constructions ///
-			const auto meta_t = tsh::ValueType<>::withDefaults(tsh::getMetaType());
+			const auto meta_t = tsh::ValueType<>::direct(tsh::getMetaType());
 
 			// Immutable view constructors.
 			builtin_op(keywordToStr(Keyword::Ref), { meta_t }, meta_t, Ref, Prefix);
@@ -551,10 +551,10 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("!="), { bool_t, bool_t }, bool_t, IntegerNeq, Infix);
 
 			/// Character arithmetic ///
-			const auto u8_t = tsh::ValueType<>::withDefaults(
+			const auto u8_t = tsh::ValueType<>::direct(
 				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
 			);
-			const auto char_t = tsh::ValueType<>::withDefaults(tsh::getCharType());
+			const auto char_t = tsh::ValueType<>::direct(tsh::getCharType());
 			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt, Infix);
 			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq, Infix);
 			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt, Infix);

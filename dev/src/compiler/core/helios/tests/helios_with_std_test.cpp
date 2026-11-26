@@ -24,7 +24,6 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <helios/tsh/mutability.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
@@ -103,7 +102,6 @@ protected:
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
-	using enum compiler::tsh::Mutability;
 
 	/**
 	 * WithContextCompute helper wrapper to avoid boilerplate.
@@ -131,11 +129,7 @@ private:
 	 * Shorthand to create a mutable ValueType from an abstract type.
 	 */
 	static compiler::tsh::ValueType<> vt(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::ValueType<>::withDefaultsMut(abstract_type);
-	}
-
-	static compiler::tsh::ValueType<> vtConst(const compiler::tsh::AbstractType abstract_type) {
-		return vt(abstract_type).withMutability(compiler::tsh::Mutability::Immutable);
+		return compiler::tsh::ValueType<>::direct(abstract_type);
 	}
 
 	auto getSliceTypeNoContext(compiler::tsh::ValueType<> element_type) {
@@ -194,7 +188,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return compiler::tsh::ValueType<>::withDefaultsMut(
+				return compiler::tsh::ValueType<>::direct(
 					ctx.query<compiler::tsh::QueryClassType>(sym_id)
 				);
 			};
@@ -1068,7 +1062,6 @@ private:
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(trivial_type, param_type.getType());
 				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
 
@@ -1258,7 +1251,6 @@ private:
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(variant_type, param_type.getType());
 				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
 
@@ -1290,11 +1282,7 @@ private:
 					// The subject is borrowed, so the constraint is the type the payload is
 					// bound with: a mutable reference to the alternative.
 					ASSERT_TRUE(match_case.constraint_type.has_value());
-					ASSERT_EQUAL(
-						alternatives.at(i).toRef().withMutability(compiler::tsh::Mutability::Mutable
-					    ),
-						match_case.constraint_type.value()
-					);
+					ASSERT_EQUAL(alternatives.at(i).toRef(), match_case.constraint_type.value());
 					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
 					ASSERT_EQUAL(
 						match_case.constraint_type.value(),
@@ -1381,7 +1369,6 @@ private:
 				ASSERT_EQUAL_PRINT(1, dtor.declaration->parameters.size());
 				const auto self_type = dtor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, self_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, self_type.getMutability());
 				ASSERT_EQUAL(type, self_type.getType());
 				ASSERT_EQUAL(
 					compiler::tsh::Kind::Unit, dtor.declaration->return_type.getType().getKind()
@@ -1494,9 +1481,7 @@ private:
 				// The payload is destroyed in place, so it is bound as a mutable reference.
 				ASSERT_TRUE(owning_case.constraint_type.has_value());
 				ASSERT_EQUAL(
-					variant_type.getUnderlyingTypes().at(0).toRef().withMutability(
-						compiler::tsh::Mutability::Mutable
-					),
+					variant_type.getUnderlyingTypes().at(0).toRef(),
 					owning_case.constraint_type.value()
 				);
 				ASSERT_TRUE(
@@ -1839,14 +1824,14 @@ private:
 			ASSERT_EQUAL(
 				compiler::tsh::Kind::CPointer, index_ptr->base->expression_type.getType().getKind()
 			);
-			ASSERT_EQUAL(i32_vt, index_ptr->expression_type.getValueType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_vt, index_ptr->expression_type.getValueType());
 		}
 
 		{
 			auto expr_ptr  = get_var_init_expr(base::StrID("deref_val"));
 			auto deref_ptr = dynamic_cast<const compiler::helios::code::DerefExpr*>(expr_ptr.get());
 			ASSERT_TRUE(deref_ptr != nullptr);
-			ASSERT_EQUAL(i32_vt, deref_ptr->expression_type.getValueType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_vt, deref_ptr->expression_type.getValueType());
 		}
 
 		{
@@ -1857,7 +1842,7 @@ private:
 			auto deref_lhs
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_ptr->lhs.get());
 			ASSERT_TRUE(deref_lhs != nullptr);
-			ASSERT_EQUAL(i32_vt, deref_lhs->expression_type.getValueType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_vt, deref_lhs->expression_type.getValueType());
 		}
 
 		{
@@ -1912,6 +1897,7 @@ private:
 			//    read back as a box), not returned as-is.
 			const auto boxed_field = ctx.query<helios::QueryTypeOfSymbol>(holder_var)
 			                             ->valueOrThrow()
+			                             .getValueType()
 			                             .getType()
 			                             .getInterface(ctx)
 			                             ->getElementsWithName(base::StrID("boxed"))

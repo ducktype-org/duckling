@@ -588,7 +588,8 @@ namespace compiler::helios::mangler {
 				if (isFunctionLike(kind(symbol_id))) {
 					// @TODO: #2255 Function qualifiers?
 
-					auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
+					auto function_type
+						= ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow().getValueType();
 					ret << ctx.query<QueryMangledType>({ function_type })->valueOrThrow().str();
 
 					const auto& fun_decl
@@ -643,9 +644,7 @@ namespace compiler::helios::mangler {
 							// (works for any kind: class, tuple, static array, ...). The infix tag
 							// distinguishes the implicit, default and copy constructors.
 							const auto mangled_type
-								= ctx.query<QueryMangledType>(
-										 tsh::ValueType<>::withDefaultsMut(ctor.type)
-								)
+								= ctx.query<QueryMangledType>(tsh::ValueType<>::direct(ctor.type))
 							          ->valueOrThrow()
 							          .str();
 
@@ -1146,9 +1145,6 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// @TODO: #3285 add backreferences
 			return base::StrID{ base::strConcat(
-				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
-				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
-				key.getMutability() == tsh::Mutability::Mutable ? "" : "N",
 				key.getRefKind() == tsh::ReferenceKind::Direct ? ""
 				: key.getRefKind() == tsh::ReferenceKind::Box  ? "X"
 															   : "R",

@@ -355,10 +355,8 @@ private:
 		});
 	}
 
-	using enum Mutability;
-
-	static ValueType<> vt(const AbstractType abstract_type, const bool is_mutable = false) {
-		return ValueType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	static ValueType<> vt(const AbstractType abstract_type) {
+		return ValueType<>::direct(abstract_type);
 	}
 
 	/**
@@ -388,8 +386,7 @@ private:
 		assertTrue(ptr_1 == ptr_2, "Pointers to the same type and mutability should be equal.");
 		const auto ptr_3 = query::entryPoint<QueryPointerType>(vt(raw_2));
 		assertTrue(ptr_1 != ptr_3, "Pointers to different types should be different.");
-		const auto ptr_4 = query::entryPoint<QueryPointerType>(vt(raw_1, true));
-		assertTrue(ptr_1 != ptr_4, "Pointers of different mutability should be different.");
+		const auto ptr_4 = query::entryPoint<QueryPointerType>(vt(raw_1));
 
 		const AbstractType        type_ptr = ptr_4;
 		const PointerAbstractType ptr_5    = type_ptr;
@@ -455,13 +452,6 @@ private:
 			arr_1 != arr_5_diff_size, "StaticArrays with different sizes should be different."
 		);
 
-		const auto arr_6_diff_mut
-			= query::entryPoint<QueryStaticArrayType>({ vt(int_16, true), 10 });
-		assertTrue(
-			arr_1 != arr_6_diff_mut,
-			"StaticArrays with element with different mutability should be different."
-		);
-
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
@@ -497,7 +487,7 @@ private:
 			);
 
 			// Test non-default-constructible static array with ref element)
-			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_type    = ValueType<>::ref(int_16);
 			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
 			assertFalse(
 				vt(arr_of_refs).isDefaultConstructible(ctx),
@@ -537,8 +527,7 @@ private:
 		const auto tup_4 = query::entryPoint<QueryTupleType>({ { vt(int_32), vt(int_32) } });
 		assertTrue(tup_1 != tup_4, "Tuples with different types should be different.");
 
-		const auto tup_5 = query::entryPoint<QueryTupleType>({ { vt(int_16, true), vt(int_32) } });
-		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
+		const auto tup_5 = query::entryPoint<QueryTupleType>({ { vt(int_16), vt(int_32) } });
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -563,7 +552,7 @@ private:
 			);
 
 			// Test non-default-constructible tuple with Ref element.
-			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref, Mutability::Immutable);
+			const auto ref_type    = ValueType<>::ref(int_16);
 			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, vt(int_32) } });
 			assertFalse(
 				vt(tup_of_refs).isDefaultConstructible(ctx),
@@ -592,7 +581,7 @@ private:
 				mixed_tuple.carriesInformation(ctx),
 				"Tuple with an int component should carry information"
 			);
-			const auto unit_ref  = ValueType(unit, ReferenceKind::Ref, Mutability::Immutable);
+			const auto unit_ref  = ValueType<>::ref(unit);
 			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, vt(unit) } });
 			assertTrue(
 				ref_tuple.carriesInformation(ctx),

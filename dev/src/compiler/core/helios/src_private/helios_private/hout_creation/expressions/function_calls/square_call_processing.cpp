@@ -54,7 +54,7 @@ namespace compiler::helios::code {
 
 			// @TODO: #1532 This i64 coercion should be handled by the `[]` operator.
 			// @TODO: #2754 Possibly adjust the type based on the actual type of the index expression.
-			auto i64_type = tsh::ValueType<>::withDefaults(
+			auto i64_type = tsh::ValueType<>::direct(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			auto index_res = subExprFromPSTWithType(ctx, index_pst, i64_type);
@@ -92,13 +92,13 @@ namespace compiler::helios::code {
 				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
 					if (literal_type_expr->value_type.getType().getKind()
 					    == tsh::Kind::TypeTemplate) {
-						return tsh::ValueType<>::withDefaults(tsh::getMetaType());
+						return tsh::ValueType<>::direct(tsh::getMetaType());
 					}
 				}
 
 				// @TODO: #2754 Possibly adjust the type based on the actual type of the index
 				// expression.
-				return tsh::ValueType<>::withDefaults(
+				return tsh::ValueType<>::direct(
 					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 				);
 			}();

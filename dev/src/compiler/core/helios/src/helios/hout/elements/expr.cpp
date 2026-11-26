@@ -74,7 +74,7 @@ namespace compiler::helios::code {
 	LiteralUnitExpr::LiteralUnitExpr(query::Context&, ElementOrigin origin):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getUnitType()),
+				  tsh::ValueType<>::direct(tsh::getUnitType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -118,7 +118,7 @@ namespace compiler::helios::code {
 		  Expr(
 
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getBoolType()),
+				  tsh::ValueType<>::direct(tsh::getBoolType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -140,7 +140,7 @@ namespace compiler::helios::code {
 	LiteralCharExpr::LiteralCharExpr(query::Context&, const ElementOrigin& origin, char value):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getCharType()),
+				  tsh::ValueType<>::direct(tsh::getCharType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -160,7 +160,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getCharSliceType(ctx)),
+				  tsh::ValueType<>::direct(tsh::getCharSliceType(ctx)),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
@@ -187,12 +187,12 @@ namespace compiler::helios::code {
 		  Expr(
 
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()),
+				  tsh::ValueType<>::direct(tsh::getMetaType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
 		  ),
-		  value_type(tsh::ValueType<>::withDefaultsMut(type)) {}
+		  value_type(tsh::ValueType<>::direct(type)) {}
 
 	LiteralTypeExpr::LiteralTypeExpr(
 		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::ValueType<> value_type
@@ -208,11 +208,16 @@ namespace compiler::helios::code {
 
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ElementOrigin origin, SymID symbol):
 		  Expr(
-
-			  tsh::ExpressionType<>(
-				  ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(ctx, symbol))
-			  ),
+			  [&] {
+				  // The place of a symbol is writable when the declaration says.
+				  const tsh::SymbolType& symbol_type
+					  = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+				  return tsh::ExpressionType<>(
+					  symbol_type.getValueType(),
+					  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(ctx, symbol))
+						  .withPlaceAccess(symbol_type.getPlaceAccess())
+				  );
+			  }(),
 			  origin
 		  ),
 		  symbol(symbol) {}
@@ -253,7 +258,9 @@ namespace compiler::helios::code {
 			if (inner_type.getValueCategory().getCategory() != tsh::PrimaryCategory::Temporary)
 				return inner_type;
 
-			return { inner_type.getValueType(), tsh::ValueCategory(tsh::PrimaryCategory::Local) };
+			return { inner_type.getValueType(),
+				     tsh::ValueCategory(tsh::PrimaryCategory::Local)
+				         .withPlaceAccess(inner_type.getValueCategory().getPlaceAccess()) };
 		}
 	}
 
@@ -406,7 +413,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  // @TODO: #2171 Select type of expression based on result type of the operation.
-				  tsh::ValueType<>::withDefaultsMut(builtinBinaryOperationToReturnType(
+				  tsh::ValueType<>::direct(builtinBinaryOperationToReturnType(
 					  ctx, operation, lhs->expression_type.getType(), rhs->expression_type.getType()
 				  )),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
@@ -572,7 +579,7 @@ namespace compiler::helios::code {
 	TupleExpr::TupleExpr(query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> elements):
 		  Expr(
 			  tsh::ExpressionType{
-				  tsh::ValueType<>::withDefaultsMut(
+				  tsh::ValueType<>::direct(
 					  ctx.query<tsh::QueryTupleType>({ extractTypesFromExprs(elements) })
 				  ),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
@@ -620,7 +627,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType{
-				  tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()),
+				  tsh::ValueType<>::direct(tsh::getMetaType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  },
 			  origin
@@ -663,7 +670,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType{
-				  tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()),
+				  tsh::ValueType<>::direct(tsh::getMetaType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  },
 			  origin
@@ -710,7 +717,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType{
-				  tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()),
+				  tsh::ValueType<>::direct(tsh::getMetaType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  },
 			  origin
@@ -922,11 +929,10 @@ namespace compiler::helios::code {
 		query::Context& ctx, ElementOrigin origin, BuiltinUnary operation, Box<Expr> expr
 	):
 		  Expr(
-			  tsh::ExpressionType<>{
-				  tsh::ValueType<>::withDefaultsMut(builtinUnaryOperationToReturnType(
-					  ctx, operation, expr->expression_type.getType()
-				  )),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary) },
+			  tsh::ExpressionType<>{ tsh::ValueType<>::direct(builtinUnaryOperationToReturnType(
+										 ctx, operation, expr->expression_type.getType()
+									 )),
+	                                 tsh::ValueCategory(tsh::PrimaryCategory::Temporary) },
 			  origin
 		  ),
 		  operation(operation),
@@ -1059,12 +1065,20 @@ namespace compiler::helios::code {
 		query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field
 	):
 		  Expr(
-			  tsh::ExpressionType(
-				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
-					  tsh::ValueSemanticsOptions::MOVE
-				  ))
-			  ),
+			  [&] {
+				  const tsh::SymbolType& field_type
+					  = ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow();
+				  const tsh::ValueCategory& base_category
+					  = base->expression_type.getValueCategory();
+				  // A field may be written to only if both the object and the field may be written to.
+				  return tsh::ExpressionType(
+					  field_type.getValueType(),
+					  base_category.withDisabled(tsh::ValueSemanticsOptions::MOVE)
+						  .withPlaceAccess(tsh::combinePlaceAccess(
+							  base_category.getPlaceAccess(), field_type.getPlaceAccess()
+						  ))
+				  );
+			  }(),
 			  origin
 		  ),
 		  base(std::move(base)),
@@ -1115,13 +1129,19 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  tsh::ValueCategory(base->expression_type.getValueCategory().withDisabled(
-					  tsh::ValueSemanticsOptions::MOVE
-				  ))
+				  [&] {
+					  // An element of a array is a part of the array, so it is as writable as the array.
+					  const auto category = base->expression_type.getValueCategory().withDisabled(
+						  tsh::ValueSemanticsOptions::MOVE
+					  );
+					  if (base->expression_type.getType().getKind() == tsh::Kind::StaticArray)
+						  return category;
+					  // @TODO: #2104 The element of a pointer is writable is the pointer allows is.
+		              // But it's not implemented yet.
+					  return category.withPlaceAccess(tsh::PlaceAccess::Mutable);
+				  }()
 			  ),
 			  origin
-
-
 		  ),
 		  base(std::move(base)),
 		  index(std::move(index)) {}
@@ -1181,7 +1201,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getBoolType()),
+				  tsh::ValueType<>::direct(tsh::getBoolType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin
@@ -1329,7 +1349,7 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  // The whole ValueType of the operand becomes the pointee, so its reference kind
 	              // survives: `ptrof` on a `box T` place gives `ptr box T`.
-				  tsh::ValueType<>::withDefaultsMut(
+				  tsh::ValueType<>::direct(
 					  ctx.query<tsh::QueryPointerType>({ inner->expression_type.getValueType() })
 				  ),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
@@ -1393,6 +1413,15 @@ namespace compiler::helios::code {
 				  inner->expression_type.getValueType().getPointeeValueType(),
 				  // Dereferencing creates a non-owned lvalue.
 				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
+					  .withPlaceAccess(
+						  // A box owns its content, so the content is as writable as the box.
+	                      // @TODO: #2104 Whether a pointee may be written depends on the view type.
+	                      // Which is NYI so for now we can always write to it.
+						  inner->expression_type.getValueType().getRefKind()
+								  == tsh::ReferenceKind::Box
+							  ? inner->expression_type.getValueCategory().getPlaceAccess()
+							  : tsh::PlaceAccess::Mutable
+					  )
 			  ),
 			  origin
 		  ),
@@ -1417,8 +1446,7 @@ namespace compiler::helios::code {
 	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::AbstractType type):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaults(type),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+				  tsh::ValueType<>::direct(type), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin
 		  ),
@@ -1447,8 +1475,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::ValueType<>::withDefaultsMut(type),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  tsh::ValueType<>::direct(type), tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin
 		  ),
@@ -1496,7 +1523,7 @@ namespace compiler::helios::code {
 	LiftToTypeExpr::LiftToTypeExpr(query::Context&, ElementOrigin origin, Box<Expr> value_expr):
 		  Expr(
 			  tsh::ExpressionType(
-				  tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()),
+				  tsh::ValueType<>::direct(tsh::getMetaType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin
@@ -1523,7 +1550,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType(
 				  tail.has_value() ? tail.value()->expression_type.getValueType()
-								   : tsh::ValueType<>::withDefaultsMut(tsh::getUnitType()),
+								   : tsh::ValueType<>::direct(tsh::getUnitType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin

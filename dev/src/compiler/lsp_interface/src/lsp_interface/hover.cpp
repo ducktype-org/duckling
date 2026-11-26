@@ -52,7 +52,8 @@ namespace duck_ls {
 			query::Context& ctx, SymID symbol, base::Optional<std::string> fallback
 		) {
 			auto type_result = ctx.query<QueryTypeOfSymbol>({ symbol });
-			if (type_result->hasValue()) return type_result->valueOrPanic().sourceTypeName(ctx);
+			if (type_result->hasValue())
+				return type_result->valueOrPanic().getValueType().sourceTypeName(ctx);
 			return fallback;
 		}
 

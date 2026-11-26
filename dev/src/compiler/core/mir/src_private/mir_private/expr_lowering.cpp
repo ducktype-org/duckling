@@ -540,8 +540,7 @@ namespace compiler::mir {
 			// Container sizes and indices are signed, so the counter is too.
 			const auto counter_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			auto counter
-				= function.addTmp(tsh::ValueType<>::withDefaultsMut(counter_type), expr_scope);
+			auto counter = function.addTmp(tsh::ValueType<>::direct(counter_type), expr_scope);
 
 			auto counter_constant = [&](usize constant) {
 				return MIRValue{ MIRConstant{
@@ -856,7 +855,7 @@ namespace compiler::mir {
 
 
 				if (projects_payload) {
-					const auto pointer_type = tsh::ValueType<>::withDefaultsMut(
+					const auto pointer_type = tsh::ValueType<>::direct(
 						function.getContext().query<tsh::QueryPointerType>({ alternative_type.value(
 						) })
 					);
@@ -1520,7 +1519,7 @@ namespace compiler::mir {
 
 	private:
 		static MIRValue unitTypeConstant() {
-			return MIRValue{ MIRConstant{ tsh::ValueType<>::withDefaultsMut(tsh::getUnitType()) } };
+			return MIRValue{ MIRConstant{ tsh::ValueType<>::direct(tsh::getUnitType()) } };
 		}
 
 		/**
@@ -1543,9 +1542,8 @@ namespace compiler::mir {
 			}
 			case tsh::Kind::Tuple: {
 				auto tuple_tmp = function.addTmp(value_type, expr_scope);
-				auto result    = function.addTmp(
-                    tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
-                );
+				auto result
+					= function.addTmp(tsh::ValueType<>::direct(tsh::getMetaType()), expr_scope);
 
 				CORE_ASSERT(
 					value_type.getRefKind() == tsh::ReferenceKind::Direct,
@@ -1591,9 +1589,8 @@ namespace compiler::mir {
 					element_types.push_back(unitTypeConstant());
 					break;
 				case tsh::Kind::Tuple: {
-					auto nested_result = function.addTmp(
-						tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
-					);
+					auto nested_result
+						= function.addTmp(tsh::ValueType<>::direct(tsh::getMetaType()), expr_scope);
 					element_types.emplace_back(nested_result);
 					nested_tuples.emplace_back(field_place, nested_result);
 					break;
