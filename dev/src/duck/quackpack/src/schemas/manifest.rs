@@ -39,8 +39,6 @@ pub struct Manifest {
     pub venv: Option<VenvConfig>,
     /// Lints configuration.
     pub lints: Option<Lints>,
-    /// `build-options:` root field.
-    pub build_options: Option<BuildOptions>,
 }
 
 impl Manifest {
@@ -52,7 +50,6 @@ impl Manifest {
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
             && self.lints.is_none()
-            && self.build_options.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -69,9 +66,6 @@ impl Manifest {
         }
         if self.venv.is_some() {
             result.push("venv");
-        }
-        if self.build_options.is_some() {
-            result.push("build-options");
         }
         result
     }
@@ -96,19 +90,13 @@ pub struct Metadata {
     /// Directories searched for [`Metadata::external_libs`] before the system ones.
     /// Paths are relative to the package's root.
     pub external_lib_paths: Option<Vec<PathBuf>>,
-    /// The old name of `external-libs`; only kept to report a helpful error.
-    // @TODO: #3999 remove this field in a future release.
-    pub links: Option<de::IgnoredAny>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-/// Schema of the `build-options:` table.
-pub struct BuildOptions {
     /// Whether the package is compiled with the standard library (`true` when omitted).
     pub use_std: Option<bool>,
     /// Whether the package can only be compiled as a dependency (`false` when omitted).
     pub always_dep: Option<bool>,
+    /// The old name of `external-libs`; only kept to report a helpful error.
+    // @TODO: #3999 remove this field in a future release.
+    pub links: Option<de::IgnoredAny>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

@@ -2085,32 +2085,12 @@ metadata:
 }
 
 #[test]
-fn build_options_empty_section_uses_defaults() {
-    let (_dir, manifest_path) = prepare_manifest(
-        r#"
-metadata:
-  name: foo
-  version: '1'
-
-build-options: {}
-"#,
-    );
-    let ctx = duck_context_for_tests();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
-    let build_options = manifest.manifest().build_options();
-    assert!(build_options.use_std);
-    assert!(!build_options.always_dep);
-}
-
-#[test]
 fn build_options_without_std() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: foo
   version: '1'
-
-build-options:
   use-std: false
 
 dependencies:
@@ -2132,8 +2112,6 @@ fn build_options_always_dep_without_dependencies() {
 metadata:
   name: foo
   version: '1'
-
-build-options:
   use-std: false
   always-dep: true
 "#,
@@ -2152,8 +2130,6 @@ fn build_options_always_dep_with_dependencies_is_an_error() {
 metadata:
   name: foo
   version: '1'
-
-build-options:
   always-dep: true
 
 dependencies:
@@ -2168,8 +2144,8 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                "failed to parse the field `build-options`",
-                "failed to parse the field `build-options.always-dep`",
+                "failed to parse the field `metadata`",
+                "failed to parse the field `metadata.always-dep`",
                 "a package with `always-dep` set to `true` cannot have dependencies",
                 "remove the `dependencies` and `dev-dependencies` of this package",
             ]
@@ -2184,8 +2160,6 @@ fn build_options_always_dep_with_dev_dependencies_is_an_error() {
 metadata:
   name: foo
   version: '1'
-
-build-options:
   always-dep: true
 
 dev-dependencies:
@@ -2200,35 +2174,10 @@ dev-dependencies:
         make_errors_message(
             &dir,
             [
-                "failed to parse the field `build-options`",
-                "failed to parse the field `build-options.always-dep`",
+                "failed to parse the field `metadata`",
+                "failed to parse the field `metadata.always-dep`",
                 "a package with `always-dep` set to `true` cannot have dependencies",
                 "remove the `dependencies` and `dev-dependencies` of this package",
-            ]
-        )
-    );
-}
-
-#[test]
-fn fail_frontmatter_with_build_options() {
-    let (dir, frontmatter_path) = prepare_frontmatter(
-        r#"
-build-options:
-  use-std: false
-"#,
-    );
-    let ctx = duck_context_for_tests();
-    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        make_errors_message_frontmatter(
-            &dir,
-            [
-                &format!(
-                    "illegal field `build-options` in the frontmatter at `{}`",
-                    frontmatter_path.display()
-                ),
-                "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
             ]
         )
     );

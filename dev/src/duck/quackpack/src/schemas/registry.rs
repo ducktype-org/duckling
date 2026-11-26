@@ -55,6 +55,17 @@ pub struct Metadata {
     /// Directories searched for [`Metadata::external_libs`], relative to the package's root.
     #[serde(default)]
     pub external_lib_paths: Vec<PathBuf>,
+    /// Whether the package is compiled with the standard library.
+    #[serde(default = "default_use_std")]
+    pub use_std: bool,
+    /// Whether the package can only be compiled as a dependency.
+    #[serde(default)]
+    pub always_dep: bool,
+}
+
+/// The value of [`Metadata::use_std`] when the registry does not send it.
+fn default_use_std() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -172,4 +183,43 @@ pub enum OptLevel {
 pub struct DependencyCondition {
     /// Required root package features.
     pub package_features: Option<Vec<String>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Metadata;
+
+    #[test]
+    fn metadata_build_options_default_when_missing() {
+        let metadata: Metadata = serde_json::from_str(
+            r#"{
+    "version": "1.0.0",
+    "authors": [],
+    "license": "",
+    "name": "foo",
+    "description": ""
+}"#,
+        )
+        .unwrap();
+        assert!(metadata.use_std);
+        assert!(!metadata.always_dep);
+    }
+
+    #[test]
+    fn metadata_build_options_are_read() {
+        let metadata: Metadata = serde_json::from_str(
+            r#"{
+    "version": "1.0.0",
+    "authors": [],
+    "license": "",
+    "name": "foo",
+    "description": "",
+    "use-std": false,
+    "always-dep": true
+}"#,
+        )
+        .unwrap();
+        assert!(!metadata.use_std);
+        assert!(metadata.always_dep);
+    }
 }

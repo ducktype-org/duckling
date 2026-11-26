@@ -22,9 +22,9 @@ use crate::core::{
     PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::schemas::manifest::{
-    BuildOptions as BuildOptionsSchema, DuckLints as DuckLintsSchema, Lints as LintsSchema,
-    Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
-    Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
+    DuckLints as DuckLintsSchema, Lints as LintsSchema, Manifest as ManifestSchema,
+    Metadata as MetadataSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+    VenvConfig as VenvConfigSchema,
 };
 use crate::util::Pluralize;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
@@ -157,15 +157,8 @@ pub(crate) fn parse(
             };
 
             let mut guard = scope.push("metadata".into());
-            let mut build_options = parse_build_options(metadata, &mut guard)
+            let build_options = parse_build_options(metadata, &dependencies, &mut guard)
                 .with_context(move || guard.make_context_string())?;
-            let guard = scope.push("build-options".into());
-            parse_build_options_section(
-                schema.build_options.as_ref(),
-                &dependencies,
-                &mut build_options,
-                guard,
-            )?;
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -274,10 +267,11 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }
 
-/// Parse a [`BuildOptions`] from the `metadata` part of the schema. The fields set by the
-/// `build-options` section keep their defaults, see [`parse_build_options_section`].
+/// Parse a [`BuildOptions`] from the `metadata` part of the schema, checking that a package
+/// with `always-dep` set has no dependencies.
 fn parse_build_options(
     input: &MetadataSchema,
+    dependencies: &Dependencies,
     scope: &mut ScopeGuard<'_>,
 ) -> QuackResult<BuildOptions> {
     if input.links.is_some() {
@@ -290,40 +284,21 @@ fn parse_build_options(
     let external_libs = parse_external_libs(input.external_libs.as_deref())
         .with_context(move || guard.make_context_string())?;
     let external_lib_paths = input.external_lib_paths.clone().unwrap_or_default();
-    Ok(BuildOptions {
-        external_libs,
-        external_lib_paths,
-        ..BuildOptions::default()
-    })
-}
-
-/// Parse the `build-options` section into `options`, checking that a package with `always-dep`
-/// set has no dependencies.
-fn parse_build_options_section(
-    input: Option<&BuildOptionsSchema>,
-    dependencies: &Dependencies,
-    options: &mut BuildOptions,
-    mut scope: ScopeGuard<'_>,
-) -> QuackResult<()> {
-    let Some(input) = input else {
-        return Ok(());
-    };
-    if let Some(use_std) = input.use_std {
-        options.use_std = use_std;
-    }
-    if let Some(always_dep) = input.always_dep {
-        options.always_dep = always_dep;
-    }
-    if options.always_dep && !dependencies.all_dependencies().is_empty() {
-        let outer_context = scope.make_context_string();
+    let defaults = BuildOptions::default();
+    let use_std = input.use_std.unwrap_or(defaults.use_std);
+    let always_dep = input.always_dep.unwrap_or(defaults.always_dep);
+    if always_dep && !dependencies.all_dependencies().is_empty() {
         let guard = scope.push("always-dep".into());
         let mut err = qp_err!("a package with `always-dep` set to `true` cannot have dependencies");
         err.add_hint("remove the `dependencies` and `dev-dependencies` of this package");
-        return Err(err)
-            .with_context(move || guard.make_context_string())
-            .context(outer_context);
+        return Err(err).with_context(move || guard.make_context_string());
     }
-    Ok(())
+    Ok(BuildOptions {
+        external_libs,
+        external_lib_paths,
+        use_std,
+        always_dep,
+    })
 }
 
 /// Parse the `metadata.external-libs` list, checking that every entry is a bare library name.

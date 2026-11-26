@@ -1,8 +1,7 @@
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
-  echo "build-options:
-    use-std: false
+  echo "  use-std: false
     always-dep: true" >> foo/quackconfig.yaml
 Tests:
   always-dep-root:
@@ -15,6 +14,6 @@ Tests:
           String: |+
             info: loaded source code of 1 package, 0 were downloaded, 1 was already present
             info: successfully synchronized venv \`foo\`
-            error: package \`foo\` cannot be compiled directly, because its \`build-options.always-dep\` is \`true\`
+            error: package \`foo\` cannot be compiled directly, because its \`metadata.always-dep\` is \`true\`
 
             note: such a package can only be compiled as a dependency of another package
