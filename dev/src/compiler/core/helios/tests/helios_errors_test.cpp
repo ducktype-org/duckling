@@ -653,6 +653,49 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				fun f() = {
+					let arr: i64[2] = [1i64, 2i64];
+					for (let e in arr) { e = 5; }
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class S { x: i64 = 0; }
+				fun f() = {
+					let s = S();
+					s.x = 1;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun f() = {
+					let arr: i64[2] = [1i64, 2i64];
+					arr[0] = 5;
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				let G: i64 = 1;
+				fun f() = { G = 2; }
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
 				fun main() -> i64 = {
 					var x: i32 = 0;
 					var y: i64 = 1;
@@ -1012,15 +1055,6 @@ private:
 				{ "Left side of assignment can't be immutable." },
 				1
 			);
-
-			// @TODO: #2104 Uncomment when operation assignment operators properly handle
-			// mutability. checkForErrorOnCompileModule( 	R"( 	fun main() -> i64 = { 		let
-			// x: i64 = 1; 		x += 123;
-			// 	}
-			// )",
-			// 	{ "Left side of assignment can't be immutable." },
-			// 	1
-			// );
 		}
 
 		// ============================ Variant errors ============================

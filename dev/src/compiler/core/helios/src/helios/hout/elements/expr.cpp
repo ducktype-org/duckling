@@ -1136,7 +1136,7 @@ namespace compiler::helios::code {
 					  );
 					  if (base->expression_type.getType().getKind() == tsh::Kind::StaticArray)
 						  return category;
-					  // @TODO #2104 The element of a pointer is writable is the pointer allows is.
+					  // @TODO: #2104 The element of a pointer is writable is the pointer allows is.
 		              // But it's not implemented yet.
 					  return category.withPlaceAccess(tsh::PlaceAccess::Mutable);
 				  }()
@@ -1348,7 +1348,7 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  // The whole ValueType of the operand becomes the pointee, so its reference kind
-				  // survives: `ptrof` on a `box T` place gives `ptr box T`.
+	              // survives: `ptrof` on a `box T` place gives `ptr box T`.
 				  tsh::ValueType<>::direct(
 					  ctx.query<tsh::QueryPointerType>({ inner->expression_type.getValueType() })
 				  ),
