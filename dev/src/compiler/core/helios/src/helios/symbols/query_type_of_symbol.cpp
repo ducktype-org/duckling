@@ -260,7 +260,8 @@ namespace compiler::helios {
 			auto& declaration = ctx.query<QueryDeclOfFun>(sym)->valueOrThrow();
 			std::vector<tsh::ValueType<>> param_types{};
 			param_types.reserve(declaration.parameters.size());
-			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
+			for (auto& param: declaration.parameters)
+				param_types.emplace_back(param.type.withMutability(tsh::Mutability::Mutable));
 
 			return tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryFunctionType>(
 				{ .parameter_types = param_types, .result_type = declaration.return_type }

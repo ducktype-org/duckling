@@ -26,6 +26,9 @@ namespace pst::expr {
 				state.logSafeError(makeBox<error::MisplacedMutError>(state.getPosition()));
 			}
 			state.tokens().skip();
+			// An alone `mut` is already reported. We don't want the "empty where non-empty" error
+			// as well.
+			if (state.ctokens().size() == 0) return nullptr;
 			return parse(state);
 		}
 

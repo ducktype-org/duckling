@@ -140,7 +140,7 @@ namespace lang_def {
 		Or,
 		Xor,
 
-		// Only a part of a view (`{ref, ptr, manyptr} mut T`) and of a `mut fun`.
+		// Only a part of a view (`{ref, ptr, manyptr, cptr, slice} mut T`) and of a `mut fun`.
 		Mut,
 
 		// General text prefix operators (Not doesn't count)
@@ -344,7 +344,7 @@ namespace lang_def {
 	KeywordFlags keywordFlags(Keyword key);
 
 	/**
-	 * @brief The operator of a writeble view (`ref mut`, `ptr mut`, `manyptr mut`, `cptr mut` and
+	 * @brief The operator of a writable view (`ref mut`, `ptr mut`, `manyptr mut`, `cptr mut` and
 	 * `slice mut`).
 	 * @return Nothing when @p view is not one of `ref`, `ptr`, `manyptr`, `cptr` and `slice`.
 	 */
