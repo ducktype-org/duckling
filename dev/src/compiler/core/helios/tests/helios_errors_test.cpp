@@ -267,7 +267,8 @@ private:
 			);
 			checkForErrorOnCompileModule(
 				R"(fun suffix +(lhs: i64, rhs: i64) -> i64 = lhs;)",
-				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				{ "Unary operator declarations must take exactly one operand.",
+			      "expected 1 operand, but 2 are declared" },
 				1
 			);
 			checkForErrorOnCompileModule(
@@ -287,7 +288,140 @@ private:
 						fun suffix +(rhs: i64) -> i64 = rhs;
 					}
 				)",
-				{ "Only unary operator declarations may use `prefix` or `suffix`." },
+				{ "Unary operator declarations must take exactly one operand.",
+			      "expected 1 operand, but 2 are declared, including `self` as the first" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					fun contains(a: i64, b: i64) -> bool = true;
+					fun main() -> i64 = {
+						let x = 1 contains 2;
+						return 0;
+					}
+				)",
+				{ "`contains` cannot be used as an infix operator because no matching declaration "
+			      "is "
+			      "marked `infix`.",
+			      "Found `contains` declared without `infix`.",
+			      "write `infix` before the name to allow `a contains b`" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun has(a: i64) -> bool = true;
+					}
+					fun main() -> i64 = {
+						let n = Number(1);
+						let x = n has 2;
+						return 0;
+					}
+				)",
+				{ "`has` cannot be used as an infix operator because no matching declaration is "
+			      "marked `infix`.",
+			      "Found `has` declared without `infix`.",
+			      "write `infix` before the name to allow `a has b`" },
+				1
+			);
+			{
+				// Inside its own class, a method is found both by the scope lookup and by the
+				// method lookup, but it must be reported only once.
+				const frontend::ModuleID module_id = frontend::createModuleTreeFromContents(R"(
+					class Bag {
+						x: i64;
+						fun contains(item: i64) -> bool = self.x == item;
+						fun check() -> bool = self contains 1;
+					}
+				)");
+				assertTrue(
+					query::entryPoint<helios::QueryModuleHOUT>(module_id)->hasFailed(),
+					"Expected HOUT query to fail for module content."
+				);
+				std::stringstream logged_messages;
+				query::Context::dumpToOneLoggerAndClear()->terminalPrint(logged_messages);
+				const std::string      logged_str = logged_messages.str();
+				const std::string_view note       = "Found `contains` declared without `infix`.";
+				usize                  note_count = 0;
+				for (usize pos = logged_str.find(note); pos != std::string::npos;
+				     pos       = logged_str.find(note, pos + note.size()))
+                    note_count++;
+				assertEqual(note_count, usize{ 1 }, "Expected exactly one note per declaration.");
+			}
+			// Operators take one or two operands. The pointer counts the `self` operand of methods.
+			constexpr std::string_view BINARY_ARITY
+				= "Binary operator declarations must take exactly two operands.";
+			checkForErrorOnCompileModule(
+				R"(fun prefix +*() -> i64 = 0;)",
+				{ "Unary operator declarations must take exactly one operand.",
+			      "expected 1 operand, but 0 are declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun infix contains(a: i64) -> bool = true;)",
+				{ BINARY_ARITY, "expected 2 operands, but 1 is declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun infix +*(a: i64, b: i64, c: i64) -> i64 = a;)",
+				{ BINARY_ARITY, "expected 2 operands, but 3 are declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun +*(a: i64, b: i64, c: i64) -> i64 = a;)",
+				{ BINARY_ARITY, "expected 2 operands, but 3 are declared" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun infix has(a: i64, b: i64) -> bool = true;
+					}
+				)",
+				{ BINARY_ARITY,
+			      "expected 2 operands, but 3 are declared, including `self` as the first" },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						fun +*(a: i64, b: i64) -> i64 = a;
+					}
+				)",
+				{ BINARY_ARITY,
+			      "expected 2 operands, but 3 are declared, including `self` as the first" },
+				1
+			);
+			// Static methods have no `self` operand.
+			checkForErrorOnCompileModule(
+				R"(
+					class Number {
+						value: i64;
+						global fun +*(a: i64, b: i64, c: i64) -> i64 = a;
+					}
+				)",
+				{ BINARY_ARITY, "expected 2 operands, but 3 are declared" },
+				1
+			);
+			// A symbolic operator without parameters and without a fixity could have been meant as
+			// either a unary or a binary operator, so the error accepts either operand count.
+			checkForErrorOnCompileModule(
+				R"(fun +*() -> i64 = 0;)",
+				{ "Operator declarations must take at least one operand.",
+			      "expected 1 or 2 operands, but 0 are declared" },
+				1
+			);
+			// An identifier operator is still an ordinary function, so it collides with a plain
+			// function of the same signature.
+			checkForErrorOnCompileModule(
+				R"(
+					fun foo(a: i64, b: i64) -> i64 = a;
+					fun infix foo(a: i64, b: i64) -> i64 = b;
+				)",
+				{ "Symbol 'foo' is already defined.", "Previous declaration here." },
 				1
 			);
 		}

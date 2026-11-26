@@ -26,6 +26,16 @@ namespace lexer {
 	bool isOperatorSymbolString(std::string_view name);
 
 	/**
+	 * @brief Checks whether `name` is an identifier (or a keyword), per the same
+	 * `name_start`/`name_continue` character classes the lexer itself uses.
+	 *
+	 * @note Names that are neither identifiers nor operator symbols exist too, e.g. bracket
+	 * operator names, so this is not the negation of `isOperatorSymbolString`.
+	 */
+	[[nodiscard]]
+	bool isIdentifierString(std::string_view name);
+
+	/**
 	 * @brief Simple wrapper for an operator.
 	 */
 	struct Operator final {
@@ -66,6 +76,12 @@ namespace lexer {
 		[[nodiscard]]
 		bool isGenBinOp() const;
 
+		/**
+		 * @brief Precedence of a general binary operator; a lower value binds tighter.
+		 *
+		 * Builtin operators have fixed values, other symbolic operators share one default, and
+		 * identifier operators (e.g. `contains`) bind the loosest of all general binary operators.
+		 */
 		[[nodiscard]]
 		i64 getGenBinOpPrecedence() const;
 

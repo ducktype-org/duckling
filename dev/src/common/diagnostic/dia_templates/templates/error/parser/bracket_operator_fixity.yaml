@@ -14,7 +14,7 @@ params:
     description: "The location."
 
 header_message:
-  - "The `()` and `[]` operators cannot use `prefix` or `suffix`."
+  - "The `()` and `[]` operators cannot use `prefix`, `suffix` or `infix`."
 
 description:
   - codeblock:

@@ -40,6 +40,46 @@ namespace compiler::helios::code {
 		}
 	};
 
+	/**
+	 * @brief An identifier was used as an infix operator (`a foo b`), but none of the functions it
+	 * names is declared `infix`.
+	 */
+	class OperatorNotDeclaredInfixError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "operator_not_declared_infix" };
+		}
+
+	public:
+		OperatorNotDeclaredInfixError(dia::StablePosition source_position, std::string op):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::TextArgument>("operator", std::move(op));
+		}
+	};
+
+	/**
+	 * @brief Attached to `OperatorNotDeclaredInfixError`: points at the name of a function that
+	 * would match, if it were declared `infix`.
+	 */
+	class OperatorDeclaredWithoutInfixNote final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "type_check",
+				     .name          = "operator_declared_without_infix" };
+		}
+
+	public:
+		OperatorDeclaredWithoutInfixNote(dia::StablePosition name_position, std::string op):
+			  MessageWithCodeFragmentAndCause(name_position) {
+			addArgument<dia::TextArgument>("operator", std::move(op));
+		}
+	};
+
 	class UndefinedUnaryOperatorError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

@@ -190,6 +190,11 @@ either in the scheme or it's implementation, they should be reflected here.
 // be complete. A compound operator is just the concatenation of its characters' tags, e.g.
 // `+*` -> "plml", `==` -> "eqeq", `<=` -> "lteq" -- no per-combination table needed.
 //
+// Only operators whose names are not identifiers use <operator-name>. Identifier operators
+// declared with `infix` (e.g. `fun infix contains(...)`) are mangled as a plain <identifier>, like
+// any function: they remain callable with ordinary call syntax, so they must collide with a
+// non-`infix` function of the same name and signature.
+//
 // <operatoriness> is required (not inferred from operand count) because e.g. a unary prefix
 // `++a` and a unary suffix `a++` have identical arity/types and would otherwise mangle identically.
 <operator-name> ::= "O" <operatoriness> <base-10-number> <op-translit-unit>*

@@ -96,7 +96,7 @@ namespace formatter {
 
 	bool isFixityMarker(const Token& t, const Token* before) {
 		return before != nullptr && isFunKeyword(*before) && !isKeyword(t)
-		    && (isStr(t, "prefix") || isStr(t, "suffix"));
+		    && (isStr(t, "prefix") || isStr(t, "suffix") || isStr(t, "infix"));
 	}
 
 	bool isContinuationKeyword(const Token& t) {

@@ -71,25 +71,35 @@ namespace pst {
 	/**
 	 * @brief Consumes a contextual operator fixity specifier when it precedes an operator name.
 	 *
-	 * `prefix` and `suffix` remain regular identifiers everywhere else, including as function
-	 * names. The bracket operators `()` and `[]` have no fixity, so a specifier before them is
-	 * reported and skipped.
+	 * `prefix` and `suffix` must be followed by a symbolic operator name. `infix` may also be
+	 * followed by an identifier, which declares an identifier operator (`fun infix contains(...)`).
+	 * The bracket operators `()` and `[]` have no fixity, so a specifier before them is reported
+	 * and skipped.
+	 *
+	 * `prefix`, `suffix` and `infix` remain regular identifiers everywhere else, including as
+	 * function names.
 	 */
 	inline OperatorFixity parseOperatorFixity(LangParserState& state) {
-		const bool bracket_operator = isBracketOperatorName(state, 1);
-		if (!state[0].isIdentifier() || !(state[1].isOperatorSymbol() || bracket_operator))
-			return OperatorFixity::None;
+		if (!state[0].isIdentifier()) return OperatorFixity::None;
 
 		const auto fixity_str = state[0].getStrValue();
-		if (fixity_str != "prefix" && fixity_str != "suffix") return OperatorFixity::None;
+		if (fixity_str != "prefix" && fixity_str != "suffix" && fixity_str != "infix")
+			return OperatorFixity::None;
 
-		if (bracket_operator) {
+		if (isBracketOperatorName(state, 1)) {
 			state.logInt(makeBox<error::BracketOperatorFixityError>(state.getPosition()));
 			state.tokens().next();
 			return OperatorFixity::None;
 		}
 
-		state.tokens().next();
-		return fixity_str == "prefix" ? OperatorFixity::Prefix : OperatorFixity::Suffix;
+		if (fixity_str == "infix" && (state[1].isOperatorSymbol() || state[1].isIdentifier())) {
+			state.tokens().next();
+			return OperatorFixity::Infix;
+		}
+		if (fixity_str != "infix" && state[1].isOperatorSymbol()) {
+			state.tokens().next();
+			return fixity_str == "prefix" ? OperatorFixity::Prefix : OperatorFixity::Suffix;
+		}
+		return OperatorFixity::None;
 	}
 }

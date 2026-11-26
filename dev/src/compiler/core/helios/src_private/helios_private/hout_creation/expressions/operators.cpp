@@ -6,11 +6,13 @@
 
 #include "operators.hpp"
 
+#include "errors.hpp"
 #include "function_calls/call_processing.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -28,6 +30,7 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -174,6 +177,40 @@ namespace {
 		base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
 			return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
 		});
+	}
+
+	/**
+	 * @brief Position of the name in the declaration of a function (e.g. `foo` in `fun foo(...)`).
+	 */
+	dia::StablePosition declaredNamePosition(query::Context& ctx, SymID symbol) {
+		const auto element = maybeSymbolPst(symbol);
+		CORE_ASSERT(element.has_value(), "An operator candidate should be declared in the source");
+		const auto stmt = element->unlock(ctx).dynamicCast<pst::Stmt>();
+		CORE_ASSERT(stmt.has_value(), "A function declaration should be a statement");
+		const auto identifier = (*stmt)->getDeclSymbolIdentifier();
+		CORE_ASSERT(identifier.has_value(), "A function declaration should have a name");
+		return identifier->unlock(ctx)->getStablePosition();
+	}
+
+	/**
+	 * @brief Logs that the identifier operator @p op is used infix, while none of the functions
+	 * named by it (@p non_infix_candidates) is declared `infix`. Each of them gets a note.
+	 */
+	void reportOperatorNotDeclaredInfix(
+		query::Context&           ctx,
+		const lexer::Operator     op,
+		const ElementOrigin&      op_origin,
+		const std::vector<SymID>& non_infix_candidates
+	) {
+		auto error = makeBox<OperatorNotDeclaredInfixError>(
+			op_origin.getStablePosition().value(), op.str()
+		);
+		for (const auto candidate: non_infix_candidates) {
+			error->addAttachedMessage(makeBox<OperatorDeclaredWithoutInfixNote>(
+				declaredNamePosition(ctx, candidate), op.str()
+			));
+		}
+		ctx.log(std::move(error));
 	}
 }
 
@@ -327,6 +364,8 @@ namespace compiler::helios::code {
 			if (name(builtin_operator_sym) == op.value)
 				all_candidates.push_back(builtin_operator_sym);
 		}
+		// All candidates before the filters below, to explain a missing `infix` modifier.
+		std::vector<SymID> non_infix_candidates = all_candidates;
 		filterFunctionsByOperatoriness(
 			ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 		);
@@ -339,6 +378,11 @@ namespace compiler::helios::code {
 			const auto method_lookup_result
 				= HInterface::ofTypeInstance(lhs_abstract_type).lookup(ctx, op.value);
 			method_candidates = method_lookup_result->valueOrThrow().leaves;
+			// A method can also be found by the scope lookup above, e.g. inside its own class.
+			// It needs deduplicating so that it doesn't appear twice in diagnostics.
+			for (const auto method_candidate: method_candidates)
+				if (not std::ranges::contains(non_infix_candidates, method_candidate))
+					non_infix_candidates.push_back(method_candidate);
 			filterFunctionsByOperatoriness(
 				ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 			);
@@ -346,6 +390,14 @@ namespace compiler::helios::code {
 			for (const auto method_candidate: method_candidates)
 				if (not std::ranges::contains(all_candidates, method_candidate))
 					all_candidates.push_back(method_candidate);
+		}
+
+		// An identifier operator (`a foo b`) only considers functions declared `infix`.
+		// If there are none, but there are functions of that name, the modifier is likely missing.
+		if (all_candidates.empty() && lexer::isIdentifierString(op.value.strView())
+		    && !non_infix_candidates.empty()) {
+			reportOperatorNotDeclaredInfix(ctx, op, op_origin, non_infix_candidates);
+			query::throwFailed();
 		}
 
 		return processBinaryOperatorCall(

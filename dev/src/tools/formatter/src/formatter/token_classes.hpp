@@ -82,7 +82,7 @@ namespace formatter {
 	bool isFunKeyword(const lexer::Token& t);
 
 	/**
-	 * Whether @p t is the `prefix`/`suffix` marker of a custom operator declaration, as in
+	 * Whether @p t is the `prefix`/`suffix`/`infix` marker of a custom operator declaration, as in
 	 * `fun prefix -*(...)`. @p before is the token before @p t, which must be `fun`/`fundecl`;
 	 * a variable named `prefix` is not a marker.
 	 */

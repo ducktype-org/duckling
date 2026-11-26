@@ -13,11 +13,34 @@
 #include "../common/elements_common.hpp"
 #include "stmt_kind_fd.hpp"
 
+#include <base/extend_cpp/stringifyable_enum.hpp>
+
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
+
+#include <cstdint>
+#include <string_view>
+
+/**
+ * @brief Operator fixity specifier written between `fun`/`fundecl` and the function name.
+ *
+ * `prefix` and `suffix` apply to unary operators with symbolic names. `infix` applies to binary
+ * operators and is required for identifier names (e.g. `fun infix contains(...)`), while being
+ * optional and redundant for symbolic names.
+ */
+MAKE_STRINGIFYABLE_ENUM(pst, uint8_t, OperatorFixity,
+	/// No fixity specifier.
+	None,
+	/// `prefix`
+	Prefix,
+	/// `suffix`
+	Suffix,
+	/// `infix`
+	Infix
+)
 
 namespace pst {
 
@@ -60,12 +83,6 @@ namespace pst {
 		None,
 		Symbol,
 		Transparent,
-	};
-
-	enum class OperatorFixity {
-		None,
-		Prefix,
-		Suffix,
 	};
 
 	enum class StmtKind : int {

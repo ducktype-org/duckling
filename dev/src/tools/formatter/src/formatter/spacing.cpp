@@ -65,7 +65,7 @@ namespace formatter {
 				// The template header binds to its parameter list: `template(T: type)`.
 				if (isKeyword(*prev) && isStr(*prev, "template")) return false;
 				// A custom operator used as the declared name: `fun +*(a, b)`,
-				// `fun prefix -*(a)`, `fundecl suffix **(a)`.
+				// `fun prefix -*(a)`, `fundecl suffix **(a)`, `fun infix -+(a, b)`.
 				// A variable named `prefix` is no marker: `prefix - (a + b)` keeps its space.
 				if (isOperator(*prev) && prev2 != nullptr
 				    && (isFunKeyword(*prev2) || isFixityMarker(*prev2, prev3)))

@@ -271,7 +271,7 @@
     "functionDeclarations": {
       "patterns": [
         {
-          "match": "\\b(fun|fundecl)\\b(?:\\s+(prefix|suffix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\`]))?(?:\\s+([_\\p{L}][\\w]*))?",
+          "match": "\\b(fun|fundecl)\\b(?:\\s+((?:prefix|suffix|infix)\\b(?=\\s*[-+*/%=<>!&|^~?:.\\\\`])|infix\\b(?=\\s+[_\\p{L}])))?(?:\\s+([_\\p{L}][\\w]*))?",
           "captures": {
             "1": {
               "name": "storage.type.function.duckling"

@@ -1,0 +1,47 @@
+# Identifier operators declared with `infix`: free functions, methods, `infix` on a symbolic
+# operator, precedence, associativity and ordinary call syntax.
+
+class Range {
+	lo: i64 = 0;
+	hi: i64 = 0;
+
+	fun infix contains(x: i64) -> bool = {
+		return self.lo <= x and x < self.hi;
+	}
+}
+
+fun infix divides(a: i64, b: i64) -> bool = {
+	return b % a == 0;
+}
+
+fun infix minus(a: i64, b: i64) -> i64 = {
+	return a - b;
+}
+
+fun infix +*(a: i64, b: i64) -> i64 = {
+	return a * b + a;
+}
+
+fun toInt(b: bool) -> i64 = {
+	if (b) {
+		return 1;
+	}
+	return 0;
+}
+
+fun main() -> i64 = {
+	let r = Range(1, 10);
+	builtin_output_i64(toInt(r contains 5)); # 1
+	builtin_output_i64(toInt(r contains 10)); # 0
+	builtin_output_i64(toInt(3 divides 12)); # 1
+	# Identifier operators bind looser than symbolic ones: 10 minus (2 * 3), not (10 minus 2) * 3.
+	builtin_output_i64(10 minus 2 * 3); # 4
+	# (2 +* 3) minus 7, not 2 +* (3 minus 7)
+	builtin_output_i64(2 +* 3 minus 7); # 1
+	# Left associative: (10 minus 3) minus 2, not 10 minus (3 minus 2)
+	builtin_output_i64(10 minus 3 minus 2); # 5
+	# Identifier operators remain ordinary functions and methods.
+	builtin_output_i64(minus(6, 2)); # 4
+	builtin_output_i64(toInt(r.contains(0))); # 0
+	return 0;
+}

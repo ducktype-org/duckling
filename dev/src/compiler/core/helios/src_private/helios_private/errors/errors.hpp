@@ -114,17 +114,80 @@ namespace compiler::helios {
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
-	class InvalidOperatorFixityError final: public dia::MessageWithCodeFragmentAndCause {
+	/**
+	 * @brief A symbolic operator declared without a fixity takes no operands. Points at the
+	 * parameter list.
+	 */
+	class OperatorWithoutOperandsError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",
 				     .type          = "error",
 				     .family        = "parser",
-				     .name          = "invalid_operator_fixity" };
+				     .name          = "operator_without_operands" };
 		}
 
 	public:
-		explicit InvalidOperatorFixityError(dia::StablePosition source_position):
-			  MessageWithCodeFragmentAndCause(source_position) {}
+		explicit OperatorWithoutOperandsError(dia::StablePosition params_position):
+			  MessageWithCodeFragmentAndCause(params_position) {}
+	};
+
+	/**
+	 * @brief Common base of the operator arity errors. Points at the parameter list and reports
+	 * how many operands are declared.
+	 */
+	class OperatorArityError: public dia::MessageWithCodeFragmentAndCause {
+	protected:
+		/**
+		 * @param declared_operands Operand count, including the implicit `self` of a non-static
+		 * method.
+		 * @param has_self Whether the operator is a non-static method, whose `self` is the first
+		 * operand.
+		 */
+		OperatorArityError(dia::StablePosition params_position, u64 declared_operands, bool has_self):
+			  MessageWithCodeFragmentAndCause(params_position) {
+			addArgument<dia::TextArgument>("declared_operands", std::to_string(declared_operands));
+			addArgument<dia::TextArgument>("has_self", has_self ? "true" : "false");
+		}
+	};
+
+	/**
+	 * @brief An operator marked `prefix` or `suffix` does not take exactly one operand.
+	 */
+	class InvalidUnaryOperatorArityError final: public OperatorArityError {
+		[[nodiscard]]
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "invalid_unary_operator_arity" };
+		}
+
+	public:
+		InvalidUnaryOperatorArityError(
+			dia::StablePosition params_position, u64 declared_operands, bool has_self
+		):
+			  OperatorArityError(params_position, declared_operands, has_self) {}
+	};
+
+	/**
+	 * @brief An operator marked `infix` does not take exactly two operands, or a symbolic operator
+	 * declared without a fixity takes more than two.
+	 */
+	class InvalidBinaryOperatorArityError final: public OperatorArityError {
+		[[nodiscard]]
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "invalid_binary_operator_arity" };
+		}
+
+	public:
+		InvalidBinaryOperatorArityError(
+			dia::StablePosition params_position, u64 declared_operands, bool has_self
+		):
+			  OperatorArityError(params_position, declared_operands, has_self) {}
 	};
 
 	/**

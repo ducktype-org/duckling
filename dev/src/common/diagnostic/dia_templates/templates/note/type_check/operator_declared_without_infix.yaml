@@ -1,0 +1,36 @@
+metadata:
+  type: "note"
+  family: "type_check"
+  name: "operator_declared_without_infix"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  operator:
+    description: "The name of the function, used as an infix operator elsewhere."
+  code:
+    description: "The declaration snippet of the function."
+  code_location:
+    description: "The location of the function name in its declaration."
+
+header_message:
+  - "Found `"
+  - param: "operator"
+  - "` declared without `infix`."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "note"
+    content:
+      - "write `infix` before the name to allow `a "
+      - param: "operator"
+      - " b`"

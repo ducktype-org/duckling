@@ -195,6 +195,10 @@ private:
 			{ "fun prefix -* (v: i64) -> i64;", "fun prefix -*(v: i64) -> i64;\n" },
 			{ "fun suffix ++(v: i64) -> i64;", "fun suffix ++(v: i64) -> i64;\n" },
 			{ "fundecl suffix ** (a: i64) -> i64;", "fundecl suffix **(a: i64) -> i64;\n" },
+			{ "fun infix -+ (a: i64, b: i64) -> i64;", "fun infix -+(a: i64, b: i64) -> i64;\n" },
+			{ "fun infix contains (a: i64, b: i64) -> bool;",
+		      "fun infix contains(a: i64, b: i64) -> bool;\n" },
+			{ "fun infix (infix: i64) -> i64;", "fun infix(infix: i64) -> i64;\n" },
 			// Only after `fun`/`fundecl`: a variable named `prefix` keeps the operator spaced.
 			{ "x = prefix - (a + b);", "x = prefix - (a + b);\n" },
 			{ "let s = suffix + (n * 2);", "let s = suffix + (n * 2);\n" },
