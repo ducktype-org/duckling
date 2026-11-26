@@ -99,11 +99,11 @@ jobs:
     timeout-minutes: 60 # (Per matrix run)
     runs-on:
       group: SelfHostedRunners
-      labels: ${{ matrix.compiler.platform == 'macos' && 'macOS' || (matrix.build-type == 'Dev' && 'debug' || 'release') }}
+      labels: ${{ matrix.compiler.platform == 'macos' && 'macOS' || matrix.runner || (matrix.build-type == 'Dev' && 'debug' || 'release') }}
 
     env:
-      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' && !matrix.coverage }}
+      COVERAGE_ENABLED: ${{ matrix.coverage && 'true' || 'false' }}
       PLATFORM: ${{ matrix.compiler.platform }}
 
     steps:
@@ -142,6 +142,7 @@ jobs:
           cxx: ${{ matrix.compiler.cxx }}
           compiler-name: ${{ matrix.compiler.name }}
           linker: ${{ matrix.compiler.linker }}
+          apt-llvm-version: ${{ matrix.compiler.apt-llvm }}
           coverage-enabled: ${{ env.COVERAGE_ENABLED }}
           build-deployables: ${{ env.BUILD_DEPLOYABLES }}
           dev-dir: ${{ env.WORKSPACE }}
@@ -217,20 +218,27 @@ jobs:
           ./toolbox.py init
 
 
-      # Enables coverage only in case of Debug build.
       - name: Additional setup-build flags
         id: setup-build-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) || '--no-coverage' }}
+          flags: >-
+            ${{
+              matrix.coverage == 'gcov' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) ||
+              matrix.coverage == 'llvm' && '--coverage --coverage-backend llvm' ||
+              '--no-coverage'
+            }}
+            ${{ matrix.coverage-opt-level && format('--coverage-opt-level {0}', matrix.coverage-opt-level) || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
         # JIT should be enabled if build type is DevOpt and compiler is clang, otherwise it should be disabled.
+        # Coverage builds skip it: the instrumentation flags would leak into the JIT's bitcode.
       - name: Check should enable JIT
         id: check-jit
         run: |
             echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] && \
                                 [ "${{ matrix.compiler.name }}" = "clang" ] && \
+                                [ "${{ env.COVERAGE_ENABLED }}" != "true" ] && \
                                 echo "--jit llvm-only" || echo "--jit no" ) >> $GITHUB_OUTPUT
 
       # Configure CMake. Using toolbox instead of direct command, because it
@@ -352,7 +360,9 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+          percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html)
+          echo "Unit test line coverage: ${percent}%" >> $GITHUB_STEP_SUMMARY
+          echo coverage-percent=$percent > $GITHUB_OUTPUT
 
       - name: Delete coverage data files
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
@@ -360,6 +370,7 @@ jobs:
         run: |
           # Remove only .gcda files, so that .gcno files are still present for integration tests
           find ${{ env.BUILD_DIR }} -name '*.gcda' -type f -delete
+          rm -rf ${{ env.BUILD_DIR }}/profraw
 
       - name: Integration Tests
         id: integration-tests
@@ -388,7 +399,9 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+          percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html)
+          echo "Integration test line coverage: ${percent}%" >> $GITHUB_STEP_SUMMARY
+          echo coverage-percent=$percent > $GITHUB_OUTPUT
 
       - name: Test TODO Count
         id: todo-counter

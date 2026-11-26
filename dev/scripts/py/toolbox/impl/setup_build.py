@@ -29,6 +29,8 @@ def setup_build_impl(
     gcov_version,
     ccache,
     coverage,
+    coverage_backend,
+    coverage_opt_level,
     linker,
     allocator,
     shared_libs,
@@ -99,6 +101,8 @@ def setup_build_impl(
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")
     if coverage:
+        cmd_parts.append(f"-D COVERAGE_BACKEND={coverage_backend.lower()}")
+        cmd_parts.append(f"-D COVERAGE_OPT_LEVEL={coverage_opt_level or ''}")
         cmd_parts.append(f"-D GCOV_VERSION={gcov_version}")
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")

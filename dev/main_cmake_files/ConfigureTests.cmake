@@ -4,16 +4,33 @@ function(add_to_coverage target)
 	endif()
 endfunction()
 
-if (ENABLE_COVERAGE AND BUILD_TYPE_IS_OPTIMISED)
-	message(WARNING "Chosen build type expects to be optimised, but coverage is enabled, which disables optimisations.")
+set(COVERAGE_BACKEND "gcov" CACHE STRING "Coverage instrumentation: gcov or llvm (clang source-based)")
+set_property(CACHE COVERAGE_BACKEND PROPERTY STRINGS gcov llvm)
+set(COVERAGE_OPT_LEVEL "" CACHE STRING "Optimisation level of coverage builds (0-3); empty keeps the build type's own")
+
+# Compile options come after the build type's flags, so this level wins.
+if(ENABLE_COVERAGE AND NOT COVERAGE_OPT_LEVEL STREQUAL "")
+	add_compile_options(-O${COVERAGE_OPT_LEVEL})
 endif()
 
-if(ENABLE_COVERAGE)
+set(COVERAGE_EXCLUDED_PATHS
+	"docs"
+	"integration_tests"
+	"scripts"
+	"/tests/"
+	"/playground/"
+	"${CMAKE_BINARY_DIR}"
+)
+
+if(ENABLE_COVERAGE AND COVERAGE_BACKEND STREQUAL "gcov")
 	# --coverage -fprofile-update=atomic is needed,
 	# since the compiler, the VM and many tests are multithreaded.
 	# -fprofile-exclude-files skips counters in system headers (std, LLVM): the coverage report
 	# drops them anyway, and their shared atomic counters make the instrumented binaries much slower.
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-update=atomic")
+	if(NOT BUILD_TYPE_IS_OPTIMISED AND COVERAGE_OPT_LEVEL STREQUAL "")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+	endif()
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		# ccache rejects -fprofile-exclude-files but hashes specs files. ';' since '|' is a pipe in specs.
 		set(COVERAGE_SPECS_FILE "${CMAKE_BINARY_DIR}/coverage.specs")
@@ -24,6 +41,8 @@ if(ENABLE_COVERAGE)
 	else()
 		add_compile_options("-fprofile-exclude-files=^/usr/|^${CMAKE_BINARY_DIR}/")
 	endif()
+	# Arc counters sit after calls, so no call is ever a tail call.
+	set(COVERAGE_BLOCKS_TAIL_CALLS ON)
 
 	find_program(FASTCOV fastcov REQUIRED)
 
@@ -45,12 +64,7 @@ if(ENABLE_COVERAGE)
 		COMMAND ${FASTCOV}
 		--gcov ${GCOV_VERSION}
 		--include "${CMAKE_SOURCE_DIR}" # Process only files in this folder
-		--exclude "docs" # Exclude paths containing this name from coverage
-		"integration_tests"
-		"scripts"
-		"/tests/"
-		"/playground/"
-		"${CMAKE_BINARY_DIR}" # Exclude paths containing this name from coverage
+		--exclude ${COVERAGE_EXCLUDED_PATHS}
 		--process-gcno # Process files not touched by tests (generated during compilation)
 		--lcov # Generate output in lcov format
 		-o coverage.info
@@ -61,6 +75,63 @@ if(ENABLE_COVERAGE)
 		VERBATIM
 	)
 	add_dependencies(coverage build_all_coverage_targets)
+elseif(ENABLE_COVERAGE AND COVERAGE_BACKEND STREQUAL "llvm")
+	if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		message(FATAL_ERROR "COVERAGE_BACKEND=llvm requires clang")
+	endif()
+
+	# Counters are inserted from the AST, so the report stays exact at any optimisation level.
+	# %8m merges every run of a binary into at most 8 files, so many concurrent duckc processes
+	# do not each leave a profile behind.
+	set(COVERAGE_PROFILE_DIR "${CMAKE_BINARY_DIR}/profraw")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate=${COVERAGE_PROFILE_DIR}/%8m.profraw -fcoverage-mapping")
+
+	string(REGEX MATCH "^[0-9]+" CLANG_MAJOR_VERSION "${CMAKE_CXX_COMPILER_VERSION}")
+
+	# Single-byte counters only record whether a region ran, which is all the report needs, and
+	# multithreaded code does not contend on them. Older clang leaves some regions without one
+	# and reports executed code as not executed.
+	set(COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG 23)
+	if(CLANG_MAJOR_VERSION VERSION_GREATER_EQUAL COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG)
+		option(COVERAGE_LLVM_SINGLE_BYTE "Use single-byte coverage counters" ON)
+	else()
+		option(COVERAGE_LLVM_SINGLE_BYTE "Use single-byte coverage counters" OFF)
+	endif()
+
+	if(COVERAGE_LLVM_SINGLE_BYTE)
+		if(CLANG_MAJOR_VERSION VERSION_LESS COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG)
+			message(FATAL_ERROR "COVERAGE_LLVM_SINGLE_BYTE needs clang ${COVERAGE_LLVM_SINGLE_BYTE_MIN_CLANG} or newer")
+		endif()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mllvm -enable-single-byte-coverage=true")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-update=atomic")
+	endif()
+	add_link_options(-fprofile-instr-generate)
+
+	get_filename_component(CLANG_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+	find_program(LLVM_PROFDATA NAMES llvm-profdata-${CLANG_MAJOR_VERSION} llvm-profdata HINTS ${CLANG_BIN_DIR} REQUIRED)
+	find_program(LLVM_COV NAMES llvm-cov-${CLANG_MAJOR_VERSION} llvm-cov HINTS ${CLANG_BIN_DIR} REQUIRED)
+	find_program(GENHTML genhtml REQUIRED)
+
+	add_custom_target(build_all_coverage_targets)
+
+	add_custom_target(coverage
+		COMMAND /usr/bin/env python3 ${CMAKE_SOURCE_DIR}/scripts/cmake/llvm_coverage.py
+		--llvm-profdata ${LLVM_PROFDATA}
+		--llvm-cov ${LLVM_COV}
+		--profile-dir ${COVERAGE_PROFILE_DIR}
+		--build-dir ${CMAKE_BINARY_DIR}
+		--exclude ${COVERAGE_EXCLUDED_PATHS}
+		-o coverage.info
+
+		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info --ignore-errors inconsistent
+
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		VERBATIM
+	)
+	add_dependencies(coverage build_all_coverage_targets)
+elseif(ENABLE_COVERAGE)
+	message(FATAL_ERROR "Unknown COVERAGE_BACKEND: ${COVERAGE_BACKEND}")
 endif()
 
 # The "--fair-sched=yes" option is used in VM debugger tests to speed up the tests,
