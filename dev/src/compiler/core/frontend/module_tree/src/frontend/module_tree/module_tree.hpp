@@ -273,6 +273,16 @@ namespace compiler::frontend {
 		 */
 		virtual void makeAbstract() = 0;
 
+		template<class T>
+		Ref<T> as() {
+			return dynamic_cast<Ref<T>>(this);
+		}
+
+		template<class T>
+		CRef<T> as() const {
+			return dynamic_cast<CRef<T>>(this);
+		}
+
 		/**
 		 * @brief Access the slot holding the source file that acts as the main source file of this
 		 * module.
@@ -294,7 +304,7 @@ namespace compiler::frontend {
 		 * calling this.
 		 */
 		[[nodiscard]]
-		virtual Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot();
+		virtual Ref<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot(); // this is kind of dumb, only normal modules have submodules, we can just use dynamic_cast to normal modules to access this
 
 		[[nodiscard]]
 		virtual CRef<base::HashMap<base::StrID, base::Ref<ModuleTree>>> submodulesSlot() const;
@@ -327,10 +337,10 @@ namespace compiler::frontend {
 		 * calling this.
 		 */
 		[[nodiscard]]
-		virtual Ref<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot();
+		virtual Ref<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot(); // same here as with submoduleslot
 
 		[[nodiscard]]
-		virtual CRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const;
+		virtual CRef<base::HashMap<base::StrID, std::vector<fs::File>>> otherFilesSlot() const; // same here as with submoduleslot
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes

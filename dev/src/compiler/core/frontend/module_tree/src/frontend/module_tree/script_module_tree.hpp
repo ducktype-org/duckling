@@ -12,8 +12,11 @@ namespace compiler::frontend {
 
 	/**
 	 * @brief REPL-specific module tree node.
+	 *
 	 * Represents a single node in the synthetic REPL chain.
 	 * Only used for repl modules.
+	 *
+	 * @note Those nodes embed into module tree parent structure normally.
 	 *
 	 * @note: Parent of this module is either the REPL module higher in the chain or the script
 	 * module itself.
@@ -25,10 +28,12 @@ namespace compiler::frontend {
 		 */
 		base::Optional<base::Ref<SourceFile>> m_synthetic_source_file;
 
-		/**
-		 * TODO: (issue?) the parent less structure is sub optimal, but it has to wait for future PRs to address it.
-		 */
-		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_parent;
+
+		// HERE: we delete it probably, SyntheticReplChainModuleTreeNode uses normal module parent for its structure.
+		// /**
+		//  * TODO: (issue?) the parent less structure is sub optimal, but it has to wait for future PRs to address it.
+		//  */
+		// base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_parent;
 
 		void makeAbstract() final;
 
@@ -73,7 +78,8 @@ namespace compiler::frontend {
 		// We might want to keep refs to all synthetic REPL chain modules associated with this script here
 		// to be able to modify them as needed in the future.
 
-		// base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
+		// this will have to be set somehow in builder/modifier:
+		base::Optional<Ref<SyntheticReplChainModuleTreeNode>> m_repl_module_child;
 
 		void makeAbstract() final;
 
@@ -88,7 +94,6 @@ namespace compiler::frontend {
 
 	public:
 		explicit ScriptModuleTreeNode();
-
 
 		SubmodulesAccessLocked getSubmodules() const override {
 			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
