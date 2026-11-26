@@ -20,7 +20,7 @@ namespace pst {
 
 		PARSE().all(Keyword::Fun);
 		out->operator_fixity = parseOperatorFixity(state);
-		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
+		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName, true);
 		PARSE().one(&out->params);
 		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 

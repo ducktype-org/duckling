@@ -8,8 +8,8 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -30,8 +30,8 @@
 namespace compiler::tsh {
 	namespace {
 		std::string renderCompileTimeValue(query::Context& ctx, const ctv::CompileTimeValue& value) {
-			if (const auto type = value.get<SymbolType<>>(); type.has_value())
-				return renderSymbolTypeName(ctx, type.value()).text;
+			if (const auto type = value.get<ValueType<>>(); type.has_value())
+				return renderValueTypeName(ctx, type.value()).text;
 			if (const auto number = value.get<numeric_value::NumericValue>(); number.has_value())
 				return std::visit(
 					[&](const auto stored) -> std::string {
@@ -122,15 +122,15 @@ namespace compiler::tsh {
 		}
 
 		std::string joinSourceTypeNames(
-			query::Context&                  ctx,
-			const std::vector<SymbolType<>>& types,
-			std::string_view                 separator,
-			const TypeNamePrecedence         parent_precedence = TypeNamePrecedence::Function
+			query::Context&                 ctx,
+			const std::vector<ValueType<>>& types,
+			std::string_view                separator,
+			const TypeNamePrecedence        parent_precedence = TypeNamePrecedence::Function
 		) {
 			std::string result;
 			for (usize i = 0; i < types.size(); i++) {
 				if (i != 0) result += separator;
-				result += renderSymbolTypeName(ctx, types[i]).nestedIn(parent_precedence);
+				result += renderValueTypeName(ctx, types[i]).nestedIn(parent_precedence);
 			}
 			return result;
 		}
@@ -168,31 +168,31 @@ namespace compiler::tsh {
 		case Kind::Pointer:
 			return {
 				.text = "ptr "
-				      + renderSymbolTypeName(ctx, type.as<PointerAbstractType>().getPointee())
+				      + renderValueTypeName(ctx, type.as<PointerAbstractType>().getPointee())
 				            .nestedIn(TypeNamePrecedence::Prefix),
 				.precedence = TypeNamePrecedence::Prefix,
 			};
 		case Kind::ManyPointer:
 			return {
 				.text = "manyptr "
-				      + renderSymbolTypeName(ctx, type.as<ManyPointerAbstractType>().getPointee())
+				      + renderValueTypeName(ctx, type.as<ManyPointerAbstractType>().getPointee())
 				            .nestedIn(TypeNamePrecedence::Prefix),
 				.precedence = TypeNamePrecedence::Prefix,
 			};
 		case Kind::CPointer:
 			return {
 				.text = "cptr "
-				      + renderSymbolTypeName(ctx, type.as<CPointerAbstractType>().getPointee())
+				      + renderValueTypeName(ctx, type.as<CPointerAbstractType>().getPointee())
 				            .nestedIn(TypeNamePrecedence::Prefix),
 				.precedence = TypeNamePrecedence::Prefix,
 			};
 		case Kind::Slice: {
 			const auto element = type.as<SliceAbstractType>().getElementType();
-			if (element == SymbolType<>::withDefaultsMut(getCharType()))
+			if (element == ValueType<>::withDefaultsMut(getCharType()))
 				return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
 			return {
-				.text = "slice "
-				      + renderSymbolTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
+				.text
+				= "slice " + renderValueTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
 				.precedence = TypeNamePrecedence::Prefix,
 			};
 		}
@@ -207,8 +207,8 @@ namespace compiler::tsh {
 				element = array.getElementType();
 			}
 			return {
-				.text = renderSymbolTypeName(ctx, element).nestedIn(TypeNamePrecedence::Postfix)
-				      + extents,
+				.text
+				= renderValueTypeName(ctx, element).nestedIn(TypeNamePrecedence::Postfix) + extents,
 				.precedence = TypeNamePrecedence::Postfix,
 			};
 		}
@@ -242,7 +242,7 @@ namespace compiler::tsh {
 					function.getFunctionKind() == FunctionKind::Raw ? "funptr(" : "(",
 					joinSourceTypeNames(ctx, function.getParameterTypes(), ", "),
 					") -> ",
-					renderSymbolTypeName(ctx, function.getResultType())
+					renderValueTypeName(ctx, function.getResultType())
 						.nestedIn(TypeNamePrecedence::Function)
 				),
 				.precedence = TypeNamePrecedence::Function,
@@ -268,7 +268,7 @@ namespace compiler::tsh {
 		CORE_UNREACHABLE();
 	}
 
-	SourceTypeName renderSymbolTypeName(query::Context& ctx, const SymbolType<> type) {
+	SourceTypeName renderValueTypeName(query::Context& ctx, const ValueType<> type) {
 		using enum ReferenceKind;
 		const std::string prefix = base::strConcat(
 			type.getUniqueness() == Uniqueness::Unique ? "unique " : "",

@@ -40,7 +40,7 @@ namespace compiler::lir {
 		const base::Optional<u64> new_parameter_index
 	) {
 		auto type_layout
-			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type)
+			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QueryValueTypeLayout>(mir_local->type)
 		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
 		LIRVariableMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
@@ -52,9 +52,9 @@ namespace compiler::lir {
 		};
 	}
 
-	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::SymbolType<> pointee_type) {
+	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::ValueType<> pointee_type) {
 		const auto ref_type   = pointee_type.toRef();
-		auto&      ref_layout = ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
+		auto&      ref_layout = ctx.query<tsl::QueryValueTypeLayout>(ref_type)->valueOrPanicMsg(
             "layout query failed at LIR stage"
         );
 
@@ -63,7 +63,7 @@ namespace compiler::lir {
 
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout
-			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type)
+			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QueryValueTypeLayout>(mir_global.type)
 		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
 
 		auto mangled_name  = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);

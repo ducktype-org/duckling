@@ -25,8 +25,8 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios/utils/main_return_type.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -134,7 +134,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Whether a deduction candidate is the uninhabited `void` type.
 		 */
-		bool isVoid(const tsh::SymbolType<>& type) {
+		bool isVoid(const tsh::ValueType<>& type) {
 			return type.getType().getKind() == tsh::Kind::Void;
 		}
 	}
@@ -142,9 +142,9 @@ namespace compiler::helios {
 	/**
 	 * @brief Query function return type, deduced based on return statements in its body.
 	 */
-	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<query::QResult<tsh::SymbolType<>>>, ({}))
+	DECLARE_QUERY(QueryReturnTypeDeduction, SymID, CRef<query::QResult<tsh::ValueType<>>>, ({}))
 
-	struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, query::QResult<tsh::SymbolType<>>) {
+	struct IMPLEMENT_QUERY(QueryReturnTypeDeduction, query::QResult<tsh::ValueType<>>) {
 		struct ReturnTypeCollector final: public pst::PstVisitorEmpty {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -155,7 +155,7 @@ namespace compiler::helios {
 			 */
 			bool initial_invocation;
 
-			std::set<tsh::SymbolType<>> out;
+			std::set<tsh::ValueType<>> out;
 
 			/**
 			 * @brief Whether every path through the function body ends in a `return`, i.e.
@@ -204,7 +204,7 @@ namespace compiler::helios {
 						)
 						                ->valueOrThrow()
 						                .ref();
-						output(expr->expression_type.getSymbolType());
+						output(expr->expression_type.getValueType());
 
 						// The body expression is the returned value, so there is no way around it.
 						body_always_returns = true;
@@ -237,10 +237,10 @@ namespace compiler::helios {
 					auto expr = ctx.query<QueryHoutOfExpr>(val.value().unlock(ctx)->getExpr())
 					                ->valueOrThrow()
 					                .ref();
-					output(expr->expression_type.getSymbolType());
+					output(expr->expression_type.getValueType());
 				} else {
 					// "void" return should actually deduce to unit type:
-					output(tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType()));
+					output(tsh::ValueType<>::withDefaultsMut(tsh::getUnitType()));
 				}
 			}
 
@@ -295,7 +295,7 @@ namespace compiler::helios {
 			case 0:
 				// there are no returns to deduce the type
 				// we default to unit type
-				return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+				return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 			case 1:
 				// deduced type is conclusive (albeit there might still be a fallthrough to the
 				// end of the function, but it then does not contribute to return type deduction).
@@ -382,6 +382,10 @@ namespace compiler::helios {
 		) {
 			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
+			// The parser only accepts these names on methods, and without a fixity.
+			if (name == base::StrID("()") || name == base::StrID("[]"))
+				return Operatoriness::Bracket;
+
 			const bool is_symbolic = lexer::isOperatorSymbolString(name.strView());
 			const u64  operands    = params.count + (params.has_self ? 1 : 0);
 
@@ -419,7 +423,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 		}
 
-		bool isValidMainReturnType(query::Context& ctx, const tsh::SymbolType<>& return_type) {
+		bool isValidMainReturnType(query::Context& ctx, const tsh::ValueType<>& return_type) {
 			const auto required_type = requiredMainReturnType(ctx);
 
 			return return_type.getType() == required_type.getType()
@@ -447,7 +451,7 @@ namespace compiler::helios {
 				                                 && kind(original_symbol) == SymbolKind::Function;
 
 				// Default return type is a direct unit.
-				auto ret_type              = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+				auto ret_type              = tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 				code::ElementOrigin origin = code::generatedOrigin();
 
 				// Set return type if provided.
@@ -456,7 +460,7 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret_unlocked->getExpr()).valueOrThrow();
 
-					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
+					ret_type = ret_type_ctv.get<tsh::ValueType<>>().value();
 
 					if (global_main_definition && not isValidMainReturnType(ctx, ret_type)) {
 						ctx.log<InvalidMainReturnTypeError>(
@@ -565,6 +569,11 @@ namespace compiler::helios {
 					stmt->getOperatorFixity(),
 					stmt->getStablePosition()
 				);
+				if (specifiers.is_static
+				    && operatoriness == HOUTFunctionDeclaration::Operatoriness::Bracket)
+					fail<StaticBracketOperatorError>(
+						ctx, stmt->getStablePosition(), name(original_symbol).str()
+					);
 				emplaceDeclaration(params, stmt->getRet(), operatoriness);
 				if (specifiers.is_static) return;
 
@@ -593,7 +602,7 @@ namespace compiler::helios {
 				);
 
 				const auto class_type  = classMemberOwner(original_symbol);
-				this->out->return_type = tsh::SymbolType<>::withDefaultsMut(class_type);
+				this->out->return_type = tsh::ValueType<>::withDefaultsMut(class_type);
 			}
 
 			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
@@ -615,7 +624,7 @@ namespace compiler::helios {
 					code::generatedOrigin()
 				);
 
-				const auto unit_ret = tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+				const auto unit_ret = tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 
 				this->out.emplace(HOUTFunctionDeclaration(
 					original_symbol,
@@ -651,24 +660,23 @@ namespace compiler::helios {
 				ctor_name = name(target_type.as<tsh::ClassAbstractType>().getSymbol());
 				break;
 			case tsh::Kind::Tuple:
-				ctor_name
-					= ctx
-				          .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaultsMut(
-							  target_type.as<tsh::TupleAbstractType>()
-						  ))
-				          ->valueOrThrow();
+				ctor_name = ctx
+				                .query<mangler::QueryMangledType>(tsh::ValueType<>::withDefaultsMut(
+									target_type.as<tsh::TupleAbstractType>()
+								))
+				                ->valueOrThrow();
 				break;
 			default:
 				CORE_PANIC("Implicit ctor of type kind", target_type.getKind(), " is not handled.");
 			}
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
-			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
-					   .name = ctor_name,
-					   .generated_symbol_data
+			const SymID ctor_symbol       = ctx.query<defgen::QueryGeneratedSymbol>({
+					  .name = ctor_name,
+					  .generated_symbol_data
                 = Constructor{ .type = target_type, .kind = Constructor::Kind::Implicit },
             });
-			const auto  result_symbol_type = tsh::SymbolType<>::withDefaultsMut(target_type);
+			const auto  result_value_type = tsh::ValueType<>::withDefaultsMut(target_type);
 
 			std::vector<code::Parameter> parameters;
 			parameters.reserve(num_fields);
@@ -724,7 +732,7 @@ namespace compiler::helios {
 			                                        .getType()
 			                                        .as<tsh::FunctionAbstractType>();
 			CORE_ASSERT(
-				result_symbol_type == expected_function_type.getResultType(),
+				result_value_type == expected_function_type.getResultType(),
 				"Generated constructor return type mismatch"
 			);
 			for (u64 i = 0; i < num_fields; i++) {
@@ -738,7 +746,7 @@ namespace compiler::helios {
 			return HOUTFunctionDeclaration{
 				ctor_symbol,
 				HOUTFunctionDeclaration::Operatoriness::None,
-				result_symbol_type,
+				result_value_type,
 				std::move(parameters),
 				code::generatedOrigin(),
 			};
@@ -801,7 +809,7 @@ namespace compiler::helios {
 							return getImplicitCtorDecl(ctx, ctor_data);
 						case defgen::Constructor::Kind::Default: {
 							const auto return_type
-								= tsh::SymbolType<>::withDefaultsMut(ctor_data.type);
+								= tsh::ValueType<>::withDefaultsMut(ctor_data.type);
 
 							return HOUTFunctionDeclaration{
 								key,

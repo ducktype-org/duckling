@@ -23,8 +23,8 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
@@ -59,9 +59,9 @@ namespace compiler::helios {
 	requires std::same_as<Container, pst::CodeBlock>
 	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                          ctx,
-		pst::Access<Container>                   container,
-		const base::Optional<tsh::SymbolType<>>& return_type
+		query::Context&                         ctx,
+		pst::Access<Container>                  container,
+		const base::Optional<tsh::ValueType<>>& return_type
 	);
 
 	template<std::derived_from<pst::Stmt> T>
@@ -117,7 +117,7 @@ namespace compiler::helios {
 	struct HoutStmtMaker final: public pst::PstVisitorPanicky {
 		query::Context& ctx;
 
-		base::Optional<tsh::SymbolType<>> return_type;
+		base::Optional<tsh::ValueType<>> return_type;
 
 		/**
 		 * Whether the statement generation has failed.
@@ -137,7 +137,7 @@ namespace compiler::helios {
 		 */
 		std::vector<Box<code::Stmt>> prefix_stmts;
 
-		HoutStmtMaker(query::Context& ctx, base::Optional<tsh::SymbolType<>> return_type):
+		HoutStmtMaker(query::Context& ctx, base::Optional<tsh::ValueType<>> return_type):
 			  ctx(ctx),
 			  return_type(return_type) {}
 
@@ -170,7 +170,7 @@ namespace compiler::helios {
 				const auto position    = pst_expr.unlock(ctx)->getStablePosition();
 				const auto target_type = return_type.has_value()
 				                           ? return_type.value()
-				                           : expr_hout->expression_type.getSymbolType();
+				                           : expr_hout->expression_type.getValueType();
 				const query::QResult<coercions::Coercion> coercion = coercions::validCoercionOf(
 					ctx, expr_hout.ref(), target_type, position, {}, {}, coercions::HandOverKind::LastUse
 				);
@@ -225,7 +225,7 @@ namespace compiler::helios {
 
 			// If left side of the assignment is a ref/box, we have to dereference it and store
 			// the value in the memory pointed by the ref/box.
-			auto location_type = location_expr->expression_type.getSymbolType();
+			auto location_type = location_expr->expression_type.getValueType();
 			if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 				location_expr = makeBox<code::DerefExpr>(
 					ctx, location_expr->origin.generatedFrom(), location_expr->clone()
@@ -253,13 +253,13 @@ namespace compiler::helios {
 
 			// 1. Handle regular assignement
 			if (op == base::StrID("=")) {
-				// The new `SymbolType` of `location_expr` is the location symbol without the
+				// The new `ValueType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now
 				// coerce the value expr to the type without the ref/box specifier.
 				auto new_value_expr_coerced = getHoutOfExprWithExpectedType(
 												  ctx,
 												  val,
-												  location_expr->expression_type.getSymbolType(),
+												  location_expr->expression_type.getValueType(),
 												  var.unlock(ctx)->getStablePosition()
 				)
 				                                  .valueOrThrow();
@@ -377,7 +377,7 @@ namespace compiler::helios {
 
 			// in the future we must also handle here different if-s variants
 			// for example: `if (let a = ...) {}`.
-			auto bool_type        = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
+			auto bool_type        = tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
 				is_failed = true;
@@ -414,7 +414,7 @@ namespace compiler::helios {
 		}
 
 		void visitWhile(pst::Access<pst::While> stmt) override {
-			auto bool_type        = tsh::SymbolType<>::withDefaultsMut(tsh::getBoolType());
+			auto bool_type        = tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
 			auto control_flow_id  = getControlFlowID(ctx, stmt);
 			auto condition_holder = stmt->getCondition();
 			if (!condition_holder.has_value()) {
@@ -628,10 +628,10 @@ namespace compiler::helios {
 	 * @brief Compiles `stmt` and appends what it produced to `block`.
 	 */
 	static void appendStmt(
-		query::Context&                          ctx,
-		code::CodeBlock&                         block,
-		pst::Access<pst::Stmt>                   stmt,
-		const base::Optional<tsh::SymbolType<>>& return_type
+		query::Context&                         ctx,
+		code::CodeBlock&                        block,
+		pst::Access<pst::Stmt>                  stmt,
+		const base::Optional<tsh::ValueType<>>& return_type
 	) {
 		HoutStmtMaker stmt_maker(ctx, return_type);
 		stmt->acceptVisitor(stmt_maker);
@@ -656,9 +656,9 @@ namespace compiler::helios {
 	requires std::same_as<Container, pst::CodeBlock>
 	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                          ctx,
-		pst::Access<Container>                   container,
-		const base::Optional<tsh::SymbolType<>>& return_type
+		query::Context&                         ctx,
+		pst::Access<Container>                  container,
+		const base::Optional<tsh::ValueType<>>& return_type
 	) {
 		code::CodeBlock block({});
 		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container))
@@ -680,7 +680,7 @@ namespace compiler::helios {
 					auto tail_expr =,
 					code::subExprFromPST(ctx, unlockOrFail(ctx, tail_holder->getExpr()))
 				);
-				const auto tail_type = tail_expr->expression_type.getSymbolType();
+				const auto tail_type = tail_expr->expression_type.getValueType();
 				UNPACK_QRESULT_MOVE(
 					tail =,
 					coercions::coerceFromBox(
@@ -702,7 +702,7 @@ namespace compiler::helios {
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
 		query::Context&                   ctx,
 		pst::Access<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                 return_type
+		tsh::ValueType<>                  return_type
 	) {
 		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
 	}
@@ -710,7 +710,7 @@ namespace compiler::helios {
 	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
 		query::Context&                   ctx,
 		pst::AccessLocked<pst::CodeBlock> container,
-		tsh::SymbolType<>                 return_type
+		tsh::ValueType<>                  return_type
 	) {
 		return std::make_shared<const code::CodeBlock>(
 			processBlock(ctx, unlockOrFail(ctx, container), return_type)
@@ -718,7 +718,7 @@ namespace compiler::helios {
 	}
 
 	code::CodeBlock compileSingleStatement(
-		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, tsh::SymbolType<> return_type
+		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, tsh::ValueType<> return_type
 	) {
 		code::CodeBlock block({});
 		HoutStmtMaker   stmt_maker(ctx, return_type);

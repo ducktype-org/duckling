@@ -226,6 +226,21 @@ class PSTErrorTests: public tester::TestSuite {
         "class Foo { fun >=(rhs: Foo) -> bool = {} }"
 	};
 
+	Example<pst::Class, true> bracket_operator_methods{
+		"class Foo { fun ()(a: i64) -> i64 = a; fun []() -> i64 = 0; }"
+	};
+	Example<pst::Class, false> prefix_bracket_operator_method{
+		"class Foo { fun prefix ()(a: i64) -> i64 = a; }"
+	};
+	Example<pst::Class, false> infix_bracket_operator_method{
+		"class Foo { fun infix [](a: i64) -> i64 = a; }"
+	};
+	Example<pst::Class, false> not_empty_bracket_operator_name{
+		"class Foo { fun [a: i64]() -> i64 = a; }"
+	};
+	Example<pst::Fun, false>     bracket_operator_function{ "fun ()(a: i64) -> i64 = a;" };
+	Example<pst::FunDecl, false> bracket_operator_fundecl{ "fundecl [](a: i64) -> i64" };
+
 	Example<pst::Fun, false> assignment_operator_function1{ "fun +*=(a: i64) = {}" };
 	Example<pst::Fun, false> bare_assign_operator_function{ "fun =(a: i64) = {}" };
 	Example<pst::Fun, false> special_operator_function1{ "fun ->(a: i64) = {}" };
@@ -809,6 +824,15 @@ class PSTErrorTests: public tester::TestSuite {
 		);
 		testDiagnosticMessage<pst::AssignmentOperatorFunNameError>(
 			ss, dia::SourcePosition::fakePosition(), std::string("+*=")
+		);
+		testDiagnosticMessage<pst::BracketOperatorOutsideClassError>(
+			ss, dia::SourcePosition::fakePosition(), std::string("()")
+		);
+		testDiagnosticMessage<pst::BracketOperatorNameNotEmptyError>(
+			ss, dia::SourcePosition::fakePosition()
+		);
+		testDiagnosticMessage<pst::error::BracketOperatorFixityError>(
+			ss, dia::SourcePosition::fakePosition()
 		);
 
 		testDiagnosticMessage<

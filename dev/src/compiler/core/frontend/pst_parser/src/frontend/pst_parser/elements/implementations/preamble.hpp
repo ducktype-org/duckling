@@ -59,10 +59,22 @@ namespace pst {
 	}
 
 	/**
+	 * @brief Checks if the token @p at tokens ahead names a bracket operator, like the `()` of
+	 * `fun ()(x: i64)` or the `[]` of `fun [](i: i64)`: a round or square bracket group followed by
+	 * the parameter list.
+	 */
+	inline bool isBracketOperatorName(LangParserState& state, i64 at) {
+		return (state[at].isBracketGroup(Token::Round) || state[at].isBracketGroup(Token::Square))
+		    && state[at + 1].isBracketGroup(Token::Round);
+	}
+
+	/**
 	 * @brief Consumes a contextual operator fixity specifier when it precedes an operator name.
 	 *
 	 * `prefix` and `suffix` must be followed by a symbolic operator name. `infix` may also be
 	 * followed by an identifier, which declares an identifier operator (`fun infix contains(...)`).
+	 * The bracket operators `()` and `[]` have no fixity, so a specifier before them is reported
+	 * and skipped.
 	 *
 	 * `prefix`, `suffix` and `infix` remain regular identifiers everywhere else, including as
 	 * function names.
@@ -70,20 +82,23 @@ namespace pst {
 	inline OperatorFixity parseOperatorFixity(LangParserState& state) {
 		if (!state[0].isIdentifier()) return OperatorFixity::None;
 
-		const auto fixity = state[0].getStrValue();
-		if (state[1].isOperatorSymbol()) {
-			if (fixity == "prefix") {
-				state.tokens().next();
-				return OperatorFixity::Prefix;
-			}
-			if (fixity == "suffix") {
-				state.tokens().next();
-				return OperatorFixity::Suffix;
-			}
+		const auto fixity_str = state[0].getStrValue();
+		if (fixity_str != "prefix" && fixity_str != "suffix" && fixity_str != "infix")
+			return OperatorFixity::None;
+
+		if (isBracketOperatorName(state, 1)) {
+			state.logInt(makeBox<error::BracketOperatorFixityError>(state.getPosition()));
+			state.tokens().next();
+			return OperatorFixity::None;
 		}
-		if (fixity == "infix" && (state[1].isOperatorSymbol() || state[1].isIdentifier())) {
+
+		if (fixity_str == "infix" && (state[1].isOperatorSymbol() || state[1].isIdentifier())) {
 			state.tokens().next();
 			return OperatorFixity::Infix;
+		}
+		if (fixity_str != "infix" && state[1].isOperatorSymbol()) {
+			state.tokens().next();
+			return fixity_str == "prefix" ? OperatorFixity::Prefix : OperatorFixity::Suffix;
 		}
 		return OperatorFixity::None;
 	}

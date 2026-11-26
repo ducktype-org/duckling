@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <diagnostic/message.hpp>
 #include <diagnostic/stable_position.hpp>
@@ -36,7 +36,7 @@ namespace compiler::helios {
 			query::Context&     ctx,
 			dia::StablePosition source_position,
 			std::string         field_name,
-			tsh::SymbolType<>   field_type,
+			tsh::ValueType<>    field_type,
 			std::string         reason
 		);
 	};

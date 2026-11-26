@@ -276,6 +276,10 @@ namespace compiler::helios::mangler {
 					return std::string_view{ "rm" };
 				case U'&':
 					return std::string_view{ "an" };
+				case U'(':
+					return std::string_view{ "lp" };
+				case U')':
+					return std::string_view{ "rp" };
 				case U'*':
 					return std::string_view{ "ml" };
 				case U'+':
@@ -296,8 +300,12 @@ namespace compiler::helios::mangler {
 					return std::string_view{ "gt" };
 				case U'?':
 					return std::string_view{ "qm" };
+				case U'[':
+					return std::string_view{ "ls" };
 				case U'\\':
 					return std::string_view{ "bs" };
+				case U']':
+					return std::string_view{ "rs" };
 				case U'^':
 					return std::string_view{ "eo" };
 				case U'`':
@@ -352,6 +360,8 @@ namespace compiler::helios::mangler {
 						return 'p';
 					case Operatoriness::Suffix:
 						return 's';
+					case Operatoriness::Bracket:
+						return 'b';
 					case Operatoriness::None:
 						break;
 					}
@@ -650,7 +660,7 @@ namespace compiler::helios::mangler {
 							// distinguishes the implicit, default and copy constructors.
 							const auto mangled_type
 								= ctx.query<QueryMangledType>(
-										 tsh::SymbolType<>::withDefaultsMut(ctor.type)
+										 tsh::ValueType<>::withDefaultsMut(ctor.type)
 								)
 							          ->valueOrThrow()
 							          .str();
@@ -915,7 +925,7 @@ namespace compiler::helios::mangler {
 					ret += mangleCTV(ctx, TypeTuple::elementToCtv(elem));
 				return ret += "E";
 			}
-			variant_case(tsh::SymbolType<>, sym) {
+			variant_case(tsh::ValueType<>, sym) {
 				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
 			}
 			variant_case(compiler::ctv::CompileTimeValue::VMValue, vm_value) {

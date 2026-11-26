@@ -190,6 +190,26 @@ namespace compiler::helios {
 			  OperatorArityError(params_position, declared_operands, has_self) {}
 	};
 
+	/**
+	 * @brief A `()` or `[]` operator declared as a static method. These operators are called on a
+	 * value, which becomes their `self`.
+	 */
+	class StaticBracketOperatorError final: public dia::MessageWithCodeFragmentAndCause {
+		[[nodiscard]]
+		dia::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "static_bracket_operator" };
+		}
+
+	public:
+		StaticBracketOperatorError(dia::StablePosition source_position, std::string op):
+			  MessageWithCodeFragmentAndCause(source_position) {
+			addArgument<dia::TextArgument>("operator", std::move(op));
+		}
+	};
+
 	class ReturnWithoutValueError final: public dia::MessageWithCodeFragmentAndCause {
 		dia::Metadata getMetadata() const final {
 			return { .template_type = "message",

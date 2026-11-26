@@ -291,6 +291,9 @@ private:
 			{ "fun +* (a: i64, b: i64) -> i64 = a * b;",
 		      "fun +*(a: i64, b: i64) -> i64 = a * b;\n" },
 			{ "fun -*(a: i64) -> i64 = a;", "fun -*(a: i64) -> i64 = a;\n" },
+			// So do the bracket operators, and `self` binds to the brackets applied to it.
+			{ "fun () (x: i64) -> i64 = self [x];", "fun ()(x: i64) -> i64 = self[x];\n" },
+			{ "fun [] (i: i64) -> i64 = self (i);", "fun [](i: i64) -> i64 = self(i);\n" },
 			// A binary operator in an expression keeps its spaces.
 			{ "x = a + (b);", "x = a + (b);\n" },
 			// Text operators never glue to their operand: `notb` would be one identifier.

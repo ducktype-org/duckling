@@ -12,15 +12,15 @@
 #include "deductions.hpp"
 
 namespace compiler::tsh::deductions {
-	SymbolType<> declarationTypeFromInitializer(
+	ValueType<> declarationTypeFromInitializer(
 		const ExpressionType<>& expr_type, const Mutability expected_mutability
 	) {
-		return SymbolType<>::withDefaults(expr_type.getSymbolType().getType())
+		return ValueType<>::withDefaults(expr_type.getValueType().getType())
 		    .withMutability(expected_mutability);
 	}
 
-	SymbolType<> declarationTypeFromProvidedType(
-		const SymbolType<>& given_type, const Mutability expected_mutability
+	ValueType<> declarationTypeFromProvidedType(
+		const ValueType<>& given_type, const Mutability expected_mutability
 	) {
 		return given_type.withMutability(expected_mutability);
 	}

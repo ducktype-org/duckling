@@ -45,8 +45,8 @@ namespace compiler::helios {
 	 */
 	struct HOUTFunctionDeclaration final {
 		/**
-		 * @brief Classifies functions by what kind of operator they are (infix, prefix, suffix), or
-		 * if they are not an operator (none).
+		 * @brief Classifies functions by what kind of operator they are (infix, prefix, suffix,
+		 * bracket), or if they are not an operator (none).
 		 *
 		 * This information is useful during overload resolution, when lookup by name returns multiple
 		 * candidates, some being of incorrect operatoriness in the given context. For example, if
@@ -57,7 +57,9 @@ namespace compiler::helios {
 			None,    ///< The function is not an operator
 			Infix,   ///< The function is a binary, infix operator
 			Prefix,  ///< The function is a unary, prefix operator
-			Suffix   ///< The function is a unary, suffix operator
+			Suffix,  ///< The function is a unary, suffix operator
+			Bracket  ///< The function is a `()` or `[]` operator method, all of whose arguments
+			         ///< other than `self` are written inside the brackets
 		};
 
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
@@ -80,7 +82,7 @@ namespace compiler::helios {
 
 		Operatoriness operatoriness;
 
-		tsh::SymbolType<> return_type;
+		tsh::ValueType<> return_type;
 
 		std::vector<code::Parameter> parameters;
 
@@ -95,7 +97,7 @@ namespace compiler::helios {
 		HOUTFunctionDeclaration(
 			SymID                        symbol,
 			Operatoriness                operatoriness,
-			tsh::SymbolType<>            ret_type,
+			tsh::ValueType<>             ret_type,
 			std::vector<code::Parameter> parameters,
 			code::ElementOrigin          origin
 		);
@@ -179,7 +181,7 @@ namespace compiler::helios {
 
 		std::variant<HOUTGlobalConst, HOUTGlobalVariable> value;
 
-		tsh::SymbolType<> type;
+		tsh::ValueType<> type;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

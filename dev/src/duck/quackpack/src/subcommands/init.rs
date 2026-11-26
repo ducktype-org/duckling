@@ -149,8 +149,6 @@ impl fmt::Display for VenvConfigBuilder {
 const DEFAULT_SOURCE_FILENAME: &str = "src.dk";
 
 const DEFAULT_SOURCE_CONTENTS: &str = "\
-import core.builtins.*;
-
 fun main() = {
     return 0;
 }

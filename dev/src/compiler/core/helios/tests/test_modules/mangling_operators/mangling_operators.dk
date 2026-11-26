@@ -40,4 +40,12 @@ class Foo {
 	fun infix has(a: i64) -> i64 = {
 		return a;
 	}
+
+	fun ()(a: i64) -> i64 = {
+		return a;
+	}
+
+	fun [](a: i64) -> i64 = {
+		return a;
+	}
 }
