@@ -230,7 +230,7 @@ namespace compiler::helios::code {
 										pos,
 										makeBox<InteractiveType>(ctx, data.failed.getTarget()),
 										makeBox<InteractiveType>(
-											ctx, data.failed.getSource().getSymbolType()
+											ctx, data.failed.getSource().getValueType()
 										),
 										get_interactive_function(data.function)
 									);

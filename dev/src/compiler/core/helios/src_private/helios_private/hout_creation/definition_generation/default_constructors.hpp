@@ -85,7 +85,7 @@ namespace compiler::helios::defgen {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryDefaultInitializerExpr, tsh::SymbolType<>, CRef<query::QResult<Box<code::Expr>>>, ({})
+		QueryDefaultInitializerExpr, tsh::ValueType<>, CRef<query::QResult<Box<code::Expr>>>, ({})
 	);
 
 
@@ -96,6 +96,6 @@ namespace compiler::helios::defgen {
 	 * default constructible.
 	 */
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::StablePosition pos
+		query::Context& ctx, const tsh::ValueType<>& type, dia::StablePosition pos
 	);
 }

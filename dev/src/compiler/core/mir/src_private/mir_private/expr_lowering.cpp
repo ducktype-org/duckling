@@ -89,7 +89,7 @@ namespace compiler::mir {
 			BlockBuilderRef                      begin,
 			const BlockBuilder::InstructionHole& hole,
 			const Instruction&                   instr,
-			const tsh::SymbolType<>&             type
+			const tsh::ValueType<>&              type
 		) {
 			CORE_ASSERT(out.empty(), "Output already set.");
 			CORE_ASSERT(instr.output.empty(), "instruction shouldn't have output set.");
@@ -108,7 +108,7 @@ namespace compiler::mir {
 			const BlockBuilder::InstructionHole& hole,
 			const MIRValue&                      source,
 			MIRLocalRef                          source_local,
-			const tsh::SymbolType<>&             type,
+			const tsh::ValueType<>&              type,
 			InstructionMetadata                  metadata
 		) {
 			CORE_ASSERT(out.empty(), "Output already set.");
@@ -148,7 +148,7 @@ namespace compiler::mir {
 				return { lowered.begin, *place };
 			}
 
-			const auto tmp = function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
+			const auto tmp = function.addTmp(expr.expression_type.getValueType(), expr_scope);
 			store_hole.fill(Instruction{ Operation::Assign,
 			                             MIRPlace(tmp),
 			                             { result },
@@ -217,7 +217,7 @@ namespace compiler::mir {
 					MIRValue{
 						MIRGlobal({
 							expr.symbol,
-							expr.expression_type.getSymbolType(),
+							expr.expression_type.getValueType(),
 							global_kind,
 						}),
 					}
@@ -260,7 +260,7 @@ namespace compiler::mir {
 			bool        is_and       = expr.operation == hc::BuiltinBinary::BooleanAnd;
 			std::string debug_prefix = is_and ? "and" : "or";
 
-			auto boolean_type = expr.expression_type.getSymbolType();
+			auto boolean_type = expr.expression_type.getValueType();
 			CORE_ASSERT(
 				boolean_type.getType().getKind() == tsh::Kind::Bool,
 				"Lazily evaluated binary operators are boolean."
@@ -309,11 +309,11 @@ namespace compiler::mir {
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			IF_BUILD_TYPE_DEV({
 				const bool lhs_trivial
-					= expr.lhs->expression_type.getSymbolType().isTriviallyDestructible(
+					= expr.lhs->expression_type.getValueType().isTriviallyDestructible(
 						function.getContext()
 					);
 				const bool rhs_trivial
-					= expr.rhs->expression_type.getSymbolType().isTriviallyDestructible(
+					= expr.rhs->expression_type.getValueType().isTriviallyDestructible(
 						function.getContext()
 					);
 
@@ -341,7 +341,7 @@ namespace compiler::mir {
 			const auto res_left      = lowered_left.getResultAndTakeOwnership(function, flags);
 
 			// Fill the hole with the binary operation.
-			const auto result_type           = expr.expression_type.getSymbolType();
+			const auto result_type           = expr.expression_type.getValueType();
 			const auto operation_with_params = builtinBinaryToOperation(expr.operation);
 
 			noValueOutput(
@@ -362,7 +362,7 @@ namespace compiler::mir {
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
 			CORE_ASSERT(
-				expr.expr->expression_type.getSymbolType().isTriviallyDestructible(
+				expr.expr->expression_type.getValueType().isTriviallyDestructible(
 					function.getContext()
 				),
 				"Operand of a builtin operator have to be trivially destructible, to opt out "
@@ -378,7 +378,7 @@ namespace compiler::mir {
 			auto       lowered     = lowerSubExpr(*expr.expr, continuation);
 			const auto res_lowered = lowered.getResultAndTakeOwnership(function, flags);
 
-			const auto result_type = expr.expression_type.getSymbolType();
+			const auto result_type = expr.expression_type.getValueType();
 
 			const auto [operation, param] = builtinUnaryToOperation(expr.operation);
 
@@ -395,7 +395,7 @@ namespace compiler::mir {
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
-			const auto result_type     = ternary_expr.expression_type.getSymbolType();
+			const auto result_type     = ternary_expr.expression_type.getValueType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
 			auto build_case_block
@@ -466,13 +466,13 @@ namespace compiler::mir {
 				call,
 				Instruction{
 					Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
-				expr.expression_type.getSymbolType()
+				expr.expression_type.getValueType()
 			);
 		}
 
 		template<class ProjectionFor>
 		void lowerInPlaceConstruction(
-			const tsh::SymbolType<>&                dest_type,
+			const tsh::ValueType<>&                 dest_type,
 			const std::vector<base::Box<hc::Expr>>& values,
 			ProjectionFor                           projection_for,
 			base::Optional<dia::StablePosition>     position
@@ -525,7 +525,7 @@ namespace compiler::mir {
 		 * ```
 		 */
 		void lowerArrayFillLoop(
-			const tsh::SymbolType<>&                               dest_type,
+			const tsh::ValueType<>&                                dest_type,
 			const hc::Expr&                                        value,
 			usize                                                  size,
 			const base::Optional<base::CSharedBox<hc::CodeBlock>>& per_element_body,
@@ -541,7 +541,7 @@ namespace compiler::mir {
 			const auto counter_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 			auto counter
-				= function.addTmp(tsh::SymbolType<>::withDefaultsMut(counter_type), expr_scope);
+				= function.addTmp(tsh::ValueType<>::withDefaultsMut(counter_type), expr_scope);
 
 			auto counter_constant = [&](usize constant) {
 				return MIRValue{ MIRConstant{
@@ -637,7 +637,7 @@ namespace compiler::mir {
 				// A single value for a multi-element static array fills all of its elements.
 				if (expr.values.size() == 1 and array_type.getSize() > 1) {
 					lowerArrayFillLoop(
-						expr.expression_type.getSymbolType(),
+						expr.expression_type.getValueType(),
 						*expr.values.front(),
 						array_type.getSize(),
 						expr.per_element_body,
@@ -657,7 +657,7 @@ namespace compiler::mir {
 				);
 
 				lowerInPlaceConstruction(
-					expr.expression_type.getSymbolType(),
+					expr.expression_type.getValueType(),
 					expr.values,
 					[](const MIRPlace& base, usize i) {
 						auto index = MIRValue{ MIRConstant{
@@ -685,7 +685,7 @@ namespace compiler::mir {
 			);
 
 			lowerInPlaceConstruction(
-				expr.expression_type.getSymbolType(),
+				expr.expression_type.getValueType(),
 				expr.values,
 				[&](const MIRPlace& base, usize i) -> MIRPlace {
 					return base.withField(ctx, field_symbols[i]);
@@ -695,7 +695,7 @@ namespace compiler::mir {
 		}
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
-			auto result_type = expr.expression_type.getSymbolType();
+			auto result_type = expr.expression_type.getValueType();
 			CORE_ASSERT(
 				result_type.getType().getKind() == tsh::Kind::Meta,
 				"Expression type in Variant Type Constructor should be meta"
@@ -732,7 +732,7 @@ namespace compiler::mir {
 		}
 
 		void visitOptionalTypeConstructorExpr(const hc::OptionalTypeConstructorExpr& expr) override {
-			auto result_type = expr.expression_type.getSymbolType();
+			auto result_type = expr.expression_type.getValueType();
 			CORE_ASSERT(
 				result_type.getType().getKind() == tsh::Kind::Meta,
 				"Expression type in Optional Type Constructor should be meta"
@@ -760,7 +760,7 @@ namespace compiler::mir {
 		}
 
 		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
-			auto result_type = expr.expression_type.getSymbolType();
+			auto result_type = expr.expression_type.getValueType();
 			CORE_ASSERT(
 				result_type.getType().getKind() == tsh::Kind::Variant,
 				"VariantConstructExpr must produce a variant"
@@ -792,12 +792,12 @@ namespace compiler::mir {
 
 		void visitMatchExpr(const hc::MatchExpr& expr) override {
 			auto&      ctx          = function.getContext();
-			const auto variant_type = expr.subject->expression_type.getSymbolType()
+			const auto variant_type = expr.subject->expression_type.getValueType()
 			                              .getType()
 			                              .as<tsh::VariantAbstractType>();
 
 			// Every case writes its value here, so the match has one result whichever arm ran.
-			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto result_type     = expr.expression_type.getValueType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
 			struct PendingProjection final {
@@ -838,8 +838,8 @@ namespace compiler::mir {
 				);
 				auto case_entry = lowered_result.begin;
 
-				base::Optional<MIRLocalMutRef>    payload_ptr;
-				base::Optional<tsh::SymbolType<>> alternative_type;
+				base::Optional<MIRLocalMutRef>   payload_ptr;
+				base::Optional<tsh::ValueType<>> alternative_type;
 
 				if_opt_some(match_case.alternative_index, index) {
 					alternative_type = variant_type.getMember(index);
@@ -856,7 +856,7 @@ namespace compiler::mir {
 
 
 				if (projects_payload) {
-					const auto pointer_type = tsh::SymbolType<>::withDefaultsMut(
+					const auto pointer_type = tsh::ValueType<>::withDefaultsMut(
 						function.getContext().query<tsh::QueryPointerType>({ alternative_type.value(
 						) })
 					);
@@ -932,8 +932,8 @@ namespace compiler::mir {
 
 			CORE_ASSERT(first_entry.has_value(), "A match has to have at least one case.");
 
-			tsh::SymbolType<> subject_type = expr.subject->expression_type.getSymbolType();
-			const bool subject_is_direct = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
+			tsh::ValueType<> subject_type = expr.subject->expression_type.getValueType();
+			const bool subject_is_direct  = subject_type.getRefKind() == tsh::ReferenceKind::Direct;
 
 			base::Optional<BlockBuilder::InstructionHole> assign_ref_subject;
 			base::Optional<MIRLocalRef>                   ref_subject_local;
@@ -1035,7 +1035,7 @@ namespace compiler::mir {
 		}
 
 		void visitIndexExpr(const hc::IndexExpr& expr) override {
-			const auto base_type = expr.base->expression_type.getSymbolType().getType();
+			const auto base_type = expr.base->expression_type.getValueType().getType();
 			const auto base_kind = base_type.getKind();
 
 			if (base_kind == tsh::Kind::Meta) {
@@ -1138,7 +1138,7 @@ namespace compiler::mir {
 
 			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
-				= function.addTmp(chain_expr.expression_type.getSymbolType(), expr_scope);
+				= function.addTmp(chain_expr.expression_type.getValueType(), expr_scope);
 
 			// Now, build the proper comparisons in reverse order.
 			auto  next_block = continuation;
@@ -1207,7 +1207,7 @@ namespace compiler::mir {
 			CalleeLowering                    lower_callee
 		) {
 			bool never_returns
-				= expr.expression_type.getSymbolType().getType().getKind() == tsh::Kind::Void;
+				= expr.expression_type.getValueType().getType().getKind() == tsh::Kind::Void;
 
 			if (never_returns) {
 				auto call_block = function.newBlock("call.diverging");
@@ -1236,7 +1236,7 @@ namespace compiler::mir {
 					call,
 					Instruction{
 						operation, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
-					expr.expression_type.getSymbolType()
+					expr.expression_type.getValueType()
 				)
 			);
 
@@ -1288,7 +1288,7 @@ namespace compiler::mir {
 		 * construction does this, `as` cannot express it in the source language.
 		 */
 		bool isBoxFromPointerCast(const hc::CastExpr& expr) {
-			const auto source_type = expr.source_expr->expression_type.getSymbolType();
+			const auto source_type = expr.source_expr->expression_type.getValueType();
 			return source_type.getRefKind() == tsh::ReferenceKind::Direct
 			    && source_type.getType().getKind() == tsh::Kind::Pointer
 			    && expr.target_type.getRefKind() == tsh::ReferenceKind::Box;
@@ -1302,7 +1302,7 @@ namespace compiler::mir {
 		 * `tmp1: ref T = addressof val; tmp2: cptr U = cast tmp1`.
 		 */
 		bool isRefToCptrCast(const hc::CastExpr& expr) {
-			return expr.source_expr->expression_type.getSymbolType().getRefKind()
+			return expr.source_expr->expression_type.getValueType().getRefKind()
 			        == tsh::ReferenceKind::Ref
 			    && expr.target_type.getType().getKind() == tsh::Kind::CPointer;
 		}
@@ -1329,7 +1329,7 @@ namespace compiler::mir {
 				                 expr_scope,
 				                 {},
 				                 { expr.getPosition() } },
-					expr.expression_type.getSymbolType()
+					expr.expression_type.getValueType()
 				);
 			}
 
@@ -1347,16 +1347,16 @@ namespace compiler::mir {
 			return noValueOutput(
 				lowered.begin,
 				hole,
-				Instruction{ Operation::Cast,
-			                 {},
-			                 { res_lowered },
-			                 {},
-			                 expr_scope,
-			                 CastParameters{ .source_type
-			                                 = expr.source_expr->expression_type.getSymbolType(),
-			                                 .target_type = expr.target_type },
-			                 { expr.getPosition() } },
-				expr.expression_type.getSymbolType()
+				Instruction{
+					Operation::Cast,
+					{},
+					{ res_lowered },
+					{},
+					expr_scope,
+					CastParameters{ .source_type = expr.source_expr->expression_type.getValueType(),
+			                        .target_type = expr.target_type },
+					{ expr.getPosition() } },
+				expr.expression_type.getValueType()
 			);
 		}
 
@@ -1400,19 +1400,19 @@ namespace compiler::mir {
 				hole,
 				inner_val,
 				inner_val.get<MIRPlace>().getBase<MIRLocalRef>(),
-				expr.expression_type.getSymbolType(),
+				expr.expression_type.getValueType(),
 				{ expr.getPosition() }
 			);
 		}
 
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
-			const auto& inner_type = expr.inner->expression_type.getSymbolType();
+			const auto& inner_type = expr.inner->expression_type.getValueType();
 
 			if (inner_type.getRefKind() == tsh::ReferenceKind::Direct) {
 				auto       hole          = continuation->addHole();
 				auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 				const auto res_inner     = lowered_inner.getResult(function);
-				const auto result_type   = expr.expression_type.getSymbolType();
+				const auto result_type   = expr.expression_type.getValueType();
 
 				noValueOutput(
 					lowered_inner.begin,
@@ -1447,7 +1447,7 @@ namespace compiler::mir {
 				Instruction(
 					Operation::AddressOf, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
 				),
-				expr.expression_type.getSymbolType()
+				expr.expression_type.getValueType()
 			);
 		}
 
@@ -1472,7 +1472,7 @@ namespace compiler::mir {
 				continuation,
 				hole,
 				Instruction(Operation::ZeroInitialize, {}, {}, {}, expr_scope),
-				expr.expression_type.getSymbolType()
+				expr.expression_type.getValueType()
 			);
 		}
 
@@ -1491,7 +1491,7 @@ namespace compiler::mir {
 				return;
 			}
 
-			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto result_type     = expr.expression_type.getValueType();
 			const auto target_location = function.addTmp(result_type, expr_scope);
 
 			// The tail shares the scope of the block, so the locals it reads are still alive.
@@ -1520,7 +1520,7 @@ namespace compiler::mir {
 
 	private:
 		static MIRValue unitTypeConstant() {
-			return MIRValue{ MIRConstant{ tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType()) } };
+			return MIRValue{ MIRConstant{ tsh::ValueType<>::withDefaultsMut(tsh::getUnitType()) } };
 		}
 
 		/**
@@ -1531,7 +1531,7 @@ namespace compiler::mir {
 		 * inner expression is.
 		 */
 		ExprLowerRes lowerAndLiftToType(const hc::Expr& expr, BlockBuilderRef continuation) {
-			const auto value_type = expr.expression_type.getSymbolType();
+			const auto value_type = expr.expression_type.getValueType();
 
 			switch (value_type.getType().getKind()) {
 			case tsh::Kind::Meta:
@@ -1544,7 +1544,7 @@ namespace compiler::mir {
 			case tsh::Kind::Tuple: {
 				auto tuple_tmp = function.addTmp(value_type, expr_scope);
 				auto result    = function.addTmp(
-                    tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
+                    tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
                 );
 
 				CORE_ASSERT(
@@ -1592,7 +1592,7 @@ namespace compiler::mir {
 					break;
 				case tsh::Kind::Tuple: {
 					auto nested_result = function.addTmp(
-						tsh::SymbolType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
+						tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()), expr_scope
 					);
 					element_types.emplace_back(nested_result);
 					nested_tuples.emplace_back(field_place, nested_result);
@@ -1731,7 +1731,7 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::SymbolType<> typeOfMIRValue(const MIRValue& value, query::Context& ctx) {
+		static tsh::ValueType<> typeOfMIRValue(const MIRValue& value, query::Context& ctx) {
 			variant_match(value.getVariant()) {
 				variant_case(MIRConstant, constant) {
 					return constant.value.getTypeOfStoredValue(ctx);
@@ -1760,7 +1760,7 @@ namespace compiler::mir {
 		  value{ std::move(value) } {}
 
 	[[nodiscard]]
-	tsh::SymbolType<> ExprLowerRes::getResultType() {
+	tsh::ValueType<> ExprLowerRes::getResultType() {
 		variant_match(value) {
 			variant_case(MovedValue, moved) { return moved.owning_assign.type; }
 			variant_case(Finalizer, res_data) { return res_data.type; }

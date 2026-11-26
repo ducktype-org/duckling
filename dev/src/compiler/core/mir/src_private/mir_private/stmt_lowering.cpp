@@ -44,7 +44,7 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
-	static bool returnTypeMatches(const tsh::SymbolType<>& given, const tsh::SymbolType<>& expected) {
+	static bool returnTypeMatches(const tsh::ValueType<>& given, const tsh::ValueType<>& expected) {
 		return given.getType() == expected.getType() && given.getRefKind() == expected.getRefKind();
 	}
 
@@ -143,7 +143,7 @@ namespace compiler::mir {
 		}
 
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
-			const auto value_type = stmt.value->expression_type.getSymbolType();
+			const auto value_type = stmt.value->expression_type.getValueType();
 			if (!returnTypeMatches(value_type, function.getResultType()))
 				failReturnType(stmt.getPosition(), value_type.toString());
 
@@ -192,7 +192,7 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
-			const auto unit = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+			const auto unit = tsh::ValueType<>::withDefaults(tsh::getUnitType());
 			if (!returnTypeMatches(unit, function.getResultType()))
 				failReturnType(stmt.getPosition(), "()");
 
@@ -457,7 +457,7 @@ namespace compiler::mir {
 			// destruct(a) <- added in the later pass
 			// a = tmp
 			bool destructor_in_between
-				= not stmt.location_expr->expression_type.getSymbolType().isTriviallyDestructible(
+				= not stmt.location_expr->expression_type.getValueType().isTriviallyDestructible(
 					function.getContext()
 				);
 			base::Optional<BlockBuilder::InstructionHole> second_hole;

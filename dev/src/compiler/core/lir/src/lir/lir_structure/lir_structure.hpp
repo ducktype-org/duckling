@@ -332,7 +332,7 @@ namespace compiler::lir {
 		 * @param pointee_type Type of the referenced value.
 		 * @return LIRLocal
 		 */
-		static LIRLocal refLocal(query::Context& ctx, tsh::SymbolType<> pointee_type);
+		static LIRLocal refLocal(query::Context& ctx, tsh::ValueType<> pointee_type);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };
@@ -598,11 +598,11 @@ namespace compiler::lir {
 		/**
 		 * @brief The source type of the cast operation.
 		 */
-		tsh::SymbolType<> source_type;
+		tsh::ValueType<> source_type;
 		/**
 		 * @brief The target type of the cast operation.
 		 */
-		tsh::SymbolType<> target_type;
+		tsh::ValueType<> target_type;
 		/**
 		 * @brief The source type layout of the cast operation.
 		 */
@@ -619,7 +619,7 @@ namespace compiler::lir {
 	 */
 	struct VariantParameters final {
 		usize                 alternative_index;
-		tsh::SymbolType<>     alternative_type;
+		tsh::ValueType<>      alternative_type;
 		CRef<tsl::TypeLayout> alternative_layout;
 		CRef<tsl::TypeLayout> variant_layout;
 	};

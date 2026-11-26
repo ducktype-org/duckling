@@ -63,7 +63,7 @@ namespace compiler::helios::templates {
 
 			// Template parameters are baked to constants so the type of the parameter is always
 			// immutable.
-			auto type = type_ctv.valueOrPanic().get<tsh::SymbolType<>>().value().withMutability(
+			auto type = type_ctv.valueOrPanic().get<tsh::ValueType<>>().value().withMutability(
 				tsh::Mutability::Immutable
 			);
 

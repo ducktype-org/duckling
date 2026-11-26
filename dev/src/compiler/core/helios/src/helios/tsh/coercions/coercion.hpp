@@ -11,9 +11,9 @@
  * of a possibly different type. `Coercion` represents a tree of what has to happen to the value or
  * the reason nothing can happen.
  *
- * Both coercion layers(`SymbolType` and `ExpressionType`) answer with the same tree:
- * - `SymbolTypeCoercion` is decided from the types alone, so it knows nothing about ownership.
- *   This is what `QuerySymbolTypeCoercion` caches.
+ * Both coercion layers(`ValueType` and `ExpressionType`) answer with the same tree:
+ * - `ValueTypeCoercion` is decided from the types alone, so it knows nothing about ownership.
+ *   This is what `QueryValueTypeCoercion` caches.
  * - `Coercion` is the same tree decided for one particular value, which is the `ExpressionType`.
  *   Every `HandOver` is decided: it is gone, it became an `ImplicitMove`, or it became an
  *   `Elementwise`. Otherwise the coercion is refused (@see `coercion_step::HandOver`). This is used
@@ -26,7 +26,7 @@
 #pragma once
 
 #include "../expression_type.hpp"
-#include "../symbol_type.hpp"
+#include "../value_type.hpp"
 #include "coercion_error.hpp"
 #include "coercion_node.hpp"
 #include "coercion_rank.hpp"
@@ -45,7 +45,7 @@
 namespace compiler::tsh::coercions {
 	template<typename Source>
 	concept CoercionSource
-		= std::same_as<Source, SymbolType<>> || std::same_as<Source, ExpressionType<>>;
+		= std::same_as<Source, ValueType<>> || std::same_as<Source, ExpressionType<>>;
 
 	/**
 	 * @brief A whole coercion of a value described by @p Source, or the reason it is refused.
@@ -60,7 +60,7 @@ namespace compiler::tsh::coercions {
 		static CoercionTree successfulCoercion(const Source& source, CoercionNode root) {
 			CORE_ASSERT(
 				not containsIllegalStep(root),
-				"A SymbolTypeCoercion should never contain `ImplicitMove`, and a Coercion should "
+				"A ValueTypeCoercion should never contain `ImplicitMove`, and a Coercion should "
 				"never contain `HandOver`"
 			);
 			return { source, std::move(root) };
@@ -86,7 +86,7 @@ namespace compiler::tsh::coercions {
 		 * @brief The location the value is handed to.
 		 */
 		[[nodiscard]]
-		const SymbolType<>& getTarget() const {
+		const ValueType<>& getTarget() const {
 			return isValid() ? getRoot().target : getError().target;
 		}
 
@@ -157,13 +157,13 @@ namespace compiler::tsh::coercions {
 		using Storage = std::variant<CoercionNode, CoercionError>;
 
 		using IllegalStep = std::conditional_t<
-			std::same_as<Source, SymbolType<>>,
+			std::same_as<Source, ValueType<>>,
 			coercion_step::ImplicitMove,
 			coercion_step::HandOver>;
 
 		/**
 		 * @brief Whether @p node or any of its parts contains an `IllegalStep` (`HandOver` in
-		 * `Coercion` or a `ImplicitMove` in `SymbolTypeCoercion`).
+		 * `Coercion` or a `ImplicitMove` in `ValueTypeCoercion`).
 		 */
 		[[nodiscard]]
 		static bool containsIllegalStep(const CoercionNode& node) {
@@ -190,7 +190,7 @@ namespace compiler::tsh::coercions {
 	/**
 	 * @brief A coercion decided from the types alone. Doesn't contain any ownership decisions.
 	 */
-	using SymbolTypeCoercion = CoercionTree<SymbolType<>>;
+	using ValueTypeCoercion = CoercionTree<ValueType<>>;
 
 	/**
 	 * @brief A coercion decided for one particular value, with ownership included.

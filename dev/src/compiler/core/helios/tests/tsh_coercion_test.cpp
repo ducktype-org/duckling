@@ -41,10 +41,10 @@ public:
 	}
 
 private:
-	const SymbolType<> boolean           = direct(getBoolType());
-	const SymbolType<> byte_type         = direct(getByteType());
-	const SymbolType<> mutable_pointer   = direct(getRawPointerType(true));
-	const SymbolType<> immutable_pointer = direct(getRawPointerType(false));
+	const ValueType<> boolean           = direct(getBoolType());
+	const ValueType<> byte_type         = direct(getByteType());
+	const ValueType<> mutable_pointer   = direct(getRawPointerType(true));
+	const ValueType<> immutable_pointer = direct(getRawPointerType(false));
 
 	void referenceKinds() {
 		using enum ReferenceKind;

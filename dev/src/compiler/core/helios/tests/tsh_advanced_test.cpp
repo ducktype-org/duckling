@@ -104,16 +104,16 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto get_type = [&](const compiler::helios::SymID sym_id) {
-				return SymbolType<>::withDefaultsMut(ctx.query<compiler::tsh::QueryClassType>(sym_id
-				));
+				return ValueType<>::withDefaultsMut(ctx.query<compiler::tsh::QueryClassType>(sym_id)
+				);
 			};
 
-			auto assert_flags = [&](const SymbolType<>& type,
-			                        bool                def,
-			                        bool                zero,
-			                        bool                copy,
-			                        bool                triv,
-			                        std::string_view    msg) {
+			auto assert_flags = [&](const ValueType<>& type,
+			                        bool               def,
+			                        bool               zero,
+			                        bool               copy,
+			                        bool               triv,
+			                        std::string_view   msg) {
 				assertTrue(
 					type.isDefaultConstructible(ctx) == def,
 					base::strConcat(msg, " isDefaultConstructible check failed")
@@ -384,15 +384,15 @@ private:
 			)",
 			OTHER_MOD
 		);
-		const auto person_type = getSymbolTypeOf("person", root_scope);
-		ASSERT_TRUE(person_type != getSymbolTypeOf("other_person", root_scope));
+		const auto person_type = getValueTypeOf("person", root_scope);
+		ASSERT_TRUE(person_type != getValueTypeOf("other_person", root_scope));
 		ASSERT_TRUE(
-			getSymbolTypeOf("tiny_float", root_scope)
-			!= getSymbolTypeOf("another_tiny_float", root_scope)
+			getValueTypeOf("tiny_float", root_scope)
+			!= getValueTypeOf("another_tiny_float", root_scope)
 		);
 		ASSERT_EQUAL(
-			getSymbolTypeOf("tiny_float", root_scope),
-			getSymbolTypeOf("round_trip_tiny_float", root_scope)
+			getValueTypeOf("tiny_float", root_scope),
+			getValueTypeOf("round_trip_tiny_float", root_scope)
 		);
 		const std::vector<std::pair<std::string_view, std::string_view>> templates{
 			{ "Boxed", "Type template: Boxed" },
@@ -401,10 +401,10 @@ private:
 			{ "FnNs.ident", "Type template: FnNs.ident" },
 			{ "FnNs.Number", "Type template: FnNs.Number" },
 		};
-		std::vector<SymbolType<>> template_types;
+		std::vector<ValueType<>> template_types;
 		template_types.reserve(templates.size());
 		for (const auto& [chain, _]: templates)
-			template_types.push_back(getSymbolTypeOf(chain, root_scope));
+			template_types.push_back(getValueTypeOf(chain, root_scope));
 
 		withContextDo([&](query::Context& ctx) {
 			for (usize i = 0; i < templates.size(); ++i)
@@ -426,7 +426,7 @@ private:
 					);
 					ASSERT_EQUAL(expected, integral.sourceTypeName(ctx));
 					ASSERT_EQUAL(
-						expected, SymbolType<>::withDefaultsMut(integral).sourceTypeName(ctx)
+						expected, ValueType<>::withDefaultsMut(integral).sourceTypeName(ctx)
 					);
 				}
 			}
@@ -435,7 +435,7 @@ private:
 				ASSERT_EQUAL(base::strConcat("f", bits), floating.sourceTypeName(ctx));
 				ASSERT_EQUAL(
 					base::strConcat("f", bits),
-					SymbolType<>::withDefaultsMut(floating).sourceTypeName(ctx)
+					ValueType<>::withDefaultsMut(floating).sourceTypeName(ctx)
 				);
 			}
 			ASSERT_EQUAL(std::string("()"), getUnitType().sourceTypeName(ctx));
@@ -443,7 +443,7 @@ private:
 			ASSERT_EQUAL(std::string("bool"), getBoolType().sourceTypeName(ctx));
 			ASSERT_EQUAL(std::string("char"), getCharType().sourceTypeName(ctx));
 			const KeyFor_QueryTupleType single_tuple_key{
-				.components = { SymbolType<>::withDefaultsMut(i64_type) },
+				.components = { ValueType<>::withDefaultsMut(i64_type) },
 			};
 			const auto single_tuple = ctx.query<QueryTupleType>(single_tuple_key);
 			assertEqual(
@@ -458,7 +458,7 @@ private:
 				"AbstractType should expose the source-level type name too"
 			);
 
-			const SymbolType<> qualified_type(
+			const ValueType<> qualified_type(
 				i64_type,
 				ReferenceKind::Ref,
 				Mutability::Immutable,
@@ -468,12 +468,12 @@ private:
 			assertEqual(
 				std::string("unique leaking imm ref i64"),
 				qualified_type.sourceTypeName(ctx),
-				"SymbolType qualifiers should use the same order as toString"
+				"ValueType qualifiers should use the same order as toString"
 			);
 			assertEqual(
 				std::string("unique leaking ref i64"),
 				qualified_type.withMutability(Mutability::Mutable).sourceTypeName(ctx),
-				"Mutable symbol types should omit the imm qualifier"
+				"Mutable ValueTypes should omit the imm qualifier"
 			);
 
 			assertEqual(
@@ -488,8 +488,8 @@ private:
 			);
 
 			const auto function_type = ctx.query<QueryFunctionType>({
-				.parameter_types = { SymbolType<>::withDefaultsMut(i64_type) },
-				.result_type     = SymbolType<>::withDefaultsMut(getBoolType()),
+				.parameter_types = { ValueType<>::withDefaultsMut(i64_type) },
+				.result_type     = ValueType<>::withDefaultsMut(getBoolType()),
 			});
 			assertEqual(
 				std::string("funptr(i64) -> bool"),
@@ -498,13 +498,13 @@ private:
 			);
 			const auto variant_type = ctx.query<QueryVariantType>({
 				.underlying_types = {
-					SymbolType<>::withDefaultsMut(i64_type),
-					SymbolType<>::withDefaultsMut(getBoolType()),
+					ValueType<>::withDefaultsMut(i64_type),
+					ValueType<>::withDefaultsMut(getBoolType()),
 				},
 			});
 			const auto composite_function_type = ctx.query<QueryFunctionType>({
 				.parameter_types = { person_type },
-				.result_type     = SymbolType<>::withDefaultsMut(variant_type),
+				.result_type     = ValueType<>::withDefaultsMut(variant_type),
 			});
 			assertEqual(
 				std::string("funptr(Person) -> bool | i64"),
@@ -545,7 +545,7 @@ private:
 		std::string_view declarations = "",
 		std::string_view other_module = ""
 	) {
-		const auto type = getSymbolTypeOf(
+		const auto type = getValueTypeOf(
 			"checked",
 			buildSourceModule(
 				base::strConcat(declarations, "\nvar checked: ", type_expression, ";"), other_module

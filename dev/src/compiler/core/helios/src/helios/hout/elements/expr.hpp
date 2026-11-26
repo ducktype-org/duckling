@@ -206,7 +206,7 @@ namespace compiler::helios::code {
 	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
 	 */
 	struct LiteralTypeExpr final: public Expr {
-		tsh::SymbolType<> value_type;
+		tsh::ValueType<> value_type;
 
 		LiteralTypeExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type);
 
@@ -219,7 +219,7 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		LiteralTypeExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> value_type
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::ValueType<> value_type
 		);
 	};
 
@@ -565,11 +565,11 @@ namespace compiler::helios::code {
 		usize     alternative_index;
 
 		VariantConstructExpr(
-			query::Context&   ctx,
-			ElementOrigin     origin,
-			Box<Expr>         inner,
-			tsh::SymbolType<> variant_type,
-			usize             alternative_index
+			query::Context&  ctx,
+			ElementOrigin    origin,
+			Box<Expr>        inner,
+			tsh::ValueType<> variant_type,
+			usize            alternative_index
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -613,7 +613,7 @@ namespace compiler::helios::code {
 			base::Optional<usize> alternative_index;
 			/** Type of the constraint, if provided. The constraint is not provided when wildcard
 			 * pattern (matches everything). */
-			base::Optional<tsh::SymbolType<>> constraint_type;
+			base::Optional<tsh::ValueType<>> constraint_type;
 			/** This is a variable that is used by the expression,
 			  where the alternative value of the same type as constraint should land.*/
 			base::Optional<SymID> binding;
@@ -808,14 +808,14 @@ namespace compiler::helios::code {
 	 * The result is an expression of the target type.
 	 */
 	struct CastExpr final: public Expr {
-		Box<Expr>         source_expr;
-		tsh::SymbolType<> target_type;
+		Box<Expr>        source_expr;
+		tsh::ValueType<> target_type;
 
 		CastExpr(
-			query::Context&   ctx,
-			ElementOrigin     origin,
-			Box<Expr>         source_expr,
-			tsh::SymbolType<> target_type
+			query::Context&  ctx,
+			ElementOrigin    origin,
+			Box<Expr>        source_expr,
+			tsh::ValueType<> target_type
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -836,13 +836,13 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		static bool castCreatesTemporary(tsh::SymbolType<> source, tsh::SymbolType<> dst);
+		static bool castCreatesTemporary(tsh::ValueType<> source, tsh::ValueType<> dst);
 
 		CastExpr(
 			tsh::ExpressionType<> expression_type,
 			ElementOrigin         origin,
 			Box<Expr>             source_expr,
-			tsh::SymbolType<>     target_type
+			tsh::ValueType<>      target_type
 		);
 	};
 
@@ -873,7 +873,7 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a pointer creation expression (`ptrof`).
-	 * It takes a place holding a value of symbol type `S` and produces a value of type `ptr S`.
+	 * It takes a place holding a value of ValueType `S` and produces a value of type `ptr S`.
 	 *
 	 * Unlike `RefOfExpr`, the reference kind of the operand is kept instead of being collapsed into
 	 * `Ref`: `ptrof` on a place of type `box T` yields `ptr box T`, the address of the box itself,
