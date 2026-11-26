@@ -151,7 +151,7 @@ impl From<&PackageData> for SerializablePackageData {
             enabled_features: value.enabled_features().clone(),
             identity: value.identity(),
             version: value.package().version(),
-            use_std: value.package().manifest().build_metadata().use_std,
+            use_std: value.package().manifest().build_options().use_std,
         }
     }
 }

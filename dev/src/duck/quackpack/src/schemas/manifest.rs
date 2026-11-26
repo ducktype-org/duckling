@@ -39,8 +39,8 @@ pub struct Manifest {
     pub venv: Option<VenvConfig>,
     /// Lints configuration.
     pub lints: Option<Lints>,
-    /// `build-metadata:` root field.
-    pub build_metadata: Option<BuildMetadata>,
+    /// `build-options:` root field.
+    pub build_options: Option<BuildOptions>,
 }
 
 impl Manifest {
@@ -52,7 +52,7 @@ impl Manifest {
             && self.dev_dependencies.is_none()
             && self.profiles.is_none()
             && self.lints.is_none()
-            && self.build_metadata.is_none()
+            && self.build_options.is_none()
     }
 
     /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
@@ -70,8 +70,8 @@ impl Manifest {
         if self.venv.is_some() {
             result.push("venv");
         }
-        if self.build_metadata.is_some() {
-            result.push("build-metadata");
+        if self.build_options.is_some() {
+            result.push("build-options");
         }
         result
     }
@@ -103,8 +103,8 @@ pub struct Metadata {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-/// Schema of the `build-metadata:` table.
-pub struct BuildMetadata {
+/// Schema of the `build-options:` table.
+pub struct BuildOptions {
     /// Whether the package is compiled with the standard library (`true` when omitted).
     pub use_std: Option<bool>,
     /// Whether the package can only be compiled as a dependency (`false` when omitted).

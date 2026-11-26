@@ -94,9 +94,9 @@ pub fn compile(
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let root_manifest = bcx.pcx.package().manifest();
-    if root_manifest.build_metadata().always_dep {
+    if root_manifest.build_options().always_dep {
         let mut err = qp_err!(
-            "package `{}` cannot be compiled directly, because its `build-metadata.always-dep` is `true`",
+            "package `{}` cannot be compiled directly, because its `build-options.always-dep` is `true`",
             root_manifest.name()
         );
         err.add_note("such a package can only be compiled as a dependency of another package");

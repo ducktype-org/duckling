@@ -2,9 +2,9 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
-  echo "build-metadata:
+  echo "build-options:
     use-std: false" >> foo/quackconfig.yaml
-  echo "build-metadata:
+  echo "build-options:
     use-std: false
     always-dep: true" >> bar/quackconfig.yaml
   @{duck-exe} -C foo add --local ../bar bar

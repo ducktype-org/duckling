@@ -18,11 +18,11 @@ use crate::core::lints::warnings::Warnings;
 use crate::core::manifest::VenvConfig;
 use crate::core::valid_package_name::validate_package_name;
 use crate::core::{
-    BuildMetadata, BuildOptions, Dependencies, DependencyKind, Features, Lints, Manifest, OptLevel,
+    BuildOptions, Dependencies, DependencyKind, Features, Lints, Manifest, OptLevel,
     PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::schemas::manifest::{
-    BuildMetadata as BuildMetadataSchema, DuckLints as DuckLintsSchema, Lints as LintsSchema,
+    BuildOptions as BuildOptionsSchema, DuckLints as DuckLintsSchema, Lints as LintsSchema,
     Manifest as ManifestSchema, Metadata as MetadataSchema, OptLevel as SchemaOptLevel,
     Profile as ProfileSchema, VenvConfig as VenvConfigSchema,
 };
@@ -110,7 +110,6 @@ pub(crate) fn parse(
                 profiles,
                 VenvConfig::default_for_script(ctx),
                 BuildOptions::default(),
-                BuildMetadata::default(),
                 lints,
             );
             Ok(manifest)
@@ -158,11 +157,15 @@ pub(crate) fn parse(
             };
 
             let mut guard = scope.push("metadata".into());
-            let build_options = parse_build_options(metadata, &mut guard)
+            let mut build_options = parse_build_options(metadata, &mut guard)
                 .with_context(move || guard.make_context_string())?;
-            let guard = scope.push("build-metadata".into());
-            let build_metadata =
-                parse_build_metadata(schema.build_metadata.as_ref(), &dependencies, guard)?;
+            let guard = scope.push("build-options".into());
+            parse_build_options_section(
+                schema.build_options.as_ref(),
+                &dependencies,
+                &mut build_options,
+                guard,
+            )?;
             Ok(Manifest::new(
                 name.into(),
                 version,
@@ -172,7 +175,6 @@ pub(crate) fn parse(
                 profiles,
                 venv,
                 build_options,
-                build_metadata,
                 lints,
             ))
         }
@@ -272,7 +274,8 @@ fn parse_venv(input: Option<&VenvConfigSchema>, root: &Path, ctx: &DuckContext) 
     VenvConfig::new(storage_root, expose_freezefile, ephemeral)
 }
 
-/// Parse a [`BuildOptions`] from the `metadata` part of the schema.
+/// Parse a [`BuildOptions`] from the `metadata` part of the schema. The fields set by the
+/// `build-options` section keep their defaults, see [`parse_build_options_section`].
 fn parse_build_options(
     input: &MetadataSchema,
     scope: &mut ScopeGuard<'_>,
@@ -290,25 +293,28 @@ fn parse_build_options(
     Ok(BuildOptions {
         external_libs,
         external_lib_paths,
+        ..BuildOptions::default()
     })
 }
 
-/// Parse the `build-metadata` section, checking that a package with `always-dep` set has no
-/// dependencies.
-fn parse_build_metadata(
-    input: Option<&BuildMetadataSchema>,
+/// Parse the `build-options` section into `options`, checking that a package with `always-dep`
+/// set has no dependencies.
+fn parse_build_options_section(
+    input: Option<&BuildOptionsSchema>,
     dependencies: &Dependencies,
+    options: &mut BuildOptions,
     mut scope: ScopeGuard<'_>,
-) -> QuackResult<BuildMetadata> {
-    let default = BuildMetadata::default();
+) -> QuackResult<()> {
     let Some(input) = input else {
-        return Ok(default);
+        return Ok(());
     };
-    let build_metadata = BuildMetadata {
-        use_std: input.use_std.unwrap_or(default.use_std),
-        always_dep: input.always_dep.unwrap_or(default.always_dep),
-    };
-    if build_metadata.always_dep && !dependencies.all_dependencies().is_empty() {
+    if let Some(use_std) = input.use_std {
+        options.use_std = use_std;
+    }
+    if let Some(always_dep) = input.always_dep {
+        options.always_dep = always_dep;
+    }
+    if options.always_dep && !dependencies.all_dependencies().is_empty() {
         let outer_context = scope.make_context_string();
         let guard = scope.push("always-dep".into());
         let mut err = qp_err!("a package with `always-dep` set to `true` cannot have dependencies");
@@ -317,7 +323,7 @@ fn parse_build_metadata(
             .with_context(move || guard.make_context_string())
             .context(outer_context);
     }
-    Ok(build_metadata)
+    Ok(())
 }
 
 /// Parse the `metadata.external-libs` list, checking that every entry is a bare library name.

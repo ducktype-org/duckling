@@ -263,7 +263,7 @@ impl<'duck, 'ctx> UnitRunner<'duck, 'ctx> {
         layout: &dyn DependencyLayout,
         profile: Profile,
     ) -> process_builder::DuckcProcessBuilder {
-        let use_std = unit.package().manifest().build_metadata().use_std;
+        let use_std = unit.package().manifest().build_options().use_std;
         let mut builder = Duckc::new(self.ctx()).process_builder();
         builder
             .set_subcommand(DuckcSubcommand::CompilePackages)

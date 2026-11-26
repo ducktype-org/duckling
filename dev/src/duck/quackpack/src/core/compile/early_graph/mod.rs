@@ -156,7 +156,7 @@ impl EarlyGraph {
             .sorted_by(|left, right| Identity::stable_compare(*left, *right));
         for identity in packages {
             let package = self.package(&identity).package();
-            if package.manifest().build_metadata().use_std {
+            if package.manifest().build_options().use_std {
                 continue;
             }
             for (_ename, dep_identity) in self
@@ -165,7 +165,7 @@ impl EarlyGraph {
                 .dependencies()
             {
                 let dependency = self.package(dep_identity).package();
-                if dependency.manifest().build_metadata().use_std {
+                if dependency.manifest().build_options().use_std {
                     errors.push(NoStdPackageDependsOnStdPackage {
                         package: package.name(),
                         dependency: dependency.name(),
