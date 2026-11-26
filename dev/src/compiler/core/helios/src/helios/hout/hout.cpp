@@ -9,6 +9,7 @@
 #include "elements.hpp"
 
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -98,7 +99,9 @@ namespace compiler::helios {
 					<< " = " << const_value.value.toString() << '\n';
 			}
 			variant_case(HOUTGlobalVariable, val) {
-				out << (type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ");
+				const auto place_access
+					= ctx.query<QueryTypeOfSymbol>(helios_symbol)->valueOrThrow().getPlaceAccess();
+				out << (place_access == tsh::PlaceAccess::Mutable ? "var   " : "let   ");
 				out << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString() << " = ";
 				val.initial_value.ref()->debugPrint(out);
 				out << '\n';

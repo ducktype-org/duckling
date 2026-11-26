@@ -253,12 +253,8 @@ namespace compiler::helios::desugaring {
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
-			.index = get_generated_local(
-				base::StrID("__index"), tsh::SymbolType(getI64(ctx), tsh::PlaceAccess::Mutable)
-			),
-			.length = get_generated_local(
-				base::StrID("__len"), tsh::SymbolType(getI64(ctx), tsh::PlaceAccess::Immutable)
-			),
+			.index = get_generated_local(base::StrID("__index"), tsh::SymbolType::var(getI64(ctx))),
+			.length = get_generated_local(base::StrID("__len"), tsh::SymbolType::let(getI64(ctx))),
 		};
 	}
 

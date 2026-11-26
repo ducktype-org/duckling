@@ -12,16 +12,15 @@
 #include "deductions.hpp"
 
 namespace compiler::tsh::deductions {
-	ValueType<> declarationTypeFromInitializer(
-		const ExpressionType<>& expr_type, const Mutability expected_mutability
+	SymbolType declarationTypeFromInitializer(
+		const ExpressionType<>& expr_type, const PlaceAccess place_access
 	) {
-		return ValueType<>::withDefaults(expr_type.getValueType().getType())
-		    .withMutability(expected_mutability);
+		return { ValueType<>::direct(expr_type.getValueType().getType()), place_access };
 	}
 
-	ValueType<> declarationTypeFromProvidedType(
-		const ValueType<>& given_type, const Mutability expected_mutability
+	SymbolType declarationTypeFromProvidedType(
+		const ValueType<>& given_type, const PlaceAccess place_access
 	) {
-		return given_type.withMutability(expected_mutability);
+		return { given_type, place_access };
 	}
 }

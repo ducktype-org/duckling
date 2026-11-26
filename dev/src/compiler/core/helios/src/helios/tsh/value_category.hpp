@@ -22,6 +22,7 @@
 
 #include <hashing/hash.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <string>
 
@@ -29,7 +30,7 @@
 // Maybe in the future we want to bring back "Identifiable" and make a struct to keep more
 // information
 /**
- * Primary category describes source of the value.
+ * @brief Primary category describes source of the value.
  */
 MAKE_STRINGIFYABLE_ENUM(compiler::tsh, uint8_t, PrimaryCategory,
 	/// Product of expression evaluation. An owned rvalue.
@@ -45,7 +46,29 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, uint8_t, PrimaryCategory,
 	Dereferenced
 )
 
+/**
+ * @brief Whether a place may be written to.
+ *
+ * It is a property of a place, not of a type. A declaration gives it to the place of its symbol
+ * (`let`, `const` and the `self` of a method that is not `mut` are Immutable) and every expression
+ * that denotes a place carries it in its ValueCategory.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::tsh, uint8_t, PlaceAccess,
+	Mutable,
+	Immutable
+)
+
 namespace compiler::tsh {
+	/**
+	 * @brief Combines two `PlaceAccess`es. Used when accessing a component of a place, like a class
+	 * field or an element of an array. The component may be written to only if both the whole place
+	 * and the component may be .
+	 */
+	[[nodiscard]]
+	constexpr PlaceAccess combinePlaceAccess(const PlaceAccess owner, const PlaceAccess part) {
+		return std::max(owner, part);
+	}
+
 	/**
 	 * @brief Get the primary category of a symbol: Local or Global, or Literal for a function (its
 	 * address).
@@ -87,6 +110,7 @@ namespace compiler::tsh {
 	 * @brief Describes properties of a value that are independent of its type. Like:
 	 * - Where it came from - PrimaryCategory
 	 * - What may/must be done with it - ValueSemantics.
+	 * - Whether the place it denotes may be written to - PlaceAccess.
 	 */
 	class ValueCategory {
 		using enum ValueSemanticsOptions;
@@ -108,6 +132,10 @@ namespace compiler::tsh {
 		 * is used, others may be redundant.
 		 */
 		ValueSemantics force_semantic{};
+		/**
+		 * Whether the place with this ValueCategory may be written to.
+		 */
+		PlaceAccess place_access{ PlaceAccess::Mutable };
 
 	public:
 		// It is not obvious what the default value category should be,
@@ -125,16 +153,32 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		ValueCategory withForceSemantics(const ValueSemantics new_force_semantic) const {
-			return { category, is_pure, allows_semantic, new_force_semantic };
+			ValueCategory copy  = *this;
+			copy.force_semantic = new_force_semantic;
+			return copy;
 		}
 
 		[[nodiscard]]
 		ValueCategory withDisabled(ValueSemantics disabled) const {
-			auto allows_semantic_copy = allows_semantic;
-			allows_semantic_copy -= disabled;
-			auto force_semantic_copy = force_semantic;
-			force_semantic_copy -= disabled;
-			return { category, is_pure, allows_semantic_copy, force_semantic_copy };
+			ValueCategory copy = *this;
+			copy.allows_semantic -= disabled;
+			copy.force_semantic -= disabled;
+			return copy;
+		}
+
+		[[nodiscard]]
+		ValueCategory withPlaceAccess(const PlaceAccess new_place_access) const {
+			ValueCategory copy = *this;
+			copy.place_access  = new_place_access;
+			return copy;
+		}
+
+		/**
+		 * A simple getter for place_access.
+		 */
+		[[nodiscard]]
+		PlaceAccess getPlaceAccess() const {
+			return place_access;
 		}
 
 		/**
@@ -229,7 +273,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
-				category, is_pure, allows_semantic, force_semantic
+				category, is_pure, allows_semantic, force_semantic, place_access
 			);
 		}
 

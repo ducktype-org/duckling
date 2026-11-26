@@ -487,7 +487,7 @@ private:
 			);
 
 			// Test non-default-constructible static array with ref element)
-			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref);
+			const auto ref_type    = ValueType<>::ref(int_16);
 			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
 			assertFalse(
 				vt(arr_of_refs).isDefaultConstructible(ctx),
@@ -552,7 +552,7 @@ private:
 			);
 
 			// Test non-default-constructible tuple with Ref element.
-			const auto ref_type    = ValueType(int_16, ReferenceKind::Ref);
+			const auto ref_type    = ValueType<>::ref(int_16);
 			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, vt(int_32) } });
 			assertFalse(
 				vt(tup_of_refs).isDefaultConstructible(ctx),
@@ -581,7 +581,7 @@ private:
 				mixed_tuple.carriesInformation(ctx),
 				"Tuple with an int component should carry information"
 			);
-			const auto unit_ref  = ValueType(unit, ReferenceKind::Ref);
+			const auto unit_ref  = ValueType<>::ref(unit);
 			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, vt(unit) } });
 			assertTrue(
 				ref_tuple.carriesInformation(ctx),

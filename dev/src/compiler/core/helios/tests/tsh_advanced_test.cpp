@@ -455,14 +455,6 @@ private:
 				"AbstractType should expose the source-level type name too"
 			);
 
-			const ValueType<> qualified_type(
-				i64_type, ReferenceKind::Ref, Leakage::Leaking, Uniqueness::Unique
-			);
-			assertEqual(
-				std::string("unique leaking ref i64"),
-				qualified_type.sourceTypeName(ctx),
-				"ValueType qualifiers should use the same order as toString"
-			);
 
 			assertEqual(
 				std::string("void"),

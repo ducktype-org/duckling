@@ -271,8 +271,6 @@ namespace compiler::tsh {
 	SourceTypeName renderValueTypeName(query::Context& ctx, const ValueType<> type) {
 		using enum ReferenceKind;
 		const std::string prefix = base::strConcat(
-			type.getUniqueness() == Uniqueness::Unique ? "unique " : "",
-			type.getLeakage() == Leakage::Leaking ? "leaking " : "",
 			type.getRefKind() == Direct ? ""
 			: type.getRefKind() == Box  ? "box "
 										: "ref "

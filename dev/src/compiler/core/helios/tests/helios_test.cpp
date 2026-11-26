@@ -180,7 +180,7 @@ private:
 	 * Shorthand to create a reference to mutable ValueType from an abstract type.
 	 */
 	static compiler::tsh::ValueType<> refvt(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::ValueType{ abstract_type, compiler::tsh::ReferenceKind::Ref };
+		return compiler::tsh::ValueType<>::ref(abstract_type);
 	}
 
 	static const compiler::helios::code::Expr* stripImplicitMove(
@@ -1454,7 +1454,7 @@ private:
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
 		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-		const auto int32ref_type = compiler::tsh::SymbolType(vt(int32_type).toRef(), Immutable);
+		const auto int32ref_type = compiler::tsh::SymbolType::let(vt(int32_type).toRef());
 		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
@@ -1463,7 +1463,7 @@ private:
 		// is covered by `helios_with_std_test`.
 		auto       sym_vbox    = getChain("VBOX", root_scope).back();
 		const auto f32_type    = getFloatTypeNoContext(32);
-		const auto f32box_type = compiler::tsh::SymbolType(vt(f32_type).toBox(), Immutable);
+		const auto f32box_type = compiler::tsh::SymbolType::let(vt(f32_type).toBox());
 		const auto vbox_type   = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
 		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
@@ -1472,7 +1472,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = compiler::tsh::SymbolType(vt(bool_type), Immutable);
+		const auto const_bool_type = compiler::tsh::SymbolType::let(vt(bool_type));
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -1742,8 +1742,7 @@ private:
 			auto i32_type = getIntegralTypeNoContext(32, Signed);
 			ASSERT_EQUAL(vt(i32_type), getValueTypeOf("copied", scope));
 			ASSERT_EQUAL(
-				compiler::tsh::SymbolType(vt(i32_type), Immutable),
-				getSymbolTypeOf("copied_let", scope)
+				compiler::tsh::SymbolType::let(vt(i32_type)), getSymbolTypeOf("copied_let", scope)
 			);
 		}
 	}

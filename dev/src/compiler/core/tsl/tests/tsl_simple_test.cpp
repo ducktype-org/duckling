@@ -372,10 +372,10 @@ private:
 			const ValueType<> i8_type = vt(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			const ValueType<> f16_type = vt(getFloatType(ctx, 16));
-			const ValueType<> f64_type = vt(getFloatType(ctx, 64));
-			const ValueType<> f16_ref  = ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Ref };
-			const ValueType<> f16_box  = ValueType<>{ getFloatType(ctx, 16), ReferenceKind::Box };
+			const ValueType<>       f16_type     = vt(getFloatType(ctx, 16));
+			const ValueType<>       f64_type     = vt(getFloatType(ctx, 64));
+			const ValueType<>       f16_ref      = ValueType<>::ref(getFloatType(ctx, 16));
+			const ValueType<>       f16_box      = ValueType<>::box(getFloatType(ctx, 16));
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });

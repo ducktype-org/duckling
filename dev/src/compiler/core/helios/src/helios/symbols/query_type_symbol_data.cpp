@@ -162,7 +162,8 @@ namespace compiler::helios {
 				comparison != defgen::COMPARISON_METHODS.end(), "Expected a comparison symbol"
 			);
 
-			const auto method_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+			const auto method_type
+				= ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow().getValueType().getType();
 			if (method_type.getKind() != tsh::Kind::Function) return tsh::MemberSpecialKind::None;
 
 			const auto  fn_type = method_type.as<tsh::FunctionAbstractType>();
@@ -191,14 +192,16 @@ namespace compiler::helios {
 			}
 			case SymbolKind::Method: {
 				if (name(sym) == "toString") {
-					const auto method_type
-						= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+					const auto method_type = ctx.query<helios::QueryTypeOfSymbol>(sym)
+					                             ->valueOrThrow()
+					                             .getValueType()
+					                             .getType();
 					if (method_type.getKind() == tsh::Kind::Function) {
 						const auto fn_type = method_type.as<tsh::FunctionAbstractType>();
 						// parameterTypes.size() == 1 means method has not params except self.
 						if (fn_type.getParameterTypes().size() == 1
 						    && fn_type.getResultType()
-						           == tsh::ValueType<>::withDefaultsMut(tsh::getStringType(ctx)))
+						           == tsh::ValueType<>::direct(tsh::getStringType(ctx)))
 							return tsh::MemberSpecialKind::ToString;
 					}
 				}

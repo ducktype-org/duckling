@@ -7,7 +7,6 @@
 #pragma once
 
 #include "abstract_type.hpp"
-#include "mutability.hpp"
 
 #include <hashing/hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -41,45 +40,26 @@ namespace compiler::tsh {
 		Ref,
 	};
 
-	enum class Leakage : bool {
-		/**
-		 * @brief The value can leak outside the defining scope.
-		 */
-		Leaking,
-
-		/**
-		 * @brief The value cannot leak outside the defining scope.
-		 */
-		NonLeaking,
-	};
-
-	enum class Uniqueness : bool {
-		/**
-		 * @brief The value is unique, no other references to it can exist.
-		 */
-		Unique,
-
-		/**
-		 * @brief The value is not unique, other references to it are permitted.
-		 */
-		NonUnique,
-	};
-
 	/**
 	 * @brief The ValueType class describes how a value is held, which is an AbstractType expanded
-	 * with information about referencing and mutability.
+	 * with information about referencing.
 	 *
 	 * A ValueType<AbstractType> object will contain information about any type,
 	 * while a ValueType<IntegralAbstractType> object is guaranteed to contain information
 	 * about some Integral type described with an IntegralAbstractType object.
 	 *
-	 * It types symbols, like variables and parameters, and the components of composite types,
-	 * like tuples and variants.
+	 * It types values everywhere: symbols, expressions and the components of composite types,
+	 * like tuples and variants. This represents a pure type looking from the user level.
+	 * There are two possible expansions of the ValueType:
+	 * - `SymbolType` - an object which describes a declared symbol. It includes other symbol
+	 * properties different from the type itself. This includes PlaceAccess, Uniqueness and Leakage.
+	 * - `ExpressionType` - an object which describes an expression. It includes other expression
+	 * properties - mainly `ValueCategory`.`
 	 *
 	 * @tparam ABSTRACT_TYPE The underlying class from the AbstractType hierarchy.
 	 */
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE = AbstractType>
-	class ValueType {
+	class ValueType final {
 	public:
 		/**
 		 * @brief Constructs the ValueType from another ValueType.
@@ -95,69 +75,36 @@ namespace compiler::tsh {
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		ValueType(const ValueType<OTHER_ABSTRACT_TYPE>& other):
 			  abstract_type(other.getType()),
-			  reference_kind(other.getRefKind()),
-			  mutability(other.getMutability()),
-			  leakage(other.getLeakage()),
-			  uniqueness(other.getUniqueness()) {}
+			  reference_kind(other.getRefKind()) {}
 
 		/**
-		 * @brief Constructs the ValueType directly from its contents.
-		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
-		 * @param reference_kind The reference kind.
-		 * @param mutability The mutability.
-		 * @param leakage The leakage.
-		 * @param uniqueness The uniqueness.
-		 */
-		ValueType(
-			const ABSTRACT_TYPE abstract_type,
-			const ReferenceKind reference_kind,
-			const Mutability    mutability,
-			const Leakage       leakage    = Leakage::NonLeaking,
-			const Uniqueness    uniqueness = Uniqueness::NonUnique
-		):
-			  abstract_type(abstract_type),
-			  reference_kind(reference_kind),
-			  mutability(mutability),
-			  leakage(leakage),
-			  uniqueness(uniqueness) {}
-
-		/**
-		 * @brief Creates a ValueType from an AbstractType with a set of default symbol properties.
-		 *
-		 * This static factory method makes a ValueType<> that has Direct reference kind, is
-		 * Immutable, NonLeaking and NonUnique and wraps the given abstract type. Use
-		 * withDefaultsMut() when the symbol has to be Mutable.
-		 *
-		 * @warning Do not wrap this method in "convenience" functions or implicit conversions.
-		 * Hiding this call behind a shorter or automated wrapper defeats its purpose of making the
-		 * transition from AbstractType to ValueType explicit and conscious decision.
+		 * @brief Creates a Direct ValueType from an AbstractType.
 		 *
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
-		 * @return A ValueType<ABSTRACT_TYPE> with default (immutable) symbol properties.
+		 * @return A Direct ValueType<ABSTRACT_TYPE>.
 		 */
-		static ValueType<ABSTRACT_TYPE> withDefaults(const ABSTRACT_TYPE abstract_type) {
-			return ValueType<ABSTRACT_TYPE>(
-				abstract_type,
-				ReferenceKind::Direct,
-				Mutability::Immutable,
-				Leakage::NonLeaking,
-				Uniqueness::NonUnique
-			);
+		static ValueType<ABSTRACT_TYPE> direct(const ABSTRACT_TYPE abstract_type) {
+			return ValueType<ABSTRACT_TYPE>(abstract_type, ReferenceKind::Direct);
 		}
 
 		/**
-		 * @brief Same as withDefaults(), but the resulting ValueType is Mutable.
+		 * @brief Creates a Ref ValueType from an AbstractType.
+		 *
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
-		 * @return A ValueType<ABSTRACT_TYPE> with default symbol properties, but Mutable.
+		 * @return A Ref ValueType<ABSTRACT_TYPE>.
 		 */
-		static ValueType<ABSTRACT_TYPE> withDefaultsMut(const ABSTRACT_TYPE abstract_type) {
-			return ValueType<ABSTRACT_TYPE>(
-				abstract_type,
-				ReferenceKind::Direct,
-				Mutability::Mutable,
-				Leakage::NonLeaking,
-				Uniqueness::NonUnique
-			);
+		static ValueType<ABSTRACT_TYPE> ref(const ABSTRACT_TYPE abstract_type) {
+			return ValueType<ABSTRACT_TYPE>(abstract_type, ReferenceKind::Ref);
+		}
+
+		/**
+		 * @brief Creates a Box ValueType, from an AbstractType.
+		 *
+		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
+		 * @return A Box ValueType<ABSTRACT_TYPE>.
+		 */
+		static ValueType<ABSTRACT_TYPE> box(const ABSTRACT_TYPE abstract_type) {
+			return ValueType<ABSTRACT_TYPE>(abstract_type, ReferenceKind::Box);
 		}
 
 		/**
@@ -176,33 +123,6 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		ReferenceKind getRefKind() const {
 			return reference_kind;
-		}
-
-		/**
-		 * @brief Gets the mutability.
-		 * @return The mutability.
-		 */
-		[[nodiscard]]
-		Mutability getMutability() const {
-			return mutability;
-		}
-
-		/**
-		 * @brief Gets the leakage.
-		 * @return The leakage.
-		 */
-		[[nodiscard]]
-		Leakage getLeakage() const {
-			return leakage;
-		}
-
-		/**
-		 * @brief Gets the uniqueness.
-		 * @return The uniqueness.
-		 */
-		[[nodiscard]]
-		Uniqueness getUniqueness() const {
-			return uniqueness;
 		}
 
 		/**
@@ -303,7 +223,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		ValueType withReferenceKind(const ReferenceKind new_reference_kind) const {
-			return ValueType(abstract_type, new_reference_kind, mutability, leakage, uniqueness);
+			return ValueType(abstract_type, new_reference_kind);
 		}
 
 		/**
@@ -333,11 +253,6 @@ namespace compiler::tsh {
 			return withReferenceKind(ReferenceKind::Ref);
 		}
 
-		[[nodiscard]]
-		ValueType withMutability(const Mutability new_mutability) const {
-			return ValueType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
-		}
-
 		/**
 		 * @brief Utility to get the pointee type from the current ValueType.
 		 * Works both with reference RefKind and pointer abstract types.
@@ -362,10 +277,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		auto operator<=>(const ValueType<OTHER_ABSTRACT_TYPE>& other) const {
 			if (auto type_cmp = abstract_type <=> other.getType(); type_cmp != 0) return type_cmp;
-			if (auto ref_cmp = reference_kind <=> other.getRefKind(); ref_cmp != 0) return ref_cmp;
-			if (auto mut_cmp = mutability <=> other.getMutability(); mut_cmp != 0) return mut_cmp;
-			if (auto leak_cmp = leakage <=> other.getLeakage(); leak_cmp != 0) return leak_cmp;
-			return uniqueness <=> other.getUniqueness();
+			return reference_kind <=> other.getRefKind();
 		}
 
 		/**
@@ -384,9 +296,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(
-				abstract_type, reference_kind, mutability, leakage, uniqueness
-			);
+			return hashing::justHash<hashing::SHA256>(abstract_type, reference_kind);
 		}
 
 		friend constexpr void addToHash(
@@ -399,9 +309,6 @@ namespace compiler::tsh {
 		std::string toString() const {
 			using enum ReferenceKind;
 			return base::strConcat(
-				uniqueness == Uniqueness::Unique ? "unique " : "",
-				leakage == Leakage::Leaking ? "leaking " : "",
-				mutability == Mutability::Mutable ? "" : "imm ",
 				reference_kind == Direct ? ""
 				: reference_kind == Box  ? "box "
 										 : "ref ",
@@ -412,9 +319,8 @@ namespace compiler::tsh {
 		/**
 		 * @brief Returns a source-oriented representation of this ValueType.
 		 *
-		 * The returned representation includes all applicable symbol qualifiers, such as `imm`,
-		 * `ref`, `box`, `unique` and `leaking`, in the same order as @ref toString. The qualifiers
-		 * `unique` and `leaking` currently have no type-expression syntax. The underlying type
+		 * The returned representation includes the reference kind, `ref` or `box`, in the same
+		 * way as @ref toString. The underlying type
 		 * follows Duckling source syntax whenever it has a type-expression spelling and otherwise
 		 * uses the human-readable fallback documented by AbstractType::sourceTypeName. The result
 		 * is intended for user-facing output, subject to the name-qualification limitations
@@ -430,9 +336,14 @@ namespace compiler::tsh {
 	private:
 		ABSTRACT_TYPE abstract_type;
 		ReferenceKind reference_kind;
-		Mutability    mutability;
-		Leakage       leakage;
-		Uniqueness    uniqueness;
+
+		/**
+		 * @brief Constructs the ValueType directly from its contents. Use direct(), ref() or box()
+		 * instead, or withReferenceKind().
+		 */
+		ValueType(const ABSTRACT_TYPE abstract_type, const ReferenceKind reference_kind):
+			  abstract_type(abstract_type),
+			  reference_kind(reference_kind) {}
 	};
 
 	extern template auto ValueType<AbstractType>::getPointeeValueType() const

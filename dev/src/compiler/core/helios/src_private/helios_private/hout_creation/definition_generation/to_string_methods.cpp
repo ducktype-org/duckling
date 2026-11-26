@@ -274,9 +274,7 @@ namespace compiler::helios::defgen {
 					.generated_symbol_data
 					= GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
 				                                 .variable_index  = i,
-				                                 .type            = tsh::SymbolType(
-                                                     payload_type, tsh::PlaceAccess::Mutable
-                                                 ) },
+				                                 .type = tsh::SymbolType::var(payload_type) },
 				});
 
 				const SymID payload_to_string = toStringSymForType(ctx, alternatives[i].getType());
@@ -320,9 +318,7 @@ namespace compiler::helios::defgen {
 			      .generated_symbol_data
 			      = GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
 			                                   .variable_index  = 0,
-			                                   .type            = tsh::SymbolType(
-                                                   STRING_TYPE, tsh::PlaceAccess::Mutable
-                                               ) } }
+			                                   .type = tsh::SymbolType::var(STRING_TYPE) } }
 			);
 			body.emplace_back(s.var(result_sym, STRING_TYPE, s.litStrObj(base::StrID(prefix))));
 

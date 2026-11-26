@@ -175,11 +175,10 @@ namespace compiler::helios::defgen {
 				const auto payload_type = alternatives[i].toRef();
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
-					.name = base::StrID(base::strConcat("__alternative_", i)),
-					.generated_symbol_data
-					= Variable{ .function_symbol = dtor_sym,
-				                .variable_index  = i,
-				                .type = tsh::SymbolType(payload_type, tsh::PlaceAccess::Mutable) },
+					.name                  = base::StrID(base::strConcat("__alternative_", i)),
+					.generated_symbol_data = Variable{ .function_symbol = dtor_sym,
+				                                       .variable_index  = i,
+				                                       .type = tsh::SymbolType::var(payload_type) },
 				});
 
 				// The binding already is the reference the destructor wants. Going through
@@ -225,11 +224,10 @@ namespace compiler::helios::defgen {
 			const auto i64_type = tsh::ValueType<>::direct(i64_abs_type);
 
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				   .name = base::StrID("__i"),
-				   .generated_symbol_data
-                = Variable{ .function_symbol = dtor_sym,
-			                   .variable_index  = 0,
-			                   .type = tsh::SymbolType(i64_type, tsh::PlaceAccess::Mutable) },
+				   .name                  = base::StrID("__i"),
+				   .generated_symbol_data = Variable{ .function_symbol = dtor_sym,
+			                                          .variable_index  = 0,
+			                                          .type = tsh::SymbolType::var(i64_type) },
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(i64_abs_type)
 			                    .expect("i64 creation failed");

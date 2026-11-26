@@ -8,6 +8,7 @@
 
 
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/value_type.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -15,7 +16,7 @@
 
 namespace compiler::helios {
 
-	using QuerySymbolType_Result = query::QResult<tsh::ValueType<>>;
+	using QuerySymbolType_Result = query::QResult<tsh::SymbolType>;
 
 	/**
 	 * @brief Query type of the symbol.
