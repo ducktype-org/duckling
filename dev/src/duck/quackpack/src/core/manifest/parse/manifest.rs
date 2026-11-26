@@ -282,9 +282,14 @@ fn parse_build_options(
     let external_libs = parse_external_libs(input.external_libs.as_deref())
         .with_context(move || guard.make_context_string())?;
     let external_lib_paths = input.external_lib_paths.clone().unwrap_or_default();
+    let defaults = BuildOptions::default();
+    let use_std = input.use_std.unwrap_or(defaults.use_std);
+    let always_dep = input.always_dep.unwrap_or(defaults.always_dep);
     Ok(BuildOptions {
         external_libs,
         external_lib_paths,
+        use_std,
+        always_dep,
     })
 }
 

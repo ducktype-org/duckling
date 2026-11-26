@@ -90,6 +90,10 @@ pub struct Metadata {
     /// Directories searched for [`Metadata::external_libs`] before the system ones.
     /// Paths are relative to the package's root.
     pub external_lib_paths: Option<Vec<PathBuf>>,
+    /// Whether the package is compiled with the standard library (`true` when omitted).
+    pub use_std: Option<bool>,
+    /// Whether the package can only be compiled as a dependency (`false` when omitted).
+    pub always_dep: Option<bool>,
     /// The old name of `external-libs`; only kept to report a helpful error.
     // @TODO: #3999 remove this field in a future release.
     pub links: Option<de::IgnoredAny>,

@@ -16,6 +16,7 @@ SubDirs:
   - incremental
   - local-cycle
   - no-cstd
+  - no-std
   - same-dep-names-different-sources
   - shared-artifacts
   - workers-count

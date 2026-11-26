@@ -283,6 +283,7 @@ fn construct_request(
                 id,
                 version: *version,
                 features,
+                no_std_parent: None,
             }))
         } else {
             qp_bail!("pinned dependency should have exactly one version specified");
@@ -297,6 +298,7 @@ fn construct_request(
             id,
             versions,
             features,
+            no_std_parent: None,
         }))
     }
 }

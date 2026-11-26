@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "  use-std: false" >> foo/quackconfig.yaml
+  echo "  use-std: false
+    always-dep: true" >> bar/quackconfig.yaml
+  @{duck-exe} -C foo add --local ../bar bar
+
+Tests:
+  no-std:
+    Description: compiles every package with `use-std` set to `false` without the standard library
+    Cases:
+      build:
+        # One `duckc` call for `bar` and one for `foo`, both with `--no-std`.
+        test-cmd: duck -C foo -v build 2>&1 | grep -c -- " --no-std"
+        Output:
+          String: |+
+            2

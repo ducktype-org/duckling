@@ -70,6 +70,8 @@ pub struct SerializablePackageData {
     pub enabled_features: HashSet<FeatureName>,
     pub identity: Identity,
     pub version: Version,
+    /// Whether the package is compiled with the standard library.
+    pub use_std: bool,
 }
 
 impl SerializableGraphNodeData {
@@ -142,6 +144,7 @@ impl From<&PackageData> for SerializablePackageData {
             enabled_features: value.enabled_features().clone(),
             identity: value.identity(),
             version: value.package().version(),
+            use_std: value.package().manifest().build_options().use_std,
         }
     }
 }

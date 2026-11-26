@@ -1,5 +1,6 @@
 SubDirs:
   - absent-flag
+  - always-dep-with-dependencies
   - always_false_conditions
   - frozen-unsatisfied-root
   - gatherer-checks-self-dependence

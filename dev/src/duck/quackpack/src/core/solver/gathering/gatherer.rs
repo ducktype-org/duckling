@@ -170,6 +170,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             },
             versions: None,
             features: root_features,
+            no_std_parent: None,
         };
         // The action is always RequestActionFetch, so ignore returned value.
         let _ = state.get_request_action(ManifestsRequest::NotPinned(root_request), errors)?;
@@ -483,6 +484,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 },
                 versions: None,
                 features: [].into(),
+                no_std_parent: None,
             };
             // We create a dummy logger, because we do not care about errors of `fetch_local`,
             // if it returns a `FetchResponse::Success` then there were no errors anyway.

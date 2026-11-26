@@ -2067,3 +2067,99 @@ dependencies:
         )
     );
 }
+
+#[test]
+fn build_options_defaults() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert!(build_options.use_std);
+    assert!(!build_options.always_dep);
+}
+
+#[test]
+fn build_options_without_std() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  use-std: false
+
+dependencies:
+  bar:
+    version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap().0;
+    let build_options = manifest.manifest().build_options();
+    assert!(!build_options.use_std);
+    assert!(!build_options.always_dep);
+}
+
+#[test]
+fn build_options_always_dep_without_dependencies() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  use-std: false
+  always-dep: true
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let (manifest, _, errors) = parse_manifest(&manifest_path, &ctx).unwrap();
+    errors.emit_errors(&ctx).unwrap();
+    let build_options = manifest.manifest().build_options();
+    assert!(!build_options.use_std);
+    assert!(build_options.always_dep);
+}
+
+#[test]
+fn build_options_always_dep_with_dependencies_is_an_error() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  always-dep: true
+
+dependencies:
+  bar:
+    version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let (_, _, errors) = parse_manifest(&manifest_path, &ctx).unwrap();
+    let err = errors.emit_errors(&ctx).unwrap_err();
+    assert_eq!(err.to_string(), "emitted 1 error");
+}
+
+#[test]
+fn build_options_always_dep_with_dev_dependencies_is_an_error() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+  always-dep: true
+
+dev-dependencies:
+  bar:
+    version: '1'
+"#,
+    );
+    let ctx = duck_context_for_tests();
+    let (_, _, errors) = parse_manifest(&manifest_path, &ctx).unwrap();
+    let err = errors.emit_errors(&ctx).unwrap_err();
+    assert_eq!(err.to_string(), "emitted 1 error");
+}

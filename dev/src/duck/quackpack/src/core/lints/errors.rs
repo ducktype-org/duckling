@@ -58,3 +58,10 @@ macros::make_diagnostic! {
     }
     display("the key `{}` is unused", key)
 }
+
+macros::make_diagnostic! {
+    pub struct AlwaysDepWithDependencies {}
+    display(
+        "a package with `metadata.always-dep` set to `true` cannot have `dependencies` or `dev-dependencies`"
+    )
+}

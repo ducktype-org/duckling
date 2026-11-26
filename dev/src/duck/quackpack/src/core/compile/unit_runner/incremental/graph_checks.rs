@@ -248,21 +248,24 @@ mod test {
         ],
         "enabled-features": [],
         "identity": "foo local+file:///home/foo",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       },
       "bar local+file:///home/bar": {
         "root-path": "/home/bar",
         "deps-realization": [],
         "enabled-features": [],
         "identity": "bar local+file:///home/bar",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       },
       "baz local+file:///home/baz": {
         "root-path": "/home/baz",
         "deps-realization": [],
         "enabled-features": [],
         "identity": "baz local+file:///home/baz",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       }
     }
   }"#;
@@ -323,14 +326,16 @@ mod test {
         ],
         "enabled-features": [],
         "identity": "foo local+file:///home/foo",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       },
       "bar local+file:///home/bar": {
         "root-path": "/home/bar",
         "deps-realization": [],
         "enabled-features": [],
         "identity": "bar local+file:///home/bar",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       }
     }
   }"#;
@@ -391,14 +396,16 @@ mod test {
         ],
         "enabled-features": [],
         "identity": "foo local+file:///home/foo",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       },
       "bar local+file:///home/bar": {
         "root-path": "/home/bar",
         "deps-realization": [],
         "enabled-features": [],
         "identity": "bar local+file:///home/bar",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "use-std": true
       }
     }
   }"#;

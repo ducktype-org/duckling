@@ -163,6 +163,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             description,
             external_libs,
             external_lib_paths,
+            use_std,
+            always_dep,
         } = metadata;
         let authors = authors.into_iter().collect();
         let metadata = PackageMetadata {
@@ -184,6 +186,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             BuildOptions {
                 external_libs: external_libs.into_iter().map(Into::into).collect(),
                 external_lib_paths,
+                use_std: use_std.unwrap_or(true),
+                always_dep,
             },
             lints,
         ))
@@ -220,6 +224,8 @@ impl TryFrom<Manifest> for registry::Manifest {
                 .map(Into::into)
                 .collect(),
             external_lib_paths: build_options.external_lib_paths,
+            use_std: Some(build_options.use_std),
+            always_dep: build_options.always_dep,
         };
         Ok(Self {
             metadata,

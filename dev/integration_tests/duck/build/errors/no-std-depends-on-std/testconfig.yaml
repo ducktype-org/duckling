@@ -1,0 +1,16 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "  use-std: false" >> foo/quackconfig.yaml
+  @{duck-exe} -C foo add --local ../bar bar
+Tests:
+  no-std-depends-on-std:
+    Description: errors when a package without the standard library depends on a package with it
+    Cases:
+      no-std-depends-on-std:
+        test-cmd: duck -C foo build
+        ExitCode: 1
+        Err:
+          String: |+
+            error: package \`foo\` does not use the standard library, so it cannot depend on \`bar\` version \`1.0.0\`, which does

@@ -21,7 +21,7 @@ use crate::util::Pluralize;
 use crate::util::extend::QpExtend;
 use crate::util::interning::QpJoin;
 use crate::util::with_version::WithVersion;
-use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err};
+use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal, qp_err};
 
 /// Gathered information about a particular package.
 #[derive(Debug)]
@@ -44,6 +44,8 @@ impl PackageData {
             return Ok(vec![]);
         }
         let mut result = vec![];
+        let manifest = &self.manifest;
+        let no_std_parent = (!manifest.build_options().use_std).then(|| manifest.name());
         for dependency in self
             .manifest
             .dependencies()
@@ -65,6 +67,7 @@ impl PackageData {
                     dependency.name(),
                     version,
                     features,
+                    no_std_parent,
                 ));
             } else {
                 let versions = dependency.versions().to_vec();
@@ -78,6 +81,7 @@ impl PackageData {
                     dependency.name(),
                     versions,
                     features,
+                    no_std_parent,
                 ));
             }
         }
@@ -201,7 +205,12 @@ impl GathererState {
                         format!("could not expand the package {request_pkg:#?} {self:#?}")
                     })?;
                 Ok(self
-                    .update_pkg_data(answer_pkg, pinned_request.features, errors)?
+                    .update_pkg_data(
+                        answer_pkg,
+                        pinned_request.features,
+                        pinned_request.no_std_parent,
+                        errors,
+                    )?
                     .into())
             }
         }
@@ -249,7 +258,12 @@ impl GathererState {
                     );
                 }
                 Ok(self
-                    .update_pkg_data(answer_pkg, pinned_request.features, errors)?
+                    .update_pkg_data(
+                        answer_pkg,
+                        pinned_request.features,
+                        pinned_request.no_std_parent,
+                        errors,
+                    )?
                     .into())
             }
         }
@@ -265,6 +279,7 @@ impl GathererState {
         let id = request.id;
         let selector = request.versions;
         let requested_features = request.features;
+        let no_std_parent = request.no_std_parent;
         let mut result = vec![];
         let mut any_matched = false;
         let Some(answer_origin) = self.source_to_origin_resolver.get(&id.source).copied() else {
@@ -289,6 +304,7 @@ impl GathererState {
                 result.extend(self.update_pkg_data(
                     PackageId::new(answer_identity, version),
                     requested_features.clone(),
+                    no_std_parent,
                     errors,
                 )?);
             }
@@ -315,15 +331,29 @@ impl GathererState {
     ///
     /// Checks that all the requested features exist (are supported by the package).
     /// If any such feature exists, then the [`ManifestsRequest`]
+    ///
+    /// Checks that a package using the standard library is not requested by `no_std_parent`,
+    /// a package which does not use it. Such a package is not a realization of the request.
     fn update_pkg_data(
         &mut self,
         pkg: PackageId,
         requested_features: HashSet<FeatureName>,
+        no_std_parent: Option<StrId>,
         errors: &mut ErrorsLogger,
     ) -> QuackResult<Vec<ManifestsRequest>> {
         let Some(pkg_data) = self.pkgs_data.get_mut(&pkg) else {
             qp_bail_internal!("fetched package {pkg:?} without PackageData {self:#?}")
         };
+        if let Some(parent) = no_std_parent
+            && pkg_data.manifest.build_options().use_std
+        {
+            errors.log(qp_err!(
+                "package `{parent}` does not use the standard library, so it cannot depend on `{}` version `{}`, which does",
+                pkg.name(),
+                pkg.version(),
+            ));
+            return Ok(vec![]);
+        }
         // Collect features which were requested but the package does not have them.
         let mut nonexistent_features = vec![];
         for feature in requested_features.iter() {
@@ -567,6 +597,7 @@ impl GathererState {
                     result.extend(self.update_pkg_data(
                         PackageId::new(answer_identity, pinned_request.version),
                         pinned_request.features,
+                        pinned_request.no_std_parent,
                         errors,
                     )?);
                 }

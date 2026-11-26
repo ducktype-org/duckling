@@ -100,6 +100,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![foo_bar_dep]),
         features: HashMap::new(),
@@ -115,6 +117,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -130,6 +134,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -145,6 +151,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: HashMap::new(),
@@ -183,6 +191,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: [("dx".into(), vec![])].into(),
@@ -198,6 +208,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![dx_xd_dep]),
         features: [("root".into(), vec![])].into(),
@@ -248,6 +260,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![a_c_dep]),
         features: [("f".into(), vec![])].into(),
@@ -263,6 +277,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: [].into(),
@@ -278,6 +294,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![b_a_dep]),
         features: [].into(),
@@ -293,6 +311,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: [].into(),
@@ -343,6 +363,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![u_v_dep]),
         features: [("v".into(), vec![])].into(),
@@ -358,6 +380,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![v_u_dep]),
         features: [("u".into(), vec![])].into(),
@@ -391,6 +415,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies(vec![n_m_dep]),
         features: [
@@ -410,6 +436,8 @@ fn create_mock_server() -> MockServer {
             description: "".into(),
             external_libs: vec![],
             external_lib_paths: vec![],
+            use_std: None,
+            always_dep: false,
         },
         dependencies: registry::Dependencies::default(),
         features: [].into(),
@@ -961,4 +989,118 @@ dependencies:
             (PackageId::new(identity_m, Version::new(1, 0, 0)), [].into()),
         ])
     )
+}
+
+/// Prepare a `root` package without the standard library, depending on a local package `bar`.
+/// `bar` uses the standard library when `bar_uses_std` is true.
+fn prepare_no_std_root(bar_uses_std: bool) -> (TempDir, PathBuf, PathBuf) {
+    let dir = tempdir().unwrap();
+    let root_path = dir.path().join("root").join("quackconfig.yaml");
+    let bar_dir = dir.path().join("bar");
+    touch(&root_path).unwrap();
+    write_file(
+        &root_path,
+        r#"
+metadata:
+  name: root
+  version: '0.1.0'
+  use-std: false
+
+dependencies:
+  bar:
+    source:
+      path: ../bar
+"#,
+    )
+    .unwrap();
+    let bar_path = bar_dir.join("quackconfig.yaml");
+    touch(&bar_path).unwrap();
+    write_file(
+        &bar_path,
+        format!(
+            r#"
+metadata:
+  name: bar
+  version: '1.0.0'
+  use-std: {bar_uses_std}
+"#
+        ),
+    )
+    .unwrap();
+    try_fsync_dir(dir.path()).unwrap();
+    (dir, root_path, bar_dir)
+}
+
+/// A package without the standard library can depend on a package without it.
+#[test]
+fn no_std_depends_on_no_std() {
+    let (ctx, _root) = setup_duck_ctx();
+    let fetcher = Fetcher::new(&ctx);
+    let (_dir, root_path, bar_dir) = prepare_no_std_root(false);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
+    let identity_bar = FullIdentity::new("bar".into(), FullOrigin::for_local(&bar_dir).unwrap());
+    assert!(
+        gathered_info
+            .packages_data
+            .contains_key(&PackageId::new(identity_bar, Version::new(1, 0, 0)))
+    );
+}
+
+/// A package without the standard library cannot depend on a package with it.
+#[test]
+fn no_std_depends_on_std_is_an_error() {
+    let (ctx, _root) = setup_duck_ctx();
+    let fetcher = Fetcher::new(&ctx);
+    let (_dir, root_path, _bar_dir) = prepare_no_std_root(true);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let err = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "package `root` does not use the standard library, so it cannot depend on `bar` version `1.0.0`, which does"
+    );
+}
+
+/// In the Merciful mode, a package with the standard library is not a realization of a
+/// dependency of a package without it.
+#[test]
+fn no_std_depends_on_std_merciful() {
+    let (ctx, _root) = setup_duck_ctx();
+    let fetcher = Fetcher::new(&ctx);
+    let (_dir, root_path, bar_dir) = prepare_no_std_root(true);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().0.into_manifest();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode {
+            suppress_foreign_manifests_errors: true,
+            frozen: false,
+        },
+    ))
+    .unwrap();
+    let identity_bar = FullIdentity::new("bar".into(), FullOrigin::for_local(&bar_dir).unwrap());
+    assert!(
+        !gathered_info
+            .packages_data
+            .contains_key(&PackageId::new(identity_bar, Version::new(1, 0, 0)))
+    );
 }

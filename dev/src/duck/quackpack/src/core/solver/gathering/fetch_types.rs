@@ -22,6 +22,9 @@ pub struct NotPinnedRequest {
     pub id: RequestIdentifier,
     pub versions: Option<Vec<Version>>,
     pub features: HashSet<FeatureName>,
+    /// The name of the requesting package if it does not use the standard library.
+    /// Then only packages that do not use it either can answer this request.
+    pub no_std_parent: Option<StrId>,
 }
 
 /// Request to get manifest for a particular package.
@@ -30,6 +33,9 @@ pub struct PinnedRequest {
     pub id: RequestIdentifier,
     pub version: Version,
     pub features: HashSet<FeatureName>,
+    /// The name of the requesting package if it does not use the standard library.
+    /// Then only packages that do not use it either can answer this request.
+    pub no_std_parent: Option<StrId>,
 }
 
 /// A common identifier of a request.
@@ -46,11 +52,13 @@ impl ManifestsRequest {
         name: StrId,
         version: Version,
         features: HashSet<FeatureName>,
+        no_std_parent: Option<StrId>,
     ) -> Self {
         Self::Pinned(PinnedRequest {
             id: RequestIdentifier { name, source },
             version,
             features,
+            no_std_parent,
         })
     }
 
@@ -60,11 +68,13 @@ impl ManifestsRequest {
         name: StrId,
         versions: Option<Vec<Version>>,
         features: HashSet<FeatureName>,
+        no_std_parent: Option<StrId>,
     ) -> Self {
         Self::NotPinned(NotPinnedRequest {
             id: RequestIdentifier { name, source },
             versions,
             features,
+            no_std_parent,
         })
     }
 

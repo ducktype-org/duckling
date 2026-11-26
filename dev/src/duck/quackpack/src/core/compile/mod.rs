@@ -21,8 +21,8 @@ use self::unit_runner::{CompilationOutput, CompilationTarget, UnitRunner};
 use crate::core::identity::Identity;
 use crate::core::solver::solver_freeze::SolverFreeze;
 use crate::core::storage::paths::Storage;
-use crate::core::{AnyPackage, FeatureName, PackageContext, PackageId};
-use crate::{QuackResult, qp_bail_internal};
+use crate::core::{AnyPackage, FeatureName, Manifest, PackageContext, PackageId};
+use crate::{QuackResult, qp_bail, qp_bail_internal, qp_err};
 
 pub mod artifacts_layout;
 pub mod compiler_package;
@@ -93,10 +93,24 @@ pub fn compile(
     if bcx.pcx.package().is_script() {
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
+    bail_if_always_dep(bcx.pcx.package().manifest())?;
     let graph = create_early_graph_from_bcx(&bcx, pkgs)?;
     trace!(early_graph = ?graph, "created EarlyGraph");
     let unit_graph = lower_early_graph(graph)?;
     trace!(?unit_graph, "created UnitGraph");
     let runner = UnitRunner::new(unit_graph, &bcx);
     runner.run()
+}
+
+/// Fail if the root package has `always-dep` set, because it can only be compiled as a dependency.
+fn bail_if_always_dep(root_manifest: &Manifest) -> QuackResult<()> {
+    if root_manifest.build_options().always_dep {
+        let mut err = qp_err!(
+            "package `{}` cannot be compiled directly, because its `metadata.always-dep` is `true`",
+            root_manifest.name()
+        );
+        err.add_note("such a package can only be compiled as a dependency of another package");
+        qp_bail!(err)
+    }
+    Ok(())
 }
