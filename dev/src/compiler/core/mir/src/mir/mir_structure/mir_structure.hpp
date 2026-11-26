@@ -13,9 +13,9 @@
 #include <ctv/ctv.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
-#include <base/collections/stable_hashmap.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -153,7 +153,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
 	CreateBox,
 	CreateRef,
-	CreateConst,
+	CreateMut,
+	CreateImm,
 	CreatePtr,
 	CreateManyPtr,
 	CreateCPtr,
@@ -248,7 +249,7 @@ namespace compiler::mir {
 		 * Locals without a helios_id are locals created for temporary values.
 		 */
 		base::Optional<helios::SymID> helios_id;
-		tsh::SymbolType<>             type;
+		tsh::ValueType<>              type;
 
 		/**
 		 * Lifetime scopes of this local.
@@ -282,7 +283,7 @@ namespace compiler::mir {
 		 * @brief Constructor for a local variables with a HELIOS SymID.
 		 */
 		MIRLocal(
-			LocalID id, helios::SymID helios_id, tsh::SymbolType<> type, LifetimeFlags lifetime_flags
+			LocalID id, helios::SymID helios_id, tsh::ValueType<> type, LifetimeFlags lifetime_flags
 		):
 			  id(id),
 			  helios_id(helios_id),
@@ -294,11 +295,11 @@ namespace compiler::mir {
 		 * parameters.
 		 */
 		MIRLocal(
-			LocalID           id,
-			helios::SymID     helios_id,
-			tsh::SymbolType<> type,
-			LifetimeFlags     lifetime_flags,
-			u64               parameter_index
+			LocalID          id,
+			helios::SymID    helios_id,
+			tsh::ValueType<> type,
+			LifetimeFlags    lifetime_flags,
+			u64              parameter_index
 		):
 			  id(id),
 			  helios_id(helios_id),
@@ -309,7 +310,7 @@ namespace compiler::mir {
 		/**
 		 * @brief Constructor for temporary values.
 		 */
-		MIRLocal(LocalID id, tsh::SymbolType<> type): id(id), helios_id({}), type(type) {}
+		MIRLocal(LocalID id, tsh::ValueType<> type): id(id), helios_id({}), type(type) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
@@ -373,11 +374,11 @@ namespace compiler::mir {
 		/**
 		 * @brief Type of the global variable.
 		 */
-		tsh::SymbolType<> type;
+		tsh::ValueType<> type;
 
 		Kind kind;
 
-		MIRGlobal(helios::SymID helios_id, tsh::SymbolType<> type, Kind kind):
+		MIRGlobal(helios::SymID helios_id, tsh::ValueType<> type, Kind kind):
 			  helios_id(helios_id),
 			  type(type),
 			  kind(kind) {}
@@ -470,7 +471,7 @@ namespace compiler::mir {
 		/**
 		 * @brief Get the type of the base variable.
 		 */
-		tsh::SymbolType<> getBaseType() {
+		tsh::ValueType<> getBaseType() {
 			variant_match(base) {
 				variant_case(MIRLocalRef, local) { return local->type; }
 				variant_case(MIRGlobal, global) { return global.type; }
@@ -493,7 +494,7 @@ namespace compiler::mir {
 		 * @note If the projection chain is empty, this type will be equal to the base type. It
 		 * may differ from the base type if the projection chain is not empty.
 		 */
-		tsh::SymbolType<> type;
+		tsh::ValueType<> type;
 
 		/**
 		 * Construct a MIRPlace from a local or global variable.
@@ -688,11 +689,11 @@ namespace compiler::mir {
 		/**
 		 * @brief The source type of the cast operation.
 		 */
-		tsh::SymbolType<> source_type;
+		tsh::ValueType<> source_type;
 		/**
 		 * @brief The target type of the cast operation.
 		 */
-		tsh::SymbolType<> target_type;
+		tsh::ValueType<> target_type;
 	};
 
 	/**
@@ -701,8 +702,8 @@ namespace compiler::mir {
 	 * the interned variant type's alternatives.
 	 */
 	struct VariantParameters final {
-		usize             alternative_index;
-		tsh::SymbolType<> alternative_type;
+		usize            alternative_index;
+		tsh::ValueType<> alternative_type;
 	};
 
 	/**
@@ -864,8 +865,8 @@ namespace compiler::mir {
 		 */
 		base::StrID name;
 
-		tsh::SymbolType<>              return_type;
-		std::vector<tsh::SymbolType<>> parameter_types;
+		tsh::ValueType<>              return_type;
+		std::vector<tsh::ValueType<>> parameter_types;
 
 		/**
 		 * @brief Map from BlockID to the Block.
@@ -873,7 +874,7 @@ namespace compiler::mir {
 		 * @note Block with ID "0" should always be the one with FunctionEnd (@p
 		 * finalizeFunctionEnd)
 		 */
-		base::StableHashMap<BlockID, Block> blocks;
+		base::HashMap<BlockID, Block> blocks;
 
 		/**
 		 * @brief The generated order of blocks in the function.
@@ -923,16 +924,16 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                         name,
-			tsh::SymbolType<>                   return_type,
-			std::vector<tsh::SymbolType<>>      parameter_types,
-			base::StableHashMap<BlockID, Block> blocks,
-			std::vector<BlockID>                block_order,
-			base::StableVector<const MIRLocal>  local_list,
-			u64                                 next_local_id,
-			LifetimeScopeTree                   lifetime_scope_tree,
-			ScopeRef                            no_lifetime_scope,
-			HSymID                              helios_id
+			base::StrID                        name,
+			tsh::ValueType<>                   return_type,
+			std::vector<tsh::ValueType<>>      parameter_types,
+			base::HashMap<BlockID, Block>      blocks,
+			std::vector<BlockID>               block_order,
+			base::StableVector<const MIRLocal> local_list,
+			u64                                next_local_id,
+			LifetimeScopeTree                  lifetime_scope_tree,
+			ScopeRef                           no_lifetime_scope,
+			HSymID                             helios_id
 		);
 
 		[[nodiscard]]
@@ -942,7 +943,7 @@ namespace compiler::mir {
 		 * @brief Adds a compiler generated local to an already built function and returns it. Used
 		 * when adding lifetime flags in `AddLifetimeFlagsLocalsPass`.
 		 */
-		MIRLocalRef addGeneratedLocal(tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags);
+		MIRLocalRef addGeneratedLocal(tsh::ValueType<> type, ScopeRef scope, LifetimeFlags flags);
 
 		void debugPrint(std::ostream& os) const;
 

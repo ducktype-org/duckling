@@ -8,6 +8,7 @@
 #include "diagnostic_arguments_forward.hpp"
 #include "utils.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/visitor.hpp>

@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "../symbol_type.hpp"
+#include "../value_type.hpp"
 #include "coercion_rank.hpp"
 #include "reference_coercion.hpp"
 
@@ -52,12 +52,12 @@ namespace compiler::tsh::coercions {
 		 * @brief The value is handed over to the location it is coerced into, which is where it may
 		 * be copied, moved or refused.
 		 *
-		 * @note Deciding WHERE the value has to be passed is decided on the `SymbolType` level.
+		 * @note Deciding WHERE the value has to be passed is decided on the `ValueType` level.
 		 * This node is added every time when a value is passed into a new location. The fact HOW
 		 * the value should be passed is decided on the `ExpressionType` level based on the
 		 * ValueCategories.
 		 *
-		 * Thus, this node is inserted only in the `SymbolTypeCoercion` tree and `coercionOf` remaps
+		 * Thus, this node is inserted only in the `ValueTypeCoercion` tree and `coercionOf` remaps
 		 * it when ValueCategories are taken into account. The `HandOver` node can be remapped to:
 		 * - Nothing:
 		 * 		When copying by bytes is enough (e.g. user wrote a `move`, for a
@@ -197,7 +197,7 @@ namespace compiler::tsh::coercions {
 		/// What the step does.
 		Kind kind;
 		/// The type of the value once the step is done.
-		SymbolType<> result;
+		ValueType<> result;
 
 		/**
 		 * @brief How good of a match this step is, its parts included.
@@ -224,10 +224,10 @@ namespace compiler::tsh::coercions {
 	 */
 	struct CoercionNode final {
 		/// The source type of this nodes value.
-		SymbolType<> source;
+		ValueType<> source;
 
 		/// The target type of this node.
-		SymbolType<> target;
+		ValueType<> target;
 
 		/// Everything that has to be done to a value, in order it has to be done.
 		std::vector<CoercionStep> steps{};
@@ -247,7 +247,7 @@ namespace compiler::tsh::coercions {
 		 * @brief The current type of the value.
 		 */
 		[[nodiscard]]
-		const SymbolType<>& current() const noexcept {
+		const ValueType<>& current() const noexcept {
 			return steps.empty() ? source : steps.back().result;
 		}
 

@@ -14,9 +14,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -52,7 +52,7 @@ namespace compiler::helios::defgen {
 		});
 	}
 
-#define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
+#define STRING_TYPE tsh::ValueType<>::withDefaultsMut(tsh::getStringType(ctx))
 #define LANG_PRIMITIVE(primitive) \
 	ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
 
@@ -62,7 +62,7 @@ namespace compiler::helios::defgen {
 		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
 		auto       string_abstract_type = tsh::getStringType(ctx);
 		const auto expected_arg_type
-			= tsh::SymbolType<>::withDefaults(string_abstract_type)
+			= tsh::ValueType<>::withDefaultsMut(string_abstract_type)
 		          .withReferenceKind(
 					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
 				  );
@@ -114,7 +114,7 @@ namespace compiler::helios::defgen {
 			const bool is_signed
 				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
 			   == tsh::IntegralAbstractType::Signedness::Signed;
-			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+			const auto target_int_type = tsh::ValueType<>::withDefaultsMut(tsh::getIntegralType(
 				ctx,
 				64,
 				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
@@ -161,7 +161,7 @@ namespace compiler::helios::defgen {
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
-				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
+				= tsh::ValueType<>::withDefaultsMut(tsh::getFloatType(ctx, 64));
 			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
 
 			const Shorthand s{ ctx };
@@ -239,7 +239,7 @@ namespace compiler::helios::defgen {
 			const auto builtin_sym = bakeLanguagePrimitive(
 				ctx,
 				LanguagePrimitive::StringifyStaticArray,
-				{ tsh::SymbolType<>::withDefaults(array_type), size }
+				{ tsh::ValueType<>::withDefaultsMut(array_type), size }
 			);
 
 			const Shorthand s{ ctx };
@@ -267,9 +267,8 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a `box` alternative
 				// is a reference to the pointee.
-				const auto payload_type = alternatives[i]
-				                              .withReferenceKind(tsh::ReferenceKind::Ref)
-				                              .withMutability(tsh::Mutability::Mutable);
+				const auto payload_type
+					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name = base::StrID(base::strConcat("__alternative_", i)),

@@ -8,6 +8,7 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -20,9 +21,9 @@
 namespace compiler::mir {
 	Function::Function(
 		base::StrID                                         name,
-		tsh::SymbolType<>                                   return_type,
-		std::vector<tsh::SymbolType<>>                      parameter_types,
-		base::StableHashMap<BlockID, Block>                 blocks,
+		tsh::ValueType<>                                    return_type,
+		std::vector<tsh::ValueType<>>                       parameter_types,
+		base::HashMap<BlockID, Block>                       blocks,
 		std::vector<BlockID>                                block_order,
 		base::StableVector<const MIRLocal>                  local_list,
 		u64                                                 next_local_id,
@@ -59,7 +60,7 @@ namespace compiler::mir {
 	}
 
 	MIRLocalRef Function::addGeneratedLocal(
-		tsh::SymbolType<> type, ScopeRef scope, LifetimeFlags flags
+		tsh::ValueType<> type, ScopeRef scope, LifetimeFlags flags
 	) {
 		MIRLocal local{ LocalID(next_local_id++), type };
 		local.scope          = scope;
@@ -253,7 +254,7 @@ namespace compiler::mir {
 		result.projection_chain.push_back(Projection::deref());
 		// New type after deref is the one which was referenced by the ref/box, without the
 		// reference specifier.
-		result.type = result.type.getPointeeSymbolType();
+		result.type = result.type.getPointeeValueType();
 		return result;
 	}
 
@@ -273,7 +274,7 @@ namespace compiler::mir {
 
 		auto base_type = type.getType();
 
-		auto element_type = [&]() -> tsh::SymbolType<> {
+		auto element_type = [&]() -> tsh::ValueType<> {
 			switch (base_type.getKind()) {
 			case tsh::Kind::StaticArray:
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();

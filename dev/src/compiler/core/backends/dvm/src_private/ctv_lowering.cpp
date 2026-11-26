@@ -40,7 +40,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Represents a meta type as the DVM opaque pointer value: a pointer to the symbol
 		 * type in the comp-time lowering, zero otherwise.
 		 */
-		u64 metaTypeToU64(ProgramLoweringContext& pctx, const compiler::tsh::SymbolType<>& type_val) {
+		u64 metaTypeToU64(ProgramLoweringContext& pctx, const compiler::tsh::ValueType<>& type_val) {
 			// @TODO: #1709 RTTI when the is_comp_time_lowering == false
 			return pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
 		}
@@ -109,7 +109,7 @@ namespace compiler::backend_vm::internal {
 					translateToU64(value), std::get<vm::code::PrimitiveType>(type).size
 				);
 			}
-			variant_case(compiler::tsh::SymbolType<>, type_val) {
+			variant_case(compiler::tsh::ValueType<>, type_val) {
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
 					metaTypeToU64(pctx, type_val), v_get(type, vm::code::OpaqueType).size
 				);
@@ -301,7 +301,7 @@ namespace compiler::backend_vm::internal {
 		for (const auto& element: tuple.getElements()) {
 			variant_match(element) {
 				variant_case_novalue(ctv::CompileTimeValue::UnitCTV) {}
-				variant_case(compiler::tsh::SymbolType<>, type_val) {
+				variant_case(compiler::tsh::ValueType<>, type_val) {
 					CORE_ASSERT(field != data_type.fields.end(), "Too few tuple fields.");
 					const auto& field_type = pctx.type_storage.dvm_types.at(field->type);
 					result->fields.emplace_back(

@@ -13,6 +13,7 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>

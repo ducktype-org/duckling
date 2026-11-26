@@ -16,10 +16,11 @@
 #pragma once
 
 #include "abstract_type.hpp"
-#include "symbol_type.hpp"
+#include "value_type.hpp"
 
 #include <helios/symbols/symbol_id.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/optional.hpp>
 
 #include <string_id/string_id.hpp>
@@ -41,6 +42,12 @@ namespace compiler::tsh {
 		UserDestructor,
 		CopyConstructor,
 		ToString,
+		Equal,
+		NotEqual,
+		Lesser,
+		LesserEqual,
+		Greater,
+		GreaterEqual,
 		None
 	};
 
@@ -217,7 +224,7 @@ namespace compiler::tsh {
 		 * @return The type of this element.
 		 */
 		[[nodiscard]]
-		SymbolType<> getType(query::Context& ctx) const;
+		ValueType<> getType(query::Context& ctx) const;
 
 		/**
 		 * @brief Gets the visibility of this element.

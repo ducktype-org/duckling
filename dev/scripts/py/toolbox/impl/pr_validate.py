@@ -11,6 +11,7 @@ from .helpers import (
     log_good,
 )
 from .duck_linter import duck_linter_impl
+from .duckfmt import duckfmt_impl
 from .cpp_linter import cpp_linter_impl
 from .header_checker import header_checker_impl
 from .issue_checker import issue_checker_impl
@@ -57,6 +58,11 @@ def pr_validate_impl(
     # license headers
     if not license_checker_impl(auto_fix=auto_fix, no_fix=no_fix):
         exit_with_error("License header check has failed")
+
+    # Duckling formatting. Build it first so the check is fast.
+    bash_command(f"cmake --build {build_dir} --target duckfmt -- -j {thread_count}")
+    if not duckfmt_impl(build_dir=build_dir, auto_fix=auto_fix, no_fix=no_fix):
+        exit_with_error("Duckling formatting check has failed")
 
     # Run formatting checker
     _, clang_format_failed = cpp_linter_impl(

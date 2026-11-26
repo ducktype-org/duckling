@@ -10,8 +10,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -22,6 +22,23 @@
 
 namespace compiler::helios {
 	namespace defgen {
+		bool isComparisonMethodKind(const Method::Kind kind) {
+			switch (kind) {
+			case Method::Kind::Equal:
+			case Method::Kind::NotEqual:
+			case Method::Kind::Lesser:
+			case Method::Kind::LesserEqual:
+			case Method::Kind::Greater:
+			case Method::Kind::GreaterEqual:
+				return true;
+			case Method::Kind::DefaultDestructor:
+			case Method::Kind::LengthMethod:
+			case Method::Kind::ToString:
+				return false;
+			}
+			CORE_UNREACHABLE();
+		}
+
 		base::Bit256 Constructor::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
 				type.queryUnstablePerfectHash(), static_cast<u64>(kind)
@@ -66,14 +83,12 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
-		tsh::SymbolType<> ReplInputWrapper::getReturnType() const {
+		tsh::ValueType<> ReplInputWrapper::getReturnType() const {
 			variant_match(element) {
 				variant_case_novalue(Instruction) {
-					return tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+					return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 				}
-				variant_case(Expression, expr) {
-					return expr.expr->expression_type.getSymbolType();
-				}
+				variant_case(Expression, expr) { return expr.expr->expression_type.getValueType(); }
 			}
 			CORE_UNREACHABLE();
 		}

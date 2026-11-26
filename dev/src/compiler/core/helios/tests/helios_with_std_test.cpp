@@ -16,7 +16,6 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -129,21 +128,17 @@ private:
 	}
 
 	/**
-	 * Shorthand to create a mutable symbol type from an abstract type.
+	 * Shorthand to create a mutable ValueType from an abstract type.
 	 */
-	static compiler::tsh::SymbolType<> st(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			compiler::tsh::Mutability::Mutable,
-		};
+	static compiler::tsh::ValueType<> vt(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::ValueType<>::withDefaultsMut(abstract_type);
 	}
 
-	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
-		return st(abstract_type).withMutability(compiler::tsh::Mutability::Immutable);
+	static compiler::tsh::ValueType<> vtConst(const compiler::tsh::AbstractType abstract_type) {
+		return vt(abstract_type).withMutability(compiler::tsh::Mutability::Immutable);
 	}
 
-	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+	auto getSliceTypeNoContext(compiler::tsh::ValueType<> element_type) {
 		return std::any_cast<compiler::tsh::SliceAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
 				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
@@ -199,32 +194,32 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
-				return compiler::tsh::SymbolType<>::withDefaults(
+				return compiler::tsh::ValueType<>::withDefaultsMut(
 					ctx.query<compiler::tsh::QueryClassType>(sym_id)
 				);
 			};
 
-			auto i32_st = st(compiler::tsh::getIntegralType(
+			auto i32_vt = vt(compiler::tsh::getIntegralType(
 				ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 			));
 
 			// Primitives should be zero initialized.
 			{
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(i32_st)->valueOrThrow();
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(i32_vt)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 
 			// Unit type should be initialized with a unit literal.
 			{
-				auto        unit_st = st(compiler::tsh::getUnitType());
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(unit_st)->valueOrThrow();
+				auto        unit_vt = vt(compiler::tsh::getUnitType());
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(unit_vt)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const LiteralUnitExpr*>(expr.get()) != nullptr);
 			}
 
 			// Meta type should be initialized with a type literal (void by default).
 			{
-				auto        meta_st = st(compiler::tsh::getMetaType());
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(meta_st)->valueOrThrow();
+				auto        meta_vt = vt(compiler::tsh::getMetaType());
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(meta_vt)->valueOrThrow();
 				auto        type_lit = dynamic_cast<const LiteralTypeExpr*>(expr.get());
 				ASSERT_TRUE(type_lit != nullptr);
 				ASSERT_EQUAL(compiler::tsh::getVoidType(), type_lit->value_type.getType());
@@ -232,17 +227,17 @@ private:
 
 			// Trivial class should be zero initialized.
 			{
-				auto        trivial_st = get_class_type(trivial_sym);
+				auto        trivial_vt = get_class_type(trivial_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(trivial_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(trivial_vt)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 
 			// Class with an initial value provided for field should emit a call to a ctor.
 			{
-				auto        with_init_st = get_class_type(with_init_sym);
+				auto        with_init_vt = get_class_type(with_init_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(with_init_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(with_init_vt)->valueOrThrow();
 
 				auto call = dynamic_cast<const CallExpr*>(expr.get());
 				ASSERT_TRUE(call != nullptr);
@@ -259,9 +254,9 @@ private:
 			// Class with a class field which is non zero-initializable should emit a ctor call.
 			// This ctor should call a ctor of the inner non zero-initializable field.
 			{
-				auto        nested_st = get_class_type(nested_sym);
+				auto        nested_vt = get_class_type(nested_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(nested_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(nested_vt)->valueOrThrow();
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
@@ -281,9 +276,9 @@ private:
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
 			// inner element.
 			{
-				auto        arr_holder_st = get_class_type(arr_holder_sym);
+				auto        arr_holder_vt = get_class_type(arr_holder_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(arr_holder_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(arr_holder_vt)->valueOrThrow();
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
@@ -305,9 +300,9 @@ private:
 			// TupleHolder ctor should call a ctor of the tuple field, which calls a ctor of the
 			// inner element.
 			{
-				auto        tup_holder_st = get_class_type(tup_holder_sym);
+				auto        tup_holder_vt = get_class_type(tup_holder_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(tup_holder_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(tup_holder_vt)->valueOrThrow();
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
@@ -331,8 +326,8 @@ private:
 			// `DeepStack` ctor should call a ctor of the `Nested` field, which calls a ctor of
 			// `WithInit`
 			{
-				auto        deep_st = get_class_type(deep_sym);
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(deep_st)->valueOrThrow();
+				auto        deep_vt = get_class_type(deep_sym);
+				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(deep_vt)->valueOrThrow();
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
@@ -347,9 +342,9 @@ private:
 			// a static array of trivially zero-initializable types which can be zero initialized,
 			// thus its zero-initializable.
 			{
-				auto        deep_trivial_st = get_class_type(deep_trivial_sym);
+				auto        deep_trivial_vt = get_class_type(deep_trivial_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_vt)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 
@@ -357,23 +352,26 @@ private:
 			// a tuple of trivially zero-initializable types which can be zero initialized,
 			// thus its zero-initializable.
 			{
-				auto        tup_trivial_st = get_class_type(tup_trivial_sym);
+				auto        tup_trivial_vt = get_class_type(tup_trivial_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(tup_trivial_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(tup_trivial_vt)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 		});
 	}
 
-	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// The implicit prelude brings `core.builtins` symbols into scope of every module
 	// without an explicit import. The `builtins` module has no import statements at all, yet an
 	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
 	void testImplicitPrelude() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 		auto scope     = getModuleScope(module_id);
 
-		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
-			{ scope, base::StrID("builtin_output_i64"), true }
+		auto result = query::entryPoint<compiler::helios::QueryLookupFromScope>(
+			{ .scope          = scope,
+		      .name           = base::StrID("builtin_output_i64"),
+		      .with_wildcards = true,
+		      .with_parents   = true }
 		);
 		assertFalse(
 			result->valueOrThrow().isEmpty(),
@@ -422,9 +420,9 @@ private:
 				if (!takes_slice && name != base::StrID("slice_from_ptr_len")) continue;
 
 				// `ptr_from_slice` takes the slice, `slice_from_ptr_len` returns it.
-				const auto slice_st   = takes_slice ? fun->declaration->parameters.at(0).type
+				const auto slice_vt   = takes_slice ? fun->declaration->parameters.at(0).type
 				                                    : fun->declaration->return_type;
-				const auto slice_type = slice_st.getType().as<compiler::tsh::SliceAbstractType>();
+				const auto slice_type = slice_vt.getType().as<compiler::tsh::SliceAbstractType>();
 				baked_element_types[name].push_back(slice_type.getElementType().getType());
 			}
 
@@ -466,18 +464,18 @@ private:
 				"String should not be trivially destructible: it defines one to free its buffer."
 			);
 
-			const auto string_st = st(string_type);
+			const auto string_vt = vt(string_type);
 
 			assertTrue(
-				string_st.isDefaultConstructible(ctx), "String should be default constructible."
+				string_vt.isDefaultConstructible(ctx), "String should be default constructible."
 			);
 			assertTrue(
-				string_st.isTriviallyZeroInitializable(ctx),
+				string_vt.isTriviallyZeroInitializable(ctx),
 				"String should be trivially zero-initializable (the empty string is all-zero)."
 			);
-			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
+			assertTrue(string_vt.isCopyable(ctx), "String should be copyable.");
 			assertFalse(
-				string_st.isTriviallyCopyable(ctx),
+				string_vt.isTriviallyCopyable(ctx),
 				"String should not be trivially copyable: it has a user-defined `copy`."
 			);
 		});
@@ -644,7 +642,7 @@ private:
 			const auto char_type       = compiler::tsh::getCharType();
 			const auto str_type        = getStringTypeNoContext();
 			const auto i64_type        = getIntegralTypeNoContext(64, Signed);
-			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
+			const auto char_slice_type = getSliceTypeNoContext(vt(char_type));
 
 			auto fun_body_scope = getFunctionBodyScope(fun_sym);
 
@@ -969,8 +967,8 @@ private:
 
 		auto i32_type
 			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
-		auto ref_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
-		auto box_i32 = st(i32_type).withReferenceKind(compiler::tsh::ReferenceKind::Box);
+		auto ref_i32 = vt(i32_type).toRef();
+		auto box_i32 = vt(i32_type).toBox();
 
 		auto get_var_stmt = [&](usize index) -> const VariableStmt& {
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[index].get());
@@ -1066,11 +1064,11 @@ private:
 				const auto& cctor
 					= ctx.query<QueryDefaultCopyConstructor>(trivial_type)->valueOrThrow();
 
-				// `(const ref Trivial) -> Trivial`.
+				// `(ref Trivial) -> Trivial`.
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(trivial_type, param_type.getType());
 				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
 
@@ -1104,9 +1102,9 @@ private:
 				auto i32_type = compiler::tsh::getIntegralType(
 					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 				);
-				auto has_box_st = st(get_class_type(has_box_sym));
+				auto has_box_vt = vt(get_class_type(has_box_sym));
 				auto tuple_type
-					= ctx.query<compiler::tsh::QueryTupleType>({ { st(i32_type), has_box_st } });
+					= ctx.query<compiler::tsh::QueryTupleType>({ { vt(i32_type), has_box_vt } });
 
 				const auto& cctor
 					= ctx.query<QueryDefaultCopyConstructor>(tuple_type)->valueOrThrow();
@@ -1251,16 +1249,16 @@ private:
 					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 				);
 				auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
-					{ st(i32_type), st(get_class_type(has_box_sym)) },
+					{ vt(i32_type), vt(get_class_type(has_box_sym)) },
 				});
 
 				const auto& cctor = dump_cctor("i32 | HasBox", variant_type);
 
-				// `(const ref V) -> V`.
+				// `(ref V) -> V`.
 				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
 				const auto param_type = cctor.declaration->parameters.at(0).type;
 				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
-				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, param_type.getMutability());
 				ASSERT_EQUAL(variant_type, param_type.getType());
 				ASSERT_EQUAL(variant_type, cctor.declaration->return_type.getType());
 
@@ -1293,9 +1291,8 @@ private:
 					// bound with: a mutable reference to the alternative.
 					ASSERT_TRUE(match_case.constraint_type.has_value());
 					ASSERT_EQUAL(
-						alternatives.at(i)
-							.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-							.withMutability(compiler::tsh::Mutability::Mutable),
+						alternatives.at(i).toRef().withMutability(compiler::tsh::Mutability::Mutable
+					    ),
 						match_case.constraint_type.value()
 					);
 					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
@@ -1473,7 +1470,7 @@ private:
 					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 				);
 				const auto variant_type = ctx.query<compiler::tsh::QueryVariantType>({
-					{ st(i32_type), st(get_class_type(has_box_sym)) },
+					{ vt(i32_type), vt(get_class_type(has_box_sym)) },
 				});
 				ASSERT_TRUE(!variant_type.isTriviallyDestructible(ctx));
 
@@ -1497,10 +1494,9 @@ private:
 				// The payload is destroyed in place, so it is bound as a mutable reference.
 				ASSERT_TRUE(owning_case.constraint_type.has_value());
 				ASSERT_EQUAL(
-					variant_type.getUnderlyingTypes()
-						.at(0)
-						.withReferenceKind(compiler::tsh::ReferenceKind::Ref)
-						.withMutability(compiler::tsh::Mutability::Mutable),
+					variant_type.getUnderlyingTypes().at(0).toRef().withMutability(
+						compiler::tsh::Mutability::Mutable
+					),
 					owning_case.constraint_type.value()
 				);
 				ASSERT_TRUE(
@@ -1648,20 +1644,20 @@ private:
 		ASSERT_TRUE(dynamic_cast<const CallExpr*>(stripImplicitMove(ca_init)) != nullptr);
 		ASSERT_EQUAL(
 			compiler::tsh::ReferenceKind::Direct,
-			ca_init->expression_type.getSymbolType().getRefKind()
+			ca_init->expression_type.getValueType().getRefKind()
 		);
 
 		// `copyof r` keeps the `ref`: the reference itself is copied, so there is no node.
 		const auto* cr_init = init_of(2);
 		ASSERT_TRUE(dynamic_cast<const IdentifierExpr*>(cr_init) != nullptr);
 		ASSERT_EQUAL(
-			compiler::tsh::ReferenceKind::Ref, cr_init->expression_type.getSymbolType().getRefKind()
+			compiler::tsh::ReferenceKind::Ref, cr_init->expression_type.getValueType().getRefKind()
 		);
 
 		// `copyof bx` keeps the `box`: a fresh allocation holding a copy-constructed pointee.
 		const auto* cb_init = init_of(3);
 		ASSERT_EQUAL(
-			compiler::tsh::ReferenceKind::Box, cb_init->expression_type.getSymbolType().getRefKind()
+			compiler::tsh::ReferenceKind::Box, cb_init->expression_type.getValueType().getRefKind()
 		);
 		const auto* boxed = boxAllocArg(cb_init);
 		ASSERT_TRUE(boxed != nullptr);
@@ -1738,67 +1734,61 @@ private:
 		auto body_scope        = getFunctionBodyScope(test_pointers_sym);
 
 		auto i32_type = getIntegralTypeNoContext(32, Signed);
-		auto i32_st   = st(i32_type);
+		auto i32_vt   = vt(i32_type);
 
-		// Get all symbol types before entering query context
-		const auto p_type         = getSymbolTypeOf("p", body_scope);
-		const auto from_ref_type  = getSymbolTypeOf("from_ref", body_scope);
-		const auto from_addr_type = getSymbolTypeOf("from_addr", body_scope);
-		const auto from_box_type  = getSymbolTypeOf("from_box", body_scope);
-		const auto c_type         = getSymbolTypeOf("c", body_scope);
-		const auto m_type         = getSymbolTypeOf("m", body_scope);
-		const auto pp_type        = getSymbolTypeOf("pp", body_scope);
-		const auto inner_type     = getSymbolTypeOf("inner", body_scope);
-		const auto deref_val_type = getSymbolTypeOf("deref_val", body_scope);
-		const auto sum_type       = getSymbolTypeOf("sum", body_scope);
-		const auto c_elem_type    = getSymbolTypeOf("c_elem", body_scope);
+		// Get all ValueTypes before entering query context
+		const auto p_type         = getValueTypeOf("p", body_scope);
+		const auto from_ref_type  = getValueTypeOf("from_ref", body_scope);
+		const auto from_addr_type = getValueTypeOf("from_addr", body_scope);
+		const auto from_box_type  = getValueTypeOf("from_box", body_scope);
+		const auto c_type         = getValueTypeOf("c", body_scope);
+		const auto m_type         = getValueTypeOf("m", body_scope);
+		const auto pp_type        = getValueTypeOf("pp", body_scope);
+		const auto inner_type     = getValueTypeOf("inner", body_scope);
+		const auto deref_val_type = getValueTypeOf("deref_val", body_scope);
+		const auto sum_type       = getValueTypeOf("sum", body_scope);
+		const auto c_elem_type    = getValueTypeOf("c_elem", body_scope);
 
-		const auto pof_direct_type = getSymbolTypeOf("pof_direct", body_scope);
-		const auto pof_box_type    = getSymbolTypeOf("pof_box", body_scope);
-		const auto pof_ref_type    = getSymbolTypeOf("pof_ref", body_scope);
-		const auto pof_elem_type   = getSymbolTypeOf("pof_elem", body_scope);
+		const auto pof_direct_type = getValueTypeOf("pof_direct", body_scope);
+		const auto pof_box_type    = getValueTypeOf("pof_box", body_scope);
+		const auto pof_ref_type    = getValueTypeOf("pof_ref", body_scope);
+		const auto pof_elem_type   = getValueTypeOf("pof_elem", body_scope);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_st });
-			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>({ st(ptr_i32) });
-			const auto manyptr_i32 = ctx.query<compiler::tsh::QueryManyPointerType>({ i32_st });
-			const auto cptr_i32    = ctx.query<compiler::tsh::QueryCPointerType>({ i32_st });
+			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_vt });
+			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>({ vt(ptr_i32) });
+			const auto manyptr_i32 = ctx.query<compiler::tsh::QueryManyPointerType>({ i32_vt });
+			const auto cptr_i32    = ctx.query<compiler::tsh::QueryCPointerType>({ i32_vt });
 
-			const auto ptr_i32_st     = st(ptr_i32);
-			const auto ptr_ptr_i32_st = st(ptr_ptr_i32);
-			const auto manyptr_i32_st = st(manyptr_i32);
-			const auto cptr_i32_st    = st(cptr_i32);
+			const auto ptr_i32_vt     = vt(ptr_i32);
+			const auto ptr_ptr_i32_vt = vt(ptr_ptr_i32);
+			const auto manyptr_i32_vt = vt(manyptr_i32);
+			const auto cptr_i32_vt    = vt(cptr_i32);
 
-			ASSERT_EQUAL(ptr_i32_st, p_type);
-			ASSERT_EQUAL(ptr_i32_st, from_ref_type);
-			ASSERT_EQUAL(ptr_i32_st, from_addr_type);
-			ASSERT_EQUAL(ptr_i32_st, from_box_type);
-			ASSERT_EQUAL(cptr_i32_st, c_type);
-			ASSERT_EQUAL(manyptr_i32_st, m_type);
-			ASSERT_EQUAL(ptr_ptr_i32_st, pp_type);
-			ASSERT_EQUAL(ptr_i32_st, inner_type);
-			ASSERT_EQUAL(i32_st, deref_val_type);
-			ASSERT_EQUAL(i32_st, sum_type);
-			ASSERT_EQUAL(i32_st, c_elem_type);
+			ASSERT_EQUAL(ptr_i32_vt, p_type);
+			ASSERT_EQUAL(ptr_i32_vt, from_ref_type);
+			ASSERT_EQUAL(ptr_i32_vt, from_addr_type);
+			ASSERT_EQUAL(ptr_i32_vt, from_box_type);
+			ASSERT_EQUAL(cptr_i32_vt, c_type);
+			ASSERT_EQUAL(manyptr_i32_vt, m_type);
+			ASSERT_EQUAL(ptr_ptr_i32_vt, pp_type);
+			ASSERT_EQUAL(ptr_i32_vt, inner_type);
+			ASSERT_EQUAL(i32_vt, deref_val_type);
+			ASSERT_EQUAL(i32_vt, sum_type);
+			ASSERT_EQUAL(i32_vt, c_elem_type);
 
-			// `ptrof x` is `ptr S` for the whole symbol type `S` of `x`: unlike `&x`, a `box`/`ref`
+			// `ptrof x` is `ptr S` for the whole ValueType `S` of `x`: unlike `&x`, a `box`/`ref`
 			// operand is not collapsed, the pointer addresses the box/reference itself.
 			using compiler::tsh::ReferenceKind;
-			ASSERT_EQUAL(ptr_i32_st, pof_direct_type);
+			ASSERT_EQUAL(ptr_i32_vt, pof_direct_type);
 			ASSERT_EQUAL(
-				st(ctx.query<compiler::tsh::QueryPointerType>(
-					{ i32_st.withReferenceKind(ReferenceKind::Box) }
-				)),
-				pof_box_type
+				vt(ctx.query<compiler::tsh::QueryPointerType>({ i32_vt.toBox() })), pof_box_type
 			);
 			ASSERT_EQUAL(
-				st(ctx.query<compiler::tsh::QueryPointerType>(
-					{ i32_st.withReferenceKind(ReferenceKind::Ref) }
-				)),
-				pof_ref_type
+				vt(ctx.query<compiler::tsh::QueryPointerType>({ i32_vt.toRef() })), pof_ref_type
 			);
 			// Indexing a `manyptr i32` gives an `i32` place, so its address is a plain `ptr i32`.
-			ASSERT_EQUAL(ptr_i32_st, pof_elem_type);
+			ASSERT_EQUAL(ptr_i32_vt, pof_elem_type);
 		});
 
 		auto& function = hout.functions.at(0);
@@ -1849,14 +1839,14 @@ private:
 			ASSERT_EQUAL(
 				compiler::tsh::Kind::CPointer, index_ptr->base->expression_type.getType().getKind()
 			);
-			ASSERT_EQUAL(i32_st, index_ptr->expression_type.getSymbolType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_vt, index_ptr->expression_type.getValueType().withMutability(Mutable));
 		}
 
 		{
 			auto expr_ptr  = get_var_init_expr(base::StrID("deref_val"));
 			auto deref_ptr = dynamic_cast<const compiler::helios::code::DerefExpr*>(expr_ptr.get());
 			ASSERT_TRUE(deref_ptr != nullptr);
-			ASSERT_EQUAL(i32_st, deref_ptr->expression_type.getSymbolType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_vt, deref_ptr->expression_type.getValueType().withMutability(Mutable));
 		}
 
 		{
@@ -1867,7 +1857,7 @@ private:
 			auto deref_lhs
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_ptr->lhs.get());
 			ASSERT_TRUE(deref_lhs != nullptr);
-			ASSERT_EQUAL(i32_st, deref_lhs->expression_type.getSymbolType().withMutability(Mutable));
+			ASSERT_EQUAL(i32_vt, deref_lhs->expression_type.getValueType().withMutability(Mutable));
 		}
 
 		{
@@ -1929,7 +1919,7 @@ private:
 			                             .getSymbol();
 			const auto box_copy = s.copyValue(s.access(s.ident(holder_var), boxed_field));
 			ASSERT_EQUAL(
-				box_copy->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Box
+				box_copy->expression_type.getValueType().getRefKind(), tsh::ReferenceKind::Box
 			);
 			ASSERT_TRUE(boxAllocArg(box_copy.get()) != nullptr);
 		});
@@ -1965,7 +1955,7 @@ private:
 		ASSERT_EQUAL(optional_type.getKind(), compiler::tsh::Kind::Variant);
 		const auto optional_variant = compiler::tsh::VariantAbstractType(optional_type);
 		ASSERT_TRUE(optional_variant.representsOptionalType());
-		ASSERT_EQUAL(optional_variant.getOptionalValueType(), st(i64_type));
+		ASSERT_EQUAL(optional_variant.getOptionalValueType(), vt(i64_type));
 
 		ASSERT_EQUAL(variant_type.getKind(), compiler::tsh::Kind::Variant);
 		ASSERT_TRUE(not compiler::tsh::VariantAbstractType(variant_type).representsOptionalType());

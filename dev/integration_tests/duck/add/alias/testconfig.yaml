@@ -9,10 +9,10 @@ Tests:
           @{duck-exe} init foo
           @{duck-exe} init a
         test-cmd: duck -C foo add --local ../a --alias b a
-        Output:
+        Err:
           Run: |+
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added normal dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            info: successfully added dependency \`b\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         expected-manifest: 1
       same-name-with-alias:
         PreCase: |+
@@ -22,9 +22,8 @@ Tests:
           @{duck-exe} init --name dep dep2
           @{duck-exe} -C foo add --local ../dep1 --alias dep1 dep
         test-cmd: duck -C foo add --local ../dep2 --alias dep2 dep
-        Output:
+        Err:
           Run: |+
-            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`" &&
-            echo "info: successfully added normal dependency \`dep2\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: written new manifest to \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            info: successfully added dependency \`dep2\` to the project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         expected-manifest: 2
-        

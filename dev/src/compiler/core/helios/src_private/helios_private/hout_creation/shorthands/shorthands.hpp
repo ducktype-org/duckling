@@ -32,7 +32,7 @@
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios/tsh/coercions/coercion_error.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -136,12 +136,12 @@ namespace compiler::helios::code::shorthands {
 			namespace ce = tsh::coercions::coercion_error;
 
 			const tsh::coercions::Coercion coercion = coercions::coercionOf(
-				*ctx, value.ref(), value->expression_type.getSymbolType(), kind
+				*ctx, value.ref(), value->expression_type.getValueType(), kind
 			);
 			if (coercion.isValid())
 				return coercions::applyCoercion(*ctx, coercion, std::move(value));
 
-			const std::string type = value->expression_type.getSymbolType().toString();
+			const std::string type = value->expression_type.getValueType().toString();
 			variant_match(coercion.getError().reason) {
 				variant_case_novalue(ce::RequiresExplicitCopyMove) {
 					CORE_PANIC(base::strConcat(
@@ -417,7 +417,7 @@ namespace compiler::helios::code::shorthands {
 
 		/** @brief A cast of `source` to `target_type`. */
 		[[nodiscard]]
-		Box<CastExpr> cast(Box<Expr> source, tsh::SymbolType<> target_type) const {
+		Box<CastExpr> cast(Box<Expr> source, tsh::ValueType<> target_type) const {
 			return makeBox<CastExpr>(*ctx, generatedOrigin(), std::move(source), target_type);
 		}
 
@@ -427,10 +427,10 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		static MatchExpr::Case matchCase(
-			base::Optional<usize>             alternative_index,
-			base::Optional<tsh::SymbolType<>> constraint_type,
-			base::Optional<SymID>             binding,
-			Box<Expr>                         result
+			base::Optional<usize>            alternative_index,
+			base::Optional<tsh::ValueType<>> constraint_type,
+			base::Optional<SymID>            binding,
+			Box<Expr>                        result
 		) {
 			return MatchExpr::Case{
 				.alternative_index = alternative_index,
@@ -489,12 +489,12 @@ namespace compiler::helios::code::shorthands {
 		/** @brief A block of statements evaluating to a unit. */
 		[[nodiscard]]
 		Box<BlockExpr> blockExpr(Box<BlockStmt> block) const {
-			return makeBox<BlockExpr>(*ctx, generatedOrigin(), std::move(block));
+			return makeBox<BlockExpr>(generatedOrigin(), std::move(block));
 		}
 
 		[[nodiscard]]
 		Box<BlockExpr> blockExpr(StmtPack body) const {
-			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
+			return makeBox<BlockExpr>(generatedOrigin(), block(std::move(body)));
 		}
 
 		/******************
@@ -513,7 +513,7 @@ namespace compiler::helios::code::shorthands {
 
 		/** @brief A variable declaration `var/let symbol: type = init;`. The init is consumed. */
 		[[nodiscard]]
-		Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type, Box<Expr> init) const {
+		Box<VariableStmt> var(SymID symbol, tsh::ValueType<> type, Box<Expr> init) const {
 			return makeBox<VariableStmt>(generatedOrigin(), consume(std::move(init)), type, symbol);
 		}
 
@@ -524,7 +524,7 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<VariableStmt>(
 				generatedOrigin(),
 				consume(std::move(init)),
-				tsh::SymbolType<>::withDefaults(type),
+				tsh::ValueType<>::withDefaultsMut(type),
 				symbol
 			);
 		}
@@ -534,7 +534,7 @@ namespace compiler::helios::code::shorthands {
 		 * @note Unlike the other `var` methods, this one isn't static, as it requires ctx.
 		 */
 		[[nodiscard]]
-		Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type) const {
+		Box<VariableStmt> var(SymID symbol, tsh::ValueType<> type) const {
 			return makeBox<VariableStmt>(
 				generatedOrigin(), defaultValue(type.getType()), type, symbol
 			);
@@ -611,7 +611,7 @@ namespace compiler::helios::code::shorthands {
 		 * @note Assumes the coercion will succeed.
 		 */
 		[[nodiscard]]
-		Box<Expr> coerce(Box<Expr> expr, const tsh::SymbolType<> target_type) const {
+		Box<Expr> coerce(Box<Expr> expr, const tsh::ValueType<> target_type) const {
 			const tsh::coercions::Coercion coercion
 				= coercions::coercionOf(*ctx, expr.ref(), target_type);
 			return coercions::applyCoercion(*ctx, coercion, std::move(expr));
@@ -628,12 +628,12 @@ namespace compiler::helios::code::shorthands {
 			const auto new_origin = expr->origin.generatedFrom();
 			// If the expr is not a simple type, we must call its method on a reference.
 			if (not expr->expression_type.getType().isSimple()
-			    and expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Ref) {
+			    and expr->expression_type.getValueType().getRefKind() != tsh::ReferenceKind::Ref) {
 				expr = withOrigin(new_origin, refOf(std::move(expr)));
 			}
 			// But also if the accessed field is a reference to a simple type, we must deref it.
 			if (expr->expression_type.getType().isSimple()
-			    and expr->expression_type.getSymbolType().getRefKind()
+			    and expr->expression_type.getValueType().getRefKind()
 			            != tsh::ReferenceKind::Direct) {
 				expr = withOrigin(new_origin, deref(std::move(expr)));
 			}
@@ -657,7 +657,7 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		Box<Expr> copyValue(Box<Expr> source, ElementOrigin origin = generatedOrigin()) const {
-			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
+			const tsh::ValueType<> type = source->expression_type.getValueType();
 			if (type.isTriviallyCopyable(*ctx)) return source;
 
 			// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee

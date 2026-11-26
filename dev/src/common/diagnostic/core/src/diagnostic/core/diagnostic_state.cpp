@@ -6,6 +6,8 @@
 
 #include "diagnostic_state.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <unordered_set>
 
 namespace dia::state {
@@ -97,8 +99,8 @@ namespace dia::state {
 	}
 
 	void CodeLocationComponent::debugPrint(std::ostream& out, usize indent) const {
-		out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file << ":"
-			<< location.line << ":" << location.column << ")\n";
+		out << std::string(indent * 2, ' ') << "CodeLocationComponent(" << location.file.string()
+			<< ":" << location.line << ":" << location.column << ")\n";
 	}
 
 	void Diagnostic::debugPrint(std::ostream& out) const {

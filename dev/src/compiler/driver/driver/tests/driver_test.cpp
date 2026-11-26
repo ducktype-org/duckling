@@ -12,11 +12,13 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/pst_parser/source_position_locked.hpp>
+#include <frontend/pst_parser/access/source_position_locked.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
+
+#include <base/collections/hashmap.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -120,13 +122,13 @@ private:
 			base::HashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> parents;
 
 			for (const auto& node: graph.getAllNodes())
-				parents.emplace(node, std::vector<query::internal::NodeID>{});
+				parents.put(node, std::vector<query::internal::NodeID>{});
 
 			for (const auto& node: graph.getAllNodes()) {
 				for (const auto& child: graph.getDirectDependencies(node)) {
 					auto it = parents.find(child);
 					CORE_ASSERT(it != parents.end(), "Node not it the map, graph is inconsistent");
-					it->second.push_back(node);
+					it->value.push_back(node);
 				}
 			}
 

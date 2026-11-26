@@ -32,6 +32,9 @@ namespace formatter {
 	struct BlockItem final {
 		const lexer::Token*    curly;
 		std::vector<Statement> body;
+
+		/** A line comment right after `{` on the same line, kept there. */
+		base::Optional<const lexer::Token*> open_comment = {};
 	};
 
 	using StatementItem = std::variant<RunItem, BlockItem>;
@@ -66,4 +69,7 @@ namespace formatter {
 	 */
 	[[nodiscard]]
 	std::vector<Statement> parseStatementList(std::span<const lexer::Token> tokens);
+
+	/** @brief Builds the code block of the curly group @p curly, with its body parsed. */
+	BlockItem parseBlock(const lexer::Token& curly);
 }

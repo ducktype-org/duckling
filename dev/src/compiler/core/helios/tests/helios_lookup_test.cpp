@@ -18,6 +18,7 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>

@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <frontend/pst_parser/elements/elements_list.hpp>
-#include <frontend/pst_parser/generic_query_key.hpp>
+#include <frontend/pst_parser/elements/common/elements_list.hpp>
+#include <frontend/pst_parser/pst_query/generic_pst_query_key.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/coercions/errors.hpp>
@@ -47,7 +47,7 @@ namespace compiler::helios {
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		tsh::SymbolType<>                                expected_type,
+		tsh::ValueType<>                                 expected_type,
 		base::Optional<dia::StablePosition>              coercion_expects_pos = {},
 		const coercions::CoercionErrorOverrides&         error_overrides      = {}
 	);
@@ -66,6 +66,6 @@ namespace compiler::helios {
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedTypes(
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		const std::vector<tsh::SymbolType<>>&            expected_types
+		const std::vector<tsh::ValueType<>>&             expected_types
 	);
 }

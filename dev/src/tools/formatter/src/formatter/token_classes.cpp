@@ -8,6 +8,9 @@
 
 #include <lang_definitions/key_spec_op.hpp>
 
+#include <algorithm>
+#include <array>
+
 namespace formatter {
 	namespace {
 
@@ -58,7 +61,7 @@ namespace formatter {
 		// merge with the operand into a single identifier.
 		if (!isOperator(t)) return false;
 		return isStr(t, "-") || isStr(t, "+") || isStr(t, "!") || isStr(t, "~") || isStr(t, "&")
-		    || isStr(t, "?") || isStr(t, "++") || isStr(t, "--");
+		    || isStr(t, "*") || isStr(t, "?") || isStr(t, "++") || isStr(t, "--");
 	}
 
 	bool isSuffixOperator(const Token& t) {
@@ -82,10 +85,34 @@ namespace formatter {
 		           .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 	}
 
+	bool isValueKeyword(const Token& t) {
+		return isKeyword(t)
+		    && (isTypeKeyword(t) || isStr(t, "self") || isStr(t, "true") || isStr(t, "false"));
+	}
+
+	bool isFunKeyword(const Token& t) {
+		return isKeyword(t) && (isStr(t, "fun") || isStr(t, "fundecl"));
+	}
+
+	bool isFixityMarker(const Token& t, const Token* before) {
+		return before != nullptr && isFunKeyword(*before) && !isKeyword(t)
+		    && (isStr(t, "prefix") || isStr(t, "suffix"));
+	}
+
+	bool isContinuationKeyword(const Token& t) {
+		if (!isKeyword(t)) return false;
+		static constexpr std::array<std::string_view, 11> CONTINUATIONS{
+			"and",  "or",    "xor",  "in",      "hides",     "then",
+			"else", "catch", "with", "extends", "implements"
+		};
+		return std::ranges::contains(CONTINUATIONS, sv(t));
+	}
+
 	bool isPrefixContext(const Token* prev) {
 		if (prev == nullptr) return true;
 		if (isOperator(*prev)) return true;
-		if (isKeyword(*prev)) return true;
+		// A value or type keyword ends an operand: `self * 2`, `c as i64 - 1` are binary.
+		if (isKeyword(*prev)) return !isValueKeyword(*prev);
 		if (isSpecial(*prev) && isStr(*prev, ",")) return true;
 		return false;
 	}

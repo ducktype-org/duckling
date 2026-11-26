@@ -84,7 +84,7 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Determines weather the type has a trivial destructor.
-		 * For more details look in `symbol_type.hpp`.
+		 * For more details look in `value_type.hpp`.
 		 *
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
@@ -94,7 +94,7 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Determines weather the type has a default constructor.
-		 * For more details look in `symbol_type.hpp`.
+		 * For more details look in `value_type.hpp`.
 		 *
 		 * @return true if the type has a default constructor, false otherwise.
 		 */
@@ -104,7 +104,7 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Determines weather the type has a trivial zero constructor.
-		 * For more details look in `symbol_type.hpp`.
+		 * For more details look in `value_type.hpp`.
 		 *
 		 * @return true if the type can be default initialized by zeros, false otherwise
 		 */
@@ -114,7 +114,7 @@ namespace compiler::tsh {
 
 		/**
 		 * @brief Checks if a value of this type can be copied.
-		 * For more details look in `symbol_type.hpp`.
+		 * For more details look in `value_type.hpp`.
 		 *
 		 * @return True if the type is copyable, false otherwise.
 		 */
@@ -125,7 +125,7 @@ namespace compiler::tsh {
 		/**
 		 * @brief Checks if a value of this type can be copied trivially by just copying the values
 		 * bytes.
-		 * For more details look in `symbol_type.hpp`.
+		 * For more details look in `value_type.hpp`.
 		 *
 		 * @return True if the symbol is trivially copyable, false otherwise.
 		 */
@@ -470,7 +470,7 @@ namespace compiler::tsh {
 	};
 
 	class PointerAbstractTypeImpl: public AbstractTypeImpl {
-		SymbolType<> pointee;
+		ValueType<> pointee;
 
 	public:
 		[[nodiscard]]
@@ -484,7 +484,7 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::Pointer;
 
 		[[nodiscard]]
-		SymbolType<> getPointee() const {
+		ValueType<> getPointee() const {
 			return pointee;
 		}
 
@@ -493,7 +493,7 @@ namespace compiler::tsh {
 			return pointee.getType();
 		}
 
-		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
+		explicit PointerAbstractTypeImpl(const ValueType<> component): pointee(component) {
 			representation = base::strConcat("ptr ", component.toString());
 		}
 
@@ -525,7 +525,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::ManyPointer;
 
-		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component):
+		explicit ManyPointerAbstractTypeImpl(const ValueType<> component):
 			  PointerAbstractTypeImpl(component) {
 			representation = base::strConcat("manyptr ", component.toString());
 		}
@@ -546,7 +546,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::CPointer;
 
-		explicit CPointerAbstractTypeImpl(const SymbolType<> component):
+		explicit CPointerAbstractTypeImpl(const ValueType<> component):
 			  PointerAbstractTypeImpl(component) {
 			representation = base::strConcat("cptr ", component.toString());
 		}
@@ -556,7 +556,7 @@ namespace compiler::tsh {
 	};
 
 	class SliceAbstractTypeImpl final: public AbstractTypeImpl {
-		SymbolType<> element;
+		ValueType<> element;
 
 	public:
 		[[nodiscard]]
@@ -565,7 +565,7 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		SymbolType<> getElementType() const {
+		ValueType<> getElementType() const {
 			return element;
 		}
 
@@ -574,7 +574,7 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Slice;
 
-		explicit SliceAbstractTypeImpl(const SymbolType<> element): element(element) {
+		explicit SliceAbstractTypeImpl(const ValueType<> element): element(element) {
 			representation = base::strConcat("slice ", element.toString());
 		}
 
@@ -595,8 +595,8 @@ namespace compiler::tsh {
 	};
 
 	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
-		SymbolType<> element_type;
-		usize        size;  // Number of elements in the array.
+		ValueType<> element_type;
+		usize       size;  // Number of elements in the array.
 
 	public:
 		[[nodiscard]]
@@ -609,14 +609,14 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::StaticArray;
 
-		StaticArrayAbstractTypeImpl(const SymbolType<> element, const usize size):
+		StaticArrayAbstractTypeImpl(const ValueType<> element, const usize size):
 			  element_type(element),
 			  size(size) {
 			representation = base::strConcat(element.toString(), "[", base::toString(size), "]");
 		}
 
 		[[nodiscard]]
-		SymbolType<> getElementType() const {
+		ValueType<> getElementType() const {
 			return element_type;
 		}
 
@@ -641,7 +641,7 @@ namespace compiler::tsh {
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<SymbolType<>> components;
+		std::vector<ValueType<>> components;
 
 	public:
 		[[nodiscard]]
@@ -655,11 +655,11 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::Tuple;
 
 		[[nodiscard]]
-		const std::vector<SymbolType<>>& getComponents() const {
+		const std::vector<ValueType<>>& getComponents() const {
 			return components;
 		}
 
-		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
+		TupleAbstractTypeImpl(std::vector<ValueType<>> components);
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 		[[nodiscard]] bool isDefaultConstructible(query::Context& ctx) const override;
@@ -667,15 +667,22 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isCopyable(query::Context& ctx) const override;
 		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override;
 
+		/**
+		 * @brief A tuple carries information when at least one of its components does. A
+		 * reference or a box component always does, as it is stored as a pointer. So `((), ())`
+		 * carries no information, like `()`, while `((), i32)` and `(ref (), ())` do.
+		 */
+		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override;
+
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<SymbolType<>> parameter_types;
-		SymbolType<>              result_type;
-		bool                      pure;
-		FunctionKind              function_kind;
+		std::vector<ValueType<>> parameter_types;
+		ValueType<>              result_type;
+		bool                     pure;
+		FunctionKind             function_kind;
 
 	public:
 		[[nodiscard]]
@@ -689,12 +696,12 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::Function;
 
 		[[nodiscard]]
-		const std::vector<SymbolType<>>& getParameterTypes() const {
+		const std::vector<ValueType<>>& getParameterTypes() const {
 			return parameter_types;
 		}
 
 		[[nodiscard]]
-		SymbolType<> getResult() const {
+		ValueType<> getResult() const {
 			return result_type;
 		}
 
@@ -709,10 +716,10 @@ namespace compiler::tsh {
 		}
 
 		FunctionAbstractTypeImpl(
-			std::vector<SymbolType<>> parameter_types,
-			SymbolType<>              result_type,
-			bool                      pure          = false,
-			FunctionKind              function_kind = FunctionKind::Raw
+			std::vector<ValueType<>> parameter_types,
+			ValueType<>              result_type,
+			bool                     pure          = false,
+			FunctionKind             function_kind = FunctionKind::Raw
 		);
 
 		/**
@@ -751,7 +758,7 @@ namespace compiler::tsh {
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
 	class VariantAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<SymbolType<>> underlying_types;
+		std::vector<ValueType<>> underlying_types;
 		/**
 		 * @brief If true then this variant is a different type and is visible to the user as an
 		 * optional. This doesn't change the lower layers in any way.
@@ -776,13 +783,13 @@ namespace compiler::tsh {
 		 * alternatives of an optional keep this order, so `None` is always the second one.
 		 */
 		VariantAbstractTypeImpl(
-			query::Context&                  ctx,
-			const std::vector<SymbolType<>>& variant_types,
-			bool                             represents_optional
+			query::Context&                 ctx,
+			const std::vector<ValueType<>>& variant_types,
+			bool                            represents_optional
 		);
 
 		[[nodiscard]]
-		const std::vector<SymbolType<>>& getUnderlyingTypes() const {
+		const std::vector<ValueType<>>& getUnderlyingTypes() const {
 			return underlying_types;
 		}
 
@@ -796,13 +803,13 @@ namespace compiler::tsh {
 		 * @pre representsOptionalType()
 		 */
 		[[nodiscard]]
-		const SymbolType<>& getOptionalValueType() const {
+		const ValueType<>& getOptionalValueType() const {
 			CORE_ASSERT(represents_optional, "Only an optional type holds an optional value type.");
 			return underlying_types.front();
 		}
 
 		[[nodiscard]]
-		SymbolType<> getMember(const usize idx) const {
+		ValueType<> getMember(const usize idx) const {
 			return underlying_types[idx];
 		}
 
@@ -921,10 +928,10 @@ namespace compiler::tsh {
 
 		ModuleAbstractTypeImpl() = default;
 
-		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override {
-			// @TODO: #1275 this is a placeholder, implement proper logic
-			return false;
-		}
+		/**
+		 * @brief Panics: no one calls it currently.
+		 */
+		[[nodiscard]] bool isTriviallyDestructible(query::Context& ctx) const override;
 
 		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 

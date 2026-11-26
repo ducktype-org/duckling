@@ -26,7 +26,7 @@ namespace compiler::backend_vm::internal {
 		const auto& source_type   = cast_params.source_type;
 		const auto& target_type   = cast_params.target_type;
 
-		auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+		auto is_signed = [](const tsh::ValueType<>& type) -> bool {
 			if (type.getType().getKind() == tsh::Kind::Integral) {
 				return (
 					tsh::IntegralAbstractType(type.getType()).getSignedness()
@@ -43,10 +43,14 @@ namespace compiler::backend_vm::internal {
 				variant_match(target_layout->getVariant()) {
 					variant_case_novalue(tsl::IntegralTypeLayout) {
 						// ================== Int -> Int ==================
-						if (source_layout->getSize() < target_layout->getSize()) {
+						// Compare the sizes of the VM places, not of the layouts: a 1-bit `bool`
+						// is stored in a whole byte, so `bool` -> `u8` is a plain move.
+						const Bytes source_size = base::bits2bytesRoundUp(source_layout->getSize());
+						const Bytes target_size = base::bits2bytesRoundUp(target_layout->getSize());
+						if (source_size < target_size) {
 							// Extend
 							return src_signed ? OpKind::sext : OpKind::zext;
-						} else if (source_layout->getSize() > target_layout->getSize()) {
+						} else if (source_size > target_size) {
 							// Truncate
 							return OpKind::trunc;
 						} else {
@@ -172,6 +176,28 @@ namespace compiler::backend_vm::internal {
 						} else {
 							CORE_PANIC("Unsupported cast between different pointer kinds");
 						}
+					}
+					variant_case_novalue(tsl::IntegralTypeLayout) {
+						// ================== CPointer -> Int ==================
+						// Only a `cptr` is a native address. A VM pointer is a (block, offset)
+						// pair, which `dvm_ptr_parts` takes apart instead.
+						CORE_ASSERT(
+							pointer_layout.getPointerKind()
+								== tsl::PointerTypeLayout::PointerKind::CPointer,
+							"Only a cptr can be cast to an integral in DVM lowering"
+						);
+						if (target_layout->getSize() == tsl::POINTER_SIZE) return OpKind::cast;
+
+						CORE_ASSERT(
+							target_layout->getSize() < tsl::POINTER_SIZE,
+							"Unsupported cast from cptr to an integral wider than a pointer"
+						);
+						// Read the whole address as a 64-bit integer, then narrow it.
+						const DVMPlace address_tmp
+							= ctx->pushTempLocal(DVMImmediate::u64(0).type, "cast_address_tmp");
+						ctx->pushInstruction({ OpKind::cast, address_tmp, out_arguments[0] });
+						out_arguments[0] = address_tmp;
+						return OpKind::trunc;
 					}
 					variant_default {
 						CORE_PANIC("Unsupported cast from pointer-layout to target layout");

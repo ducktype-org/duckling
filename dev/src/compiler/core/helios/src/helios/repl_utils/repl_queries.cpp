@@ -7,11 +7,11 @@
 #include "repl_queries.hpp"
 
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
@@ -48,7 +48,7 @@ namespace compiler::repl {
 					= std::make_shared<helios::code::CodeBlock>(helios::compileSingleStatement(
 						ctx,
 						element.dynamicCast<pst::Stmt>(),
-						tsh::SymbolType<>::withDefaults(tsh::getUnitType())
+						tsh::ValueType<>::withDefaultsMut(tsh::getUnitType())
 					));
 
 				code_block->statements.emplace_back(
@@ -66,7 +66,7 @@ namespace compiler::repl {
 				const coercions::Coercion coercion = coercions::coercionOf(
 					ctx,
 					expr.expr.ref(),
-					expr.expr->expression_type.getSymbolType(),
+					expr.expr->expression_type.getValueType(),
 					coercions::HandOverKind::LastUse
 				);
 				BoxOrCRef<helios::code::Expr> hout_expr = expr.expr.ref();

@@ -12,7 +12,7 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
-#include <base/collections/stable_hashmap.hpp>
+#include <base/collections/hashmap.hpp>
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
@@ -116,15 +116,9 @@ namespace compiler::frontend {
 
 			auto parsed_pst = pst::ParsedPST<>::fromFile(file, pst_type, getComponentHash());
 
-			// Illegal access is fine here because we are outside of any query and the PST is only
-			// being created.
-			if (parsed_pst->getRootElement().illegalAccess().has_value()) {
-				// @TODO: #2397 we could change it, such that root element is never null.
-				// Set additional root data only if the root element is not null:
-				parsed_pst->setAdditionalRootData(pst::AdditionalRootData{
-					.pst_parent = pst::AdditionalRootData::ModuleParent{ linked_module->getModuleID(), },
-				});
-			}
+			parsed_pst->setAdditionalRootData(pst::AdditionalRootData{
+				.pst_parent = pst::AdditionalRootData::ModuleParent{ linked_module->getModuleID(), },
+			});
 			parse_tree = std::move(parsed_pst);
 
 			return parse_tree.ref().toOpt().value();

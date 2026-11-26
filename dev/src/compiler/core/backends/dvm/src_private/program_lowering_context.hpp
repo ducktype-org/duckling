@@ -8,10 +8,12 @@
 
 #include "dvm_value.hpp"
 
-#include <backends/dvm/repl_lowering_snapshot.hpp>
+#include <backends/dvm/lowered_entities_snapshot.hpp>
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
+
+#include <base/collections/hashmap.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -265,7 +267,7 @@ namespace compiler::backend_vm::internal {
 
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
-		/// symbol types) are lowered.
+		/// ValueTypes) are lowered.
 		bool is_comp_time_lowering;
 
 		base::StrID module_id;

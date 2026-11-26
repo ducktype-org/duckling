@@ -8,9 +8,9 @@
  * @file main.cpp
  * @brief Entry point of `duckfmt`, the standalone Duckling source formatter.
  *
- * Reads a single Duckling source file, re-renders it through the token-based
- * formatter and prints the result to stdout (or writes it back with -i, or
- * verifies it with -k). Unlike `duckc`, this binary does not initialize the
+ * Reads one or more Duckling source files, re-renders each through the
+ * token-based formatter and prints the result to stdout (or writes it back with
+ * -i, or verifies it with -k). Unlike `duckc`, this binary does not initialize the
  * compiler driver: tokenization and formatting need no query state.
  */
 
@@ -29,10 +29,20 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <iostream>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace {
+
+	/**
+	 * Exit codes of `duckfmt`. With several files, the highest code of any file wins.
+	 */
+	constexpr int EXIT_OK            = 0;  ///< Every file formatted successfully.
+	constexpr int EXIT_NOT_FORMATTED = 1;  ///< A file is not formatted (check mode).
+	constexpr int EXIT_ERROR         = 2;  ///< A file can't be formatted.
 
 	/**
 	 * @brief Loads the formatter configuration from @p config_path.
@@ -59,17 +69,23 @@ namespace {
 		}
 	}
 
-	int formatFile(const clah::ParsingResult& options) {
-		auto file_to_format = options.getPositional<fs::File>(0);
-
-		formatter::FormatConfig format_config = formatter::FormatConfig::defaults();
-
-		const auto config_path = options.getValue<std::string>("config").copyValueOr("");
-		if (not config_path.empty()) {
-			const auto loaded = loadConfig(config_path);
-			if (not loaded.has_value()) return 1;
-			format_config = loaded.value();
-		}
+	/**
+	 * @brief Formats one source file and prints, writes back or checks the result.
+	 *
+	 * @param print_header Print a `==> <path> <==` line before the formatted source, so the
+	 *        output of several files on stdout can be told apart.
+	 * @return `EXIT_OK` on success, `EXIT_NOT_FORMATTED` when the file is not formatted in check
+	 *         mode, `EXIT_ERROR` when it could not be tokenized or formatted. The reason is printed
+	 *         on stderr.
+	 */
+	int formatOneFile(
+		fs::File&                      file_to_format,
+		const formatter::FormatConfig& format_config,
+		const clah::ParsingResult&     options,
+		bool                           print_header
+	) {
+		// A copy: getFilePath() returns a temporary, a view of it would dangle.
+		const std::string path(file_to_format.getFilePath().strView());
 
 		auto       source_content = file_to_format.getContent();
 		const auto source_view    = source_content.view().stringView();
@@ -78,31 +94,78 @@ namespace {
 		// Comments must stay in the token stream, or formatting would erase them.
 		if (not token_source->tokenize({ .keep_comments = true })) {
 			token_source->getIntLogger()->terminalPrint(std::cerr);
-			return 1;
+			return EXIT_ERROR;
 		}
 
-		const auto formatted = formatter::formatTokens(token_source->getTokenData(), format_config);
+		std::string formatted;
+		try {
+			formatted = formatter::formatTokens(token_source->getTokenData(), format_config);
+		} catch (const base::Exception& e) {
+			std::cerr << path << ": failed to format: " << e.what() << "\n";
+			return EXIT_ERROR;
+		}
 
 		if (options.isFlag("check")) {
-			if (formatted == source_view) return 0;
+			if (formatted == source_view) return EXIT_OK;
 			// On stderr, so `duckfmt -k` stays usable in a pipeline.
-			std::cerr << file_to_format.getFilePath().strView() << ": not formatted\n";
-			return 1;
+			std::cerr << path << ": not formatted\n";
+			return EXIT_NOT_FORMATTED;
 		}
 
-		if (options.isFlag("in-place"))
+		if (options.isFlag("in-place")) {
 			file_to_format.writeToFile(formatted);
-		else
-			std::cout << formatted;
+			return EXIT_OK;
+		}
 
-		return 0;
+		if (print_header) std::cout << "==> " << path << " <==\n";
+		std::cout << formatted;
+		return EXIT_OK;
+	}
+
+	/**
+	 * @brief Handler of `duckfmt`: formats every file given on the command line.
+	 *
+	 * All files are processed even when one of them fails.
+	 *
+	 * @return The highest exit code of any file (see `EXIT_OK`, `EXIT_NOT_FORMATTED`,
+	 *         `EXIT_ERROR`).
+	 */
+	int formatFiles(const clah::ParsingResult& options) {
+		formatter::FormatConfig format_config = formatter::FormatConfig::defaults();
+
+		const auto config_path = options.getValue<std::string>("config").copyValueOr("");
+		if (not config_path.empty()) {
+			const auto loaded = loadConfig(config_path);
+			if (not loaded.has_value()) return EXIT_ERROR;
+			format_config = loaded.value();
+		}
+
+		std::vector<fs::File> files_to_format;
+		files_to_format.push_back(options.getPositional<fs::File>(0));
+		for (usize i = 0; i < options.getExtraParameterCount(); i++)
+			files_to_format.push_back(options.getExtra<fs::File>(i).value());
+
+		const bool print_headers = files_to_format.size() > 1;
+		int        exit_code     = EXIT_OK;
+		for (usize i = 0; i < files_to_format.size(); i++) {
+			// A blank line between two files keeps the headers easy to spot.
+			if (print_headers and i > 0 and not options.isFlag("check")
+			    and not options.isFlag("in-place"))
+				std::cout << "\n";
+			exit_code = std::max(
+				exit_code, formatOneFile(files_to_format[i], format_config, options, print_headers)
+			);
+		}
+		return exit_code;
 	}
 
 	clah::Clah getClahForDuckfmt() {
-		return clah::Clah(
-				   "duckfmt", "Formats a single Duckling source file and prints the result to cout."
-		)
+		constexpr std::string_view DESCRIPTION
+			= "Formats Duckling source files and prints the result to cout. With several files, "
+			  "each output starts with a `==> <file> <==` line.";
+		return clah::Clah("duckfmt", std::string(DESCRIPTION))
 		    .addPositional(clah::FileParser::make("file"))
+		    .setDefaultValueParser(clah::FileParser::make("file"))
 		    .add(clah::ParamBuilder::ofValue(clah::StringParser::make("config"))
 		             .addShortName('c')
 		             .addLongName("config")
@@ -112,17 +175,17 @@ namespace {
 		    .add(clah::ParamBuilder::ofFlag()
 		             .addShortName('i')
 		             .addLongName("in-place")
-		             .addShortDesc("Write the result back to the file instead of stdout.")
+		             .addShortDesc("Write the result back to the files instead of stdout.")
 		             .build())
 		    .add(clah::ParamBuilder::ofFlag()
 		             .addShortName('k')
 		             .addLongName("check")
 		             .addShortDesc(
-						 "Do not rewrite the file; report on stderr and exit non-zero if it is "
-						 "not already formatted."
+						 "Do not rewrite the files; report each unformatted file on stderr and "
+						 "exit non-zero if any of them is not already formatted."
 					 )
 		             .build())
-		    .setHandler(formatFile);
+		    .setHandler(formatFiles);
 	}
 }
 
@@ -140,7 +203,7 @@ int main(int argc, const char* argv[]) {
 			{ e.what(), printer::Color::Default },
 			{ "\nAborting\n", printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	} catch (const std::exception& e) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
@@ -148,7 +211,7 @@ int main(int argc, const char* argv[]) {
 			{ e.what(), printer::Color::Default },
 			{ "\nAborting\n", printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	} catch (...) {
 		printer::StreamPrinter::print({
 			{ "[ERROR] ", printer::Color::Red },
@@ -156,6 +219,6 @@ int main(int argc, const char* argv[]) {
 		      "caught.\n",
 		      printer::Color::Default },
 		});
-		return 1;
+		return EXIT_ERROR;
 	}
 }

@@ -10,9 +10,8 @@ Tests:
     Description: can get a list of venvs
     Cases:
       basic:
-        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo list"
-        stderr-regex: ""
-        stdout-regex: |+
+        test-cmd: "@{expect_output} --err-regex \"@{stderr-regex}\" duck -C foo list"
+        stderr-regex: |+
           bar:
             last-location: $DIT_TMP_DIR/bar
             last-access: @{date-regex}

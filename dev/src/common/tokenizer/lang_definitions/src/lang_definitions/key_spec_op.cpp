@@ -49,6 +49,7 @@ namespace lang_def {
 			{ Keyword::Using, "using", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Var, "var", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Let, "let", KeywordFlagsOptions::IsStmtStart },
+			{ Keyword::Const, "const", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::While, "while", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::For, "for", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Loop, "loop", KeywordFlagsOptions::IsStmtStart },
@@ -97,7 +98,8 @@ namespace lang_def {
 			{ Keyword::Else, "else", KeywordFlags() },
 
 			// This is the list of keywords that are general prefix operators
-			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Mut, "mut", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Imm, "imm", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
@@ -109,8 +111,10 @@ namespace lang_def {
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copyof, "copyof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptrof, "ptrof", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::FRef,
+	          "fref",
+	          KeywordFlagsOptions::IsGenPrefixOp | KeywordFlagsOptions::IsIdentifierLike },
 
 			// `not` isn't a general prefix operator,
 			// it has specific handling together with the other boolean operators
@@ -169,7 +173,7 @@ namespace lang_def {
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
-			{ Keyword::Self, "self", KeywordFlags() },
+			{ Keyword::Self, "self", KeywordFlagsOptions::IsIdentifierLike },
 
 			{ Keyword::Destroy, "destroy", KeywordFlags() },
 		});

@@ -54,6 +54,10 @@ namespace formatter {
 	[[nodiscard]]
 	u32 visualWidth(std::string_view text);
 
+	/** @brief The source line @p t starts on. */
+	[[nodiscard]]
+	usize startLine(const lexer::Token& t);
+
 	/** Whether @p a and @p b sit on the same source line. */
 	[[nodiscard]]
 	bool onSameSourceLine(const lexer::Token& a, const lexer::Token& b);

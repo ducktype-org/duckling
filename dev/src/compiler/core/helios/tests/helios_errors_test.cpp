@@ -9,6 +9,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
+#include <helios/errors/block_expr_not_allowed.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -44,6 +45,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testBlockExprOutsideFunctionBody);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
 		TESTER_ADD_TEST(testFunctionValueErrors);
@@ -71,8 +73,12 @@ public:
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 		TESTER_ADD_TEST(testInteractiveTypeKeepsWrittenAliasName);
 		TESTER_ADD_TEST(testUnsupportedSelectorErrors);
+		TESTER_ADD_TEST(testUnsupportedAccessErrors);
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
+		TESTER_ADD_TEST(testParseErrorsFailModule);
+		TESTER_ADD_TEST(testStatementsOutsideFunctions);
+		TESTER_ADD_TEST(testDeclarationsInsideFunctions);
 	}
 
 protected:
@@ -165,6 +171,34 @@ private:
 		checkForError(present_phrases, logged_msg_count);
 	}
 
+	void testBlockExprOutsideFunctionBody() {
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = { 1i64 }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = ({ 1i64 }) + 1i64) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun foo(a: i64 = { let t: i64 = 1i64; t }) -> i64 = a;)",
+			{ "A block expression cannot be used in a default argument." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(class A { x: i64 = { let t: i64 = 1i64; t }; } fun foo() = { var a: A; })",
+			{ "A block expression cannot be used in a field initializer." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(const C: i64 = { 1i64 }; fun foo() -> i64 = C;)",
+			{ "A block expression cannot be used in a const initializer." },
+			1
+		);
+	}
+
 	/**
 	 * @brief Like `checkForErrorOnCompileModule`, but the module must compile, and only warnings
 	 * may be logged.
@@ -202,11 +236,11 @@ private:
 				R"(fun a() = 'c' + 1i64;)",
 				{
 					"Call failed due to ambiguous overload resolution",
-					"type const Function (const u8, const char) -> (const char).",
-					"given argument type `char` cannot be converted to the expected type `const "
+					"type imm Function (imm u8, imm char) -> (imm char).",
+					"given argument type `char` cannot be converted to the expected type `imm "
 					"u8`.",
-					"type const Function (const char, const u8) -> (const char).",
-					"given argument type `i64` cannot be converted to the expected type `const "
+					"type imm Function (imm char, imm u8) -> (imm char).",
+					"given argument type `i64` cannot be converted to the expected type `imm "
 					"u8`.",
 				},
 				1
@@ -264,7 +298,9 @@ private:
 				fun a(x: i32) -> i32 = 0;
 				fun b() = a(1.0);
 			)",
-				{ "given argument type `f32` cannot be converted", "Function declared here." },
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:2:9\n" },
 				1
 			);
 
@@ -273,7 +309,26 @@ private:
 				fundecl a(x: i32) -> i32;
 				fun b() = a(1.0);
 			)",
-				{ "given argument type `f32` cannot be converted", "Function declared here." },
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:2:13\n" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class P {
+					x: i64;
+					fun m(y: i32) = {}
+				}
+				fun b() = {
+					var p = P(x=1);
+					p.m(1.0);
+				}
+			)",
+				{ "given argument type `f32` cannot be converted",
+			      "Function declared here.",
+			      ".dk:4:10\n" },
 				1
 			);
 
@@ -365,7 +420,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -383,7 +438,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -401,7 +456,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				class MyClass {
-					var dummy: i64 = 0; # to avoid ZST
+					dummy: i64 = 0; # to avoid ZST
 
 					fun method(x: i64) = {
 						return x + 1;
@@ -497,7 +552,7 @@ private:
 				class MyClass {
 					x:i64 = 0;
 
-					MyClass.copy(other: const MyClass) = {
+					MyClass.copy(other: imm MyClass) = {
 						return MyClass(1);
 					}
 				}
@@ -512,7 +567,7 @@ private:
 				class MyClass {
 					x:i64 = 0;
 
-					MyClass.copy(other: const ref MyClass, a: i64) = {
+					MyClass.copy(other: ref MyClass, a: i64) = {
 						return MyClass(1);
 					}
 				}
@@ -557,6 +612,17 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
+				class A {
+					y: imm i64 = 2;
+					fun setY() = { y = 10; return; }
+				}
+			)",
+				{ "Left side of assignment can't be immutable." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
 				fun main() -> i64 = {
 					let x: i64 = 0;
 					x += 1;
@@ -585,7 +651,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -626,7 +692,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "The given argument type `const type` cannot be converted to the expected type "
+				{ "The given argument type `imm type` cannot be converted to the expected type "
 			      "`()`" },
 				1
 			);
@@ -694,6 +760,30 @@ private:
 				}
 			)",
 				{ "Type `ref i32` cannot be converted to type `box i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i64 = 3;
+					let r: ref i64 = &a;
+					let num: i64 = if (a == 0) then a else r;
+				}
+			)",
+				{ "the `then` branch is `i64` and the `else` branch is `ref i64`." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				class A { x: i64; }
+				class B { y: i64; }
+				fun main() = {
+					let a: i64 = 3;
+					let v = if (a == 0) then A(1i64) else B(2i64);
+				}
+			)",
+				{ "the `then` branch is `Class A` and the `else` branch is `Class B`." },
 				1
 			);
 		}
@@ -851,6 +941,45 @@ private:
 				}
 			)",
 				{ "Immutable variables must have an initial value." },
+				1
+			);
+
+			// The parser accepts a const without a value, so HELIOS must report it.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				namespace n { const g: bool; }
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					const g: i64;
+					return 0;
+				}
+			)",
+				{ "A const must have a value." },
+				1
+			);
+
+			// Using the const must not report the missing value a second time.
+			checkForErrorOnCompileModule(
+				R"(
+				const g: i64;
+				const h: i64 = g + 1;
+				fun main() -> i64 = { return h; }
+			)",
+				{ "A const must have a value." },
 				1
 			);
 
@@ -1022,6 +1151,12 @@ private:
 				"match (v) { case x = 0i64; };",
 				{ "Match pattern bindings without a type constraint" }
 			);
+
+			// Literal patterns are not supported yet.
+			check_ref_match_error(
+				"match (v) { case 1i64 = 0i64; case _ = 1i64; };",
+				{ "Match pattern kind: Value Pattern." }
+			);
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -1055,7 +1190,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-				{ "Type `f32` cannot be converted to type `const i64`." },
+				{ "Type `f32` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -1085,7 +1220,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `const i64`." },
+				{ "Type `slice char` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -1110,30 +1245,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						break;
-					}
-				}
-			)",
-				{ "Feature not implemented", "break" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					while (true) {
-						continue;
-					}
-				}
-			)",
-				{ "Feature not implemented", "continue" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -1190,7 +1301,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				fun main() -> i64 = {
 					var a: L;
 					var b = a;
@@ -1203,7 +1314,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				class U { list: L; }
 				class T { u: U; }
 
@@ -1219,7 +1330,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				fun foo(list: L) -> i32 = {
 				    return 1;
 				}
@@ -1235,7 +1346,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				fun foo(list: ref L) -> i32 = {
 				    var list_copy: L = list;
 				    return 0;
@@ -1252,7 +1363,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
@@ -1267,7 +1378,7 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+				class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 				class U { list: L; }
 				class T { u: U }
 				fun main() -> i64 = {
@@ -1525,7 +1636,7 @@ private:
 					class Unrelated {
 						public other: i64 = 3;
 
-						public fun reach(c: const ref C) -> i64 = {
+						public fun reach(c: ref C) -> i64 = {
 							var x: i64 = c.shared;
 							return 0;
 						}
@@ -1629,7 +1740,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun add(a: i64, b: i64) -> i64 = a + b;
 			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
-			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `const Function "
+			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `imm Function "
 		      "(i64) -> (i64)`." },
 			1
 		);
@@ -1657,7 +1768,7 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"( fun main() -> i64 = { let n = 3; return n(1); } )",
-			{ "A value of type `const i32` cannot be called, because it is not a function." },
+			{ "A value of type `imm i32` cannot be called, because it is not a function." },
 			1
 		);
 
@@ -1678,7 +1789,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun inc(x: i64) -> i64 = x + 1;
 			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
-			{ "Type `Function (i64) -> (i64)` cannot be converted to type `const (i64) -> "
+			{ "Type `Function (i64) -> (i64)` cannot be converted to type `imm (i64) -> "
 		      "(i64)`." },
 			1
 		);
@@ -1710,7 +1821,7 @@ private:
 			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var a: L;
 				var b: L = a;
@@ -1721,7 +1832,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var a: L;
 				var b = a;
@@ -1732,7 +1843,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			class H { l: L; }
 			fun main() -> i64 = {
 				var h: H;
@@ -1744,7 +1855,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var arr: L[2];
 				var b: L = arr[0];
@@ -1755,7 +1866,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var a: L;
 				var b: box L = new a;
@@ -1766,7 +1877,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun f(r: ref L) -> i32 = {
 				var b: L = r;
 				return 0;
@@ -1776,7 +1887,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun f(bl: box L) -> i32 = {
 				var x: L = bl;
 				return 0;
@@ -1786,7 +1897,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun foo(x: L) -> i32 = 0;
 			fun main() -> i64 = {
 				var a: L;
@@ -1798,7 +1909,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var t: (i32, L);
 				var b: (i32, L) = t;
@@ -1812,7 +1923,7 @@ private:
 
 	void testCoercionErrors() {
 		constexpr std::string_view CLASS_L
-			= "class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }";
+			= "class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }";
 
 		// ============================ Explicit copy or move ============================
 		{
@@ -1966,7 +2077,7 @@ private:
 	 */
 	void testOptionalErrors() {
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var o: ?L = L(1i32);
 				var b: L = o.value();
@@ -1978,7 +2089,7 @@ private:
 		);
 
 		checkForErrorOnCompileModule(
-			R"( class L { v: i32; L.copy(o: const ref L) = { return L(o.v); } }
+			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
 			fun main() -> i64 = {
 				var o: ?L = L(1i32);
 				var b = o.valueOr(L(2i32));
@@ -2012,7 +2123,7 @@ private:
 			R"(
 				expand " expand \" fun a \"  ";
 			)",
-			{ "Expected the opening bracket `(` of the function parameter list.",
+			{ "Expected the opening bracket `(` of the parameter list.",
 		      "Code expanded from here.",
 		      "Code expanded from here." },
 			1
@@ -2182,28 +2293,6 @@ private:
 			{ "cycle" },
 			1
 		);
-
-		// Two namespaces re-exporting each other: looking a name up in `A` follows `using B.*;`
-		// into `B`, which follows `using A.*;` straight back. Non-wildcard selectors are settled
-		// by the name they declare, so only wildcards can loop like this.
-		// @TODO: #2615 report this in terms of the usings involved, not of query nodes.
-		checkForErrorOnCompileModule(
-			R"(
-				namespace A {
-					using B.*;
-					const IN_A: i64 = 1;
-				}
-
-				namespace B {
-					using A.*;
-					const IN_B: i64 = 2;
-				}
-
-				const V: i64 = A.IN_B;
-			)",
-			{ "cycle" },
-			1
-		);
 	}
 
 	void testErrorLoggingTemplates() {
@@ -2221,6 +2310,35 @@ private:
 				fun main() = {
 					foo[1]();
 				}
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
+		// The caller does not depend on the instantiation's body (the return type is explicit), so
+		// only the replicated instantiation fails. The module must fail, not panic.
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				fun foo() -> i64 = {
+					return a + b;
+				}
+
+				fun main() -> i64 = foo[1]();
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
+		// The same for replicated global data of an instantiation.
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N {
+					const c: i64 = a + b;
+				}
+
+				fun main() -> i64 = N[1].c;
 			)",
 			{ "Symbol 'b' not found in lookup" },
 			1
@@ -2375,7 +2493,7 @@ private:
 					return b;
 				}
 			)",
-			{ "Type `const i64` is trivially copyable. No need to use the explicit `copy` "
+			{ "Type `imm i64` is trivially copyable. No need to use the explicit `copy` "
 		      "keyword." },
 			1
 		);
@@ -2751,15 +2869,15 @@ private:
 
 		std::stringstream ss;
 
+		testDiagnosticMessage<BlockExprNotAllowedError>(
+			ss, dia::StablePosition::fakePosition(), "a default argument"
+		);
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			auto st = tsh::SymbolType{
-				int32_type,
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			auto st = tsh::ValueType<>::withDefaultsMut(int32_type);
 
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
@@ -2799,6 +2917,9 @@ private:
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
 				ss, dia::StablePosition::fakePosition()
 			);
+
+			// ConstWithoutValueError
+			testDiagnosticMessage<ConstWithoutValueError>(ss, dia::StablePosition::fakePosition());
 		});
 	}
 
@@ -2820,7 +2941,7 @@ private:
 		)");
 		auto scope     = test_utils::getModuleScope(module_id);
 		auto v_sym     = test_utils::getChain("v", scope).back();
-		auto v_type    = test_utils::getSymbolTypeOf("v", scope);
+		auto v_type    = test_utils::getValueTypeOf("v", scope);
 
 		std::stringstream written;
 		std::stringstream resolved;
@@ -2882,6 +3003,23 @@ private:
 			checkForErrorOnCompileModule(
 				base::strConcat(NAMESPACE, statement), { message }, 1, false
 			);
+	}
+
+	void testUnsupportedAccessErrors() {
+		// Drop what the earlier tests left in the logger, so each case counts only its own error.
+		query::Context::dumpToOneLoggerAndClear();
+
+		// `.?` and `::` parse like `.`, but only `.` is compiled for now.
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N.?a;",
+			{ "Feature not implemented", "The `.?` access operator is not supported yet." },
+			1
+		);
+		checkForErrorOnCompileModule(
+			"namespace N { const a: i64 = 1; } const A: i64 = N::a;",
+			{ "Feature not implemented", "The `::` access operator is not supported yet." },
+			1
+		);
 	}
 
 	void testWildcardNamesInSelectorPaths() {
@@ -3156,6 +3294,51 @@ private:
 				0
 			);
 		}
+	}
+
+	/**
+	 * A parse error must fail the module even when the parser recovers and every remaining
+	 * statement compiles. The diagnostic itself lives in the PST logger, not in the query context.
+	 */
+	void testParseErrorsFailModule() {
+		checkForErrorOnCompileModule("fun main() -> i64 = { return 0; }\nimport", {}, 0);
+	}
+
+	void testStatementsOutsideFunctions() {
+		checkForErrorOnCompileModule(
+			"var g: i64 = 1;\n"
+			"fun f() -> i64 = 1;\n"
+			"1 + 2;"
+			"\nfun main() -> i64 = { return f(); }\n",
+			{ "Only declarations are allowed at module level." },
+			1
+		);
+	}
+
+	void testDeclarationsInsideFunctions() {
+		const std::vector<std::pair<std::string_view, std::string_view>> cases = {
+			{ "class Z { v: i64 = 0; }",
+			  "Classes declared inside a function are not supported yet." },
+			{ "import std.math;",
+			  "`import` statements are not allowed inside a function. Move it to the module "
+			  "level." },
+			{ "namespace N { const a = 1; }",
+			  "Namespaces declared inside a function are not supported yet." },
+			{ "template(T: type) fun g(x: T) -> T = x;",
+			  "Templates declared inside a function are not supported yet." },
+			{ "export { const a = 1; }",
+			  "`export` blocks are not allowed inside a function. Only module-level declarations "
+			  "can be exported." },
+			{ "debug { const a = 1; }",
+			  "Specifier blocks inside a function are not supported yet." },
+		};
+
+		for (const auto& [declaration, message]: cases)
+			checkForErrorOnCompileModule(
+				base::strConcat("fun main() -> i64 = { ", declaration, " return 0; }"),
+				{ message },
+				1
+			);
 	}
 };
 

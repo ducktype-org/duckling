@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/flag.hpp>
@@ -119,7 +119,7 @@ namespace compiler::helios {
 	 */
 	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type);
 
-	SymID moveInSymForType(query::Context& ctx, tsh::SymbolType<> element_type);
+	SymID moveInSymForType(query::Context& ctx, tsh::ValueType<> element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.

@@ -6,6 +6,7 @@
 
 #include "template_evaluation.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
@@ -109,6 +110,7 @@ namespace dia {
 		 */
 		state::PointerMessageID evaluatePointerMessage(const dia_args::PointerMessage& pm);
 
+		[[nodiscard]]
 		const base::HashMap<state::PointerMessageID, state::PointerMessage>& getEvaluatedPointerMessages(
 		) const {
 			return evaluated_pointer_messages;
@@ -724,9 +726,9 @@ namespace dia {
 					ctx.diagnostic.linked_messages.at(std::ranges::find_if(
 														  ctx.message_mapping,
 														  [&](const auto& pair) {
-															  return pair.second == msg_id;
+															  return pair.value == msg_id;
 														  }
-					)->first),
+					)->key),
 					evaluated_messages[msg_id]
 				);
 			}
@@ -753,7 +755,7 @@ namespace dia {
 			                           .priority
 			                           = static_cast<u32>(pointer_message_content.priority) }
 			);
-			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			this->pointer_message_mapping.insertOrAssign(pm, new_id);
 			return new_id;
 		} else {
 			const auto& message = thread_ctx.diagnostic.linked_messages.at(pm.message_id.value());
@@ -763,7 +765,7 @@ namespace dia {
             );
 			auto new_id = getNewID<state::PointerMessageID>();
 			this->evaluated_pointer_messages.put(new_id, std::move(evaluated_pointer_message));
-			this->pointer_message_mapping.insert_or_assign(pm, new_id);
+			this->pointer_message_mapping.insertOrAssign(pm, new_id);
 			return new_id;
 		}
 	}
@@ -781,7 +783,7 @@ namespace dia {
 		state::MessageID message_id_generator = 1;
 		for (const auto& [message_id, message]: thread.linked_messages)
 			if (message.metadata.template_type == "message")
-				thread_ctx.message_mapping.insert_or_assign(message_id, message_id_generator++);
+				thread_ctx.message_mapping.insertOrAssign(message_id, message_id_generator++);
 
 		std::vector<state::Message> messages;
 

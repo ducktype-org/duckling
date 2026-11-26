@@ -13,6 +13,7 @@
 #include <base/types/ints.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <ranges>
 #include <span>
 #include <string>
@@ -149,9 +150,13 @@ namespace formatter {
 			 * bracket group) the block flattens to `{stmt; stmt;}`; an empty body is `{}`.
 			 */
 			Doc blockDoc(const BlockItem& block) {
-				if (block.body.empty()) return doc::text("{}");
+				if (block.body.empty() && !block.open_comment.has_value()) return doc::text("{}");
 				std::vector<Doc> inner;
-				inner.push_back(doc::softLine());
+				if (block.open_comment.has_value()) {
+					inner.push_back(doc::space());
+					inner.push_back(commentDoc(*block.open_comment.value()));
+				}
+				if (!block.body.empty()) inner.push_back(doc::softLine());
 				appendStatementList(inner, block.body);
 				return doc::concat({
 					doc::text("{"),
@@ -182,21 +187,27 @@ namespace formatter {
 			}
 
 			/**
-			 * Indices of binary operators rendered with a space before them, as in `a + b`.
-			 * A line may break before each of them. Member dots are excluded (they bind
+			 * Indices of binary operators (and `and`/`or`) rendered with a space before them, as in
+			 * `a + b`. A line may break before each of them. Member dots are excluded (they bind
 			 * tightly); so are unary operators (their left neighbor is not a value).
 			 */
 			[[nodiscard]]
 			std::vector<usize> operatorBreakPoints(std::span<const Token> tokens) const {
 				std::vector<usize> points;
-				const Token*       prev = nullptr;
+				const Token*       prev  = nullptr;
+				const Token*       prev2 = nullptr;
 				for (usize i = 0; i < tokens.size(); i++) {
 					const Token& t = tokens[i];
 					if (isSkippable(t)) continue;
-					if (prev != nullptr && isOperator(t) && !isStr(t, ".") && isValueCloser(*prev)
-					    && needSpace(config, prev, t))
+					// `and`/`or` are keywords, yet they join operands like binary operators.
+					const bool logical = isKeyword(t) && (isStr(t, "and") || isStr(t, "or"));
+					// The operator a `fun prefix -*(...)` declares is its name, not a break point.
+					if (prev != nullptr && (isOperator(t) || logical) && !isStr(t, ".")
+					    && isValueCloser(*prev) && needSpace(config, prev, t)
+					    && !isSuffixUse(tokens, i, prev, prev2) && !isFixityMarker(*prev, prev2))
 						points.push_back(i);
-					prev = &t;
+					prev2 = prev;
+					prev  = &t;
 				}
 				return points;
 			}
@@ -280,7 +291,9 @@ namespace formatter {
 				bool         suppress_space = suppress_leading;
 				bool         unary_glue     = false;
 				const Token* prev2          = nullptr;
-				for (const auto& t: tokens) {
+				const Token* prev3          = nullptr;
+				for (usize i = 0; i < tokens.size(); i++) {
+					const Token& t = tokens[i];
 					if (isSkippable(t)) continue;
 					// The operator-adjacency guard outranks the unary glue rule: `++ *` glued
 					// into `++*` would re-tokenize as one different operator.
@@ -288,7 +301,8 @@ namespace formatter {
 						= unary_glue && prev != nullptr && isOperator(*prev) && isOperator(t);
 					const bool leading = (suppress_space && !must_separate)
 					                       ? false
-					                       : needSpace(config, prev, t, prev2);
+					                       : !isSuffixUse(tokens, i, prev, prev2)
+					                             && needSpace(config, prev, t, prev2, prev3);
 					suppress_space     = false;
 					unary_glue         = false;
 					if (leading) docs.push_back(doc::space());
@@ -298,18 +312,39 @@ namespace formatter {
 						suppress_space = true;
 						unary_glue     = true;
 					}
+					prev3 = prev2;
 					prev2 = prev;
 					prev  = &t;
 				}
 			}
 
+			/**
+			 * Whether the operator at @p i is a custom suffix operator applied to the value
+			 * before it, as in `fw-;` or `f(x-*)`: a symbol operator right after a value and
+			 * right before the end of its expression.
+			 */
+			static bool isSuffixUse(
+				std::span<const Token> tokens, usize i, const Token* prev, const Token* prev2
+			) {
+				const Token& t = tokens[i];
+				if (!isOperator(t) || prev == nullptr || !isValueCloser(*prev)) return false;
+				const std::string_view op = sv(t);
+				if (op.empty() || std::isalpha(static_cast<unsigned char>(op.front())) != 0)
+					return false;
+				// A run cut before a block ends in `=`, `->`, `=>` or `:` (`fun f() = {`).
+				if (op.ends_with("=") || op.ends_with(">") || op == ":") return false;
+				// `fun suffix ++(...)` declares the operator, it does not apply it.
+				if (prev2 != nullptr && isFunKeyword(*prev2)) return false;
+				usize j = i + 1;
+				while (j < tokens.size() && isSkippable(tokens[j])) j++;
+				// The end of a run or a bracket group is the end of the expression.
+				if (j == tokens.size()) return true;
+				return isSpecial(tokens[j]) && (sv(tokens[j]) == ";" || sv(tokens[j]) == ",");
+			}
+
 			Doc atomDoc(const Token& t) {
 				if (isBracketGroup(t)) {
-					if (isBlockCurly(t))
-						return blockDoc({
-							.curly = &t,
-							.body  = parseStatementList(t.getRecursive()),
-						});
+					if (isBlockCurly(t)) return blockDoc(parseBlock(t));
 					return groupDoc(t);
 				}
 				return doc::text(atomText(t));
@@ -342,8 +377,11 @@ namespace formatter {
 					first = false;
 					inner.push_back(elementDoc(element));
 				}
+				// A group holding a code block may break too, so the block can spread over
+				// lines: `identity(match (v) {...})`.
+				const bool holds_block = std::ranges::any_of(t.getRecursive(), isBlockCurly);
 				return doc::group(
-					isBreakableBracket(t),
+					isBreakableBracket(t) || holds_block,
 					{
 						doc::text(std::move(open)),
 						doc::indent(std::move(inner)),

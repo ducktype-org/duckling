@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>

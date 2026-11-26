@@ -7,40 +7,40 @@
 # The LLVM struct layout must agree with what the compiler computes.
 
 class Inner {
-    x: i32 = 0;
-    y: i32 = 0;
+	x: i32 = 0;
+	y: i32 = 0;
 }
 
 class Outer {
-    a: i32 = 0;
-    b: i32 = 0;
-    c: i32 = 0;
-    inner: Inner = Inner(0, 0);
+	a: i32 = 0;
+	b: i32 = 0;
+	c: i32 = 0;
+	inner: Inner = Inner(0, 0);
 }
 
 fun main() -> i64 = {
-    # Construction
-    var o = Outer(1, 2, 3, Inner(4, 5));
-    builtin_output_i64(o.a);      # 1
-    builtin_output_i64(o.b);      # 2
-    builtin_output_i64(o.c);      # 3
-    builtin_output_i64(o.inner.x); # 4
-    builtin_output_i64(o.inner.y); # 5
+	# Construction
+	var o = Outer(1, 2, 3, Inner(4, 5));
+	builtin_output_i64(o.a); # 1
+	builtin_output_i64(o.b); # 2
+	builtin_output_i64(o.c); # 3
+	builtin_output_i64(o.inner.x); # 4
+	builtin_output_i64(o.inner.y); # 5
 
-    # Assignment to scalar field
-    o.a = 10;
-    builtin_output_i64(o.a);      # 10
+	# Assignment to scalar field
+	o.a = 10;
+	builtin_output_i64(o.a); # 10
 
-    # Assignment to nested class field
-    o.inner = Inner(20, 30);
-    builtin_output_i64(o.inner.x); # 20
-    builtin_output_i64(o.inner.y); # 30
+	# Assignment to nested class field
+	o.inner = Inner(20, 30);
+	builtin_output_i64(o.inner.x); # 20
+	builtin_output_i64(o.inner.y); # 30
 
-    # Copy
-    var p = o;
-    p.b = 99;
-    builtin_output_i64(o.b);      # 2  (original unchanged)
-    builtin_output_i64(p.b);      # 99
+	# Copy
+	var p = o;
+	p.b = 99;
+	builtin_output_i64(o.b); # 2  (original unchanged)
+	builtin_output_i64(p.b); # 99
 
-    return 0i64;
+	return 0i64;
 }

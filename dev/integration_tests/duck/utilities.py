@@ -14,15 +14,19 @@ import json
 from typing import Any, Iterable, Final
 
 
-DEFAULT_SRC: Final[str] = """import core.builtins.*;
-
-fun main() = {
+DEFAULT_SRC: Final[str] = """fun main() = {
     return 0;
 }
 """
 
 DEFAULT_GITIGNORE: Final[str] = """.duck_build
 """
+
+
+def check_file_does_not_exist(file: Path) -> None:
+    if file.exists():
+        print(f"file {file} exists")
+        sys.exit(1)
 
 
 def check_file_exists(file: Path) -> None:
@@ -104,6 +108,10 @@ def check_empty_files(files: Iterable[Path]) -> None:
 def check_files_exist(files: Iterable[Path]) -> None:
     for file in files:
         check_file_exists(file)
+
+def check_files_dont_exist(files: Iterable[Path]) -> None:
+    for file in files:
+        check_file_does_not_exist(file)
 
 
 def check_empty_dirs(dirs: Iterable[Path]) -> None:

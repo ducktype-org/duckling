@@ -89,7 +89,9 @@ namespace tokenizer {
 		/**
 		 * @brief Get line bounds (first, last + 1).
 		 */
-		std::pair<usize, usize> getLine(usize line) { return lines.at(line - 1); }
+		[[nodiscard]] std::pair<usize, usize> getLine(usize line) const {
+			return lines.at(line - 1);
+		}
 
 		/**
 		 * @brief Returns a view containing the source characters in bounds [@p begin_char,@p
@@ -118,6 +120,8 @@ namespace tokenizer {
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 
+		[[nodiscard]] const std::vector<std::pair<usize, usize>>& getLines() const { return lines; }
+
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
 			decoded.emplace(internalDecode<encoding>());
@@ -126,6 +130,12 @@ namespace tokenizer {
 		void countLines();
 
 		void runLexer(const lexer::LexOptions& options = {});
+
+		/**
+		 * @brief Sets token data without tokens, only with the sentinels at the start of the
+		 * source. Used when the source cannot be decoded, so the token data is always available.
+		 */
+		void emplaceEmptyTokenData();
 
 		/**
 		 * @brief Run the whole lexer and change the keyword mode
@@ -142,7 +152,10 @@ namespace tokenizer {
 		bool tokenize(const lexer::LexOptions& options = {}) {
 			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
-			if (int_log.hasErrors()) return false;
+			if (int_log.hasErrors()) {
+				emplaceEmptyTokenData();
+				return false;
+			}
 			countLines();
 			runLexer(options);
 			return not int_log.hasErrors();

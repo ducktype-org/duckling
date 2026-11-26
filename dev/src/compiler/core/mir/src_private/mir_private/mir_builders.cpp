@@ -12,6 +12,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <base/collections/hashmap.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
@@ -137,6 +138,10 @@ namespace compiler::mir {
 		  ctx(ctx),
 		  helios_symbol(helios_symbol) {}
 
+	tsh::ValueType<> FunctionBuilder::getResultType() const {
+		return function_type.getResultType();
+	}
+
 	[[nodiscard]]
 	Function FunctionBuilder::build() {
 		CORE_ASSERT(entry_block.has_value(), "Entry block not set");
@@ -145,7 +150,7 @@ namespace compiler::mir {
 		std::vector<BlockID> block_order;
 		block_order.reserve(this->blocks.size());
 
-		base::StableHashMap<BlockID, Block> function_blocks;
+		base::HashMap<BlockID, Block> function_blocks;
 
 		// First element in block order is the entry block
 		block_order.push_back(entry_block_id);
@@ -224,14 +229,14 @@ namespace compiler::mir {
 			return tmp;
 		}
 
-		const auto symbol_type = reusable_expr.expression_type.getSymbolType();
-		auto       tmp         = addTmp(symbol_type, scope);
+		const auto value_type = reusable_expr.expression_type.getValueType();
+		auto       tmp        = addTmp(value_type, scope);
 		reusable_expr_locals.put(expr_id, tmp);
 		return tmp;
 	}
 
 	[[nodiscard]]
-	MIRLocalMutRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, const ScopeRef scope) {
+	MIRLocalMutRef FunctionBuilder::addTmp(const tsh::ValueType<> type, const ScopeRef scope) {
 		local_list.emplaceBack(MIRLocal{ LocalID(next_local_id++), type });
 		auto tmp = local_list.last();
 		tmp->setLifetimeScope(scope);
@@ -244,7 +249,7 @@ namespace compiler::mir {
 	 * Sets its lifetime scope to no_lifetime_scope.
 	 */
 	[[nodiscard]]
-	MIRLocalMutRef FunctionBuilder::addReturnTmp(const tsh::SymbolType<> type) {
+	MIRLocalMutRef FunctionBuilder::addReturnTmp(const tsh::ValueType<> type) {
 		auto tmp = addTmp(type, no_lifetime_scope);
 		tmp->lifetime_flags |= LifetimeFlag::ReturnTmpValue | LifetimeFlag::NoScopeFlags
 		                     | LifetimeFlag::NoDestructor;
@@ -259,10 +264,8 @@ namespace compiler::mir {
 	 */
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addConditionTmp(ScopeRef scope) {
-		auto type = tsh::SymbolType<>(
-			tsh::getBoolType(), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
-		);
-		auto tmp = addTmp(type, scope);
+		auto type = tsh::ValueType<>::withDefaults(tsh::getBoolType());
+		auto tmp  = addTmp(type, scope);
 		tmp->lifetime_flags |= LifetimeFlag::ConditionTmpValue | LifetimeFlag::NoDestructor;
 		return tmp;
 	}

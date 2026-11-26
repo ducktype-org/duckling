@@ -38,7 +38,7 @@ namespace compiler::ctv {
 		const CompileTimeValue& ctv
 	) {
 		variant_match(ctv.getStorage()) {
-			variant_case(tsh::SymbolType<>, type) { return type; }
+			variant_case(tsh::ValueType<>, type) { return type; }
 			variant_case_novalue(UnitCTV) { return UnitCTV{}; }
 			variant_case(TypeTuple, tuple) { return tuple; }
 			variant_default { CORE_PANIC("Only types, units and type tuples are tuple elements."); }
@@ -48,14 +48,14 @@ namespace compiler::ctv {
 
 	CompileTimeValue CompileTimeValue::TypeTuple::elementToCtv(const Element& element) {
 		variant_match(element) {
-			variant_case(tsh::SymbolType<>, type) { return CompileTimeValue{ type }; }
+			variant_case(tsh::ValueType<>, type) { return CompileTimeValue{ type }; }
 			variant_case_novalue(UnitCTV) { return CompileTimeValue{ UnitCTV{} }; }
 			variant_case(TypeTuple, tuple) { return CompileTimeValue{ tuple }; }
 		}
 		CORE_UNREACHABLE();
 	}
 
-	bool CompileTimeValue::TypeTuple::isValid(const tsh::SymbolType<>& tuple_type) {
+	bool CompileTimeValue::TypeTuple::isValid(const tsh::ValueType<>& tuple_type) {
 		return tuple_type.getRefKind() == tsh::ReferenceKind::Direct
 		    && tuple_type.getType().getKind() == tsh::Kind::Tuple
 		    && tsh::TupleAbstractType{ tuple_type.getType() }.isTupleOfTypes();
@@ -84,7 +84,7 @@ namespace compiler::ctv {
 					hashing::addToHash(hasher, element_ctv.queryUnstablePerfectHash());
 				}
 			}
-			variant_case(tsh::SymbolType<>, val) {
+			variant_case(tsh::ValueType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
 			variant_case(VMValue, vm_value) {
@@ -125,7 +125,7 @@ namespace compiler::ctv {
 				ss << ")";
 				return ss.str();
 			}
-			variant_case(tsh::SymbolType<>, val) { return val.toString(); }
+			variant_case(tsh::ValueType<>, val) { return val.toString(); }
 			variant_case(VMValue, vm_value) {
 				// @TODO: #3774 Pretty print the VMValue instead of dumping it.
 				std::stringstream ss;
@@ -140,69 +140,43 @@ namespace compiler::ctv {
 		return "";
 	}
 
-	tsh::SymbolType<> CompileTimeValue::getTypeOfStoredValue(query::Context& ctx) const {
+	tsh::ValueType<> CompileTimeValue::getTypeOfStoredValue(query::Context& ctx) const {
 		variant_match(value) {
 			variant_case_novalue(bool) {
-				return tsh::SymbolType<>{
-					tsh::getBoolType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
 			}
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
 			variant_case_novalue(char) {
-				return tsh::SymbolType<>{
-					tsh::getCharType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::ValueType<>::withDefaultsMut(tsh::getCharType());
 			}
 			variant_case_novalue(CharSliceValue) {
-				return tsh::SymbolType<>{
-					tsh::getCharSliceType(ctx),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				};
+				return tsh::ValueType<>::withDefaults(tsh::getCharSliceType(ctx));
 			}
 			variant_case_novalue(StringClassValue) {
 				CORE_ASSERT(
 					tsh::isStringTypePresent(ctx),
 					"A String CTV cannot exist without the String type."
 				);
-				return tsh::SymbolType<>{
-					tsh::getStringType(ctx),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				};
+				return tsh::ValueType<>::withDefaults(tsh::getStringType(ctx));
 			}
 			variant_case_novalue(UnitCTV) {
-				return tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 			}
 			variant_case(TypeTuple, tuple) {
-				std::vector<tsh::SymbolType<>> component_types;
+				std::vector<tsh::ValueType<>> component_types;
 				component_types.reserve(tuple.getElements().size());
 				for (const auto& element: tuple.getElements())
 					component_types.push_back(
 						TypeTuple::elementToCtv(element).getTypeOfStoredValue(ctx)
 					);
 
-				return tsh::SymbolType<>{
-					ctx.query<tsh::QueryTupleType>({ std::move(component_types) }),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				return tsh::ValueType<>::withDefaultsMut(
+					ctx.query<tsh::QueryTupleType>({ std::move(component_types) })
+				);
 			}
 
-			variant_case(tsh::SymbolType<>, val) {
-				return tsh::SymbolType<>{
-					tsh::getMetaType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+			variant_case(tsh::ValueType<>, val) {
+				return tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
 			}
 			variant_case(VMValue, vm_value) { return vm_value.type; }
 		}

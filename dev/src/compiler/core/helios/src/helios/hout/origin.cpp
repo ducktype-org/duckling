@@ -6,7 +6,7 @@
 
 #include "origin.hpp"
 
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 
 #include <base/except/exceptions.hpp>
 

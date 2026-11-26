@@ -7,8 +7,8 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/access.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
+#include <frontend/pst_parser/base_element/lang_parser_element.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -108,8 +108,8 @@ namespace compiler::helios::templates {
 	 */
 	struct TemplateDeclarationSignature final {
 		struct Parameter final {
-			base::StrID       name;
-			tsh::SymbolType<> type;
+			base::StrID      name;
+			tsh::ValueType<> type;
 
 			// Not yet supported:
 			// base::Optional<ctv::CompileTimeValue> default_value;

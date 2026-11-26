@@ -34,7 +34,7 @@ invalid-alias-error: |+
       failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      aliased dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
+      dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
 
     Caused by:
       @{cause}"
@@ -45,7 +45,7 @@ valid-alias-error: |+
       failed to parse the field \`dependencies.@{dep-name}\`
   
     Caused by:
-      dependency \`@{alias-name}\` has an invalid alias name \`@{dep-name}\`
+      dependency \`@{dep-name}\` has an invalid alias
 
     Caused by:
       @{cause}"

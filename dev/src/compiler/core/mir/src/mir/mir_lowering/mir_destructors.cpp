@@ -13,6 +13,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include <base/collections/hashmap.hpp>
+
 #include <algorithm>
 
 namespace compiler::mir {
@@ -357,7 +359,7 @@ namespace compiler::mir {
 		query::Context& ctx, Function& function, const LifetimePassArgs& args
 	) {
 		for (auto block_id: function.block_order) {
-			auto& block = *function.blocks.at(block_id);
+			auto& block = function.blocks.at(block_id);
 
 			// Replay move-state through the block, starting from its entry state. Unreachable blocks
 			// have no computed move-state, so default to empty (matching AddDestructorsPass).

@@ -93,9 +93,9 @@ namespace compiler::helios::test_utils {
 	 * Use this to get the type of the variable `a` in `var a : i32`.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
-	 * @return The symbol type of the last symbol in the chain.
+	 * @return The ValueType of the last symbol in the chain.
 	 */
-	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope);
+	tsh::ValueType<> getValueTypeOf(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the abstract type of the value associated with last symbol in a symbol chain
@@ -113,7 +113,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+	tsh::ValueType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * @brief returns hout-expr of the initialization value of given const.

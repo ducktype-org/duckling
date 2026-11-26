@@ -9,12 +9,30 @@
 #include "mir_builders.hpp"
 
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <variant>
+#include <vector>
 
 namespace compiler::mir {
 	namespace hc = helios::code;
+
+	struct ControlFlowTarget final {
+		helios::code::ControlFlowKind kind;
+		base::Optional<helios::SymID> id;
+
+		// Destination after leaving the construct with `break`.
+		BlockBuilderRef break_target;
+
+		// Destination for `continue`: condition evaluation for if/while,
+		// iteration step for for, or body entry for block/if const.
+		BlockBuilderRef continue_target;
+	};
+
+	/* Enclosing control-flow targets, with the innermost target stored last. */
+	using ControlFlowTargets = std::vector<ControlFlowTarget>;
 
 	/**
 	 * @brief Represents a partial result of expression lowering.
@@ -43,7 +61,7 @@ namespace compiler::mir {
 		struct Finalizer final {
 			BlockBuilder::InstructionHole hole;
 			Instruction                   instr;
-			tsh::SymbolType<>             type;
+			tsh::ValueType<>              type;
 		};
 
 		/**
@@ -79,7 +97,7 @@ namespace compiler::mir {
 		 * @brief helper function returning type of result. Can be used if MIRValue is not stored.
 		 */
 		[[nodiscard]]
-		tsh::SymbolType<> getResultType();
+		tsh::ValueType<> getResultType();
 
 		/**
 		 * @brief Helper function that returns MIRvalue if it is already stored in structure.
@@ -141,12 +159,14 @@ namespace compiler::mir {
 	 * @param continuation Block that should be executed after this expression.
 	 * @param function Function that we are lowering this expression in.
 	 * @param expr_scope Lifetime Scope this expression should be in.
+	 * @param targets Enclosing break/continue targets, used by block expressions.
 	 * @return ExprLowerRes
 	 */
 	ExprLowerRes lowerExpr(
-		const hc::Expr&  expr,
-		BlockBuilderRef  continuation,
-		FunctionBuilder& function,
-		ScopeRef         expr_scope
+		const hc::Expr&           expr,
+		BlockBuilderRef           continuation,
+		FunctionBuilder&          function,
+		ScopeRef                  expr_scope,
+		const ControlFlowTargets& targets
 	);
 }

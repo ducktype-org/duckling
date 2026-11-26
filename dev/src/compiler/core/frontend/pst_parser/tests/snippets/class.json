@@ -114,7 +114,6 @@
 								"sourceEnd": 54
 							},
 							"Class Field": {
-								"is mutable": "true",
 								"name": {
 									"position": {
 										"sourceStart": 48,
@@ -176,7 +175,6 @@
 								},
 							],
 							"Class Field": {
-								"is mutable": "true",
 								"name": {
 									"position": {
 										"sourceStart": 65,
@@ -250,7 +248,7 @@
 										"sourceStart": 86,
 										"sourceEnd": 101
 									},
-									"function parameter list": [
+									"parameter list": [
 										{
 											"position": {
 												"sourceStart": 87,
@@ -488,7 +486,7 @@
 										"sourceStart": 136,
 										"sourceEnd": 143
 									},
-									"function parameter list": [
+									"parameter list": [
 										{
 											"position": {
 												"sourceStart": 137,
@@ -826,7 +824,7 @@
 														"sourceStart": 253,
 														"sourceEnd": 259
 													},
-													"function parameter list": [
+													"parameter list": [
 														{
 															"position": {
 																"sourceStart": 254,
@@ -960,7 +958,7 @@
 														"sourceStart": 291,
 														"sourceEnd": 292
 													},
-													"function parameter list": []
+													"parameter list": []
 												},
 												"body": {
 													"position": {
@@ -1047,7 +1045,7 @@
 														"sourceStart": 323,
 														"sourceEnd": 324
 													},
-													"function parameter list": []
+													"parameter list": []
 												},
 												"body": {
 													"position": {

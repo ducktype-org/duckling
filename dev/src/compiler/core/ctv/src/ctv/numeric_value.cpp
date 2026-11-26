@@ -7,7 +7,7 @@
 #include "numeric_value.hpp"
 
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -33,36 +33,24 @@ namespace compiler::numeric_value {
 		);
 	}
 
-	tsh::SymbolType<> NumericValue::getTypeOfStoredValue(query::Context& ctx) const {
+	tsh::ValueType<> NumericValue::getTypeOfStoredValue(query::Context& ctx) const {
 		using namespace tsh;
 		return std::visit(
-			[&](auto&& val) -> tsh::SymbolType<> {
+			[&](auto&& val) -> tsh::ValueType<> {
 				using T                    = std::decay_t<decltype(val)>;
 				constexpr bool IS_INTEGRAL = std::is_integral_v<T>;
 				constexpr bool IS_SIGNED   = std::is_signed_v<T>;
 
 				if constexpr (IS_INTEGRAL && IS_SIGNED) {
-					return SymbolType{
-						getIntegralType(
-							ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Signed
-						),
-						ReferenceKind::Direct,
-						Mutability::Mutable,
-					};
+					return ValueType<>::withDefaultsMut(getIntegralType(
+						ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Signed
+					));
 				} else if constexpr (IS_INTEGRAL && !IS_SIGNED) {
-					return SymbolType{
-						getIntegralType(
-							ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned
-						),
-						ReferenceKind::Direct,
-						Mutability::Mutable,
-					};
+					return ValueType<>::withDefaultsMut(getIntegralType(
+						ctx, sizeof(T) * 8, IntegralAbstractType::Signedness::Unsigned
+					));
 				} else {  // Floating point.
-					return SymbolType{
-						getFloatType(ctx, sizeof(T) * 8),
-						ReferenceKind::Direct,
-						Mutability::Mutable,
-					};
+					return ValueType<>::withDefaultsMut(getFloatType(ctx, sizeof(T) * 8));
 				}
 			},
 			value

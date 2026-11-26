@@ -10,15 +10,43 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_lowering/errors.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+
+#include <diagnostic/stable_position.hpp>
+#include <query_framework/query_errors.hpp>
 
 #include <ranges>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace compiler::mir {
+	static std::string_view controlFlowKeyword(hc::ControlFlowKind kind) {
+		switch (kind) {
+		case hc::ControlFlowKind::If:
+			return "if";
+		case hc::ControlFlowKind::While:
+			return "while";
+		case hc::ControlFlowKind::For:
+			return "for";
+		case hc::ControlFlowKind::Block:
+			return "block";
+		case hc::ControlFlowKind::COUNT:
+			CORE_UNREACHABLE();
+		}
+		CORE_UNREACHABLE();
+	}
+
+	static bool returnTypeMatches(const tsh::ValueType<>& given, const tsh::ValueType<>& expected) {
+		return given.getType() == expected.getType() && given.getRefKind() == expected.getRefKind();
+	}
 
 	/**
 	 * @brief Visitor that implements actual logic of lowering statements.
@@ -34,12 +62,20 @@ namespace compiler::mir {
 		 */
 		ScopeRef parent_scope;
 
+		// Stack of enclosing break/continue targets, with the innermost target last.
+		// Searched in reverse to select the nearest matching construct.
+		ControlFlowTargets targets;
+
 		StmtBlockVisitor(
-			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+			BlockBuilderRef    continuation,
+			FunctionBuilder&   function,
+			ScopeRef           parent_scope,
+			ControlFlowTargets targets
 		):
 			  continuation(continuation),
 			  function(function),
-			  parent_scope(parent_scope) {}
+			  parent_scope(parent_scope),
+			  targets(std::move(targets)) {}
 
 		base::Optional<StmtLowerRes> out;
 
@@ -48,14 +84,76 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
+		[[nodiscard]] const ControlFlowTarget* findTarget(
+			const hc::ControlFlowTargetSelector& selector
+		) const {
+			for (const auto& target: targets | std::views::reverse) {
+				variant_match(selector) {
+					variant_case(hc::NamedTarget, named) {
+						if (target.id.has_value() && helios::name(target.id.value()) == named.name)
+							return &target;
+					}
+					variant_case(hc::KindTarget, by_kind) {
+						if (target.kind == by_kind.kind) return &target;
+					}
+					variant_case_novalue(hc::NearestLoop) {
+						if (target.kind == hc::ControlFlowKind::While
+						    || target.kind == hc::ControlFlowKind::For)
+							return &target;
+					}
+				}
+			}
+			return nullptr;
+		}
+
+		[[noreturn]] void failMissingTarget(
+			const hc::ControlFlowTargetSelector&       selector,
+			const base::Optional<dia::StablePosition>& position,
+			std::string_view                           action
+		) const {
+			if (position.has_value()) {
+				auto& ctx = function.getContext();
+				variant_match(selector) {
+					variant_case_novalue(hc::NearestLoop) {
+						ctx.log<NoEnclosingLoopError>(position.value(), action);
+					}
+					variant_case(hc::NamedTarget, named) {
+						ctx.log<NoNamedControlFlowTargetError>(
+							position.value(), action, named.name.strView()
+						);
+					}
+					variant_case(hc::KindTarget, by_kind) {
+						ctx.log<NoControlFlowKindTargetError>(
+							position.value(), action, controlFlowKeyword(by_kind.kind)
+						);
+					}
+				}
+			}
+			query::throwFailed();
+		}
+
+		[[noreturn]] void failReturnType(
+			const base::Optional<dia::StablePosition>& position, const std::string& given_type
+		) const {
+			if (position.has_value())
+				function.getContext().log<ReturnTypeMismatchError>(
+					position.value(), given_type, function.getResultType().toString()
+				);
+			query::throwFailed();
+		}
+
 		void visitReturnStmt(const hc::ReturnStmt& stmt) override {
+			const auto value_type = stmt.value->expression_type.getValueType();
+			if (!returnTypeMatches(value_type, function.getResultType()))
+				failReturnType(stmt.getPosition(), value_type.toString());
+
 			auto return_block = function.newBlock("return");
 			auto return_scope = function.newScope(parent_scope);
 
 			auto retrieve_value = return_block->addHole();
 
 			// lower expr:
-			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope);
+			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope, targets);
 
 			auto possible_result = expr_res.getResultIfStored();
 
@@ -94,6 +192,10 @@ namespace compiler::mir {
 		}
 
 		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
+			const auto unit = tsh::ValueType<>::withDefaults(tsh::getUnitType());
+			if (!returnTypeMatches(unit, function.getResultType()))
+				failReturnType(stmt.getPosition(), "()");
+
 			auto return_block = function.newBlock("return.void");
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator(
@@ -104,14 +206,26 @@ namespace compiler::mir {
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
 			auto expr_scope  = function.newScope(parent_scope);
-			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
+			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope, targets);
 
 			std::ignore = expr_result.getResult(function);
 			output({ expr_result.begin });
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
-			auto condition_scope = function.newScope(parent_scope);
+			auto condition_scope      = function.newScope(parent_scope);
+			auto condition_block      = function.newBlock("if.cond");
+			auto get_condition_return = condition_block->addHole();
+			auto lowered_condition
+				= lowerExpr(*stmt.condition, condition_block, function, condition_scope, targets);
+
+			auto branch_targets = targets;
+			branch_targets.push_back(ControlFlowTarget{
+				.kind            = helios::code::ControlFlowKind::If,
+				.id              = stmt.control_flow_id,
+				.break_target    = continuation,
+				.continue_target = lowered_condition.begin,
+			});
 
 			// I'm not sure if we need these scopes,
 			// maybe we could just pass parent_scope as-is.
@@ -122,19 +236,16 @@ namespace compiler::mir {
 			auto else_block = function.newBlock("if.else");
 			else_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, else_scope });
-			auto else_body = lowerCodeBlock(stmt.else_body, else_block, function, else_scope).begin;
+			auto else_body
+				= lowerCodeBlock(stmt.else_body, else_block, function, else_scope, branch_targets)
+			          .begin;
 
 			auto then_block = function.newBlock("if.then");
 			then_block->setTerminator(Instruction{
 				Operation::Jump, {}, { continuation->getID() }, {}, then_scope });
-			auto then_body = lowerCodeBlock(stmt.then_body, then_block, function, then_scope).begin;
-
-			auto condition_block = function.newBlock("if.cond");
-
-			auto get_condition_return = condition_block->addHole();
-
-			auto lowered_condition
-				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+			auto then_body
+				= lowerCodeBlock(stmt.then_body, then_block, function, then_scope, branch_targets)
+			          .begin;
 
 			auto possible_condition_res = lowered_condition.getResultIfStored();
 
@@ -173,7 +284,13 @@ namespace compiler::mir {
 				{ stmt.getPosition() },
 			});
 
-			output({ lowered_condition.begin });
+			// Earlier statements may be inserted into this entry during reverse lowering.
+			// Keep it separate from the condition used by continue if.
+			auto entry_block = function.newBlock("if.entry");
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { lowered_condition.begin->getID() }, {}, parent_scope }
+			);
+			output({ entry_block });
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
@@ -184,7 +301,7 @@ namespace compiler::mir {
 			auto get_condition_return = condition_continuation_block->addHole();
 
 			auto expr_result = lowerExpr(
-				*stmt.condition, condition_continuation_block, function, condition_scope
+				*stmt.condition, condition_continuation_block, function, condition_scope, targets
 			);
 
 			auto loop_scope = function.newScope(parent_scope);
@@ -195,8 +312,32 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
 			);
 
-			auto loop_body
-				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
+			auto continue_target = loop_continuation_block;
+			if (stmt.control_flow_kind == hc::ControlFlowKind::For) {
+				// The generated for step runs after the body, including on continue.
+				continue_target
+					= lowerStmt(
+						  *stmt.step.value(), loop_continuation_block, function, loop_scope, targets
+					)
+				          .begin;
+			}
+
+			auto body_targets = targets;
+			body_targets.push_back(ControlFlowTarget{
+				.kind            = stmt.control_flow_kind,
+				.id              = stmt.control_flow_id,
+				.break_target    = continuation,
+				.continue_target = continue_target,
+			});
+			// Statements are lowered backwards and may be inserted into their continuation
+			// block. Keep the continue target separate from that mutable continuation, or
+			// a continue would also execute statements following it in the loop body.
+			auto body_fallthrough = function.newBlock("while.body.fallthrough");
+			body_fallthrough->setTerminator(
+				{ Operation::Jump, {}, { continue_target->getID() }, {}, loop_scope }
+			);
+			StmtLowerRes loop_body
+				= lowerCodeBlock(stmt.body, body_fallthrough, function, loop_scope, body_targets);
 
 			auto entry_block = function.newBlock("while.entry");
 
@@ -238,6 +379,42 @@ namespace compiler::mir {
 			output({ entry_block });
 		}
 
+		void visitBreakStmt(const hc::BreakStmt& stmt) override {
+			auto target = findTarget(stmt.target_selector);
+			if (target == nullptr)
+				failMissingTarget(stmt.target_selector, stmt.getPosition(), "break");
+
+			auto break_block = function.newBlock("break");
+			break_block->setTerminator({
+				Operation::Jump,
+				{},
+				{ target->break_target->getID() },
+				{},
+				parent_scope,
+				{},
+				{ stmt.getPosition() },
+			});
+			output({ break_block });
+		}
+
+		void visitContinueStmt(const hc::ContinueStmt& stmt) override {
+			auto target = findTarget(stmt.target_selector);
+			if (target == nullptr)
+				failMissingTarget(stmt.target_selector, stmt.getPosition(), "continue");
+
+			auto continue_block = function.newBlock("continue");
+			continue_block->setTerminator({
+				Operation::Jump,
+				{},
+				{ target->continue_target->getID() },
+				{},
+				parent_scope,
+				{},
+				{ stmt.getPosition() },
+			});
+			output({ continue_block });
+		}
+
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			auto optional_local = function.findLocal(stmt.helios_symbol);
 
@@ -254,7 +431,7 @@ namespace compiler::mir {
 			auto local_construction_hole = continuation->addHole();
 			auto assignment_scope        = function.newScope(parent_scope);
 			auto expr_result
-				= lowerExpr(*stmt.initial_value, continuation, function, assignment_scope);
+				= lowerExpr(*stmt.initial_value, continuation, function, assignment_scope, targets);
 
 			expr_result.storeResultInGivenPlace(
 				MIRPlace(local),
@@ -280,17 +457,18 @@ namespace compiler::mir {
 			// destruct(a) <- added in the later pass
 			// a = tmp
 			bool destructor_in_between
-				= not stmt.location_expr->expression_type.getSymbolType().isTriviallyDestructible(
+				= not stmt.location_expr->expression_type.getValueType().isTriviallyDestructible(
 					function.getContext()
 				);
 			base::Optional<BlockBuilder::InstructionHole> second_hole;
 			if (destructor_in_between) second_hole = continuation->addHole();
 
 			auto right_result
-				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
+				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope, targets);
 
-			auto left_result
-				= lowerExpr(*stmt.location_expr, right_result.begin, function, assignment_scope);
+			auto left_result = lowerExpr(
+				*stmt.location_expr, right_result.begin, function, assignment_scope, targets
+			);
 
 			auto left_val = left_result.getResult(function);
 
@@ -348,37 +526,76 @@ namespace compiler::mir {
 		}
 
 		void visitBlockStmt(const hc::BlockStmt& stmt) override {
-			auto block_scope = function.newScope(parent_scope);
+			auto block_scope  = function.newScope(parent_scope);
+			auto body_targets = targets;
+			// Create the continue target before lowering the body, so continue statements
+			// can already refer to it. Connect it to the body's beginning afterwards.
+			base::Optional<BlockBuilderRef> entry;
+			auto                            body_continuation = continuation;
+			if (stmt.control_flow_kind.has_value()) {
+				entry = function.newBlock(
+					stmt.control_flow_kind.value() == hc::ControlFlowKind::If ? "const.if.entry"
+																			  : "block.entry"
+				);
+				// Body statements are lowered into their continuation. Do not allow them to
+				// modify the destination of break from this block.
+				body_continuation = function.newBlock("block.body.fallthrough");
+				body_continuation->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, block_scope }
+				);
+				body_targets.push_back(ControlFlowTarget{
+					.kind            = stmt.control_flow_kind.value(),
+					.id              = stmt.control_flow_id,
+					.break_target    = continuation,
+					.continue_target = entry.value(),
+				});
+			}
 
-			auto block_body = lowerCodeBlock(stmt.body, continuation, function, block_scope);
-
-			output({ block_body.begin });
+			auto block_body
+				= lowerCodeBlock(stmt.body, body_continuation, function, block_scope, body_targets);
+			if (entry.has_value()) {
+				entry.value()->setTerminator(
+					{ Operation::Jump, {}, { block_body.begin->getID() }, {}, parent_scope }
+				);
+				// Keep the entry used by continue block free of instructions from the
+				// preceding statement, which will be lowered into our returned block.
+				auto outer_entry = function.newBlock("block.outer.entry");
+				outer_entry->setTerminator(
+					{ Operation::Jump, {}, { entry.value()->getID() }, {}, parent_scope }
+				);
+				output({ outer_entry });
+			} else {
+				output({ block_body.begin });
+			}
 		}
 	};
 
 	StmtLowerRes lowerStmt(
-		const hc::Stmt&  stmt,
-		BlockBuilderRef  continuation,
-		FunctionBuilder& function,
-		ScopeRef         parent_scope
+		const hc::Stmt&    stmt,
+		BlockBuilderRef    continuation,
+		FunctionBuilder&   function,
+		ScopeRef           parent_scope,
+		ControlFlowTargets targets
 	) {
-		StmtBlockVisitor visitor{ continuation, function, parent_scope };
+		StmtBlockVisitor visitor{ continuation, function, parent_scope, std::move(targets) };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
 	StmtLowerRes lowerCodeBlock(
-		const hc::CodeBlock& code_block,
-		BlockBuilderRef      continuation,
-		FunctionBuilder&     function,
-		ScopeRef             parent_scope
+		const hc::CodeBlock&      code_block,
+		BlockBuilderRef           continuation,
+		FunctionBuilder&          function,
+		ScopeRef                  parent_scope,
+		const ControlFlowTargets& targets
 	) {
 		StmtLowerRes last_result{ continuation };
 
 		for (auto& stmt: code_block.statements | std::views::reverse) {
-			last_result  = lowerStmt(*stmt, continuation, function, parent_scope);
+			last_result  = lowerStmt(*stmt, continuation, function, parent_scope, targets);
 			continuation = last_result.begin;
 		}
+
 		return last_result;
 	}
 }

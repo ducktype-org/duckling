@@ -6,6 +6,8 @@
 
 #include "flag_context.hpp"
 
+#include <base/collections/hashmap.hpp>
+
 #include <vm/bytecode/validator/errors.hpp>
 
 #include <queue>
@@ -139,8 +141,9 @@ namespace vm::code {
 		// Computing direct flags, i.e. flags without propagation
 		base::HashMap<base::StrID, InstructionFlag> direct_flags;
 		for (const auto& new_func: new_functions) {
-			direct_flags.put(
-				new_func.name.str, collectFlagsForFunction(new_func, globals, ext_c_functions)
+			direct_flags.maybePut(
+				base::StrID(new_func.name.str),
+				collectFlagsForFunction(new_func, globals, ext_c_functions)
 			);
 		}
 		for (const auto& [func_name, _]: transpose_call_graph)
@@ -185,7 +188,7 @@ namespace vm::code {
 
 		// Finally, save the result
 		for (const auto& [new_func, flags]: flags_in_new_functions) {
-			flags_in_functions.put(new_func, flags);
+			flags_in_functions.maybePut(base::StrID(new_func), InstructionFlag(flags));
 
 			verifyFlagsAgainstConfig(flags, config, new_func);
 		}

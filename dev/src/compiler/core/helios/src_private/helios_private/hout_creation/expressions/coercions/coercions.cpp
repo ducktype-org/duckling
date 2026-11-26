@@ -142,52 +142,52 @@ namespace compiler::helios::coercions {
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::RefOf&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context& ctx, const step::RefOf&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			const auto origin = from->origin.generatedFrom();
 			return makeBox<RefOfExpr>(ctx, origin, std::move(from));
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::Deref&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context& ctx, const step::Deref&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			const auto origin = from->origin.generatedFrom();
 			return makeBox<DerefExpr>(ctx, origin, std::move(from));
 		}
 
-		Box<Expr> applyStep(query::Context&, const step::HandOver&, const tsh::SymbolType<>&, Box<Expr>) {
+		Box<Expr> applyStep(query::Context&, const step::HandOver&, const tsh::ValueType<>&, Box<Expr>) {
 			CORE_PANIC("HandOver node should never appear in an `ExpressionType` coercion");
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::ImplicitMove&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context& ctx, const step::ImplicitMove&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			const auto origin = from->origin.generatedFrom();
 			return makeBox<MoveExpr>(ctx, origin, std::move(from), MoveExpr::MoveKind::Implicit);
 		}
 
 		Box<Expr> applyStep(
-			query::Context&, const step::MutabilityChange&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context&, const step::MutabilityChange&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			// Only what may be done with the value changes, the value itself does not.
 			return from;
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::Numeric&, const tsh::SymbolType<>& result, Box<Expr> from
+			query::Context& ctx, const step::Numeric&, const tsh::ValueType<>& result, Box<Expr> from
 		) {
 			const auto origin = from->origin.generatedFrom();
 			return makeBox<CastExpr>(ctx, origin, std::move(from), result);
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::ZeroCheck&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context& ctx, const step::ZeroCheck&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			return buildZeroCheck(ctx, std::move(from));
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::LiftToType&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context& ctx, const step::LiftToType&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			const auto origin = from->origin.generatedFrom();
 			return makeBox<LiftToTypeExpr>(ctx, origin, std::move(from));
@@ -196,8 +196,8 @@ namespace compiler::helios::coercions {
 		Box<Expr> applyStep(
 			query::Context& ctx,
 			const step::RetypeVoid&,
-			const tsh::SymbolType<>& result,
-			Box<Expr>                from
+			const tsh::ValueType<>& result,
+			Box<Expr>               from
 		) {
 			const auto origin = from->origin.generatedFrom();
 			return makeBox<CastExpr>(ctx, origin, std::move(from), result);
@@ -206,7 +206,7 @@ namespace compiler::helios::coercions {
 		Box<Expr> applyStep(
 			query::Context&          ctx,
 			const step::Elementwise& elementwise,
-			const tsh::SymbolType<>&,
+			const tsh::ValueType<>&,
 			Box<Expr> from
 		) {
 			return applyElementwise(ctx, elementwise.parts, std::move(from));
@@ -215,7 +215,7 @@ namespace compiler::helios::coercions {
 		Box<Expr> applyStep(
 			query::Context&          ctx,
 			const step::VariantPack& packing,
-			const tsh::SymbolType<>& result,
+			const tsh::ValueType<>&  result,
 			Box<Expr>                from
 		) {
 			const auto origin = from->origin.generatedFrom();
@@ -225,7 +225,7 @@ namespace compiler::helios::coercions {
 		}
 
 		Box<Expr> applyStep(
-			query::Context& ctx, const step::UserConversion&, const tsh::SymbolType<>&, Box<Expr> from
+			query::Context& ctx, const step::UserConversion&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			// @TODO: #3656 Call the conversion function once anything decides on one.
 			failNotImplemented(ctx, "User defined conversions are not supported yet.", *from);
@@ -245,12 +245,12 @@ namespace compiler::helios::coercions {
 		 */
 		Box<Expr> applyNode(query::Context& ctx, const CoercionNode& node, Box<Expr> from) {
 			CORE_ASSERT(
-				from->expression_type.getSymbolType() == node.source,
+				from->expression_type.getValueType() == node.source,
 				base::strConcat(
 					"A coercion node of `",
 					node.source.toString(),
 					"` is carried out on an expression of type `",
-					from->expression_type.getSymbolType().toString(),
+					from->expression_type.getValueType().toString(),
 					"`."
 				)
 			);
@@ -262,11 +262,11 @@ namespace compiler::helios::coercions {
 	}
 
 	Coercion coercionOf(
-		query::Context&          ctx,
-		const CRef<Expr>         from,
-		const tsh::SymbolType<>& target,
-		const HandOverKind       kind,
-		const CoercionMode       mode
+		query::Context&         ctx,
+		const CRef<Expr>        from,
+		const tsh::ValueType<>& target,
+		const HandOverKind      kind,
+		const CoercionMode      mode
 	) {
 		const ValueSource source = [&] {
 			ValueSource value = valueSourceOf(from);
@@ -281,21 +281,13 @@ namespace compiler::helios::coercions {
 	}
 
 	Coercion coercionToMeta(query::Context& ctx, const CRef<Expr> from) {
-		return coercionOf(
-			ctx,
-			from,
-			tsh::SymbolType<>{
-				tsh::getMetaType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			}
-		);
+		return coercionOf(ctx, from, tsh::ValueType<>::withDefaultsMut(tsh::getMetaType()));
 	}
 
 	query::QResult<Coercion> validCoercionOf(
 		query::Context&                     ctx,
 		const CRef<Expr>                    from,
-		const tsh::SymbolType<>&            target,
+		const tsh::ValueType<>&             target,
 		const dia::StablePosition           source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos,
 		const CoercionErrorOverrides&       error_overrides,
@@ -311,7 +303,7 @@ namespace compiler::helios::coercions {
 	query::QResult<Coercion> validCoercionOf(
 		query::Context&                     ctx,
 		const ValueSource&                  from,
-		const tsh::SymbolType<>&            target,
+		const tsh::ValueType<>&             target,
 		const dia::StablePosition           source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos,
 		const CoercionErrorOverrides&       error_overrides
@@ -334,7 +326,7 @@ namespace compiler::helios::coercions {
 			coercion.isValid(), base::strConcat("Carrying out a refused coercion: ", describe())
 		);
 		CORE_ASSERT(
-			coercion.getSource().getSymbolType() == from->expression_type.getSymbolType(),
+			coercion.getSource().getValueType() == from->expression_type.getValueType(),
 			base::strConcat(
 				"Carrying out a coercion on an expression it was not decided for: ", describe()
 			)
@@ -376,7 +368,7 @@ namespace compiler::helios::coercions {
 		case tsh::Kind::Char: {
 			// There is no literal of either to compare against, so they are compared as the
 			// unsigned integer of the same width. Both are 8 bits wide.
-			const auto as_integer = tsh::SymbolType<>::withDefaults(
+			const auto as_integer = tsh::ValueType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
 			);
 			return buildZeroCheck(ctx, makeBox<CastExpr>(ctx, origin, std::move(value), as_integer));
@@ -386,7 +378,7 @@ namespace compiler::helios::coercions {
 				ctx,
 				base::strConcat(
 					"Checking a value of type `",
-					value->expression_type.getSymbolType().toString(),
+					value->expression_type.getValueType().toString(),
 					"` against zero is not supported yet."
 				),
 				*value
@@ -399,7 +391,7 @@ namespace compiler::helios::coercions {
 	query::QResult<Box<Expr>> coerceFromBox(
 		query::Context&                     ctx,
 		Box<Expr>                           expr,
-		const tsh::SymbolType<>&            expected_type,
+		const tsh::ValueType<>&             expected_type,
 		const dia::StablePosition           source_position,
 		base::Optional<dia::StablePosition> coercion_expects_pos,
 		const CoercionErrorOverrides&       error_overrides

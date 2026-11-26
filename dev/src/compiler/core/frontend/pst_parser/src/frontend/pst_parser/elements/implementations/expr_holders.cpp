@@ -38,22 +38,22 @@ namespace pst {
 		}
 	}
 
-	bool ExprParserHelper::untilUniversalEnd(const TokenStream& state, i64 fwd) {
+	bool ExprParserHelper::untilUniversalNoBlockEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
 		    || ExprClassify::isAssignment(state, fwd) || blockEndsExpression(state, fwd);
 	}
 
-	bool ExprParserHelper::untilUniversalAllowBlockEnd(const TokenStream& state, i64 fwd) {
+	bool ExprParserHelper::untilUniversalEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Comma) || state[fwd].is(Special::Semicolon)
 		    || ExprClassify::isAssignment(state, fwd);
 	}
 
-	bool ExprParserHelper::untilUniversalAllowCommaEnd(const TokenStream& state, i64 fwd) {
+	bool ExprParserHelper::untilUniversalAllowCommaNoBlockEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd)
 		    || blockEndsExpression(state, fwd);
 	}
 
-	bool ExprParserHelper::untilUniversalAllowCommaAndBlockEnd(const TokenStream& state, i64 fwd) {
+	bool ExprParserHelper::untilUniversalAllowCommaEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
 	}
 

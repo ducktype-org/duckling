@@ -1,0 +1,30 @@
+# `answer` is not installed anywhere: duck only finds `libanswer.a` through `external-lib-paths`,
+# so the link fails (undefined `duck_answer`) unless the search really happened.
+PostCase: "@{cleanup_tmp_env}"
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  mkdir -p foo/libs
+  echo 'int duck_answer(void) { return 42; }' > answer.c
+  cc -c answer.c -o answer.o && ar rcs foo/libs/libanswer.a answer.o
+  cat <<'EOF' > foo/src/src.dk
+  import core.builtins.*;
+
+  extern("C") {
+      fundecl duck_answer() -> i32;
+  }
+
+  fun main() = {
+      return duck_answer();
+  }
+  EOF
+  echo "  external-libs: [answer]
+    external-lib-paths: [libs]" >> foo/quackconfig.yaml
+Tests:
+  external-libs:
+    Description: links a static library found in `external-lib-paths` into the binary
+    Cases:
+      run:
+        test-cmd: duck -C foo run
+        ExitCode: 42

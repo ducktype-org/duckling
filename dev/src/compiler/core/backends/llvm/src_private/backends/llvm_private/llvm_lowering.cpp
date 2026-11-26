@@ -4,7 +4,9 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <backends/llvm/llvm_backend.hpp>
 #include <backends/llvm_private/abi_converter.hpp>
+#include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <concepts>
@@ -22,6 +24,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
@@ -180,7 +183,7 @@ namespace {
 				}
 				return llvm::ConstantInt::get(llvm_type.get(), val ? 1 : 0, false);
 			}
-			variant_case_novalue(compiler::tsh::SymbolType<>) {
+			variant_case_novalue(compiler::tsh::ValueType<>) {
 				// @TODO: #1709 This is a stub representation of meta types in LLVM for the code
 				// using compile time operations on types to compile. This should never be used in
 				// runtime.
@@ -215,6 +218,17 @@ namespace {
 }
 
 namespace compiler::backend_llvm {
+
+	void configureAssemblySyntax() {
+		using AssemblySyntax     = global_state::BackendOptions::LLVMBackend::AssemblySyntax;
+		const auto& llvm_backend = global_state::getBackendOptions()->llvm_backend;
+		if (!llvm_backend || llvm_backend->asm_syntax != AssemblySyntax::Intel) return;
+
+		constexpr auto OPTION_NAME = "x86-asm-syntax";
+		auto*          option      = llvm::cl::getRegisteredOptions().lookup(OPTION_NAME);
+		if (!option || option->addOccurrence(0, OPTION_NAME, "intel"))
+			CORE_PANIC("LLVM error: unable to select Intel assembly syntax");
+	}
 
 	namespace {
 		std::once_flag llvm_init_flag;
@@ -389,6 +403,12 @@ namespace compiler::backend_llvm {
 						)
 					);
 				}
+				// - Finally, check the size, which is also the stride of an array of the class.
+				CORE_ASSERT(
+					Bytes(struct_layout.getSizeInBytes())
+						== base::bits2bytesRoundUp(class_layout.getSize()),
+					base::strConcat("LLVM struct size mismatch for class '", class_name, "'")
+				);
 
 				// Finally, return the struct type.
 				return struct_type;
@@ -413,12 +433,18 @@ namespace compiler::backend_llvm {
 				);
 			}
 			variant_case(tsl::VariantTypeLayout, variant_layout) {
-				// Variants lower to a packed literal struct (structurally uniqued by LLVM):
-				// { tag, [pad x i8], [payload x i8] }, mirroring the TSL layout.
+				// Variants lower to a literal struct (structurally uniqued by LLVM), mirroring the
+				// TSL layout: { tag, [pad x i8], [payload x i8], [0 x iA] }.
+				// A class struct gets its TSL alignment from its typed members. Here the payload
+				// is untyped bytes, so without the empty array of `iA` (A = the TSL alignment)
+				// the struct would only be as aligned as its tag. That array takes no space, but
+				// it gives the struct the TSL alignment, so a variant inside a class lands at its
+				// TSL field offset.
 				const usize data_offset = variant_layout.getDataOffset().asInt();
 				const usize tag_bytes   = base::bits2bytes(variant_layout.getTagSize()).asInt();
 				const usize total_bytes = base::bits2bytes(layout->getSize()).asInt();
 				const usize data_bytes  = total_bytes - data_offset;
+				const usize alignment   = layout->getAlignment().asInt();
 
 				llvm::Type* i8_type = llvm::Type::getInt8Ty(llvm_context);
 
@@ -427,8 +453,12 @@ namespace compiler::backend_llvm {
 				if (data_offset > tag_bytes)
 					members.push_back(llvm::ArrayType::get(i8_type, data_offset - tag_bytes));
 				members.push_back(llvm::ArrayType::get(i8_type, data_bytes));
+				members.push_back(llvm::ArrayType::get(
+					llvm::Type::getIntNTy(llvm_context, base::safeIntConv<unsigned>(alignment * 8)),
+					0
+				));
 
-				return llvm::StructType::get(llvm_context, members, /*isPacked=*/true);
+				return llvm::StructType::get(llvm_context, members, /*isPacked=*/false);
 			}
 			variant_default {
 				CORE_PANIC(
@@ -448,8 +478,9 @@ namespace compiler::backend_llvm {
 		 * TSL offsets of fields and of variant payloads are multiples of the alignment of what they
 		 * hold, and LLVM aggregate offsets are checked against the TSL ones in `typeFromLayout`.
 		 *
-		 * @note The LLVM ABI alignment is not enough on its own, because variants lower to packed
-		 * structs of bytes, whose ABI alignment is 1 while their payload does require alignment.
+		 * @note The TSL and the LLVM ABI alignments agree for the types checked in
+		 * `typeFromLayout` (variants carry the TSL alignment); the larger one is taken for the
+		 * others.
 		 */
 		auto alignmentFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
 			-> llvm::Align {
@@ -1027,7 +1058,7 @@ namespace compiler::backend_llvm {
 			const auto dst_bits
 				= base::safeIntConv<unsigned>(static_cast<usize>(target_layout->getSize()));
 
-			auto is_signed = [](const tsh::SymbolType<>& type) -> bool {
+			auto is_signed = [](const tsh::ValueType<>& type) -> bool {
 				if (type.getType().getKind() == tsh::Kind::Integral) {
 					return (
 						tsh::IntegralAbstractType(type.getType()).getSignedness()
@@ -1698,9 +1729,9 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpNE)
 
 			/// Floating point comparisons ///
-			// @note: We use Oxx instead of Uxx for the comparisons to be "ordered". This basically
-			// means if any of the operands is NaN the result of the operation is always false. The
-			// `unordered` alternative returns true if any of the operands is NaN.
+			// @note: All comparisons but `!=` use Oxx ("ordered"): they are false if any operand
+			// is NaN. `!=` uses UNE ("unordered"): it is true if any operand is NaN, so `a != b`
+			// is always `not (a == b)`, as in IEEE 754 and the DVM.
 			case FloatLt:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOLT)
 			case FloatGt:
@@ -1712,7 +1743,7 @@ namespace compiler::backend_llvm {
 			case FloatEq:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpOEQ)
 			case FloatNeq:
-				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpONE)
+				LIR_2_LLVM_BINARY_OPERATION_CASE(FCmpUNE)
 
 			/// Logic ///
 			case BooleanAnd:

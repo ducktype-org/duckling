@@ -6,7 +6,7 @@
 
 /**
  * @file rules.cpp
- * @brief Every rule of what coerces into what, and `QuerySymbolTypeCoercion`, which answers with
+ * @brief Every rule of what coerces into what, and `QueryValueTypeCoercion`, which answers with
  * them.
  */
 
@@ -30,13 +30,13 @@
 
 namespace compiler::tsh::coercions {
 	namespace {
-		SymbolTypeCoercion refused(
-			const SymbolType<>&               source,
-			const SymbolType<>&               target,
+		ValueTypeCoercion refused(
+			const ValueType<>&                source,
+			const ValueType<>&                target,
 			CoercionFailure                   reason,
 			std::vector<CoercionError::Cause> causes = {}
 		) {
-			return SymbolTypeCoercion::refusedCoercion(
+			return ValueTypeCoercion::refusedCoercion(
 				source,
 				CoercionError{
 					.reason = std::move(reason),
@@ -47,21 +47,21 @@ namespace compiler::tsh::coercions {
 			);
 		}
 
-		SymbolTypeCoercion accepted(CoercionNode node) {
-			const SymbolType<> source = node.source;
-			return SymbolTypeCoercion::successfulCoercion(source, std::move(node));
+		ValueTypeCoercion accepted(CoercionNode node) {
+			const ValueType<> source = node.source;
+			return ValueTypeCoercion::successfulCoercion(source, std::move(node));
 		}
 
-		base::CRef<SymbolTypeCoercion> planPart(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		base::CRef<ValueTypeCoercion> planPart(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
-			return ctx.query<QuerySymbolTypeCoercion>({ source, target });
+			return ctx.query<QueryValueTypeCoercion>({ source, target });
 		}
 
 		/**
 		 * A node about coercing @p source into @p target that has not done anything yet.
 		 */
-		CoercionNode startNode(const SymbolType<>& source, const SymbolType<>& target) {
+		CoercionNode startNode(const ValueType<>& source, const ValueType<>& target) {
 			return CoercionNode{
 				.source = source,
 				.target = target,
@@ -74,7 +74,7 @@ namespace compiler::tsh::coercions {
 		 * @brief Inserts a `HandOver` step into @p node if the value needs it.
 		 */
 		void handOver(query::Context& ctx, CoercionNode& node) {
-			const SymbolType<> value = node.current();
+			const ValueType<> value = node.current();
 
 			// @TODO: #1711  A function type does not know whether it is trivially copyable yet and
 			// throws NYI. Remove this edge case.
@@ -86,11 +86,11 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief The value is taken and turned into a value of @p target by @p conversion.
 		 */
-		SymbolTypeCoercion converted(
-			query::Context&     ctx,
-			const SymbolType<>& source,
-			const SymbolType<>& target,
-			CoercionStep::Kind  conversion
+		ValueTypeCoercion converted(
+			query::Context&    ctx,
+			const ValueType<>& source,
+			const ValueType<>& target,
+			CoercionStep::Kind conversion
 		) {
 			CoercionNode node = startNode(source, target);
 			handOver(ctx, node);
@@ -101,10 +101,10 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief A `void` is retyped into whatever the location is.
 		 */
-		SymbolTypeCoercion retypeVoid(const SymbolType<>& source, const SymbolType<>& target) {
+		ValueTypeCoercion retypeVoid(const ValueType<>& source, const ValueType<>& target) {
 			CoercionNode node = startNode(source, target);
 
-			// `void` into `void`/`const void` is an identity and should rank with identity, not
+			// `void` into `void`/`imm void` is an identity and should rank with identity, not
 			// `RetypeVoid` which is the worst rank.
 			const bool is_identity = source.getType() == target.getType()
 			                      && source.getRefKind() == target.getRefKind();
@@ -120,8 +120,8 @@ namespace compiler::tsh::coercions {
 		 * Nothing converts behind a reference. Only mutability may differ, and only in the
 		 * direction that promises less about the value.
 		 */
-		SymbolTypeCoercion keepReference(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		ValueTypeCoercion keepReference(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
 			// Refuse implicit `ref`/`box`.
 			if (not referenceCoercionRule(source.getRefKind(), target.getRefKind()).isLegal())
@@ -150,18 +150,18 @@ namespace compiler::tsh::coercions {
 		 * Every variant alternative is asked about how well the value matches this alternative.
 		 * Then either the best one is picked, ambiguity is reported or no alternative matched.
 		 */
-		SymbolTypeCoercion packIntoVariant(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		ValueTypeCoercion packIntoVariant(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
-			const VariantAbstractType        variant{ target.getType() };
-			const std::vector<SymbolType<>>& alternatives = variant.getUnderlyingTypes();
+			const VariantAbstractType       variant{ target.getType() };
+			const std::vector<ValueType<>>& alternatives = variant.getUnderlyingTypes();
 
 			std::vector<Candidate>            candidates;
 			std::vector<CoercionError::Cause> refusals;
 
 			for (const auto& [index, alternative]:
 			     std::views::zip(std::views::iota(0u), alternatives)) {
-				const base::CRef<SymbolTypeCoercion> into = planPart(ctx, source, alternative);
+				const base::CRef<ValueTypeCoercion> into = planPart(ctx, source, alternative);
 
 				if (into->isRefused()) {
 					refusals.push_back({
@@ -208,17 +208,17 @@ namespace compiler::tsh::coercions {
 		 * @brief The source is a `ref/`box` while the target is not. The pointee must be first read
 		 * out and then coerced.
 		 */
-		SymbolTypeCoercion readThroughReference(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		ValueTypeCoercion readThroughReference(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
 			// Check if we can coerce the derefed type.
-			const SymbolType<>                   pointee = source.getPointeeSymbolType();
-			const base::CRef<SymbolTypeCoercion> rest    = planPart(ctx, pointee, target);
+			const ValueType<>                   pointee = source.getPointeeValueType();
+			const base::CRef<ValueTypeCoercion> rest    = planPart(ctx, pointee, target);
 
 			if (rest->isRefused()) {
 				CoercionError error = rest->getError();
 				error.source        = source;
-				return SymbolTypeCoercion::refusedCoercion(source, std::move(error));
+				return ValueTypeCoercion::refusedCoercion(source, std::move(error));
 			}
 
 			// Now create the coercion plan.
@@ -232,16 +232,16 @@ namespace compiler::tsh::coercions {
 		 * @brief The source is implicitly taken by `ref`. The reference is then coerced into the
 		 * target.
 		 */
-		SymbolTypeCoercion takeByRef(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		ValueTypeCoercion takeByRef(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
-			const SymbolType<> referenced = source.withReferenceKind(ReferenceKind::Ref);
-			const base::CRef<SymbolTypeCoercion> rest = planPart(ctx, referenced, target);
+			const ValueType<>                   referenced = source.toRef();
+			const base::CRef<ValueTypeCoercion> rest       = planPart(ctx, referenced, target);
 
 			if (rest->isRefused()) {
 				CoercionError error = rest->getError();
 				error.source        = source;
-				return SymbolTypeCoercion::refusedCoercion(source, std::move(error));
+				return ValueTypeCoercion::refusedCoercion(source, std::move(error));
 			}
 
 			CoercionNode node = startNode(source, target);
@@ -253,12 +253,12 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief A composite that is rebuilt out of its parts, each coerced on its own.
 		 */
-		SymbolTypeCoercion coerceElementwise(
-			query::Context&                  ctx,
-			const SymbolType<>&              source,
-			const SymbolType<>&              target,
-			const std::vector<SymbolType<>>& source_parts,
-			const std::vector<SymbolType<>>& target_parts
+		ValueTypeCoercion coerceElementwise(
+			query::Context&                 ctx,
+			const ValueType<>&              source,
+			const ValueType<>&              target,
+			const std::vector<ValueType<>>& source_parts,
+			const std::vector<ValueType<>>& target_parts
 		) {
 			std::vector<CoercionNode>         parts;
 			std::vector<CoercionError::Cause> refusals;
@@ -266,7 +266,7 @@ namespace compiler::tsh::coercions {
 
 			for (const auto& [index, from, into]:
 			     std::views::zip(std::views::iota(0u), source_parts, target_parts)) {
-				const base::CRef<SymbolTypeCoercion> part = planPart(ctx, from, into);
+				const base::CRef<ValueTypeCoercion> part = planPart(ctx, from, into);
 
 				if (part->isRefused()) {
 					refusals.push_back({
@@ -312,11 +312,11 @@ namespace compiler::tsh::coercions {
 
 		/// A tuple is rebuilt into a tuple of as many components, and a tuple of types is read as a
 		/// tuple type.
-		SymbolTypeCoercion tupleRule(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		ValueTypeCoercion tupleRule(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
-			const TupleAbstractType          source_tuple{ source.getType() };
-			const std::vector<SymbolType<>>& components = source_tuple.getComponents();
+			const TupleAbstractType         source_tuple{ source.getType() };
+			const std::vector<ValueType<>>& components = source_tuple.getComponents();
 
 			if (target.getType().getKind() == Kind::Meta) {
 				// A tuple can be coerced into a type of all of it's components can be coerced into
@@ -330,18 +330,18 @@ namespace compiler::tsh::coercions {
 				// A more complex coercion like `(ref type, ())`. We coerce it into a tuple of types
 				// first and then lift it. If this fails the error names the components that can't
 				// be coerced to a type.
-				const SymbolType<> tuple_of_types{
+				const ValueType<> tuple_of_types{
 					ctx.query<QueryTupleType>({ std::vector(components.size(), target) }),
 					ReferenceKind::Direct,
 					Mutability::Mutable,
 				};
-				const base::CRef<SymbolTypeCoercion> into_types
+				const base::CRef<ValueTypeCoercion> into_types
 					= planPart(ctx, source, tuple_of_types);
 
 				if (into_types->isRefused()) {
 					CoercionError error = into_types->getError();
 					error.target        = target;
-					return SymbolTypeCoercion::refusedCoercion(source, std::move(error));
+					return ValueTypeCoercion::refusedCoercion(source, std::move(error));
 				}
 
 				CoercionNode node = into_types->getRoot();
@@ -353,8 +353,8 @@ namespace compiler::tsh::coercions {
 			if (target.getType().getKind() != Kind::Tuple)
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 
-			const TupleAbstractType          target_tuple{ target.getType() };
-			const std::vector<SymbolType<>>& targets = target_tuple.getComponents();
+			const TupleAbstractType         target_tuple{ target.getType() };
+			const std::vector<ValueType<>>& targets = target_tuple.getComponents();
 			if (targets.size() != components.size())
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 
@@ -362,7 +362,7 @@ namespace compiler::tsh::coercions {
 		}
 
 		/// A function converts to another one when the result and every parameter do.
-		SymbolTypeCoercion functionRule(const SymbolType<>& source, const SymbolType<>& target) {
+		ValueTypeCoercion functionRule(const ValueType<>& source, const ValueType<>& target) {
 			if (target.getType().getKind() != Kind::Function)
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 
@@ -395,8 +395,8 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief A classical value conversion.
 		 */
-		SymbolTypeCoercion convertValue(
-			query::Context& ctx, const SymbolType<>& source, const SymbolType<>& target
+		ValueTypeCoercion convertValue(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
 		) {
 			if (source.getType() == target.getType()) {
 				CoercionNode node = startNode(source, target);
@@ -483,11 +483,11 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief The main type coercion logic.
 		 */
-		SymbolTypeCoercion planCoercion(
-			query::Context&     ctx,
-			const SymbolType<>& source,
-			const SymbolType<>& target,
-			const CoercionMode  mode
+		ValueTypeCoercion planCoercion(
+			query::Context&    ctx,
+			const ValueType<>& source,
+			const ValueType<>& target,
+			const CoercionMode mode
 		) {
 			// First check if we're retyping a `void` type.
 			if (source.getType().getKind() == Kind::Void) return retypeVoid(source, target);
@@ -514,7 +514,7 @@ namespace compiler::tsh::coercions {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(QuerySymbolTypeCoercion, SymbolTypeCoercion) {
+	struct IMPLEMENT_QUERY(QueryValueTypeCoercion, ValueTypeCoercion) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			return planCoercion(ctx, key.source, key.target, key.mode);
 		}
@@ -522,5 +522,5 @@ namespace compiler::tsh::coercions {
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeCoercion);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryValueTypeCoercion);
 }

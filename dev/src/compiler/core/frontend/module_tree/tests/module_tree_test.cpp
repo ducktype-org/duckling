@@ -761,11 +761,11 @@ private:
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(mt1->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(mt1->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e4", "root" })
 		);
 #endif
@@ -781,15 +781,15 @@ private:
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(getRef(sub1)->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(getRef(sub1)->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub2" })
 		);
 		ASSERT_TRUE(
-			(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements
+			(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements()
 		     == std::vector<std::string>{ "root_package_id11e3", "root", "sub1", "subsub" })
 		);
 #endif
@@ -811,12 +811,12 @@ private:
 
 		IF_BUILD_TYPE_DEV({
 			ASSERT_TRUE(
-				(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements
+				(ModuleTree::getPathComponentHash(getRef(subsub)->getModuleID()).elements()
 			     == std::vector<std::string>{ "root_package_id11e3", "sub1", "subsub" })
 			);
 			ModuleTreeModifier::setParent(mt1, getRef(subsub));
 			ASSERT_TRUE(
-				(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements
+				(ModuleTree::getPathComponentHash(getRef(sub2)->getModuleID()).elements()
 			     == std::vector<std::string>{ "root_package_id11e3",
 			                                  "sub1",
 			                                  "subsub",
@@ -824,7 +824,7 @@ private:
 			                                  "sub2" })
 			);
 			ASSERT_TRUE(
-				(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements
+				(ModuleTree::getPathComponentHash(mt2->getModuleID()).elements()
 			     == std::vector<std::string>{ "root_package_id11e4", "root" })
 			);
 		});

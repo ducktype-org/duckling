@@ -13,8 +13,8 @@
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/types/bit256.hpp>
@@ -41,9 +41,10 @@ namespace compiler::helios::defgen {
 	 * fields with a default value (which may mean a call to another constructor); returns the
 	 * initialized static array value.
 	 *
-	 * - `Copy`: the compiler-generated default copy constructor. It takes a single `const ref T`
-	 *   source and returns a new `T` that copies each member (trivially-copyable members are
-	 *   byte-copied, non-trivially-copyable members are copied via their own copy constructor).
+	 * - `Copy`: the compiler-generated default copy constructor. It takes a single read-only
+	 *   `ref T` source and returns a new `T` that copies each member (trivially-copyable members
+	 *   are byte-copied, non-trivially-copyable members are copied via their own copy
+	 *   constructor).
 	 */
 	struct Constructor final {
 		enum class Kind {
@@ -60,14 +61,20 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
-	 * `toString`). The concrete method is distinguished by `kind`.
+	 * Represents a compiler-generated method shared by all types (the destructor, `length`, and
+	 * `toString`, or comparison operator). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
 		enum class Kind {
 			DefaultDestructor,
 			LengthMethod,
 			ToString,
+			Equal,
+			NotEqual,
+			Lesser,
+			LesserEqual,
+			Greater,
+			GreaterEqual,
 		};
 
 		tsh::AbstractType owner_type;
@@ -77,11 +84,17 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * @brief Whether @p kind is one of the generated comparison operators (`==`, `!=`, `<`, `<=`,
+	 * `>`, `>=`).
+	 */
+	[[nodiscard]] bool isComparisonMethodKind(Method::Kind kind);
+
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
 
-		HOUTFunctionDeclaration::Operatoriness operatoriness;
+		HOUTFunctionDeclaration::Operatoriness operatoriness{};
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -101,7 +114,7 @@ namespace compiler::helios::defgen {
 		};
 
 		// The type argument the builtin is templated on.
-		tsh::SymbolType<>            type;
+		tsh::ValueType<>             type;
 		BuiltinTemplatedSymbol::Kind kind;
 
 		[[nodiscard]] BuiltinKind getBuiltinKind() const {
@@ -113,7 +126,7 @@ namespace compiler::helios::defgen {
 			}
 		}
 
-		explicit BuiltinTemplatedSymbol(tsh::SymbolType<> type, BuiltinTemplatedSymbol::Kind kind):
+		explicit BuiltinTemplatedSymbol(tsh::ValueType<> type, BuiltinTemplatedSymbol::Kind kind):
 			  type(type),
 			  kind(kind) {}
 
@@ -182,7 +195,7 @@ namespace compiler::helios::defgen {
 		SymID function_symbol;  // The symbol of the function this variable belongs to.
 		u64   variable_index;   // The index of the variable in the function's body.
 		// @TODO: #2515 Remove this
-		tsh::SymbolType<> type;  // The type of the variable.
+		tsh::ValueType<> type;  // The type of the variable.
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -205,7 +218,7 @@ namespace compiler::helios::defgen {
 		base::StrID role;  /// Role of the variable (typically it's name). Needed to distinguish
 		                   /// between many Locals inserted into the same scope.
 		// @TODO: #2515 Remove this
-		tsh::SymbolType<> type;  /// The type of the variable;
+		tsh::ValueType<> type;  /// The type of the variable;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -250,7 +263,7 @@ namespace compiler::helios::defgen {
 		 * @brief Get the return type of the wrapper function.
 		 */
 		[[nodiscard]]
-		tsh::SymbolType<> getReturnType() const;
+		tsh::ValueType<> getReturnType() const;
 
 		/**
 		 * @brief Get the identifier distinguishing the wrapper in its mangled name.

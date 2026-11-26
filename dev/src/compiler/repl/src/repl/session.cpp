@@ -13,7 +13,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
-#include <frontend/pst_parser/utility.hpp>
+#include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/repl_symbols.hpp>

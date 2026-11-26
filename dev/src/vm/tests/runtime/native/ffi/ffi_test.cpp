@@ -10,6 +10,8 @@
 
 #include <vm/api/vm.hpp>
 
+#include <string>
+
 #ifndef FFI_TEST_LIB_PATH
 	#error "FFI_TEST_LIB_PATH must be defined to the built shared object path"
 #endif
@@ -42,6 +44,8 @@ public:
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
 		TESTER_ADD_TEST(cptrNullCompare);
+		TESTER_ADD_TEST(cptrCompare);
+		TESTER_ADD_TEST(cptrCastToInteger);
 		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
 		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
 		TESTER_ADD_TEST(cptrCastFromPointer);
@@ -255,6 +259,76 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"10"
+		);
+	}
+
+	// `cmpEq`/`cmpNeq` on two `pcptr` places compare the native addresses.
+	void cptrCompare() {
+		std::string checks;
+		for (const auto* instr: { "cmpEq_pcptr_pcptr buf, buf2",
+		                          "cmpEq_pcptr_pcptr buf, nul",
+		                          "cmpNeq_pcptr_pcptr buf, nul",
+		                          "cmpNeq_pcptr_pcptr buf, buf2" }) {
+			checks += std::string("    mov_p64_imm r, 0;\n    ") + instr
+			        + ";\n    cmov_p64_imm r, 1;\n    output_p64 r;\n";
+		}
+		runProgram(
+			"cptr_compare",
+			ffiObjectHeader()
+				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type nul, cptr;\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type buf2, cptr;\n"
+				  "    mov_pcptr_pcptr buf2, buf;\n"
+				  "    init_pany_type r, i64;\n"
+				+ checks
+				+ "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"1010"
+		);
+	}
+
+	// `cast_p64_pcptr` reads the native address of a C pointer as an integer: 0 for null, and an
+	// `add_pcptr_imm` byte offset shows up as the same difference between the two integers.
+	void cptrCastToInteger() {
+		runProgram(
+			"cptr_cast_to_integer",
+			ffiObjectHeader()
+				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type nul, cptr;\n"
+				  "    init_pany_type nul_addr, i64;\n"
+				  "    cast_p64_pcptr nul_addr, nul;\n"
+				  "    output_p64 nul_addr;\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type buf3, cptr;\n"
+				  "    mov_pcptr_pcptr buf3, buf;\n"
+				  "    add_pcptr_imm buf3, 3;\n"
+				  "    init_pany_type addr, i64;\n"
+				  "    cast_p64_pcptr addr, buf;\n"
+				  "    init_pany_type addr3, i64;\n"
+				  "    cast_p64_pcptr addr3, buf3;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    mov_p64_imm r, 0;\n"
+				  "    cmpNeq_p64_imm addr, 0;\n"
+				  "    cmov_p64_imm r, 1;\n"
+				  "    output_p64 r;\n"
+				  "    sub_p64_p64 addr3, addr;\n"
+				  "    output_p64 addr3;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcptr_pcptr buf_f, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"013"
 		);
 	}
 

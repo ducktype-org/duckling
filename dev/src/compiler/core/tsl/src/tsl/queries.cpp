@@ -59,7 +59,7 @@ namespace compiler::tsl {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
 
-	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, query::QResult<TypeLayout>) {
+	struct IMPLEMENT_QUERY(QueryValueTypeLayout, query::QResult<TypeLayout>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (key.getRefKind() == tsh::ReferenceKind::Direct) {
 				auto copy = ctx.query<QueryAbstractTypeLayout>(key.getType())->valueOrThrow();
@@ -71,5 +71,5 @@ namespace compiler::tsl {
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeLayout)
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryValueTypeLayout)
 }

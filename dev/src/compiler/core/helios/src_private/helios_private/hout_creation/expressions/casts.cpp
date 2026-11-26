@@ -37,10 +37,10 @@ namespace compiler::helios::code {
 	Box<Expr> castAs(
 		query::Context&                        ctx,
 		Box<Expr>                              value,
-		tsh::SymbolType<>                      as_type,
+		tsh::ValueType<>                       as_type,
 		pst::Access<pst::expr::BinaryOperator> stmt
 	) {
-		auto from = value->expression_type.getSymbolType();
+		auto from = value->expression_type.getValueType();
 		auto to   = as_type;
 		if (from == to) return value;  // trivial cast, always valid
 
@@ -59,8 +59,7 @@ namespace compiler::helios::code {
 			auto coerced = coercions::applyCoercion(ctx, coercion, std::move(value));
 
 			// @TODO: #3853 go back to this once defined
-			if (coerced->expression_type.getSymbolType() != to)
-				return cast_expr(std::move(coerced));
+			if (coerced->expression_type.getValueType() != to) return cast_expr(std::move(coerced));
 			return coerced;
 		}
 
@@ -72,9 +71,8 @@ namespace compiler::helios::code {
 		if (auto value_type = value->expression_type.getType();
 		    (value_type.getKind() == Kind::Integral || value_type.getKind() == Kind::Float)
 		    && to.getType().getKind() == Kind::Bool) {
-			const tsh::coercions::Coercion to_direct = coercions::coercionOf(
-				ctx, value.ref(), from.withReferenceKind(ReferenceKind::Direct)
-			);
+			const tsh::coercions::Coercion to_direct
+				= coercions::coercionOf(ctx, value.ref(), from.toDirect());
 			CORE_ASSERT(to_direct.isValid(), "Should always be valid");
 			return coercions::buildZeroCheck(
 				ctx, coercions::applyCoercion(ctx, to_direct, std::move(value))
@@ -206,7 +204,7 @@ namespace compiler::helios::code {
 			if (!from_ref_match || !from_kind_match || !to_ref_match || !to_kind_match) continue;
 			// To check the pointee we have to be sure that we have ref or pointer.
 			bool pointee_match = pattern.same_pointee_type
-			                       ? from.getPointeeSymbolType() == to.getPointeeSymbolType()
+			                       ? from.getPointeeValueType() == to.getPointeeValueType()
 			                       : true;
 			if (from_ref_match && from_kind_match && to_ref_match && to_kind_match
 			    && pointee_match) {

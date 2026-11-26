@@ -6,6 +6,7 @@
 
 #include "type_validator.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/config/target_info.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -131,7 +132,8 @@ namespace {
 		const ErrorContextType&                  error_context_inh,
 		const vm::ObjIdNameMap<TypeOfData>&      tod_types
 	) {
-		for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
+		for (const auto& impl: inh.implementations)
+			implementations.maybePut(base::StrID(impl.name), base::StrID(impl.type));
 		for (const auto& interface_name: inh.implements) {
 			const auto& interface = getType<InterfaceType>(
 				tod_types,

@@ -82,11 +82,7 @@ namespace compiler::repl {
 			std::cout << "\n\n";
 		}
 
-		if (pst->getLogger()->bad()) {
-			std::cerr << "Parse errors:\n";
-			pst->getLogger()->dumpLog(false, std::cerr);
-			return std::unexpected(std::string("Parse error"));
-		}
+		if (pst->getLogger()->bad()) return std::unexpected(std::string("Parse error"));
 
 		auto root = pst->getRootElement().unlock(ctx);
 		return extractStatementSources(ctx, *root);

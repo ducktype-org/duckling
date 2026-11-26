@@ -68,7 +68,8 @@ namespace pst::expr {
 		PST_WHILE(fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol()) {
 			reduced_length--;
 		}
-		if (fwd == reduced_length) state.logInt(makeBox<OnlyPrefixError>(pos));
+		if (fwd == reduced_length && !isStandaloneKeywordOperator(state))
+			state.logInt(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
 		i64              next = 0;

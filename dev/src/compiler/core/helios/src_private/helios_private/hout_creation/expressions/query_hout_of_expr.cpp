@@ -15,15 +15,15 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
-#include <frontend/pst_parser/pst_expr_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_expr_visitor.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/value_category.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
@@ -32,6 +32,7 @@
 #include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
+#include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
@@ -377,7 +378,7 @@ namespace compiler::helios::code {
 				}
 
 				auto inner = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getExpr())).valueOrThrow();
-				auto inner_type = inner->expression_type.getSymbolType();
+				auto inner_type = inner->expression_type.getValueType();
 
 				// Handle taking references
 				if (op->unwrap() == lang_def::NamedOperator::Ampersand) {
@@ -474,11 +475,8 @@ namespace compiler::helios::code {
 
 				// Box creation
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
-					const auto origin = inner->origin.generatedFrom();
-					const auto direct_type
-						= inner->expression_type.getSymbolType().withReferenceKind(
-							tsh::ReferenceKind::Direct
-						);
+					const auto origin      = inner->origin.generatedFrom();
+					const auto direct_type = inner->expression_type.getValueType().toDirect();
 
 					auto value = coercions::coerceFromBox(
 						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
@@ -498,8 +496,8 @@ namespace compiler::helios::code {
 					// copy: ref T -> T
 					// copy: box T -> T
 					const bool is_indirect = inner_type.getRefKind() != tsh::ReferenceKind::Direct;
-					const tsh::SymbolType<> copied_type
-						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
+					const tsh::ValueType<> copied_type
+						= is_indirect ? inner_type.getPointeeValueType() : inner_type;
 
 					if (copied_type.isTriviallyCopyable(ctx)) {
 						ctx.log<dia::PlaceholderWarning>(
@@ -534,9 +532,9 @@ namespace compiler::helios::code {
 						"Tried to call a copy constructor of a type which shouldn't need one"
 					);
 
-					// The copy constructor takes a `const ref` and returns a direct value. `refOf`
-					// turns every type into a reference (including ref/box because of reference
-					// kind collapsing).
+					// The copy constructor takes a read-only `ref` and returns a direct value.
+					// `refOf` turns every type into a reference (including ref/box because of
+					// reference kind collapsing).
 					node = s.call(
 						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
 						s.refOf(std::move(inner))
@@ -544,14 +542,14 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// `copyof x` copies `x` while keeping its full symbol type (including reference kind).
+				// `copyof x` copies `x` while keeping its full ValueType (including reference kind).
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copyof)) {
 					const Shorthand s{ ctx };
 
 					// copyof: T -> T
 					// copyof: ref T -> ref T
 					// copyof: box T -> box T
-					// `SymbolType::isCopyable` answers this for the value as a whole: a `ref` is
+					// `ValueType::isCopyable` answers this for the value as a whole: a `ref` is
 					// always copyable (the reference is copied), while a `box` follows its pointee.
 					if (not inner_type.isCopyable(ctx)) {
 						ctx.log<dia::PlaceholderError>(
@@ -576,6 +574,12 @@ namespace compiler::helios::code {
 				);
 			}
 
+			void visitBlockExpr(pst::Access<pst::expr::BlockExpr> stmt) override {
+				auto compiled = compileBlockExpr(ctx, stmt);
+				if (compiled.hasFailed()) return;
+				node = std::move(compiled).valueOrThrow();
+			}
+
 			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
 				auto desugared = desugaring::desugarMatch(ctx, stmt);
 				if (desugared.hasFailed()) return;
@@ -592,10 +596,10 @@ namespace compiler::helios::code {
 				if (op->unwrap() == lang_def::NamedOperator::As) {
 					auto value_expr = subExprFromPST(ctx, unlockOrFail(ctx, stmt->getLeftOperand()))
 					                      .valueOrThrow();
-					auto type_ctv    = getTypeCTVFromPST(ctx, stmt->getRightOperand());
-					auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+					auto type_ctv   = getTypeCTVFromPST(ctx, stmt->getRightOperand());
+					auto value_type = type_ctv.valueOrThrow().get<tsh::ValueType<>>().value();
 
-					node = castAs(ctx, std::move(value_expr), symbol_type, stmt);
+					node = castAs(ctx, std::move(value_expr), value_type, stmt);
 					return;
 				}
 
@@ -609,11 +613,7 @@ namespace compiler::helios::code {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
-					const auto meta_type = tsh::SymbolType<>{
-						tsh::getMetaType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto meta_type = tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
 
 					for (auto sub_expr: sub_exprs) {
 						auto sub_expr_hout = subExprFromPSTWithType(
@@ -663,12 +663,8 @@ namespace compiler::helios::code {
 					kind            = tsh::FunctionKind::Raw;
 				}
 
-				const ElementOrigin origin    = pstOrigin(arrow);
-				const auto          meta_type = tsh::SymbolType<>{
-                    tsh::getMetaType(),
-                    tsh::ReferenceKind::Direct,
-                    tsh::Mutability::Mutable,
-				};
+				const ElementOrigin origin = pstOrigin(arrow);
+				const auto meta_type       = tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
 
 				std::vector<Box<Expr>> parameters;
 				for (auto parameter: getFunctionTypeParameterExprs(ctx, parameters_expr)) {
@@ -803,18 +799,6 @@ namespace compiler::helios::code {
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getFloatType(ctx, 16));
 					break;
-				case pst::Keyword::Self: {
-					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getStablePosition(), ctx, base::StrID("self")
-					);
-
-					node = makeBox<IdentifierExpr>(
-						ctx, pstOrigin(stmt), sym_list.valueOrThrow().back()
-					);
-					break;
-				}
 				default:
 					ctx.log<dia::NotYetImplementedCodeError>(
 						"Keyword not yet handled.", stmt->getStablePosition()
@@ -836,8 +820,32 @@ namespace compiler::helios::code {
 				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
+			/**
+			 * @brief Compiles `if const condition then if_true else if_false`, evaluating the
+			 * condition at compile time and compiling only the taken branch.
+			 *
+			 * The branch that is not taken is never lowered to HOUT, so it may contain code that
+			 * would not compile for the current instantiation.
+			 */
+			void compileConstTernary(pst::Access<pst::expr::Ternary> stmt) {
+				auto condition = unlockOrFail(ctx, stmt->getCondition());
+				auto taken     = getBoolCTVFromPST(ctx, condition);
+				if (taken.hasFailed()) return;
+
+				auto branch = taken.valueOrThrow() ? stmt->getIfTrue() : stmt->getIfFalse();
+				auto result = subExprFromPST(ctx, unlockOrFail(ctx, branch));
+				if (result.hasFailed()) return;
+
+				node = std::move(result).valueOrThrow();
+			}
+
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
-				const auto bool_type     = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+				if (stmt->isConst()) {
+					compileConstTernary(stmt);
+					return;
+				}
+
+				const auto bool_type     = tsh::ValueType<>::withDefaultsMut(tsh::getBoolType());
 				auto       condition_res = subExprFromPSTWithType(
                     ctx, unlockOrFail(ctx, stmt->getCondition()), bool_type
                 );
@@ -851,8 +859,37 @@ namespace compiler::helios::code {
 				auto if_true   = std::move(if_true_res).valueOrThrow();
 				auto if_false  = std::move(if_false_res).valueOrThrow();
 
+				// Both if-else-then branches must produce the same type (note that backend may
+				// assume this). For now we just enforce it here by an error.
+				// @TODO: #4029 In the future we might want to introduce some kind of common-type
+				// and coerce all branches to common type.
+				const auto true_type  = if_true->expression_type.getValueType();
+				const auto false_type = if_false->expression_type.getValueType();
+				const bool true_void  = true_type.getType().getKind() == tsh::Kind::Void;
+				const bool false_void = false_type.getType().getKind() == tsh::Kind::Void;
+				if (!true_void and !false_void
+				    and true_type.withMutability(tsh::Mutability::Mutable)
+				            != false_type.withMutability(tsh::Mutability::Mutable)) {
+					ctx.log<dia::PlaceholderError>(
+						base::strConcat(
+							"Both branches of an `if ... then ... else ...` expression have to be "
+							"of the same type, but the `then` branch is `",
+							true_type.withMutability(tsh::Mutability::Mutable).toString(),
+							"` and the `else` branch is `",
+							false_type.withMutability(tsh::Mutability::Mutable).toString(),
+							"`."
+						),
+						stmt->getStablePosition(),
+						"Make both branches the same type, for example with an `as` cast or a "
+						"typed literal like `1i64`."
+					);
+					return;
+				}
+
+				const auto result_type
+					= true_void ? if_false->expression_type : if_true->expression_type;
 				node = makeBox<TernaryOperatorExpr>(
-					ctx,
+					result_type,
 					pstOrigin(stmt),
 					std::move(condition),
 					std::move(if_true),
@@ -916,7 +953,7 @@ namespace compiler::helios::code {
 				auto location_expr = std::move(location_expr_qresult).valueOrThrow();
 
 				// If left side of the assignment is a ref/box, dereference it first.
-				auto location_type = location_expr->expression_type.getSymbolType();
+				auto location_type = location_expr->expression_type.getValueType();
 				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
 					location_expr = makeBox<DerefExpr>(
 						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
@@ -942,14 +979,14 @@ namespace compiler::helios::code {
 				auto                   list_unlocked = stmt->getList().unlock(ctx);
 				std::vector<Box<Expr>> elems;
 				elems.reserve(list_unlocked->size());
-				base::Optional<tsh::SymbolType<>> elem_type;
+				base::Optional<tsh::ValueType<>> elem_type;
 
 				for (auto elem_holder: *list_unlocked) {
 					auto elem_pst_expr = elem_holder.unlock(ctx)->getExpr();
 					auto elem          = subExprFromPST(ctx, unlockOrFail(ctx, elem_pst_expr));
 					if (elem.hasFailed()) return;
 
-					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getSymbolType();
+					if (auto curr_elem_type = elem.valueOrThrow()->expression_type.getValueType();
 					    elem_type && curr_elem_type != *elem_type) {
 						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
@@ -965,17 +1002,14 @@ namespace compiler::helios::code {
 					}
 
 					elems.emplace_back(std::move(elem).valueOrThrow());
-					if (!elem_type) elem_type = elems.back()->expression_type.getSymbolType();
+					if (!elem_type) elem_type = elems.back()->expression_type.getValueType();
 				}
 
 				// Some type had to be chosen. `void` would perhaps make more sense,
 				// but it seemed to break some assumptions of the compiler and cause panics.
 				// @TODO: #3707 When fixed, think about making this `void`.
-				auto elem_type_of_empty_array = tsh::SymbolType<>{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto elem_type_of_empty_array
+					= tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 
 				auto type = ctx.query<tsh::QueryStaticArrayType>(
 					{ elem_type.copyValueOr(elem_type_of_empty_array), elems.size() }
@@ -1016,7 +1050,7 @@ namespace compiler::helios {
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		const tsh::SymbolType<>                          expected_type,
+		const tsh::ValueType<>                           expected_type,
 		base::Optional<dia::StablePosition>              coercion_expects_pos,
 		const coercions::CoercionErrorOverrides&         error_overrides
 	) {
@@ -1041,7 +1075,7 @@ namespace compiler::helios {
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedTypes(
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
-		const std::vector<tsh::SymbolType<>>&            expected_types
+		const std::vector<tsh::ValueType<>>&             expected_types
 	) {
 		CORE_ASSERT(!expected_types.empty(), "At least one expected type has to be provided.");
 		if (expected_types.size() == 1)
@@ -1054,7 +1088,7 @@ namespace compiler::helios {
 		std::vector<tsh::coercions::Coercion> failures;
 		failures.reserve(expected_types.size());
 
-		for (const tsh::SymbolType<>& expected_type: expected_types) {
+		for (const tsh::ValueType<>& expected_type: expected_types) {
 			tsh::coercions::Coercion coercion
 				= coercions::coercionOf(ctx, expr_hout, expected_type);
 			if (coercion.isValid())
@@ -1072,7 +1106,7 @@ namespace compiler::helios {
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
 		query::Context&                          ctx,
 		pst::Access<pst::ExprElement>            element,
-		tsh::SymbolType<>                        expected_type,
+		tsh::ValueType<>                         expected_type,
 		base::Optional<dia::StablePosition>      coercion_expects_pos,
 		const coercions::CoercionErrorOverrides& error_overrides
 	) {

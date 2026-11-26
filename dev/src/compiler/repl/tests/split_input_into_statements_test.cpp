@@ -110,7 +110,7 @@ private:
 		}
 		// multi-line class body is a single statement
 		{
-			std::string code   = "class Point {\n    var x: i32 = 0;\n    var y: i32 = 0;\n}";
+			std::string code   = "class Point {\n    x: i32 = 0;\n    y: i32 = 0;\n}";
 			auto        result = compiler::repl::splitInputIntoStatements(code);
 			ASSERT_HAS_VALUE(result, "Expected success");
 			ASSERT_EQUAL(1UL, result->size());

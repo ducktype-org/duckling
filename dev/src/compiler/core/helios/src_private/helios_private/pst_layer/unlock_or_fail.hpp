@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/access/access_pst.hpp>
 
 #include <query_framework/query_errors.hpp>
 

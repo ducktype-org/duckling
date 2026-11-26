@@ -4,11 +4,14 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -29,6 +32,7 @@ public:
 		TESTER_ADD_TEST(classConstructabilityTest);
 		TESTER_ADD_TEST(typeTemplateTest);
 		TESTER_ADD_TEST(staticInterfaceTest);
+		TESTER_ADD_TEST(sourceTypeNameTest);
 	}
 
 private:
@@ -47,13 +51,14 @@ private:
 			// these values might need to be updated.
 
 			assertTrue(
-				my_class_interface->getElements().size() == 8,
-				"There should be exactly six declared members, plus the generated constructor and "
-				"the generated parameterless constructor"
+				my_class_interface->getElements().size() == 14,
+				"There should be exactly six declared members, plus the generated constructor, "
+				"the generated parameterless constructor and the six comparison operators"
 			);
 			assertTrue(
-				my_class_interface->getElementsByName().size() == 5,
-				"There should be exactly four unique names, plus the generated destructor"
+				my_class_interface->getElementsByName().size() == 11,
+				"There should be exactly four unique names, plus the generated destructor and "
+				"the six comparison operators"
 			);
 
 			assertTrue(
@@ -99,15 +104,16 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto get_type = [&](const compiler::helios::SymID sym_id) {
-				return SymbolType<>::withDefaults(ctx.query<compiler::tsh::QueryClassType>(sym_id));
+				return ValueType<>::withDefaultsMut(ctx.query<compiler::tsh::QueryClassType>(sym_id)
+				);
 			};
 
-			auto assert_flags = [&](const SymbolType<>& type,
-			                        bool                def,
-			                        bool                zero,
-			                        bool                copy,
-			                        bool                triv,
-			                        std::string_view    msg) {
+			auto assert_flags = [&](const ValueType<>& type,
+			                        bool               def,
+			                        bool               zero,
+			                        bool               copy,
+			                        bool               triv,
+			                        std::string_view   msg) {
 				assertTrue(
 					type.isDefaultConstructible(ctx) == def,
 					base::strConcat(msg, " isDefaultConstructible check failed")
@@ -241,11 +247,12 @@ private:
 			ASSERT_EQUAL(1, std::ranges::distance(interface->getStaticFieldsView()));
 			ASSERT_EQUAL(5, std::ranges::distance(interface->getAnyFieldsView()));
 
-			// `getPub`, `setPub`, `insidePrivate`, the user destructor and the generated one.
-			ASSERT_EQUAL(5, std::ranges::distance(interface->getMethodsView()));
+			// `getPub`, `setPub`, `insidePrivate`, the user destructor, the generated one and the
+			// six comparison operators.
+			ASSERT_EQUAL(11, std::ranges::distance(interface->getMethodsView()));
 			// `make`, the copy constructor and the two generated constructors.
 			ASSERT_EQUAL(4, std::ranges::distance(interface->getStaticMethodsView()));
-			ASSERT_EQUAL(9, std::ranges::distance(interface->getAnyMethodsView()));
+			ASSERT_EQUAL(15, std::ranges::distance(interface->getAnyMethodsView()));
 
 			ASSERT_HAS_VALUE(interface->getSpecialElement(MemberSpecialKind::CopyConstructor));
 			ASSERT_HAS_VALUE(interface->getSpecialElement(MemberSpecialKind::UserDestructor));
@@ -279,6 +286,280 @@ private:
 		});
 	}
 
+	void sourceTypeNameTest() {
+		constexpr std::string_view PERSON    = "class Person {}";
+		constexpr std::string_view TYPES_NS  = R"(
+			class Person {}
+			namespace Types {
+				class Inner {}
+				template(T: type)
+				class Boxed { value: T; }
+			}
+		)";
+		constexpr std::string_view BOXED     = "template(T: type) class Boxed { value: T; }";
+		constexpr std::string_view FLOAT_T   = R"(
+			template(F: f64)
+			class FloatT {}
+			template(F: f32)
+			class Float32T {}
+		)";
+		constexpr std::string_view OTHER_MOD = R"(
+			class Person {}
+			namespace NS { class Deep {} }
+		)";
+
+		checkSourceName("i64", "i64");
+		checkSourceName("str", "str");
+		checkSourceName("slice imm char", "slice imm char");
+		checkSourceName("ptr Types.Inner", "ptr Types.Inner", TYPES_NS);
+		checkSourceName("manyptr i64", "manyptr i64");
+		checkSourceName("cptr i64", "cptr i64");
+		checkSourceName("(ptr i64)[3]", "(ptr i64)[3]");
+		checkSourceName("ptr (i64[3])", "ptr i64[3]");
+		checkSourceName("i64[3][2]", "i64[3][2]");
+		checkSourceName("(imm i64)[3][2]", "(imm i64)[3][2]");
+		checkSourceName("(i64 | bool)[3]", "(bool | i64)[3]");
+		checkSourceName("(i64, bool)", "(i64, bool)");
+		checkSourceName("i64 | bool", "bool | i64");
+		checkSourceName("(i64) -> bool", "(i64) -> bool");
+		checkSourceName("funptr(i64, bool) -> ()", "funptr(i64, bool) -> ()");
+		checkSourceName("funptr() -> i64", "funptr() -> i64");
+		checkSourceName("(i64) -> bool | i64", "(i64) -> bool | i64");
+		checkSourceName("(i64 | bool) -> i64", "(bool | i64) -> i64");
+		checkSourceName("(imm i64) -> ptr i64", "(imm i64) -> ptr i64");
+		checkSourceName("(i64) -> (i64) -> bool", "(i64) -> (i64) -> bool");
+		checkSourceName("((i64) -> bool) -> i64", "((i64) -> bool) -> i64");
+		checkSourceName("ptr ((i64) -> bool)", "ptr ((i64) -> bool)");
+		checkSourceName("((i64) -> bool)[3]", "((i64) -> bool)[3]");
+		checkSourceName("i64 | ((i64) -> bool)", "((i64) -> bool) | i64");
+		checkSourceName("((i64) -> bool, i64)", "((i64) -> bool, i64)");
+		checkSourceName("((i64) -> bool, i64) -> i64", "((i64) -> bool, i64) -> i64");
+		checkSourceName("((i64) -> bool,)", "((i64) -> bool,)");
+		checkSourceName("Person", "Person", PERSON);
+		checkSourceName("Boxed[i64]", "Boxed[i64]", BOXED);
+		checkSourceName("Types.Boxed[Person]", "Types.Boxed[Person]", TYPES_NS);
+		checkSourceName(
+			"Sized[3i64, bool]",
+			"Sized[3, bool]",
+			"template(N: i64, T: type) class Sized { value: T; }"
+		);
+		checkSourceName("FloatT[0.000000001]", "FloatT[1e-09f64]", FLOAT_T);
+		checkSourceName("FloatT[0.000000002]", "FloatT[2e-09f64]", FLOAT_T);
+		checkSourceName("FloatT[1.5]", "FloatT[1.5f64]", FLOAT_T);
+		checkSourceName("Float32T[0.1f32]", "Float32T[0.1f32]", FLOAT_T);
+		checkSourceName("FloatT[1e-09f64]", "FloatT[1e-09f64]", FLOAT_T);
+		checkSourceName("om.Person", "Person", "import other_mod as om;", OTHER_MOD);
+		checkSourceName("om.NS.Deep", "NS.Deep", "import other_mod as om;", OTHER_MOD);
+		checkSourceName(
+			"Boxed[om.Person]",
+			"Boxed[Person]",
+			base::strConcat("import other_mod as om;", BOXED),
+			OTHER_MOD
+		);
+
+		const auto root_scope = buildSourceModule(
+			R"(
+				import other_mod as om;
+				class Person {}
+				namespace Types {
+					template(T: type)
+					class Boxed { value: T; }
+				}
+				template(T: type)
+				class Boxed { value: T; }
+				template(F: f64)
+				class FloatT {}
+				template(T: type)
+				fun topFn(x: T) -> T = x;
+				namespace FnNs {
+					template(T: type)
+					fun ident(x: T) -> T = x;
+					template(N: i64)
+					namespace Number { const value = N; }
+				}
+				var person: Person;
+				var other_person: om.Person;
+				var tiny_float: FloatT[0.000000001];
+				var another_tiny_float: FloatT[0.000000002];
+				var round_trip_tiny_float: FloatT[1e-09f64];
+			)",
+			OTHER_MOD
+		);
+		const auto person_type = getValueTypeOf("person", root_scope);
+		ASSERT_TRUE(person_type != getValueTypeOf("other_person", root_scope));
+		ASSERT_TRUE(
+			getValueTypeOf("tiny_float", root_scope)
+			!= getValueTypeOf("another_tiny_float", root_scope)
+		);
+		ASSERT_EQUAL(
+			getValueTypeOf("tiny_float", root_scope),
+			getValueTypeOf("round_trip_tiny_float", root_scope)
+		);
+		const std::vector<std::pair<std::string_view, std::string_view>> templates{
+			{ "Boxed", "Type template: Boxed" },
+			{ "Types.Boxed", "Type template: Types.Boxed" },
+			{ "topFn", "Type template: topFn" },
+			{ "FnNs.ident", "Type template: FnNs.ident" },
+			{ "FnNs.Number", "Type template: FnNs.Number" },
+		};
+		std::vector<ValueType<>> template_types;
+		template_types.reserve(templates.size());
+		for (const auto& [chain, _]: templates)
+			template_types.push_back(getValueTypeOf(chain, root_scope));
+
+		withContextDo([&](query::Context& ctx) {
+			for (usize i = 0; i < templates.size(); ++i)
+				assertEqual(
+					std::string(templates[i].second),
+					template_types[i].sourceTypeName(ctx),
+					base::strConcat("Incorrect source type name for `", templates[i].first, "`")
+				);
+			const auto i64_type
+				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
+			for (const auto bits: { 8u, 16u, 32u, 64u, 128u }) {
+				for (const auto signedness: {
+						 IntegralAbstractType::Signedness::Signed,
+						 IntegralAbstractType::Signedness::Unsigned,
+					 }) {
+					const auto integral = getIntegralType(ctx, bits, signedness);
+					const auto expected = base::strConcat(
+						signedness == IntegralAbstractType::Signedness::Signed ? "i" : "u", bits
+					);
+					ASSERT_EQUAL(expected, integral.sourceTypeName(ctx));
+					ASSERT_EQUAL(
+						expected, ValueType<>::withDefaultsMut(integral).sourceTypeName(ctx)
+					);
+				}
+			}
+			for (const auto bits: { 16u, 32u, 64u, 80u, 128u }) {
+				const auto floating = getFloatType(ctx, bits);
+				ASSERT_EQUAL(base::strConcat("f", bits), floating.sourceTypeName(ctx));
+				ASSERT_EQUAL(
+					base::strConcat("f", bits),
+					ValueType<>::withDefaultsMut(floating).sourceTypeName(ctx)
+				);
+			}
+			ASSERT_EQUAL(std::string("()"), getUnitType().sourceTypeName(ctx));
+			ASSERT_EQUAL(std::string("byte"), getByteType().sourceTypeName(ctx));
+			ASSERT_EQUAL(std::string("bool"), getBoolType().sourceTypeName(ctx));
+			ASSERT_EQUAL(std::string("char"), getCharType().sourceTypeName(ctx));
+			const KeyFor_QueryTupleType single_tuple_key{
+				.components = { ValueType<>::withDefaultsMut(i64_type) },
+			};
+			const auto single_tuple = ctx.query<QueryTupleType>(single_tuple_key);
+			assertEqual(
+				std::string("(i64,)"),
+				single_tuple.sourceTypeName(ctx),
+				"Incorrect source type name for a single-element tuple"
+			);
+
+			assertEqual(
+				std::string("i64"),
+				i64_type.sourceTypeName(ctx),
+				"AbstractType should expose the source-level type name too"
+			);
+
+			const ValueType<> qualified_type(
+				i64_type,
+				ReferenceKind::Ref,
+				Mutability::Immutable,
+				Leakage::Leaking,
+				Uniqueness::Unique
+			);
+			assertEqual(
+				std::string("unique leaking imm ref i64"),
+				qualified_type.sourceTypeName(ctx),
+				"ValueType qualifiers should use the same order as toString"
+			);
+			assertEqual(
+				std::string("unique leaking ref i64"),
+				qualified_type.withMutability(Mutability::Mutable).sourceTypeName(ctx),
+				"Mutable ValueTypes should omit the imm qualifier"
+			);
+
+			assertEqual(
+				std::string("void"),
+				getVoidType().sourceTypeName(ctx),
+				"Void should use its Duckling source spelling"
+			);
+			assertEqual(
+				std::string("type"),
+				getMetaType().sourceTypeName(ctx),
+				"Meta should use its Duckling source spelling"
+			);
+
+			const auto function_type = ctx.query<QueryFunctionType>({
+				.parameter_types = { ValueType<>::withDefaultsMut(i64_type) },
+				.result_type     = ValueType<>::withDefaultsMut(getBoolType()),
+			});
+			assertEqual(
+				std::string("funptr(i64) -> bool"),
+				function_type.sourceTypeName(ctx),
+				"Function types should use their Duckling source spelling"
+			);
+			const auto variant_type = ctx.query<QueryVariantType>({
+				.underlying_types = {
+					ValueType<>::withDefaultsMut(i64_type),
+					ValueType<>::withDefaultsMut(getBoolType()),
+				},
+			});
+			const auto composite_function_type = ctx.query<QueryFunctionType>({
+				.parameter_types = { person_type },
+				.result_type     = ValueType<>::withDefaultsMut(variant_type),
+			});
+			assertEqual(
+				std::string("funptr(Person) -> bool | i64"),
+				composite_function_type.sourceTypeName(ctx),
+				"Function components should use source-oriented names"
+			);
+		});
+	}
+
+	/**
+	 * @brief Builds a module from @p source, with an optional `other_mod` submodule built from
+	 * @p other_module, and returns its root scope.
+	 */
+	compiler::helios::ScopeID buildSourceModule(
+		std::string_view source, std::string_view other_module
+	) {
+		const auto package_id  = base::StrID(base::generateRandomString(32));
+		const auto make_module = [&](std::string_view name, std::string_view contents) {
+			auto builder = compiler::frontend::ModuleTreeBuilder::create();
+			builder->setPackageID(package_id);
+			builder->setName(base::StrID(name));
+			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(contents, ".dk"));
+			return builder;
+		};
+		auto module = make_module("source_type_names", source);
+		if (!other_module.empty())
+			module->addSubmodule(make_module("other_mod", other_module)->finalize());
+		return getModuleScope(module->finalize()->getModuleID());
+	}
+
+	/**
+	 * @brief Checks that a variable of type @p type_expression, declared after @p declarations,
+	 * renders as @p expected.
+	 */
+	void checkSourceName(
+		std::string_view type_expression,
+		std::string_view expected,
+		std::string_view declarations = "",
+		std::string_view other_module = ""
+	) {
+		const auto type = getValueTypeOf(
+			"checked",
+			buildSourceModule(
+				base::strConcat(declarations, "\nvar checked: ", type_expression, ";"), other_module
+			)
+		);
+		withContextDo([&](query::Context& ctx) {
+			assertEqual(
+				std::string(expected),
+				type.sourceTypeName(ctx),
+				base::strConcat("Incorrect source type name for `", type_expression, "`")
+			);
+		});
+	}
 
 public:
 	~TypeSystemClassFieldsTest() override = default;

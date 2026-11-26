@@ -11,9 +11,8 @@ Tests:
     Description: can get info about a venv of a project
     Cases:
       basic-overwrite:
-        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
-        stderr-regex: ""
-        stdout-regex: |+
+        test-cmd: "@{expect_output} --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: |+
           foo:
             last-location: $DIT_TMP_DIR/bar/foo
             last-access: @{date-regex}

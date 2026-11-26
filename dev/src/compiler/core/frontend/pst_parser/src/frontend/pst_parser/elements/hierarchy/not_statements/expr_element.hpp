@@ -25,6 +25,12 @@ namespace pst {
 		 */
 		static bool checkNonEmpty(LangParserState& state);
 
+		/**
+		 * @brief Checks if the expression is a single keyword prefix operator (e.g. `ref`), which
+		 * is used as a value instead of being applied to an operand.
+		 */
+		static bool isStandaloneKeywordOperator(const LangParserState& state);
+
 		ELEMENT_CLONE_DECL(ExprElement, PRECEDENCE);
 
 		explicit ExprElement(LangElementConstructionData state, i64 precedence):

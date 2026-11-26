@@ -6,8 +6,8 @@
 
 #include <abi/type_system/type.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/c_abi_target.hpp>
 
@@ -29,23 +29,23 @@ namespace ats = abi::types;
 
 namespace {
 
-	SymbolType<> directOf(AbstractType abstract_type) {
-		return SymbolType{ abstract_type, ReferenceKind::Direct, Mutability::Immutable };
+	ValueType<> directOf(AbstractType abstract_type) {
+		return ValueType<>::withDefaults(abstract_type);
 	}
 
-	SymbolType<> refOf(AbstractType abstract_type) {
-		return SymbolType{ abstract_type, ReferenceKind::Ref, Mutability::Immutable };
+	ValueType<> refOf(AbstractType abstract_type) {
+		return ValueType{ abstract_type, ReferenceKind::Ref, Mutability::Immutable };
 	}
 
-	SymbolType<> boxOf(AbstractType abstract_type) {
-		return SymbolType{ abstract_type, ReferenceKind::Box, Mutability::Immutable };
+	ValueType<> boxOf(AbstractType abstract_type) {
+		return ValueType{ abstract_type, ReferenceKind::Box, Mutability::Immutable };
 	}
 
 	IntegralAbstractType i32Of(query::Context& ctx) {
 		return getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 	}
 
-	const CAbiConversionResult& queryConv(query::Context& ctx, SymbolType<> st) {
+	const CAbiConversionResult& queryConv(query::Context& ctx, ValueType<> st) {
 		auto qr = ctx.query<QueryCAbiTypeOf>(st);
 		CORE_ASSERT(!qr->hasFailed(), "QueryCAbiTypeOf returned Failed unexpectedly");
 		return qr->valueOrThrow();
@@ -81,7 +81,7 @@ private:
 		assertTrue(usize(std::get<ats::FloatType>(r->value).width_bits) == width, "width mismatch");
 	}
 
-	void expectRejected(query::Context& ctx, SymbolType<> st, const std::string& what) {
+	void expectRejected(query::Context& ctx, ValueType<> st, const std::string& what) {
 		const auto& r = queryConv(ctx, st);
 		ASSERT_NO_VALUE(r, what + " should be rejected");
 	}
@@ -188,7 +188,7 @@ private:
 			const FunctionAbstractType function
 				= ctx.query<QueryFunctionType>({ {}, directOf(getUnitType()) });
 
-			const std::vector<std::pair<SymbolType<>, std::string>> rejected = {
+			const std::vector<std::pair<ValueType<>, std::string>> rejected = {
 				{ directOf(i128_type), "i128" },
 				{ directOf(getRawPointerType(false)), "raw pointer" },
 				{ directOf(typed_pointer), "typed pointer" },
@@ -199,7 +199,7 @@ private:
 				{ directOf(tuple), "tuple" },
 				{ directOf(function), "function" },
 			};
-			for (const auto& [symbol_type, what]: rejected) expectRejected(ctx, symbol_type, what);
+			for (const auto& [value_type, what]: rejected) expectRejected(ctx, value_type, what);
 		});
 	}
 

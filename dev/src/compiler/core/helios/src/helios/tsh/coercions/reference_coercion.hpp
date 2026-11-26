@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "../symbol_type.hpp"
+#include "../value_type.hpp"
 #include "coercion_mode.hpp"
 
 #include <cstdint>

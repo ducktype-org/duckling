@@ -85,7 +85,7 @@ namespace compiler::helios::defgen {
 			const tsh::VariantAbstractType& variant_type,
 			const SymID                     copy_sym,
 			const SymID                     source_symbol,
-			const tsh::SymbolType<>&        result_symbol_type
+			const tsh::ValueType<>&         result_value_type
 		) {
 			using Variable = GeneratedFunctionVariable;
 
@@ -96,9 +96,8 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a reference-like
 				// alternative is the stored reference itself.
-				const auto payload_type = alternatives[i]
-				                              .withReferenceKind(tsh::ReferenceKind::Ref)
-				                              .withMutability(tsh::Mutability::Mutable);
+				const auto payload_type
+					= alternatives[i].toRef().withMutability(tsh::Mutability::Mutable);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name                  = base::StrID(base::strConcat("__alternative_", i)),
@@ -107,7 +106,7 @@ namespace compiler::helios::defgen {
 				                                       .type            = payload_type },
 				});
 
-				auto copy_through = [&](const tsh::SymbolType<>& value_type) -> Box<code::Expr> {
+				auto copy_through = [&](const tsh::ValueType<>& value_type) -> Box<code::Expr> {
 					if (value_type.isTriviallyCopyable(ctx)) return s.deref(s.ident(payload_sym));
 					return s.call(
 						s.ident(copyConstructorSymForType(ctx, value_type.getType())),
@@ -128,7 +127,7 @@ namespace compiler::helios::defgen {
 						return makeBoxAllocCall(
 							ctx,
 							code::generatedOrigin(),
-							copy_through(alternatives[i].getPointeeSymbolType())
+							copy_through(alternatives[i].getPointeeValueType())
 						);
 					}
 					CORE_UNREACHABLE();
@@ -139,7 +138,7 @@ namespace compiler::helios::defgen {
 					payload_type,
 					payload_sym,
 					makeBox<code::VariantConstructExpr>(
-						ctx, code::generatedOrigin(), std::move(payload_value), result_symbol_type, i
+						ctx, code::generatedOrigin(), std::move(payload_value), result_value_type, i
 					)
 				));
 			}
@@ -172,9 +171,7 @@ namespace compiler::helios::defgen {
 
 			const auto i64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_type = tsh::SymbolType<>{ i64_abs_type,
-				                                     tsh::ReferenceKind::Direct,
-				                                     tsh::Mutability::Mutable };
+			const auto i64_type = tsh::ValueType<>::withDefaultsMut(i64_abs_type);
 
 			// The elements of the aggregate differ only in the index they copy, so the whole array
 			// is built by a single value that reads the index off a variable, advanced once per
@@ -212,10 +209,10 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultCopyConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const SymID copy_sym           = copyConstructorSymForType(ctx, owner_type);
-			const auto& cctor_decl         = ctx.query<QueryDeclOfFun>(copy_sym)->valueOrThrow();
-			const SymID source_symbol      = cctor_decl.parameters.at(0).helios_symbol;
-			const auto  result_symbol_type = cctor_decl.return_type;
+			const SymID copy_sym          = copyConstructorSymForType(ctx, owner_type);
+			const auto& cctor_decl        = ctx.query<QueryDeclOfFun>(copy_sym)->valueOrThrow();
+			const SymID source_symbol     = cctor_decl.parameters.at(0).helios_symbol;
+			const auto  result_value_type = cctor_decl.return_type;
 
 			std::vector<Box<code::Stmt>> body;
 			switch (owner_type.getKind()) {
@@ -234,7 +231,7 @@ namespace compiler::helios::defgen {
 					owner_type.as<tsh::VariantAbstractType>(),
 					copy_sym,
 					source_symbol,
-					result_symbol_type
+					result_value_type
 				);
 				break;
 			default:

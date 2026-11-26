@@ -9,6 +9,7 @@
 #include "module_id.hpp"
 #include "module_tree.hpp"
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>

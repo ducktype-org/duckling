@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <base/collections/hashmap.hpp>
 #include <base/collections/maps.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>

@@ -11,7 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_any_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/round_group_expression.hpp>
-#include <frontend/pst_parser/pst_visitor.hpp>
+#include <frontend/pst_parser/visitors/pst_visitor.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -83,16 +83,16 @@ namespace compiler::helios::test_utils {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 
-	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope) {
+	tsh::ValueType<> getValueTypeOf(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
 	}
 
 	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope) {
-		return getSymbolTypeOf(chain, scope).getType();
+		return getValueTypeOf(chain, scope).getType();
 	}
 
-	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
-		return tsh::SymbolType<>::withDefaults(
+	tsh::ValueType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
+		return tsh::ValueType<>::withDefaultsMut(
 			query::entryPoint<tsh::QueryClassType>(getChain(chain, scope).back())
 		);
 	}

@@ -8,6 +8,7 @@
 
 #include "options.hpp"
 
+#include <backends/llvm/llvm_backend.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
@@ -52,12 +53,13 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
 
-			driver::dump_ir_options.dump_asm  = debug_options.dump_asm;
-			driver::dump_ir_options.dump_llvm = debug_options.dump_llvm;
-			driver::dump_ir_options.dump_dbc  = debug_options.dump_dbc;
-			driver::dump_ir_options.dump_lir  = debug_options.dump_lir;
-			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
-			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
+			driver::dump_ir_options.dump_asm      = debug_options.dump_asm;
+			driver::dump_ir_options.dump_llvm     = debug_options.dump_llvm;
+			driver::dump_ir_options.dump_llvm_opt = debug_options.dump_llvm_opt;
+			driver::dump_ir_options.dump_dbc      = debug_options.dump_dbc;
+			driver::dump_ir_options.dump_lir      = debug_options.dump_lir;
+			driver::dump_ir_options.dump_mir      = debug_options.dump_mir;
+			driver::dump_ir_options.dump_hir      = debug_options.dump_hir;
 
 			driver::print_ir_options.print_dbc = debug_options.print_dbc;
 			driver::print_ir_options.print_lir = debug_options.print_lir;
@@ -220,6 +222,7 @@ namespace compiler::driver {
 
 		void handleBackendOptions(const global_state::BackendOptions& backend_options) {
 			global_state::setters::setBackendOptions(backend_options);
+			backend_llvm::configureAssemblySyntax();
 		}
 
 		void handleExecutionOptions(const options_types::ExecutionOptions& execution_options) {

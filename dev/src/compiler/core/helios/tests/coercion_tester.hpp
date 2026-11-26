@@ -67,25 +67,25 @@ namespace coercion_testing {
 	}
 
 	/// @p type as a mutable value of its own, for a type Duckling cannot write, like `byte`.
-	[[nodiscard]] inline SymbolType<> direct(const AbstractType& type) {
+	[[nodiscard]] inline ValueType<> direct(const AbstractType& type) {
 		return { type, ReferenceKind::Direct, Mutability::Mutable };
 	}
 
 	/// @p type seen as immutable, which a parameter does not keep yet (#1488).
-	[[nodiscard]] inline SymbolType<> immutable(const SymbolType<>& type) {
+	[[nodiscard]] inline ValueType<> immutable(const ValueType<>& type) {
 		return { type.getType(), type.getRefKind(), Mutability::Immutable };
 	}
 
 	/// The variant of @p alternatives, for one Duckling cannot write, like a variant of tuples only.
-	[[nodiscard]] inline SymbolType<> variantOf(const std::vector<SymbolType<>>& alternatives) {
+	[[nodiscard]] inline ValueType<> variantOf(const std::vector<ValueType<>>& alternatives) {
 		return direct(inContext([&](query::Context& ctx) {
 			return AbstractType{ ctx.query<QueryVariantType>({ .underlying_types = alternatives }) };
 		}));
 	}
 
 	/// The type of a function from @p parameter to @p result.
-	[[nodiscard]] inline SymbolType<> functionOf(
-		const SymbolType<>& parameter, const SymbolType<>& result
+	[[nodiscard]] inline ValueType<> functionOf(
+		const ValueType<>& parameter, const ValueType<>& result
 	) {
 		return direct(inContext([&](query::Context& ctx) {
 			return AbstractType{ ctx.query<QueryFunctionType>({
@@ -119,8 +119,8 @@ namespace coercion_testing {
 		std::string rendering;
 
 		/// The types the coercion was asked about.
-		SymbolType<> source;
-		SymbolType<> target;
+		ValueType<> source;
+		ValueType<> target;
 
 		/// The root of the tree, or the refusal.
 		std::variant<CoercionNode, CoercionError> outcome;
@@ -171,7 +171,7 @@ namespace coercion_testing {
 		/// Nothing at all happens to the value at runtime.
 		const NodeCheck& doesNothing() const;
 
-		/// The value is packed into the alternative `SymbolType::toString` writes as
+		/// The value is packed into the alternative `ValueType::toString` writes as
 		/// @p alternative.
 		const NodeCheck& packsInto(std::string_view alternative) const;
 
@@ -217,7 +217,7 @@ namespace coercion_testing {
 		/// This level is an ambiguity between exactly the alternatives @p alternatives.
 		const RefusalCheck& ambiguousBetween(const std::vector<usize>& alternatives) const;
 
-		/// This level is about coercing @p source into @p target, as `SymbolType::toString` writes
+		/// This level is about coercing @p source into @p target, as `ValueType::toString` writes
 		/// them.
 		const RefusalCheck& about(std::string_view source, std::string_view target) const;
 
@@ -257,7 +257,7 @@ namespace coercion_testing {
 			CoercionTestSuite&          suite,
 			const std::string&          description,
 			const CoercionTree<Source>& tree,
-			const SymbolType<>&         target
+			const ValueType<>&          target
 		):
 			  Check(suite, subjectOf(std::move(description), tree, target), "") {}
 
@@ -272,16 +272,16 @@ namespace coercion_testing {
 		[[nodiscard]] static CSharedBox<Subject> subjectOf(
 			const std::string&          description,
 			const CoercionTree<Source>& tree,
-			const SymbolType<>&         target
+			const ValueType<>&          target
 		) {
 			std::stringstream rendering;
 			tree.debugPrint(rendering);
 
-			const SymbolType<> source = [&]() -> SymbolType<> {
-				if constexpr (std::is_same_v<Source, SymbolType<>>)
+			const ValueType<> source = [&]() -> ValueType<> {
+				if constexpr (std::is_same_v<Source, ValueType<>>)
 					return tree.getSource();
 				else
-					return tree.getSource().getSymbolType();
+					return tree.getSource().getValueType();
 			}();
 
 			return makeSharedBox<const Subject>(Subject{
@@ -334,7 +334,7 @@ fun makeBoxAndInt() -> (box i32, i32) = {
     return (new 1, 2);
 }
 
-fun makeBoxAndConstInt() -> (box i32, const i32) = {
+fun makeBoxAndConstInt() -> (box i32, imm i32) = {
     return (new 1, 2);
 }
 
@@ -350,7 +350,7 @@ var global_pair: (box i32, i32) = (new 1, 2);
     var b: box i32 = new 1;
     var t: (box i32, i32) = (new 1, 2);
     var r: ref (box i32, i32) = &t;
-    var c: (box i32, const i32) = (new 1, 2);
+    var c: (box i32, imm i32) = (new 1, 2);
     var o: Owner;
     let lb: box i32 = new 1;
     let lr: ref i32 = &x;
@@ -384,8 +384,8 @@ var global_pair: (box i32, i32) = (new 1, 2);
 			return compiled(function, [&](const compiler::helios::ScopeID body) {
 				using namespace compiler::helios::test_utils;
 
-				const SymbolType<> target = getSymbolTypeOf("into", body);
-				ValueSource        source
+				const ValueType<> target = getValueTypeOf("into", body);
+				ValueSource       source
 					= describeValue(*getExprOfVariable(getChain("value", body).back()));
 
 				// The same as HOUT does for a value at its last use, like a returned value.
@@ -414,12 +414,12 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		/**
 		 * @brief The coercion of a value described by hand, whose parts are parts of it.
 		 */
-		[[nodiscard]] CoercionCheck coerce(const ExpressionType<>& value, const SymbolType<>& into) {
+		[[nodiscard]] CoercionCheck coerce(const ExpressionType<>& value, const ValueType<>& into) {
 			return {
 				*this,
 				base::strConcat(
 					"`",
-					value.getSymbolType().toString(),
+					value.getValueType().toString(),
 					" [",
 					value.getValueCategory().toString(),
 					"]` into `",
@@ -447,8 +447,8 @@ var global_pair: (box i32, i32) = (new 1, 2);
 				using namespace compiler::helios::test_utils;
 
 				return planned(
-					getSymbolTypeOf("from", body),
-					getSymbolTypeOf("into", body),
+					getValueTypeOf("from", body),
+					getValueTypeOf("into", body),
 					base::strConcat("`", from, "` into `", into, "`"),
 					mode
 				);
@@ -458,7 +458,7 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		/**
 		 * @brief The plan between two types built by hand.
 		 */
-		[[nodiscard]] CoercionCheck plan(const SymbolType<>& from, const SymbolType<>& into) {
+		[[nodiscard]] CoercionCheck plan(const ValueType<>& from, const ValueType<>& into) {
 			return planned(
 				from, into, base::strConcat("`", from.toString(), "` into `", into.toString(), "`")
 			);
@@ -467,28 +467,28 @@ var global_pair: (box i32, i32) = (new 1, 2);
 		/**
 		 * @brief The type @p written, to build by hand what Duckling cannot write out of it.
 		 */
-		[[nodiscard]] SymbolType<> type(const std::string_view written) {
+		[[nodiscard]] ValueType<> type(const std::string_view written) {
 			return compiled(
 				base::strConcat("fun coercion_case(t: ", written, ") = {\n}\n"),
 				[](const compiler::helios::ScopeID body) {
-					return compiler::helios::test_utils::getSymbolTypeOf("t", body);
+					return compiler::helios::test_utils::getValueTypeOf("t", body);
 				}
 			);
 		}
 
 	private:
 		[[nodiscard]] CoercionCheck planned(
-			const SymbolType<>& from,
-			const SymbolType<>& into,
-			const std::string&  description,
-			const CoercionMode  mode = CoercionMode::Default
+			const ValueType<>& from,
+			const ValueType<>& into,
+			const std::string& description,
+			const CoercionMode mode = CoercionMode::Default
 		) {
 			return {
 				*this,
 				description,
 				inContext([&](query::Context& ctx) {
-					return SymbolTypeCoercion{
-						*ctx.query<QuerySymbolTypeCoercion>({ from, into, mode })
+					return ValueTypeCoercion{
+						*ctx.query<QueryValueTypeCoercion>({ from, into, mode })
 					};
 				}),
 				into,

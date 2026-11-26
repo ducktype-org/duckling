@@ -15,10 +15,12 @@ namespace compiler::backend_llvm {
 	 * @param module_impl The module to compile.
 	 * @param output_file Path where the output file will be saved.
 	 * @param output_type Type of the output file (object or assembly).
+	 * @param llvm_opt_output Optional LLVM IR dump after optimization, before code generation.
 	 */
 	void compileModuleToObject(
-		Ref<ModuleImpl>              module_impl,
-		const std::filesystem::path& output_file,
-		CompilationOutputType        output_type
+		Ref<ModuleImpl>                              module_impl,
+		const std::filesystem::path&                 output_file,
+		CompilationOutputType                        output_type,
+		const base::Optional<std::filesystem::path>& llvm_opt_output
 	);
 }
