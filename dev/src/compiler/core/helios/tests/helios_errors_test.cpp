@@ -78,6 +78,7 @@ public:
 		TESTER_ADD_TEST(testWildcardNamesInSelectorPaths);
 		TESTER_ADD_TEST(testNullElementsAfterSyntaxErrors);
 		TESTER_ADD_TEST(testParseErrorsFailModule);
+		TESTER_ADD_TEST(testParseErrorsInImportedModule);
 		TESTER_ADD_TEST(testStatementsOutsideFunctions);
 		TESTER_ADD_TEST(testDeclarationsInsideFunctions);
 	}
@@ -3346,6 +3347,23 @@ private:
 	 */
 	void testParseErrorsFailModule() {
 		checkForErrorOnCompileModule("fun main() -> i64 = { return 0; }\nimport", {}, 0);
+	}
+
+	/**
+	 * A name that a module lost to a parse error is not reported as missing by the modules that
+	 * import it: the parser has already reported the real error. A lookup that never reaches the
+	 * broken module still reports a missing name.
+	 */
+	void testParseErrorsInImportedModule() {
+		auto module_id = helios::test_utils::getModule(
+							 fs::File(path("test_modules/error_generating/parse_error_in_import"))
+		)
+		                     .first;
+
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
+		assertTrue(result->hasFailed(), "Expected HOUT query to fail for the importing module.");
+		checkForError({ "Symbol 'Nope' not found in lookup" }, 1);
 	}
 
 	void testStatementsOutsideFunctions() {

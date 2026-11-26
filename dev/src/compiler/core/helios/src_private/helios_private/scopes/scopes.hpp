@@ -152,11 +152,23 @@ namespace compiler::helios {
 	 * them. The found `using`/`import` symbols are resolved, the result holds only the symbols they
 	 * point at.
 	 *
+	 * When nothing is found and one of the searched modules failed to parse, the result is marked
+	 * with `LookupResult::searched_module_failed_to_parse`.
+	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryLookupFromScope, KeyOf_LookupFromScope, CRef<query::QResult<LookupResult>>, ({})
 	);
+
+	/**
+	 * @brief Whether the main source file of the module failed to parse.
+	 *
+	 * The whole PST of the file is unlocked, so the result is recomputed when the file changes.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryModuleHasParseErrors, frontend::ModuleID, bool, ({ .uses_qresult = false }));
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.

@@ -33,10 +33,15 @@ namespace compiler::helios {
 		return false;
 	}
 
+	bool LookupResult::isMissingBecauseOfParseErrors() const {
+		return searched_module_failed_to_parse and isEmpty() and not hasInaccessible();
+	}
+
 	GetAsSingleLookupQResult LookupResult::getAsSingle() const {
 		// The name exists, it just cannot be used from here, which is worth saying explicitly.
 		if (isEmpty()) {
 			if (hasInaccessible()) return errors::Inaccessible();
+			if (isMissingBecauseOfParseErrors()) return query::Failed();
 			return errors::SymbolNotFound();
 		}
 		if (!isSingle()) return errors::Ambiguity();
@@ -88,6 +93,7 @@ namespace compiler::helios {
 	void LookupResult::merge(LookupResult other) {
 		leaves       = mergeSet(std::move(leaves), std::move(other.leaves));
 		inaccessible = mergeSet(std::move(inaccessible), std::move(other.inaccessible));
+		searched_module_failed_to_parse |= other.searched_module_failed_to_parse;
 
 		children.insert(
 			children.end(),

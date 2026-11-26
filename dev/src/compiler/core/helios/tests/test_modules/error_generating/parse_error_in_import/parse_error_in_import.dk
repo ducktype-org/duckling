@@ -1,0 +1,18 @@
+import broken;
+using broken.T as Aliased;
+
+fun throughModule(x: broken.T) -> i64 = 0;
+
+fun throughUsing(x: Aliased) -> i64 = 0;
+
+namespace wildcard {
+	using broken.*;
+
+	fun throughWildcard() -> i64 = {
+		var x = T();
+		return 0;
+	}
+}
+
+# `Nope` is missing for real: no lookup of it reaches the broken module.
+fun withTypo(x: Nope) -> i64 = 0;

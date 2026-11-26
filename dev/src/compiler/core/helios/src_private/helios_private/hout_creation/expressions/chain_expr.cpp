@@ -517,6 +517,7 @@ namespace compiler::helios::code {
 				const auto lookup_qresult
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+				if (lookup_result->isMissingBecauseOfParseErrors()) return query::Failed();
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -916,6 +917,7 @@ namespace compiler::helios::code {
 					= HInterface::ofSymbol(query_ctx, namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+				if (lookup_result->isMissingBecauseOfParseErrors()) return query::Failed();
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);

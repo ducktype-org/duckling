@@ -835,6 +835,18 @@ namespace compiler::helios {
 			return std::monostate{};
 		}
 
+		/**
+		 * @brief Whether a module of one of the @p scopes failed to parse.
+		 */
+		static bool anyFailedToParse(Context& ctx, const std::unordered_set<ScopeID>& scopes) {
+			std::unordered_set<frontend::ModuleID> modules;
+			for (const ScopeID scope_id: scopes) modules.insert(module(scope_id));
+
+			return std::ranges::any_of(modules, [&](frontend::ModuleID module_id) {
+				return ctx.query<QueryModuleHasParseErrors>(module_id);
+			});
+		}
+
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			std::unordered_set<ScopeID> visited;
 			LookupResult                result;
@@ -860,6 +872,10 @@ namespace compiler::helios {
 
 			std::unordered_set<SymID> seen;
 			std::erase_if(result.leaves, [&](SymID sym) { return not seen.insert(sym).second; });
+
+			if (result.isEmpty() and not result.hasInaccessible())
+				result.searched_module_failed_to_parse = anyFailedToParse(ctx, visited);
+
 			return result;
 		}
 
@@ -867,6 +883,32 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupFromScope);
+
+	struct IMPLEMENT_QUERY(QueryModuleHasParseErrors, bool) {
+		/**
+		 * @brief Unlocks @p element and everything below it, so that any change of the file
+		 * invalidates the query.
+		 */
+		template<typename ElementT>
+		static void unlockSubtree(Context& ctx, pst::Access<ElementT> element) {
+			for (auto child: element->viewChildren()) {
+				auto child_unlocked = child.unlockOpt(ctx);
+				if (child_unlocked.has_value()) unlockSubtree(ctx, child_unlocked.value());
+			}
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			auto file_pst  = getFilePST(ctx, main_file);
+
+			unlockSubtree(ctx, file_pst->getRootElement().unlock(ctx));
+			return file_pst->hasErrors();
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHasParseErrors);
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {
 		auto main_source_file = ctx.query<frontend::QueryMainSourceFile>(module);

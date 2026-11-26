@@ -4,3 +4,6 @@
 # duckfmt's own itest fixtures: an unformatted input and a file with a lexer error
 integration_tests/tools/formatter/format_unformatted.dk
 integration_tests/tools/formatter/format_lexer_error.dk
+
+# A HELIOS test fixture that has to fail to parse
+src/compiler/core/helios/tests/test_modules/error_generating/parse_error_in_import/broken.dk

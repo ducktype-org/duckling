@@ -1,0 +1,2 @@
+# The parser cannot recover the class below, so `T` is never declared.
+class T ( }

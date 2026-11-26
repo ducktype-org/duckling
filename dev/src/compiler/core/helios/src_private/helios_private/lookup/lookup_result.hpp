@@ -71,6 +71,12 @@ namespace compiler::helios {
 		std::vector<NestedResult> children;
 
 		/**
+		 * Nothing was found, but one of the searched modules failed to parse. The name may have
+		 * been declared in the part the parser lost, and the parser has already reported why.
+		 */
+		bool searched_module_failed_to_parse = false;
+
+		/**
 		 * Check if lookup actually found something.
 		 * @return True if it has found something, false otherwise.
 		 */
@@ -92,8 +98,16 @@ namespace compiler::helios {
 		bool hasInaccessible() const;
 
 		/**
+		 * @brief Whether nothing was found, but the name may have been lost to a parse error.
+		 * Such a result must not be reported as a missing name.
+		 */
+		[[nodiscard]]
+		bool isMissingBecauseOfParseErrors() const;
+
+		/**
 		 * Returns a path to the symbol.
 		 * Panics on ambiguity.
+		 * Fails without a diagnostic when isMissingBecauseOfParseErrors().
 		 * @return A SymbolList representing a path to the symbol.
 		 */
 		[[nodiscard]]
