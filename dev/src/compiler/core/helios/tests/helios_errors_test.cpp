@@ -2872,7 +2872,7 @@ private:
 			using enum tsh::IntegralAbstractType::Signedness;
 			const auto int32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
-			auto st = tsh::SymbolType<>::withDefaultsMut(int32_type);
+			auto st = tsh::ValueType<>::withDefaultsMut(int32_type);
 
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
@@ -2936,7 +2936,7 @@ private:
 		)");
 		auto scope     = test_utils::getModuleScope(module_id);
 		auto v_sym     = test_utils::getChain("v", scope).back();
-		auto v_type    = test_utils::getSymbolTypeOf("v", scope);
+		auto v_type    = test_utils::getValueTypeOf("v", scope);
 
 		std::stringstream written;
 		std::stringstream resolved;

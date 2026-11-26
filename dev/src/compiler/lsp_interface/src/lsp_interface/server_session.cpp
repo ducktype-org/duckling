@@ -102,6 +102,7 @@ namespace duck_ls {
 								.openClose = true,
 								.change    = lsp::TextDocumentSyncKind::Incremental,
 							},
+							.hoverProvider = true,
 						},
 						.serverInfo = lsp::ServerInfo{
 							.name    = "duck_ls",
@@ -151,6 +152,13 @@ namespace duck_ls {
 						}
 
 						if (touched) compiler.publishDiagnostics({});
+					});
+				}
+			)
+			.onTextDocumentHover(
+				[this, &compiler](lsp::HoverParams&& params) -> lsp::TextDocumentHoverResult {
+					return orAbort(*endpoint, "textDocument/hover", [&] {
+						return compiler.hover(params.textDocument.uri, params.position);
 					});
 				}
 			)

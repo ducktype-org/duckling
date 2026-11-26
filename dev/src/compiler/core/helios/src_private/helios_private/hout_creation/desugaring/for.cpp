@@ -16,8 +16,8 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/value_category.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
@@ -42,19 +42,19 @@ namespace compiler::helios::desugaring {
 			code::ElementOrigin iterator_origin;
 
 			// Iterable info.
-			tsh::SymbolType<> iterable_type;
-			bool              collection_is_l_value;
-			Box<code::Expr>   iterable_hout;
+			tsh::ValueType<> iterable_type;
+			bool             collection_is_l_value;
+			Box<code::Expr>  iterable_hout;
 		};
 
-		tsh::SymbolType<> getI64(query::Context& ctx) {
-			return tsh::SymbolType<>::withDefaultsMut(
+		tsh::ValueType<> getI64(query::Context& ctx) {
+			return tsh::ValueType<>::withDefaultsMut(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			);
 		}
 
-		tsh::SymbolType<> getConstI64(query::Context& ctx) {
-			return tsh::SymbolType<>::withDefaultsMut(
+		tsh::ValueType<> getConstI64(query::Context& ctx) {
+			return tsh::ValueType<>::withDefaultsMut(
 					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
 			)
 			    .withMutability(tsh::Mutability::Immutable);
@@ -68,10 +68,10 @@ namespace compiler::helios::desugaring {
 			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst->getExpr() });
 			if (iterable_hout_res->hasFailed()) return {};
 
-			Box<code::Expr>   iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-			tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
-			tsh::Kind         kind          = iterable_type.getType().getKind();
-			bool              iterable_is_r_value
+			Box<code::Expr>  iterable_hout = iterable_hout_res->valueOrThrow()->clone();
+			tsh::ValueType<> iterable_type = iterable_hout->expression_type.getValueType();
+			tsh::Kind        kind          = iterable_type.getType().getKind();
+			bool             iterable_is_r_value
 				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
 			if (kind != tsh::Kind::StaticArray) {
@@ -157,7 +157,7 @@ namespace compiler::helios::desugaring {
 			Box<code::Expr>      collection_next_use,
 			SymID                idx_sym,
 			SymID                iter_sym,
-			tsh::SymbolType<>    iter_type,
+			tsh::ValueType<>     iter_type,
 			const BodyProcessor& process_body
 		) {
 			const auto gen = code::generatedOrigin();
@@ -178,7 +178,7 @@ namespace compiler::helios::desugaring {
 				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(base_expr), idx_ref());
 
 			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
-			auto element_sym_type = raw_element->expression_type.getSymbolType();
+			auto element_sym_type = raw_element->expression_type.getValueType();
 			auto element_expr     = coercions::coerceFromBox(
                 ctx.ctx,
                 std::move(raw_element),
@@ -242,7 +242,7 @@ namespace compiler::helios::desugaring {
 	ForGeneratedSymbols getForGeneratedSymbols(query::Context& ctx, pst::Access<pst::For> stmt) {
 		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-		auto get_generated_local = [&](base::StrID role, tsh::SymbolType<> type) {
+		auto get_generated_local = [&](base::StrID role, tsh::ValueType<> type) {
 			// No discriminator in the name: it is part of the query key, so anything derived from
 			// the loop (scope id, position, hash) would differ per compilation or move on edits.
 			auto name = role;
@@ -280,8 +280,7 @@ namespace compiler::helios::desugaring {
 
 		// Get the needed symbols.
 		ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, stmt);
-		tsh::SymbolType<>   iter_type
-			= ctx.query<QueryTypeOfSymbol>(symbols.iterator)->valueOrThrow();
+		tsh::ValueType<> iter_type = ctx.query<QueryTypeOfSymbol>(symbols.iterator)->valueOrThrow();
 
 		Box<code::Expr> reusable_inner = [&]() -> Box<code::Expr> {
 			if (for_ctx.collection_is_l_value)

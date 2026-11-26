@@ -14,8 +14,8 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -44,11 +44,11 @@ namespace {
 	 * forced.
 	 * @return Optional pair of (common_type, {left_coercion, right_coercion}).
 	 */
-	base::Optional<std::tuple<tsh::SymbolType<>, Coercion, Coercion>> findCommonTypeWithCoercion(
+	base::Optional<std::tuple<tsh::ValueType<>, Coercion, Coercion>> findCommonTypeWithCoercion(
 		query::Context& ctx, base::CRef<Expr> lhs, base::CRef<Expr> rhs
 	) {
-		auto lhs_type = lhs->expression_type.getSymbolType();
-		auto rhs_type = rhs->expression_type.getSymbolType();
+		auto lhs_type = lhs->expression_type.getValueType();
+		auto rhs_type = rhs->expression_type.getValueType();
 
 		// Numeric operators only work on direct values. When provided with references or box types
 		// we have to force a coercion to a direct type which will insert a DerefExpr. This is
@@ -121,7 +121,7 @@ namespace {
 				return query::Failed();
 			}
 			auto callee = bakeLanguagePrimitiveWithTypes(
-				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getSymbolType() }
+				ctx, LanguagePrimitive::PowInt, { lhs->expression_type.getValueType() }
 			);
 			return withOrigin(new_origin, s.call(s.ident(callee), std::move(lhs), std::move(rhs)));
 		}
@@ -189,7 +189,7 @@ namespace compiler::helios::code {
 		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
 		auto                     operation_kind = expr->expression_type.getType().getKind();
-		auto                     direct_type    = expr->expression_type.getSymbolType().toDirect();
+		auto                     direct_type    = expr->expression_type.getValueType().toDirect();
 		tsh::coercions::Coercion coercion       = coercions::coercionOf(ctx, expr, direct_type);
 		if (not coercion.isValid()) return {};
 
@@ -284,8 +284,8 @@ namespace compiler::helios::code {
 		//@TODO: #3702 handle custom, or otherwise fancy operators ending with `=`
 		CORE_ASSERT(!op.isAssignment(), "Assignement operator should be desugared by now.");
 
-		const auto lhs_type = lhs->expression_type.getSymbolType();
-		const auto rhs_type = rhs->expression_type.getSymbolType();
+		const auto lhs_type = lhs->expression_type.getValueType();
+		const auto rhs_type = rhs->expression_type.getValueType();
 
 		// Binary operator resolution now happens in two steps:
 		// 1. If the arguments are both numeric (integral or float) and the operator is a
@@ -463,7 +463,7 @@ namespace compiler::helios::code {
 		auto coerced_value = coercions::coerceFromBox(
 								 ctx,
 								 std::move(value),
-								 location_deref->expression_type.getSymbolType(),
+								 location_deref->expression_type.getValueType(),
 								 assignment->getStablePosition()
 		)
 		                         .valueOrThrow();
@@ -474,7 +474,7 @@ namespace compiler::helios::code {
 	struct IMPLEMENT_QUERY(QueryRegularBuiltinOperatorSymbols, RegularBuiltinOperatorSymbolMap) {
 		static auto provide(Context& ctx, QKey) -> PResult {
 			// Preamble
-			const auto bool_t = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
+			const auto bool_t = tsh::ValueType<>::withDefaults(tsh::getBoolType());
 			using enum HOUTFunctionDeclaration::Operatoriness;
 			using enum BuiltinUnary;
 			using enum BuiltinBinary;
@@ -485,8 +485,8 @@ namespace compiler::helios::code {
 			// - Helper function to register a builtin operation that results in a BuiltinBinary.
 			const auto builtin_op = [&ctx, &result_ops](
 										const base::StrID                               name,
-										std::vector<tsh::SymbolType<>>                  param_types,
-										const tsh::SymbolType<>                         return_type,
+										std::vector<tsh::ValueType<>>                   param_types,
+										const tsh::ValueType<>                          return_type,
 										const std::variant<BuiltinUnary, BuiltinBinary> bop,
 										const HOUTFunctionDeclaration::Operatoriness operatoriness
 									) -> void {
@@ -515,7 +515,7 @@ namespace compiler::helios::code {
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
 
 			/// Meta constructions ///
-			const auto meta_t = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
+			const auto meta_t = tsh::ValueType<>::withDefaults(tsh::getMetaType());
 
 			builtin_op(keywordToStr(Keyword::Ref), { meta_t }, meta_t, Ref, Prefix);
 			builtin_op(keywordToStr(Keyword::Box), { meta_t }, meta_t, Box, Prefix);
@@ -539,10 +539,10 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("!="), { bool_t, bool_t }, bool_t, IntegerNeq, Infix);
 
 			/// Character arithmetic ///
-			const auto u8_t = tsh::SymbolType<>::withDefaults(
+			const auto u8_t = tsh::ValueType<>::withDefaults(
 				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned)
 			);
-			const auto char_t = tsh::SymbolType<>::withDefaults(tsh::getCharType());
+			const auto char_t = tsh::ValueType<>::withDefaults(tsh::getCharType());
 			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt, Infix);
 			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq, Infix);
 			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt, Infix);

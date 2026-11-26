@@ -10,8 +10,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -83,14 +83,12 @@ namespace compiler::helios {
 			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
-		tsh::SymbolType<> ReplInputWrapper::getReturnType() const {
+		tsh::ValueType<> ReplInputWrapper::getReturnType() const {
 			variant_match(element) {
 				variant_case_novalue(Instruction) {
-					return tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+					return tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 				}
-				variant_case(Expression, expr) {
-					return expr.expr->expression_type.getSymbolType();
-				}
+				variant_case(Expression, expr) { return expr.expr->expression_type.getValueType(); }
 			}
 			CORE_UNREACHABLE();
 		}

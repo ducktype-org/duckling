@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "../symbol_type.hpp"
+#include "../value_type.hpp"
 #include "coercion_path.hpp"
 
 #include <iosfwd>
@@ -69,7 +69,7 @@ namespace compiler::tsh::coercions {
 		 */
 		struct CopiedValue final {
 			/// The type of the copied value.
-			SymbolType<> type;
+			ValueType<> type;
 			/// Whether the value is the pointee read out of a `ref`/`box`.
 			bool is_pointee;
 		};
@@ -144,8 +144,8 @@ namespace compiler::tsh::coercions {
 		CoercionFailure reason;
 
 		/// The coercion at this tree level.
-		SymbolType<> source;
-		SymbolType<> target;
+		ValueType<> source;
+		ValueType<> target;
 
 		/// The refusals of the sub-coercions. It has no default member initializer, because
 		/// `Cause` is not complete yet, so every refusal names its causes, even when it has none.

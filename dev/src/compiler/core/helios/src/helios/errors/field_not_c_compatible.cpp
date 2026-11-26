@@ -16,7 +16,7 @@ namespace compiler::helios {
 		query::Context&     ctx,
 		dia::StablePosition source_position,
 		std::string         field_name,
-		tsh::SymbolType<>   field_type,
+		tsh::ValueType<>    field_type,
 		std::string         reason
 	):
 		  MessageWithCodeFragmentAndCause(source_position) {

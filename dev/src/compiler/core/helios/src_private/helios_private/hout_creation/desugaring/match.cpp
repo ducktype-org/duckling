@@ -61,7 +61,7 @@ namespace compiler::helios::desugaring {
 		class MatchSubject final {
 		public:
 			Box<code::Expr>          expr;
-			tsh::SymbolType<>        whole_type;
+			tsh::ValueType<>         whole_type;
 			bool                     moves_ownership;
 			tsh::VariantAbstractType variant;
 			usize                    num_alternatives;
@@ -75,7 +75,7 @@ namespace compiler::helios::desugaring {
 		query::QResult<MatchSubject> validateMatchSubject(
 			query::Context& ctx, Box<code::Expr> expr, dia::StablePosition pos
 		) {
-			auto type = expr->expression_type.getSymbolType();
+			auto type = expr->expression_type.getValueType();
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				logError(
 					ctx,
@@ -112,10 +112,10 @@ namespace compiler::helios::desugaring {
 		 * @return The alternative index of the type.
 		 */
 		query::QResult<usize> validateMatchCaseConstraint(
-			query::Context&          ctx,
-			const MatchSubject&      match_subject,
-			const tsh::SymbolType<>& constraint,
-			dia::StablePosition      pos
+			query::Context&         ctx,
+			const MatchSubject&     match_subject,
+			const tsh::ValueType<>& constraint,
+			dia::StablePosition     pos
 		) {
 			if (not match_subject.moves_ownership
 			    and constraint.getRefKind() == tsh::ReferenceKind::Box) {
@@ -208,11 +208,11 @@ namespace compiler::helios::desugaring {
 		 * @brief A lowered case, kept until the type the cases agree on is known.
 		 */
 		struct LoweredCase final {
-			base::Optional<usize>             alternative_index;
-			base::Optional<tsh::SymbolType<>> constraint;
-			base::Optional<SymID>             binding;
-			Box<code::Expr>                   result;
-			dia::StablePosition               position;
+			base::Optional<usize>            alternative_index;
+			base::Optional<tsh::ValueType<>> constraint;
+			base::Optional<SymID>            binding;
+			Box<code::Expr>                  result;
+			dia::StablePosition              position;
 		};
 	}
 
@@ -234,7 +234,7 @@ namespace compiler::helios::desugaring {
 		// Lower all cases. The results are kept aside until every case has been lowered,
 		// because the type the cases agree on is only known once all of them are in.
 		std::vector<LoweredCase>            lowered_cases;
-		base::Optional<tsh::SymbolType<>>   common_type;
+		base::Optional<tsh::ValueType<>>    common_type;
 		std::vector<bool>                   covered(subject.num_alternatives, false);
 		bool                                has_wildcard = false;
 		base::Optional<dia::StablePosition> wildcard_position;
@@ -272,9 +272,9 @@ namespace compiler::helios::desugaring {
 			auto pattern    = flow->getPattern().unlock(ctx);
 			auto constraint = flow->getTypeConstraint();
 
-			base::Optional<usize>             alternative_index;
-			base::Optional<SymID>             binding_sym;
-			base::Optional<tsh::SymbolType<>> constraint_type;
+			base::Optional<usize>            alternative_index;
+			base::Optional<SymID>            binding_sym;
+			base::Optional<tsh::ValueType<>> constraint_type;
 
 			if (auto binding_opt = pattern.dynamicCast<pst::BindingPattern>()) {
 				if (!constraint.has_value()) {
@@ -300,7 +300,7 @@ namespace compiler::helios::desugaring {
 			if (constraint.has_value()) {
 				auto pst_expr = constraint.value().unlock(ctx)->getExpr().unlock(ctx);
 				UNPACK_QRESULT(auto constraint_ctv =, getTypeCTVFromPST(ctx, pst_expr));
-				constraint_type = constraint_ctv.get<tsh::SymbolType<>>().value();
+				constraint_type = constraint_ctv.get<tsh::ValueType<>>().value();
 
 				UNPACK_QRESULT(
 					alternative_index =,
@@ -323,7 +323,7 @@ namespace compiler::helios::desugaring {
 			} else {
 				has_wildcard                     = true;
 				wildcard_position                = case_position;
-				auto not_covered_with_destructor = [&] -> base::Optional<tsh::SymbolType<>> {
+				auto not_covered_with_destructor = [&] -> base::Optional<tsh::ValueType<>> {
 					auto& alternatives = subject.variant.getUnderlyingTypes();
 					for (usize i{ 0 }; i < subject.num_alternatives; i++) {
 						if (covered[i]) continue;
@@ -362,7 +362,7 @@ namespace compiler::helios::desugaring {
 			// common-type inference, so anything else is an error the user has to resolve.
 			// A case that never produces a value is an exception: it carries no type of its own,
 			// so it is left out of the vote and coerced to whatever the others settle on.
-			const auto result_type = result->expression_type.getSymbolType();
+			const auto result_type = result->expression_type.getValueType();
 			if (result_type.getType().getKind() != tsh::Kind::Void) {
 				if (!common_type.has_value()) common_type = result_type;
 				if (common_type.value() != result_type) {
@@ -410,7 +410,7 @@ namespace compiler::helios::desugaring {
 
 		// Every case returns void, so the match itself never produces a value either.
 		if (common_type.empty())
-			common_type = tsh::SymbolType<>::withDefaultsMut(tsh::getVoidType());
+			common_type = tsh::ValueType<>::withDefaultsMut(tsh::getVoidType());
 
 		// The cases that never produce a value (`void`) are coerced to the type the others
 		// agreed on. Type `void` is uninhabited, so the coercion only reconciles the types:
@@ -419,7 +419,7 @@ namespace compiler::helios::desugaring {
 		cases.reserve(lowered_cases.size());
 		for (auto& lowered: lowered_cases) {
 			auto result = std::move(lowered.result);
-			if (result->expression_type.getSymbolType() != common_type.value()) {
+			if (result->expression_type.getValueType() != common_type.value()) {
 				auto coerced = coercions::coerceFromBox(
 					ctx, std::move(result), common_type.value(), lowered.position
 				);
