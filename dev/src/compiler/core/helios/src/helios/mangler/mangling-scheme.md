@@ -86,11 +86,12 @@ either in the scheme or it's implementation, they should be reflected here.
          | <back-reference>
 // there could possibly be more qualifiers
 // should not repeat
-<type-modifier> ::= "N"                                     // const
-                  | "M"                                     // unique
-                  | "L"                                     // leaking
-                  | "R"                                     // reference
+<type-modifier> ::= "R" <view-access>                       // `ref` or `ref mut`
                   | "X"                                     // box
+
+// the write access of a view type 
+<view-access> ::= ""                                        // read-only
+                | "K"                                       // may write (`mut`)
 
 // more types could be added in the future
 <builtin-type> ::= "u"                                      // unit
@@ -104,10 +105,11 @@ either in the scheme or it's implementation, they should be reflected here.
                  | "s"                                      // string
                  | "t"                                      // meta (type type)
 
-<pointer-type> ::= "P"                                      // raw pointer
-                 | "P" <type> "E"                           // pointer
-                 | "MP" <type> "E"                          // many pointer
-                 | "CP" <type> "E"                          // c pointer
+<pointer-type> ::= "p"                                      // raw pointer
+                 | "P" <view-access> <type> "E"             // pointer: `ptr` or `ptr mut`
+                 | "MP" <view-access> <type> "E"            // many pointer: `manyptr` or `manyptr mut`
+                 | "CP" <view-access> <type> "E"            // c pointer: `cptr` or `cptr mut`
+                 | "S" <view-access> <type> "E"             // slice: `slice` or `slice mut`
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
                  | "Q" <type> "E"                           // optional type (?T)

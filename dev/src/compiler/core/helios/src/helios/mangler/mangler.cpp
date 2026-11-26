@@ -1012,29 +1012,46 @@ namespace compiler::helios::mangler {
 			}
 		}
 
+		/**
+		 * @brief The modifier of a view type - `K` for read-write views, nothing for read-only views.
+		 */
+		static std::string_view viewModifier(const tsh::ViewAccess access) {
+			return access == tsh::ViewAccess::ReadWrite ? "K" : "";
+		}
+
 		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
 
 		static std::string mangle(query::Context& ctx, tsh::PointerAbstractType type) {
 			return base::strConcat(
-				"P", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+				"P",
+				viewModifier(type.getAccess()),
+				ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(),
+				"E"
 			);
 		}
 
 		static std::string mangle(query::Context& ctx, tsh::ManyPointerAbstractType type) {
 			return base::strConcat(
-				"MP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+				"MP",
+				viewModifier(type.getAccess()),
+				ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(),
+				"E"
 			);
 		}
 
 		static std::string mangle(query::Context& ctx, tsh::CPointerAbstractType type) {
 			return base::strConcat(
-				"CP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+				"CP",
+				viewModifier(type.getAccess()),
+				ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(),
+				"E"
 			);
 		}
 
 		static std::string mangle(query::Context& ctx, tsh::SliceAbstractType type) {
 			return base::strConcat(
 				"S",
+				viewModifier(type.getAccess()),
 				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
 				"E"
 			);
@@ -1147,7 +1164,8 @@ namespace compiler::helios::mangler {
 			return base::StrID{ base::strConcat(
 				key.getRefKind() == tsh::ReferenceKind::Direct ? ""
 				: key.getRefKind() == tsh::ReferenceKind::Box  ? "X"
-															   : "R",
+				: key.getViewAccess() == tsh::ViewAccess::ReadWrite ? "RK"
+																	: "R",
 				mangle(ctx, key.getType()).valueOrThrow()
 			) };
 		}
