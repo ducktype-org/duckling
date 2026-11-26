@@ -1,0 +1,1 @@
+fun bad() -> i64 = undefined_name;

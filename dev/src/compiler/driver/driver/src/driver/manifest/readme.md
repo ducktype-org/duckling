@@ -228,3 +228,20 @@ When only raw linker flags are needed:
   ]
 }
 ```
+
+## REPL packages manifest (`duckc repl --packages`)
+
+`ReplPackagesManifest` reuses the package entries above and replaces `tasks` with the packages the
+REPL session imports:
+
+```json
+{
+  "packages":             [ /* RawPackageInfo, ... */ ],
+  "session_dependencies": [ /* RawDependencyInfo, ... */ ]
+}
+```
+
+Both fields are **required**; either may be empty. `session_dependencies` entries have the same
+shape as a package's `dependencies` (`id`, optional `alias`) and are validated the same way. The
+other `verify` rules apply, except that the packages list may be empty. The id and name
+`repl_session` are reserved.

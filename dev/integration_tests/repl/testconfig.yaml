@@ -25,3 +25,4 @@ SubDirs:
   - declarations
   - script_loading
   - variable_assignment
+  - packages

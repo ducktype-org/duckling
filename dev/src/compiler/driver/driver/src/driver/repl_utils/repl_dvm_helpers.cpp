@@ -13,6 +13,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/packages/standard_packages.hpp>
+#include <global_state/packages.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -132,42 +133,76 @@ namespace compiler::repl {
 			});
 	}
 
-	std::expected<void, std::string> preloadStandardLibrary(
+	namespace {
+		/**
+		 * @brief Lowers every module reachable from @p root_modules and loads them as one batch,
+		 * so the loader can resolve references between those modules.
+		 */
+		std::expected<void, std::string> loadModuleTrees(
+			query::Context&                        ctx,
+			vm::PID                                pid,
+			backend_vm::IncrementalDVMCodeBuilder& lowering_context,
+			const std::vector<frontend::ModuleID>& root_modules,
+			const std::vector<std::string>&        object_files
+		) {
+			if (root_modules.empty()) return {};
+
+			std::vector<frontend::ModuleID>         modules;
+			std::function<void(frontend::ModuleID)> collect_modules
+				= [&](frontend::ModuleID module_id) {
+					  modules.push_back(module_id);
+					  auto submodules = ctx.query<frontend::QuerySubmodules>(module_id);
+					  for (const auto& submodule: *submodules) collect_modules(submodule.value);
+				  };
+			for (const auto root_module: root_modules) collect_modules(root_module);
+
+			vm::code::CodeCollection preload_code;
+			for (const auto module_id: modules) {
+				auto lir_data_qr = driver::compileModuleToLIRModuleData(ctx, module_id);
+				if (lir_data_qr.hasFailed())
+					return std::unexpected("Failed to compile a module to LIR");
+				preload_code.mergeFrom(lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(
+					lir_data_qr.valueOrPanic().lir_unit
+				));
+			}
+			base::appendToVector(preload_code.object_files, object_files);
+
+			return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
+		}
+	}
+
+	std::expected<void, std::string> preloadPackages(
 		query::Context& ctx, vm::PID pid, backend_vm::IncrementalDVMCodeBuilder& lowering_context
 	) {
-		const auto root_modules = frontend::packages::standardLibraryRootModules(ctx);
-		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
-
-		// Collect every module reachable from the standard library package roots.
-		std::vector<frontend::ModuleID>         modules;
-		std::function<void(frontend::ModuleID)> collect_modules
-			= [&](frontend::ModuleID module_id) {
-				  modules.push_back(module_id);
-				  auto submodules = ctx.query<frontend::QuerySubmodules>(module_id);
-				  for (const auto& submodule: *submodules) collect_modules(submodule.value);
-			  };
-		for (const auto root_module: root_modules) collect_modules(root_module);
-
-		// Lower every module to in-memory DVM code and merge it into a single batch. Loading the
-		// whole standard library at once lets the loader resolve cross-module references that a
-		// per-module load would reject as unknown functions.
-		vm::code::CodeCollection preload_code;
-		for (const auto module_id: modules) {
-			auto lir_data_qr = driver::compileModuleToLIRModuleData(ctx, module_id);
-			if (lir_data_qr.hasFailed())
-				return std::unexpected("Failed to compile standard library module to LIR");
-			preload_code.mergeFrom(lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(
-				lir_data_qr.valueOrPanic().lir_unit
-			));
-		}
-
 		// The REPL never goes through the DVM linker, which is the only other place declaring the
 		// shared libraries the standard library needs for its `ffi object` symbols, so they are
 		// declared straight on the preloaded batch.
+		std::vector<std::string> std_object_files;
 		for (const auto& package: frontend::packages::standardLibraryPackages())
-			base::appendToVector(preload_code.object_files, package.getSharedLibsAsStr());
+			base::appendToVector(std_object_files, package.getSharedLibsAsStr());
 
-		return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
+		auto std_result = loadModuleTrees(
+			ctx,
+			pid,
+			lowering_context,
+			frontend::packages::standardLibraryRootModules(ctx),
+			std_object_files
+		);
+		if (!std_result.has_value())
+			return std::unexpected("Failed to load the standard library: " + std_result.error());
+
+		// User packages go in a separate batch so a broken one leaves the standard library usable.
+		std::vector<frontend::ModuleID> user_root_modules;
+		for (const auto& package: global_state::getPackages()) {
+			if (package.getPackageID() == base::StrID("repl_session")
+			    || frontend::packages::isStandardLibraryPackage(package.getPackageID()))
+				continue;
+			user_root_modules.push_back(package.getRootModule().illegalAccess().getID());
+		}
+		auto user_result = loadModuleTrees(ctx, pid, lowering_context, user_root_modules, {});
+		if (!user_result.has_value())
+			return std::unexpected("Failed to load packages: " + user_result.error());
+		return {};
 	}
 
 	// @TODO: #1817 This approach is hacky.

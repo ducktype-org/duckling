@@ -44,6 +44,11 @@ public:
 		TESTER_ADD_TEST(libStrategyBadArchiveOptionsFails);
 		TESTER_ADD_TEST(dvmStrategyMissingOutputFails);
 		TESTER_ADD_TEST(unknownStrategyFails);
+		TESTER_ADD_TEST(replManifestParsed);
+		TESTER_ADD_TEST(replManifestEmptyIsValid);
+		TESTER_ADD_TEST(replManifestMissingSessionDependenciesFails);
+		TESTER_ADD_TEST(replManifestUnknownSessionDependencyFails);
+		TESTER_ADD_TEST(replManifestDuplicateSessionAliasFails);
 	}
 
 protected:
@@ -460,6 +465,86 @@ private:
         );
 
 		ASSERT_NO_VALUE(result);
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	base::Optional<ReplPackagesManifest> parseReplManifest(std::string_view json_text) {
+		return ReplPackagesManifest::fromJson(
+			nlohmann::json::parse(json_text), diagnostics::makeGlobalLoggerReporter()
+		);
+	}
+
+	void replManifestParsed() {
+		clearLogger();
+
+		auto result = parseReplManifest(R"({
+            "packages": [
+                { "id": "util-1", "name": "util", "path": "pkgs/util" },
+                {
+                    "id": "lib-1",
+                    "name": "lib",
+                    "path": "pkgs/lib",
+                    "dependencies": [{ "id": "util-1" }]
+                }
+            ],
+            "session_dependencies": [{ "id": "lib-1" }, { "id": "util-1", "alias": "u" }]
+        })");
+
+		ASSERT_HAS_VALUE(result);
+		ASSERT_TRUE(result->verify(diagnostics::makeGlobalLoggerReporter()).isOk());
+		ASSERT_TRUE(logger().good());
+		ASSERT_EQUAL(result->packages.size(), 2u);
+		ASSERT_EQUAL(result->session_dependencies.size(), 2u);
+		ASSERT_EQUAL(result->session_dependencies[0].package_id.str(), std::string("lib-1"));
+		ASSERT_NO_VALUE(result->session_dependencies[0].alias);
+		ASSERT_EQUAL(result->session_dependencies[1].alias->str(), std::string("u"));
+	}
+
+	void replManifestEmptyIsValid() {
+		clearLogger();
+
+		auto result = parseReplManifest(R"({ "packages": [], "session_dependencies": [] })");
+
+		ASSERT_HAS_VALUE(result);
+		ASSERT_TRUE(result->verify(diagnostics::makeGlobalLoggerReporter()).isOk());
+		ASSERT_TRUE(logger().good());
+	}
+
+	void replManifestMissingSessionDependenciesFails() {
+		clearLogger();
+
+		auto result = parseReplManifest(R"({ "packages": [] })");
+
+		ASSERT_NO_VALUE(result);
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	void replManifestUnknownSessionDependencyFails() {
+		clearLogger();
+
+		auto result = parseReplManifest(R"({
+            "packages": [{ "id": "util-1", "name": "util", "path": "pkgs/util" }],
+            "session_dependencies": [{ "id": "missing" }]
+        })");
+
+		ASSERT_HAS_VALUE(result);
+		ASSERT_TRUE(result->verify(diagnostics::makeGlobalLoggerReporter()).isBad());
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	void replManifestDuplicateSessionAliasFails() {
+		clearLogger();
+
+		auto result = parseReplManifest(R"({
+            "packages": [
+                { "id": "a-1", "name": "a", "path": "pkgs/a" },
+                { "id": "b-1", "name": "b", "path": "pkgs/b" }
+            ],
+            "session_dependencies": [{ "id": "a-1" }, { "id": "b-1", "alias": "a" }]
+        })");
+
+		ASSERT_HAS_VALUE(result);
+		ASSERT_TRUE(result->verify(diagnostics::makeGlobalLoggerReporter()).isBad());
 		ASSERT_TRUE(logger().hasErrors());
 	}
 

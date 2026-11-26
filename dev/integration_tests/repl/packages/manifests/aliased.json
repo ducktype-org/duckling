@@ -1,0 +1,7 @@
+{
+  "packages": [
+    { "id": "util-1.0.0", "name": "util", "path": "pkgs/util/src" },
+    { "id": "lib-1.0.0", "name": "lib", "path": "pkgs/lib/src", "dependencies": [{ "id": "util-1.0.0" }] }
+  ],
+  "session_dependencies": [{ "id": "lib-1.0.0" }, { "id": "util-1.0.0", "alias": "u" }]
+}

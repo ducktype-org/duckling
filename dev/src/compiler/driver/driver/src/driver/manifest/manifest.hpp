@@ -62,4 +62,37 @@ namespace compiler::driver {
 		 */
 		[[nodiscard]] base::OkBad verify(const manifest::DiagnosticReporter& report) const;
 	};
+
+	/**
+	 * @brief Packages made available to a REPL session (`duckc repl --packages`).
+	 * Packages are compiled from source and loaded at session start; cells can import only the
+	 * packages listed in @c session_dependencies.
+	 */
+	struct ReplPackagesManifest final {
+		/**
+		 * @brief Every package the session needs, including transitive dependencies of the
+		 * importable ones. May be empty.
+		 */
+		std::vector<compiler::frontend::packages::RawPackageInfo> packages;
+
+		/**
+		 * @brief Packages importable from REPL cells, with optional aliases.
+		 */
+		std::vector<compiler::frontend::packages::RawDependencyInfo> session_dependencies;
+
+		/**
+		 * @brief Parse a REPL packages manifest from JSON.
+		 */
+		static base::Optional<ReplPackagesManifest> fromJson(
+			const nlohmann::json& json, const manifest::DiagnosticReporter& report
+		);
+
+		/**
+		 * @brief Verifies the packages like PackageCompilationManifest::verify, without requiring a
+		 * non-empty list, and checks @c session_dependencies like a package's dependencies.
+		 * @param report Reporter that receives any encountered diagnostics.
+		 * @return base::OkBad indicating whether the manifest is valid.
+		 */
+		[[nodiscard]] base::OkBad verify(const manifest::DiagnosticReporter& report) const;
+	};
 }

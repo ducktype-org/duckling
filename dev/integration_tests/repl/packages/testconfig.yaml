@@ -1,0 +1,71 @@
+# `duckc repl --packages <manifest>`: user packages importable from REPL cells.
+# Manifest package paths are relative to the working directory (this directory).
+
+packages_run: "@{duckc_path} repl --plain-output --custom-std-artifacts-path @{case_std_artifacts} --packages"
+
+Tests:
+  imports:
+    TimeOut: 20
+    Cases:
+      session-dependency:
+        Run: "@{packages_run} manifests/lib_only.json"
+        Input:
+          String: "import lib;\nlib.sixTimes(7)\n"
+        Output:
+          String: "42\n"
+      alias:
+        Run: "@{packages_run} manifests/aliased.json"
+        Input:
+          String: "import u;\nu.triple(5)\n"
+        Output:
+          String: "15\n"
+      transitive-dependency-hidden:
+        Run: "@{packages_run} manifests/lib_only.json"
+        Input:
+          String: "import util;\nutil.triple(2)\nimport lib;\nlib.twice(2)\n"
+        Output:
+          String: "4\n"
+      empty-manifest:
+        Run: "@{packages_run} manifests/empty.json"
+        Input:
+          String: "2 + 2\n"
+        Output:
+          String: "4\n"
+      broken-package-keeps-std:
+        Run: "@{packages_run} manifests/broken_package.json"
+        Input:
+          String: "import core.builtins.*;\nbuiltin_output_i64(5)\n"
+        Output:
+          String: "5\n2\n"
+      reset-keeps-packages:
+        TimeOut: 40
+        Run: "cp -r pkgs manifests \"$DIT_TMP_DIR\" && cd \"$DIT_TMP_DIR\" && @{packages_run} manifests/lib_only.json"
+        Input:
+          String: "import lib;\nlib.twice(4)\n1\n/reset 2\n"
+        Output:
+          String: "8\n1\n8\n"
+
+  invalid-manifest:
+    TimeOut: 20
+    Cases:
+      malformed-json:
+        Run: "@{packages_run} manifests/broken.json"
+        Input:
+          String: "1\n"
+        Output:
+          String: ""
+        ExitCode: 1
+      unknown-session-dependency:
+        Run: "@{packages_run} manifests/unknown_session_dep.json"
+        Input:
+          String: "1\n"
+        Output:
+          String: ""
+        ExitCode: 1
+      reserved-package-name:
+        Run: "@{packages_run} manifests/reserved_name.json"
+        Input:
+          String: "1\n"
+        Output:
+          String: ""
+        ExitCode: 1

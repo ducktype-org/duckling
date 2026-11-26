@@ -240,7 +240,9 @@ namespace compiler::driver {
 		 * The module is otherwise unused.
 		 * @TODO: #2762 probably remove this
 		 */
-		std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
+		std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage(
+			std::vector<compiler::frontend::packages::RawDependencyInfo> dependencies = {}
+		) {
 			auto package_root_file
 				= fs::FileManager::createRandomVirtualFile("", compiler::frontend::LANG_MODULE_FILE);
 			std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
@@ -250,10 +252,30 @@ namespace compiler::driver {
 					.version      = base::StrID("0.1.0"),
 					.package_path = package_root_file.getFilePath(),
 					.features     = {},
-					.dependencies = {},
+					.dependencies = std::move(dependencies),
 				},
 			};
 			return repl_packages_info;
+		}
+	}
+
+	namespace {
+		base::OkBad reportReservedReplPackageNames(
+			const std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info
+		) {
+			const base::StrID reserved("repl_session");
+			for (const auto& package_info: packages_info) {
+				if (package_info.package_id != reserved && package_info.package_name != reserved)
+					continue;
+				auto report = diagnostics::makeGlobalLoggerReporter();
+				report(
+					base::strConcat("Package with name `", reserved.strView(), "` already exist."),
+					"The name is reserved for the REPL session.",
+					true
+				);
+				return base::BAD;
+			}
+			return base::OK;
 		}
 	}
 
@@ -297,7 +319,10 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				auto repl_packages_info = getScriptStubPackage();
+				auto repl_packages_info = getScriptStubPackage(repl_options.session_dependencies);
+				if (reportReservedReplPackageNames(repl_options.packages_info).isBad())
+					return base::BAD;
+				base::appendToVector(repl_packages_info, repl_options.packages_info);
 
 				auto package_success
 					= handlePackageOptions(repl_packages_info, repl_options.stdlib_options);
