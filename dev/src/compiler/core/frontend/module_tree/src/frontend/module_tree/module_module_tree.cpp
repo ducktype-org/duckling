@@ -67,7 +67,7 @@ namespace compiler::frontend {
 	ModuleChildAccessLocked ModuleModuleTreeNode::getSubmoduleByName(base::StrID name) const {
 		base::Optional<ModuleID> child;
 		if (auto it = m_submodules.find(name); it != m_submodules.end())
-			child = it->second->getModuleID();
+			child = it->value->getModuleID();
 		return ModuleChildAccessLocked(getModuleID(), name, child);
 	}
 }
