@@ -6,6 +6,7 @@
 
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -2540,6 +2541,7 @@ private:
 
 		const auto sub_root_scope_any = query::utils::withContextCompute([&](query::Context& ctx) {
 			const auto sub_module = compiler::frontend::getModuleRef(module)
+			                            ->as<compiler::frontend::ModuleModuleTreeNode>()
 			                            ->getSubmoduleByName(base::StrID{ "sub" })
 			                            .unlock(ctx)
 			                            ->unlock(ctx)

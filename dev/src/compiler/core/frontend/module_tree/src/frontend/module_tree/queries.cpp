@@ -7,6 +7,7 @@
 #include "queries.hpp"
 
 #include "functors.hpp"
+#include "module_module_tree.hpp"
 #include "module_tree.hpp"
 
 #include <frontend/module_tree/access.hpp>
@@ -34,7 +35,8 @@ namespace compiler::frontend {
 		) {
 			auto module_ref = getModuleRef(module);
 			if (module_ref->getKind() != ModuleKind::Module) return {};
-			auto maybe_child = module_ref->getSubmoduleByName(name).unlock(ctx);
+			auto maybe_child
+				= module_ref->as<ModuleModuleTreeNode>()->getSubmoduleByName(name).unlock(ctx);
 			if (not maybe_child.has_value()) return {};
 			return maybe_child.value().unlock(ctx).getID();
 		}

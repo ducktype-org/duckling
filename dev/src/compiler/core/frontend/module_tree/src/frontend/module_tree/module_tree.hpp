@@ -180,33 +180,6 @@ namespace compiler::frontend {
 		FileAccessLocked getMainSourceFile() const;
 
 		/**
-		 * Accesses the submodules located in this module.
-		 *
-		 * @note Panics on REPL chain and script modules, they have no submodules. Check getKind()
-		 * first.
-		 * @note Use this only if you need all submodules. For single submodule access, use
-		 * getSubmoduleByName().
-		 * @return A lazy view that can be unlocked within a query context or accessed illegally
-		 * (outside queries).
-		 */
-		[[nodiscard]]
-		virtual SubmodulesAccessLocked getSubmodules() const;
-
-		/**
-		 * Access a single submodule edge by name.
-		 *
-		 * @note Panics on REPL chain and script modules, they have no submodules. Check getKind()
-		 * first.
-		 *
-		 * Registers dependency via QueryModuleChildSideInput when unlocked.
-		 * Use this function in lookups when you need only a submodule with some name.
-		 * @param name Name of the submodule to access.
-		 * @return AccessLocked wrapper that may contain the submodule if it exists.
-		 */
-		[[nodiscard]]
-		virtual ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
-
-		/**
 		 * Accesses all the other files that are located inside the module.
 		 * @return A base::HashMap that maps a file extension to a vector
 		 * with files with this extension.

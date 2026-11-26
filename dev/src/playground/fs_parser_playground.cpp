@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 
@@ -22,7 +23,8 @@ namespace {
 	void countFiles(const compiler::frontend::ModuleTree& tree) {
 		file_counter += tree.hasMainSourceFile() ? 1 : 0;
 		for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
-		for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
+		for (const auto& submodule:
+		     tree.as<compiler::frontend::ModuleModuleTreeNode>()->getSubmodules().illegalAccess()) {
 			countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
 			dir_counter++;
 		}

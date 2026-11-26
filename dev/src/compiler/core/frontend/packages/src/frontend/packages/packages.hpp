@@ -86,7 +86,7 @@ namespace compiler::frontend::packages {
 
 		/**
 		 * @brief Direct dependencies declared by the package.
-		 * Mirrors ModuleTree::getSubmodules — on unlock registers
+		 * Mirrors ModuleModuleTreeNode::getSubmodules — on unlock registers
 		 * QueryPackageDependencyCountSideInput so consumers depending on the dependency list
 		 * are invalidated when its size changes; outside queries use illegalAccess.
 		 */

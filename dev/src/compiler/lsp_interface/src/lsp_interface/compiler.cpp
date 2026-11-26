@@ -10,6 +10,7 @@
 #include <driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
+#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
@@ -107,7 +108,8 @@ namespace duck_ls {
 				);
 			main_file->getPST()->getLogger()->collectDiagnostics(out);
 
-			for (const auto& submodule_id_locked: module->getSubmodules().illegalAccess())
+			for (const auto& submodule_id_locked:
+			     module->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess())
 				collectErrorsFromModuleTree(
 					getModuleRef(submodule_id_locked.illegalAccess().getID()), out
 				);
@@ -122,7 +124,8 @@ namespace duck_ls {
 			if (main_file->getPST()->getLogger()->hasErrors()) return false;
 
 			bool all_submodules_parsed_successfully = true;
-			for (const auto& submodule_id_locked: module->getSubmodules().illegalAccess())
+			for (const auto& submodule_id_locked:
+			     module->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess())
 				all_submodules_parsed_successfully &= isModuleTreeParsedSuccessfully(
 					getModuleRef(submodule_id_locked.illegalAccess().getID())
 				);

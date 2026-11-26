@@ -5,6 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 
@@ -36,7 +37,9 @@ int main() {
 		}
 
 		// Each unlock(ctx) emits a QueryModuleSideInput edge so incremental rebuilds know what changed.
-		for (const auto& submodule_locked: module_tree->getSubmodules().unlock(ctx)) {
+		for (const auto& submodule_locked:
+		     module_tree->as<compiler::frontend::ModuleModuleTreeNode>()->getSubmodules().unlock(ctx
+		     )) {
 			const auto submodule_access = submodule_locked.unlock(ctx);
 			submodules.emplace_back(getModuleRef(submodule_access.getID()));
 		}

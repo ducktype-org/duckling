@@ -54,8 +54,26 @@ namespace compiler::frontend {
 
 		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const override;
 
-		SubmodulesAccessLocked getSubmodules() const override;
+		/**
+		 * @brief Accesses the submodules located in this module.
+		 *
+		 * @note Use this only if you need all submodules. For single submodule access, use
+		 * getSubmoduleByName().
+		 * @return A lazy view that can be unlocked within a query context or accessed illegally
+		 * (outside queries).
+		 */
+		[[nodiscard]]
+		SubmodulesAccessLocked getSubmodules() const;
 
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override;
+		/**
+		 * @brief Access a single submodule edge by name.
+		 *
+		 * Registers dependency via QueryModuleChildSideInput when unlocked.
+		 * Use this function in lookups when you need only a submodule with some name.
+		 * @param name Name of the submodule to access.
+		 * @return AccessLocked wrapper that may contain the submodule if it exists.
+		 */
+		[[nodiscard]]
+		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
 	};
 }

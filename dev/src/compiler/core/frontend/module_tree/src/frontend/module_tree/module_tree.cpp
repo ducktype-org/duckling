@@ -109,16 +109,8 @@ namespace compiler::frontend {
 		return FileAccessLocked(main_source_file.value()->getFileID());
 	}
 
-	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
-		CORE_PANIC("getSubmodules called on a module that does not support submodules!");
-	}
-
 	packages::PackageAccessLocked ModuleTree::getPackage() const {
 		return packages::PackageAccessLocked(m_package_id);
-	}
-
-	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID) const {
-		CORE_PANIC("getSubmoduleByName called on a module that does not support submodules!");
 	}
 
 	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
@@ -327,7 +319,8 @@ namespace compiler::frontend {
 			// PR: this should use child modules insted of getSubmodules
 			// but collectChildrenModules is private, figure this out
 			if (module_tree->getKind() != ModuleKind::Module) return;
-			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
+			const auto module_node = module_tree->as<ModuleModuleTreeNode>();
+			for (const auto& submodule: module_node->getSubmodules().illegalAccess())
 				self(submodule.illegalAccess().getID());
 		};
 		collect_files(module_id);
@@ -496,8 +489,9 @@ namespace compiler::frontend {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
-			PResult out{};
-			for (const auto& module: module_tree->getSubmodules().unlock(ctx)) {
+			PResult    out{};
+			const auto module_node = module_tree->as<ModuleModuleTreeNode>();
+			for (const auto& module: module_node->getSubmodules().unlock(ctx)) {
 				auto module_id  = module.unlock(ctx).getID();
 				auto module_ref = getModuleRef(module_id);
 				out.put(module_ref->getName(), module_id);

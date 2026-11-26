@@ -7,6 +7,7 @@
 #include "collect_input.hpp"
 
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
@@ -107,7 +108,9 @@ namespace compiler::driver {
 			const bool has_submodules = module_ref->getKind() == ModuleKind::Module;
 
 			auto submodules_count
-				= has_submodules ? module_ref->getSubmodules().illegalAccess().size() : 0;
+				= has_submodules
+			        ? module_ref->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess().size()
+			        : 0;
 			out->emplace_back(
 				QuerySubmoduleCountSideInput::getID(),
 				KeyOf_SubmoduleCountSideInput::computeHash(module_id, submodules_count)
@@ -120,8 +123,9 @@ namespace compiler::driver {
 			if (has_submodules and lookup_res.has_value()) {
 				for (const auto& lookup: *lookup_res.value()) {
 					// Check if the lookup is still valid
-					auto child_ref
-						= module_ref->getSubmoduleByName(lookup.child_name).illegalAccess();
+					auto child_ref = module_ref->as<ModuleModuleTreeNode>()
+					                     ->getSubmoduleByName(lookup.child_name)
+					                     .illegalAccess();
 					bool found = child_ref.has_value();
 
 					// If the lookup result is the same as before, we can reuse the stored InputData
@@ -150,7 +154,8 @@ namespace compiler::driver {
 
 			// Recurse into submodules
 			if (has_submodules)
-				for (const auto& submodule: module_ref->getSubmodules().illegalAccess())
+				for (const auto& submodule:
+				     module_ref->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess())
 					collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
 		}
 

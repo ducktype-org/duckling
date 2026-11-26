@@ -6,6 +6,7 @@
 
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
+#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
@@ -51,10 +52,9 @@ namespace {
 		throw std::out_of_range("Submodule not found");
 	}
 
-	ModuleAccessLocked getSubmoduleIllegal(
-		const SubmodulesAccessLocked& submodules, base::StrID name
-	) {
-		return getSubmodule(submodules.illegalAccess(), name);
+	// Helper to list the submodules of a standard module outside queries
+	std::vector<ModuleAccessLocked> submodulesOf(base::CRef<ModuleTree> module) {
+		return module->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess();
 	}
 }
 
@@ -151,9 +151,9 @@ private:
 		);
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
-		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
+		ASSERT_EQUAL(2, submodulesOf(mt).size());
 
-		auto awe = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
+		auto awe = getSubmodule(submodulesOf(mt), base::StrID("awe"));
 		ASSERT_TRUE(getRef(awe)->hasMainSourceFile());
 		assertTrue(
 			getFileRef(getRef(awe)->getMainSourceFile().illegalAccess().getID())
@@ -163,7 +163,7 @@ private:
 			"The substituted file must back the module, not the one on disk"
 		);
 
-		auto another = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
+		auto another = getSubmodule(submodulesOf(mt), base::StrID("another"));
 		assertTrue(
 			getFileRef(getRef(another)->getMainSourceFile().illegalAccess().getID())
 				->getFileIllegalAccess()
@@ -182,23 +182,22 @@ private:
         );
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
-		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
+		ASSERT_EQUAL(2, submodulesOf(mt).size());
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 
-		auto another_module
-			= getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
+		auto another_module = getSubmodule(submodulesOf(mt), base::StrID("another"));
 		ASSERT_TRUE(getRef(another_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
 			2, getRef(another_module)->getOtherFiles().size()
 		);  // 2, because there are 2 different file extensions
 		ASSERT_EQUAL(2, getRef(another_module)->getOtherFiles()[base::StrID(".txt")].size());
 		ASSERT_EQUAL(1, getRef(another_module)->getOtherFiles()[base::StrID("")].size());
-		ASSERT_EQUAL(1, getRef(another_module)->getSubmodules().illegalAccess().size());
+		ASSERT_EQUAL(1, submodulesOf(getRef(another_module)).size());
 
 
-		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe")));
-		auto awe_module = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
-		ASSERT_EQUAL(0, getRef(awe_module)->getSubmodules().illegalAccess().size());
+		ASSERT_TRUE(hasSubmodule(submodulesOf(mt), base::StrID("awe")));
+		auto awe_module = getSubmodule(submodulesOf(mt), base::StrID("awe"));
+		ASSERT_EQUAL(0, submodulesOf(getRef(awe_module)).size());
 		ASSERT_EQUAL(0, getRef(awe_module)->getOtherFiles().size());
 		ASSERT_TRUE(getRef(awe_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
@@ -239,23 +238,15 @@ private:
 			getRef(mt->getMainSourceFile())->getFileIllegalAccess().getContent().view()
 		);
 		ASSERT_TRUE(mt->getParentModule().empty());
+		auto awe_module = getSubmodule(submodulesOf(mt), base::StrID("awe"));
 		ASSERT_EQUAL(
-			mt->getName(),
-			getRef(getRef(getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe")))
-		               ->getParentModule()
-		               .value())
-				->getName()
+			mt->getName(), getRef(getRef(awe_module)->getParentModule().value())->getName()
 		);
 
-		auto awe_module = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
-		auto another_module
-			= getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
-		auto awesome_module = getSubmodule(
-			getRef(another_module)->getSubmodules().illegalAccess(), base::StrID("awesome_module")
-		);
-		auto mod_module = getSubmodule(
-			getRef(awesome_module)->getSubmodules().illegalAccess(), base::StrID("mod")
-		);
+		auto another_module = getSubmodule(submodulesOf(mt), base::StrID("another"));
+		auto awesome_module
+			= getSubmodule(submodulesOf(getRef(another_module)), base::StrID("awesome_module"));
+		auto mod_module = getSubmodule(submodulesOf(getRef(awesome_module)), base::StrID("mod"));
 
 
 		testModuleIDInSourceFile(getRef(awe_module));
@@ -324,13 +315,8 @@ private:
 		// Since ModuleTree does not expose raw file names, we check via submodules and files.
 
 		// Check submodules (directories)
-		ASSERT_TRUE(
-			hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another_directory"))
-		);
-		ASSERT_EQUAL(
-			false,
-			hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID(".skipped_directory"))
-		);
+		ASSERT_TRUE(hasSubmodule(submodulesOf(mt), base::StrID("another_directory")));
+		ASSERT_EQUAL(false, hasSubmodule(submodulesOf(mt), base::StrID(".skipped_directory")));
 
 		// Check files (source/other)
 		bool found_file = false, found_file_txt = false, found_skipped = false;
@@ -359,8 +345,7 @@ private:
 		ASSERT_TRUE(checked_content);
 
 		// Check submodule's files
-		auto another_dir
-			= getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another_directory"));
+		auto another_dir = getSubmodule(submodulesOf(mt), base::StrID("another_directory"));
 		ASSERT_EQUAL(0, getRef(another_dir)->getOtherFiles().size());
 	}
 
@@ -384,8 +369,8 @@ private:
 		ASSERT_EQUAL(root.name(), mt->getName().strView());
 
 		// Test submodules (directories)
-		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("subDir1")));
-		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("subDir2")));
+		ASSERT_TRUE(hasSubmodule(submodulesOf(mt), base::StrID("subDir1")));
+		ASSERT_TRUE(hasSubmodule(submodulesOf(mt), base::StrID("subDir2")));
 
 		// Test files in root (should be in other files or source files)
 		bool found_file1 = false;
@@ -400,7 +385,7 @@ private:
 		ASSERT_TRUE(found_file1);
 
 		// Test files in subDir1
-		auto sub1 = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("subDir1"));
+		auto sub1        = getSubmodule(submodulesOf(mt), base::StrID("subDir1"));
 		bool found_file2 = false;
 		for (const auto& [ext, files]: getRef(sub1)->getOtherFiles()) {
 			for (const auto& file: files) {
@@ -465,7 +450,7 @@ private:
 		auto sub_mod
 			= ModuleModuleTreeBuilder::create(sub_dir, base::StrID("modifier_test_package_id65"));
 		ModuleModuleTreeModifier::addSubmodule(mt, sub_mod);
-		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), sub_mod->getName()));
+		ASSERT_TRUE(hasSubmodule(submodulesOf(mt), sub_mod->getName()));
 		// Remove parent
 		ModuleModuleTreeModifier::removeParent(sub_mod);
 		ASSERT_NO_VALUE(sub_mod->getParentModule());
@@ -475,9 +460,7 @@ private:
 
 		// Test removeModule
 		ModuleModuleTreeModifier::removeSingleModule(sub_mod);
-		ASSERT_EQUAL(
-			false, hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("submod"))
-		);
+		ASSERT_EQUAL(false, hasSubmodule(submodulesOf(mt), base::StrID("submod")));
 
 		// Test fileModified (should not throw)
 		// auto src_file
@@ -495,9 +478,7 @@ private:
 
 			// Add as submodule
 			ModuleModuleTreeModifier::addSubmodule(mt, removable_sub_mod);
-			ASSERT_TRUE(
-				hasSubmodule(mt->getSubmodules().illegalAccess(), removable_sub_mod->getName())
-			);
+			ASSERT_TRUE(hasSubmodule(submodulesOf(mt), removable_sub_mod->getName()));
 
 			// Check that main file exists in SourceFile::file_map
 			ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
@@ -509,9 +490,7 @@ private:
 
 			// Remove the submodule
 			ModuleModuleTreeModifier::removeSingleModule(removable_sub_mod);
-			ASSERT_EQUAL(
-				false, hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("removable"))
-			);
+			ASSERT_EQUAL(false, hasSubmodule(submodulesOf(mt), base::StrID("removable")));
 		}
 
 		{
@@ -568,20 +547,15 @@ private:
 		ModuleModuleTreeModifier::addSubmodule(child, grand_child);
 		ModuleModuleTreeModifier::addSubmodule(root, child);
 
-		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
-		);
+		ASSERT_TRUE(hasSubmodule(submodulesOf(root), base::StrID("removal_child")));
 		auto child_id       = child->getModuleID();
 		auto grand_child_id = grand_child->getModuleID();
 
 		ModuleModuleTreeModifier::removeSingleModule(child);
 
-		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"))
-		);
-		ASSERT_EQUAL(
-			false, hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
-		);
-		auto promoted
-			= getSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"));
+		ASSERT_TRUE(hasSubmodule(submodulesOf(root), base::StrID("removal_grand")));
+		ASSERT_EQUAL(false, hasSubmodule(submodulesOf(root), base::StrID("removal_child")));
+		auto promoted = getSubmodule(submodulesOf(root), base::StrID("removal_grand"));
 		ASSERT_HAS_VALUE(getRef(promoted)->getParentModule());
 		ASSERT_EQUAL(
 			root->getModuleID(), getRef(getRef(promoted)->getParentModule().value())->getModuleID()
@@ -633,11 +607,8 @@ private:
 
 		ModuleModuleTreeModifier::removeModuleRecursive(child);
 
-		ASSERT_EQUAL(
-			false,
-			hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("recursive_child"))
-		);
-		ASSERT_TRUE(root->getSubmodules().illegalAccess().empty());
+		ASSERT_EQUAL(false, hasSubmodule(submodulesOf(root), base::StrID("recursive_child")));
+		ASSERT_TRUE(submodulesOf(root).empty());
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
 							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
@@ -702,17 +673,16 @@ private:
 		// Check structure
 		ASSERT_EQUAL("manual_mod", mt->getName().strView());
 		ASSERT_TRUE(mt->hasMainSourceFile());
-		ASSERT_TRUE(hasSubmodule(parent_mod->getSubmodules().illegalAccess(), mt->getName()));
+		ASSERT_TRUE(hasSubmodule(submodulesOf(parent_mod), mt->getName()));
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
-		ASSERT_EQUAL(1, mt->getSubmodules().illegalAccess().size());
+		ASSERT_EQUAL(1, submodulesOf(mt).size());
 		ASSERT_EQUAL(
 			"subdir",
-			getRef(getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("subdir")))
-				->getName()
-				.strView()
+			getRef(getSubmodule(submodulesOf(mt), base::StrID("subdir")))->getName().strView()
 		);
-		ASSERT_TRUE(getRef(getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("subdir")))
-		                ->hasMainSourceFile());
+		ASSERT_TRUE(
+			getRef(getSubmodule(submodulesOf(mt), base::StrID("subdir")))->hasMainSourceFile()
+		);
 		// Check parent
 		ASSERT_HAS_VALUE(mt->getParentModule());
 		ASSERT_EQUAL("parent_mod", getRef(mt->getParentModule().value())->getName().strView());
@@ -754,7 +724,11 @@ private:
 		ASSERT_EQUAL(script->getKind(), ModuleKind::Script);
 		ASSERT_EQUAL(script->getParentModule()->illegalAccess().getID(), root->getModuleID());
 		ASSERT_EQUAL(
-			root->getSubmoduleByName(base::StrID("script")).illegalAccess()->illegalAccess().getID(),
+			root->as<ModuleModuleTreeNode>()
+				->getSubmoduleByName(base::StrID("script"))
+				.illegalAccess()
+				->illegalAccess()
+				.getID(),
 			script->getModuleID()
 		);
 
@@ -801,7 +775,9 @@ private:
 
 		// Removing the script removes its whole chain and unlinks it from the root.
 		ModuleTreeModifierCommon::removeModuleRecursive(script);
-		ASSERT_NO_VALUE(root->getSubmoduleByName(base::StrID("script")).illegalAccess());
+		ASSERT_NO_VALUE(root->as<ModuleModuleTreeNode>()
+		                    ->getSubmoduleByName(base::StrID("script"))
+		                    .illegalAccess());
 	}
 
 	void testReplChainKindSpecificHash() {
@@ -842,18 +818,16 @@ private:
 			!= ModuleTree::getModuleHash(below_chain->getModuleID())
 		);
 
-		// Script and REPL chain modules have no submodules: asking for them panics.
-		bool exception_thrown = false;
-		try {
-			std::ignore = below_chain->getSubmoduleByName(base::StrID("x"));
-		} catch (const std::exception&) { exception_thrown = true; }
-		ASSERT_TRUE(exception_thrown);
-
-		exception_thrown = false;
-		try {
-			std::ignore = script_head->getSubmodules();
-		} catch (const std::exception&) { exception_thrown = true; }
-		ASSERT_TRUE(exception_thrown);
+		// Script and REPL chain modules are not standard modules, so they have no submodules:
+		// casting them to a standard module panics.
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { std::ignore = below_chain->as<ModuleModuleTreeNode>(); },
+							  "A REPL chain module is not a standard module"
+		);)
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { std::ignore = script_head->as<ModuleModuleTreeNode>(); },
+							  "A script module is not a standard module"
+		);)
 	}
 
 	void testComponentHash() {
@@ -889,9 +863,9 @@ private:
 		);
 
 		// Ensure submodule hashes differ from parent and from each other
-		auto sub1   = getSubmodule(mt1->getSubmodules().illegalAccess(), base::StrID("sub1"));
-		auto sub2   = getSubmodule(mt1->getSubmodules().illegalAccess(), base::StrID("sub2"));
-		auto subsub = getSubmoduleIllegal(getRef(sub1)->getSubmodules(), base::StrID("subsub"));
+		auto sub1   = getSubmodule(submodulesOf(mt1), base::StrID("sub1"));
+		auto sub2   = getSubmodule(submodulesOf(mt1), base::StrID("sub2"));
+		auto subsub = getSubmodule(submodulesOf(getRef(sub1)), base::StrID("subsub"));
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
