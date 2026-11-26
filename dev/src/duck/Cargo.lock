@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "duck"
-version = "0.3.0"
+version = "0.3.2"
 dependencies = [
  "clap",
  "clap_complete",
@@ -545,7 +545,7 @@ dependencies = [
 
 [[package]]
 name = "duck_core"
-version = "0.3.0"
+version = "0.3.2"
 dependencies = [
  "chrono",
  "clap",
@@ -1542,7 +1542,7 @@ dependencies = [
 
 [[package]]
 name = "quackpack"
-version = "0.3.0"
+version = "0.3.2"
 dependencies = [
  "base64",
  "chrono",
