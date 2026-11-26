@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
-project(Duckling VERSION 0.3)
+project(Duckling VERSION 0.3.2oij)
 
 set(DUCKLING_VERSION_PRERELEASE "alpha")
 
