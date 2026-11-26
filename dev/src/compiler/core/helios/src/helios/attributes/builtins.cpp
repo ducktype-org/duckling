@@ -165,10 +165,10 @@ namespace compiler::helios {
 			};
 		}
 		case BuiltinKind::SliceFromPtrLen: {
-			auto&      decl            = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			auto&      decl              = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			const auto result_value_type = decl.return_type;
-			auto       slice_type      = result_value_type.getType().as<tsh::SliceAbstractType>();
-			auto       slice_fields    = ctx.query<QuerySliceTypeData>(slice_type);
+			auto       slice_type        = result_value_type.getType().as<tsh::SliceAbstractType>();
+			auto       slice_fields      = ctx.query<QuerySliceTypeData>(slice_type);
 
 			using Variable = defgen::GeneratedFunctionVariable;
 

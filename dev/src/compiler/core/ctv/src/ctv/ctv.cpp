@@ -142,13 +142,9 @@ namespace compiler::ctv {
 
 	tsh::ValueType<> CompileTimeValue::getTypeOfStoredValue(query::Context& ctx) const {
 		variant_match(value) {
-			variant_case_novalue(bool) {
-				return tsh::ValueType<>::direct(tsh::getBoolType());
-			}
+			variant_case_novalue(bool) { return tsh::ValueType<>::direct(tsh::getBoolType()); }
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
-			variant_case_novalue(char) {
-				return tsh::ValueType<>::direct(tsh::getCharType());
-			}
+			variant_case_novalue(char) { return tsh::ValueType<>::direct(tsh::getCharType()); }
 			variant_case_novalue(CharSliceValue) {
 				return tsh::ValueType<>::direct(tsh::getCharSliceType(ctx));
 			}
@@ -159,9 +155,7 @@ namespace compiler::ctv {
 				);
 				return tsh::ValueType<>::direct(tsh::getStringType(ctx));
 			}
-			variant_case_novalue(UnitCTV) {
-				return tsh::ValueType<>::direct(tsh::getUnitType());
-			}
+			variant_case_novalue(UnitCTV) { return tsh::ValueType<>::direct(tsh::getUnitType()); }
 			variant_case(TypeTuple, tuple) {
 				std::vector<tsh::ValueType<>> component_types;
 				component_types.reserve(tuple.getElements().size());

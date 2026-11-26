@@ -437,8 +437,9 @@ namespace compiler::helios {
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
 			auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 
-			const tsh::SymbolType& symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-			const auto&            value_type = symbol_type.getValueType();
+			const tsh::SymbolType& symbol_type
+				= ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
+			const auto& value_type = symbol_type.getValueType();
 
 			if (stmt->getValue().empty()) {
 				// no initial value case
@@ -457,8 +458,7 @@ namespace compiler::helios {
 				}
 				auto initial_value = initial_value_qresult.valueOrThrow();
 
-				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, value_type, symbol)
-				);
+				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, value_type, symbol));
 			} else {
 				auto initial_value_coerced = getHoutOfExprWithExpectedType(
 												 ctx,

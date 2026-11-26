@@ -1009,7 +1009,8 @@ namespace compiler::helios::code {
 				auto elem_type_of_empty_array = tsh::ValueType<>::direct(tsh::getUnitType());
 
 				auto type = ctx.query<tsh::QueryStaticArrayType>(
-					{ .element_type=elem_type.copyValueOr(elem_type_of_empty_array), .size=elems.size() }
+					{ .element_type = elem_type.copyValueOr(elem_type_of_empty_array),
+				      .size         = elems.size() }
 				);
 				node = makeBox<CreateAggregateExpr>(ctx, pstOrigin(stmt), type, std::move(elems));
 			}
