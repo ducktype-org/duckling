@@ -380,29 +380,54 @@ entry:
 			"Large array copy must not use a whole-aggregate load or store"
 		);
 
+		auto check_aggregate_attributes = [&](const std::string& attributes) {
+			assertTrue(
+				std::regex_search(attributes, std::regex{ R"(\bnoalias\b)" }),
+				"Expected noalias on the aggregate parameter"
+			);
+			assertTrue(
+				std::regex_search(attributes, std::regex{ R"(\bnonnull\b)" }),
+				"Expected nonnull on the aggregate parameter"
+			);
+			assertTrue(
+				std::regex_search(attributes, std::regex{ R"(\balign\s+8\b)" }),
+				"Expected aggregate parameter alignment of 8 bytes"
+			);
+			assertTrue(
+				std::regex_search(attributes, std::regex{ R"(\bdereferenceable\(792000\))" }),
+				"Expected 792000 dereferenceable bytes"
+			);
+			assertFalse(
+				std::regex_search(attributes, std::regex{ R"(\bbyval\b)" }),
+				"Default ABI aggregate parameter must not use byval"
+			);
+		};
+
 		const std::string large_sink_ir = function_ir("large_array_sink");
+		// Extract the first parameter's attributes, stopping before its '%' name.
+		std::smatch parameter_match;
 		assertTrue(
-			std::regex_search(
-				large_sink_ir,
-				std::regex{
-					R"(define[^\n]*large_array_sink[^\n]*\(ptr[^,\n]*byval\(\[99000\s+x\s+i64\]\))" }
-			),
-			"Expected a large array parameter to use ptr byval([99000 x i64])"
+			std::regex_search(large_sink_ir, parameter_match, std::regex{ R"(\(ptr\b([^%\n]*))" }),
+			"Expected a pointer parameter"
 		);
+		check_aggregate_attributes(parameter_match[1].str());
 		assertFalse(
 			std::regex_search(large_sink_ir, std::regex{ R"(load\s+\[99000\s+x\s+i64\])" }),
-			"A byval array parameter must not be loaded as one aggregate"
+			"An indirect array parameter must not be loaded as one aggregate"
 		);
 
 		const std::string large_identity_ir = function_ir("large_array_identity");
+		// The first parameter is sret; the aggregate argument is the second one.
 		assertTrue(
 			std::regex_search(
 				large_identity_ir,
-				std::regex{
-					R"(define\s+void[^\n]*large_array_identity[^\n]*\(ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,\n]*,\s*ptr[^,\n]*byval\(\[99000\s+x\s+i64\]\))" }
+				parameter_match,
+				std::regex{ R"(\(ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,\n]*,\s*ptr\b([^%\n]*))" }
 			),
-			"Expected a hidden sret result followed by a byval array parameter"
+			"Expected sret followed by an indirect aggregate parameter"
 		);
+		check_aggregate_attributes(parameter_match[1].str());
+
 		assertTrue(
 			std::regex_search(
 				large_identity_ir,
@@ -418,17 +443,30 @@ entry:
 		);
 
 		const std::string large_forward_ir = function_ir("large_array_forward");
+
+		const bool found_forward = std::regex_search(
+			large_forward_ir,
+			parameter_match,
+			std::regex{ R"(\(ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,\n]*,\s*ptr\b([^%\n]*))" }
+		);
+
+		assertTrue(found_forward, "Expected a pointer parameter");
+		if (not found_forward) return;
+
+		const std::string attributes_forward = parameter_match[1].str();
+		check_aggregate_attributes(attributes_forward);
+
 		assertTrue(
 			std::regex_search(
 				large_forward_ir,
 				std::regex{
-					R"(define\s+void[^\n]*large_array_forward[^\n]*\(\s*ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,%\n]*(%[-A-Za-z0-9$._]+),[^\n]*\)[^{]*\{[\s\S]*?call\s+void[^\n]*large_array_identity[^\n]*\(\s*ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,%\n]*\1,\s*ptr[^,\n]*byval\(\[99000\s+x\s+i64\]\))" }
+					R"(define\s+void[^\n]*large_array_forward[^\n]*\(\s*ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,%\n]*(%[-A-Za-z0-9$._]+),[^\n]*\)[^{]*\{[\s\S]*?call\s+void[^\n]*large_array_identity[^\n]*\(\s*ptr[^,\n]*sret\(\[99000\s+x\s+i64\]\)[^,%\n]*\1,\s*ptr[^,\n]*\))" }
 			),
 			"Expected the nested call to receive the outer function's sret destination directly"
 		);
-		assertFalse(
+		assertTrue(
 			std::regex_search(large_forward_ir, std::regex{ R"(alloca\s+\[99000\s+x\s+i64\])" }),
-			"Forwarding a large call result must not allocate an intermediate array"
+			"Forwarding must reserve storage for the explicit argument copy"
 		);
 		assertFalse(
 			std::regex_search(
@@ -436,9 +474,12 @@ entry:
 			),
 			"A forwarded large result must not become an aggregate LLVM value"
 		);
-		assertFalse(
-			std::regex_search(large_forward_ir, std::regex{ R"(@llvm\.(memcpy|memmove))" }),
-			"Forwarding an sret destination must not copy the aggregate"
+		assertTrue(
+			std::regex_search(
+				large_forward_ir,
+				std::regex{ R"(call\s+void\s+@llvm\.memmove[^\n]*i64\s+792000,\s+i1\s+false)" }
+			),
+			"Forwarding must explicitly copy the aggregate argument"
 		);
 	}
 
@@ -621,12 +662,35 @@ entry:
 			std::regex_search(ir, std::regex{ R"(call i64 %\S+\(i64 %\S+, i64 %\S+\))" }),
 			"Expected an indirect call returning i64"
 		);
+		std::smatch aggregate_call;
 		assertTrue(
 			std::regex_search(
 				ir,
-				std::regex{ R"(call void %\S+\(ptr sret\(%\S+\) %\S+, ptr byval\(%\S+\) %\S+\))" }
+				aggregate_call,
+				std::regex{ R"(call void %\S+\(ptr sret\(%\S+\) %\S+, ptr\b([^%\n]*)%\S+\))" }
 			),
 			"Expected an indirect call passing and returning an aggregate in memory"
+		);
+		const std::string argument_attributes = aggregate_call[1].str();
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\bnoalias\b)" }),
+			"Expected noalias on the indirect aggregate argument"
+		);
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\bnonnull\b)" }),
+			"Expected nonnull on the indirect aggregate argument"
+		);
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\balign\s+8\b)" }),
+			"Expected indirect aggregate argument alignment of 8 bytes"
+		);
+		assertTrue(
+			std::regex_search(argument_attributes, std::regex{ R"(\bdereferenceable\(24\))" }),
+			"Expected 24 dereferenceable bytes for the three-i64 tuple"
+		);
+		assertFalse(
+			std::regex_search(argument_attributes, std::regex{ R"(\bbyval\b)" }),
+			"Default ABI indirect aggregate argument must not use byval"
 		);
 	}
 

@@ -40,7 +40,8 @@ namespace compiler::backend_llvm {
 	 * @brief Lowers Duckling's default ABI to an LLVM signature.
 	 *
 	 * Aggregates larger than two pointer-sized words are kept in memory: parameters become
-	 * "ptr byval(T)", while a return value uses a hidden "ptr sret(T)" parameter.
+	 * pointers to caller-created private copies, marked noalias, nonnull, align and
+	 * dereferenceable. A return value uses a hidden "ptr sret(T)" parameter.
 	 */
 	LoweredDefaultAbiSignature lowerDefaultAbiSignature(
 		Ref<llvm::Module>                         module,

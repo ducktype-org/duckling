@@ -1,0 +1,36 @@
+var GLOBAL_VALUES: i64[3];
+
+fun snapshot(values: i64[3]) -> i64 = {
+	GLOBAL_VALUES[2] = 99;
+	return values[2];
+}
+
+fun sum_last(first: i64[3], second: i64[3]) -> i64 = {
+	return first[2] + second[2];
+}
+
+fun last(values: i64[3]) -> i64 = {
+	return values[2];
+}
+
+fun main() -> i64 = {
+	GLOBAL_VALUES[2] = 30;
+
+	# The parameter keeps the value copied before the global is changed.
+	print(snapshot(GLOBAL_VALUES));
+	print(GLOBAL_VALUES[2]);
+
+	var source: i64[3];
+	source[2] = 7;
+	print(sum_last(source, source));
+	print(source[2]);
+
+	# Each iteration must copy the current value, not an entry-block snapshot.
+	var index = 1i64;
+	while (index <= 3) {
+		source[2] = index * 10;
+		print(last(source));
+		index += 1;
+	}
+	return 0;
+}
