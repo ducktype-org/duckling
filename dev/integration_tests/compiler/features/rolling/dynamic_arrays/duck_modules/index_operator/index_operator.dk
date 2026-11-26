@@ -1,0 +1,45 @@
+# `List` and `String` define the `[]` operator, so `x[i]` is the same as `x.at(i)`.
+
+fun sum(list: ref List[i64]) -> i64 = {
+	var total = 0i64;
+	var i = 0;
+	while (i < list.length()) {
+		total = total + list[i];
+		i = i + 1;
+	}
+	return total;
+}
+
+template(T: type)
+fun last(list: ref List[T]) -> T = list[list.length() - 1];
+
+fun main() -> i64 = {
+	var list: List[i64];
+	list.push(10);
+	list.push(20);
+	list.push(30);
+
+	# Reading and writing through `[]`.
+	builtin_output_i64(list[0]); # 10
+	list[1] = 25;
+	list[2] += 5;
+	builtin_output_i64(list[1]); # 25
+	builtin_output_i64(list[2]); # 35
+	builtin_output_i64(sum(&list)); # 70
+	builtin_output_i64(last[i64](&list)); # 35
+
+	var s = "abc".toString();
+	print(s[1]); # b
+	s[0] = 'x';
+	print(&s); # xbc
+	print('\n');
+
+	# A `[]` that returns a `String` can be indexed again.
+	var names: List[String];
+	names.push("duck".toString());
+	names[0][0] = 'l';
+	print(names[0][0]); # l
+	print(names[0][3]); # k
+	print('\n');
+	return 0;
+}

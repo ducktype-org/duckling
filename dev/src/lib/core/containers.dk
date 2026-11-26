@@ -197,6 +197,13 @@ class String {
 		return &pointer[i];
 	}
 
+	#{
+        `s[i]` is the same as `s.at(i)`: it panics on an index out of range.
+    #}
+	mut fun [](i: i64) -> ref mut char = {
+		return at(i);
+	}
+
 	fun toString() -> String = {
 		return copy self;
 	}
@@ -586,6 +593,13 @@ class List {
 	mut fun at(i: i64) -> ref mut T = {
 		if (i < 0i64 or i >= len) panicking.panic();
 		return &pointer[i];
+	}
+
+	#{
+        `list[i]` is the same as `list.at(i)`: it panics on an index out of range.
+    #}
+	mut fun [](i: i64) -> ref mut T = {
+		return at(i);
 	}
 
 	fun length() -> i64 = len;
