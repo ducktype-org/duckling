@@ -1,0 +1,6 @@
+fun main() -> i64 = {
+	var s = "ab".toString();
+	print(s[2]);
+
+	return 0;
+}

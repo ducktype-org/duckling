@@ -58,3 +58,23 @@ Tests:
         stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
+
+  index_operator:
+    Cases:
+      all:
+        Output:
+          String: "10\n25\n35\n70\n35\nbxbc\nlk\n"
+        ExitCode: 0
+      llvm_valgrind:
+        Output:
+          String: "10\n25\n35\n70\n35\nbxbc\nlk\n"
+        ExitCode: 0
+
+  string_index_out_of_bounds:
+    Cases:
+      llvm:
+        ExitCode: 134
+      dvm:
+        stderr_regex: "VMThread has panicked: Program panicked"
+        Output:
+          String: "Program panicked!\n"
