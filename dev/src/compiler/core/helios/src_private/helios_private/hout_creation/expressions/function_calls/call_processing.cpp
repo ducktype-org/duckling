@@ -89,9 +89,12 @@ namespace compiler::helios::code {
 		 * @brief Whether @p rank means that the argument is passed as is with no runtime effects,
 		 * which at most relaxes the mutability it is seen with.
 		 * @TODO: #1488 Revisit this.
+		 * TODOP: Review this.
 		 */
 		bool isExactRank(const CoercionRank rank) {
-			return rank.getRank() <= Rank::MutabilityChange;
+			// Not by the order of the ranks: `RefOf` ranks before `ViewAccessRelax`, but taking a
+			// reference is not passing the argument as is.
+			return rank.getRank() == Rank::Identity or rank.getRank() == Rank::ViewAccessRelax;
 		}
 	}
 

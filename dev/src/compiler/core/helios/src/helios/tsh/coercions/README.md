@@ -75,20 +75,20 @@ A `CoercionNode` (`coercion_node.hpp`) describes **one value**. It holds the val
 carries a `static constexpr` `RANK` and `NAME`, which is what the printer and the ranking read.
 They are declared in the order of their ranks:
 
-| Step               | Printed as              | Rank                   | Produced by                                                                   |
-| ------------------ | ----------------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| `HandOver`         | `hand over`             | `Identity`             | `ValueType` coercions only, `handOver()` in `rules.cpp`                       |
-| `ImplicitMove`     | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`     |
-| `MutabilityChange` | `mutability change`     | `MutabilityChange`     | raw pointers, and a tuple whose parts only change mutability                   |
-| `RefOf`            | `ref of`                | `RefOf`                | `takeByRef`, only in the `CoercionMode::ImplicitRefOf` mode                   |
-| `Deref`            | `deref`                 | `Deref`                | `readThroughReference`                                                        |
-| `Numeric`          | `numeric`               | `Numeric`              | `convertValue`: a wider integer or float, `bool` into an integer              |
-| `VariantPack`      | `pack as alternative N` | `VariantPack`          | `packIntoVariant`                                                             |
-| `LiftToType`       | `lift to type`          | `LiftToType`           | `convertValue`: `()` or a tuple of types into `type`                          |
-| `UserConversion`   | `user conversion`       | `UserConversion`       | nothing yet                                                                   |
-| `ZeroCheck`        | `zero check`            | `ZeroCheck`            | `convertValue`: `byte`, `char` or a raw pointer into `bool`                   |
-| `RetypeVoid`       | `retype void`           | `RetypeVoid`           | `retypeVoid`                                                                  |
-| `Elementwise`      | `elementwise`           | the worst of its parts | `coerceElementwise`, and `ownership.cpp` for a value built out of parts       |
+| Step              | Printed as              | Rank                   | Produced by                                                                                                             |
+| ----------------- | ----------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `HandOver`        | `hand over`             | `Identity`             | `ValueType` coercions only, `handOver()` in `rules.cpp`                                                                 |
+| `ImplicitMove`    | `implicit move`         | `Identity`             | `ExpressionType` coercions only, replaces a `HandOver` in `ownership.cpp`                                               |
+| `ViewAccessRelax` | `view access relax`     | `ViewAccessRelax`      | `keepReference` and `relaxView`: a `ref mut T -> ref T` change, also for tuples whose components only relax view access |
+| `RefOf`           | `ref of`                | `RefOf`                | `takeByRef`, only in the `CoercionMode::ImplicitRefOf` mode                                                             |
+| `Deref`           | `deref`                 | `Deref`                | `readThroughReference`                                                                                                  |
+| `Numeric`         | `numeric`               | `Numeric`              | `convertValue`: a wider integer or float, `bool` into an integer                                                        |
+| `VariantPack`     | `pack as alternative N` | `VariantPack`          | `packIntoVariant`                                                                                                       |
+| `LiftToType`      | `lift to type`          | `LiftToType`           | `convertValue`: `()` or a tuple of types into `type`                                                                    |
+| `UserConversion`  | `user conversion`       | `UserConversion`       | nothing yet                                                                                                             |
+| `ZeroCheck`       | `zero check`            | `ZeroCheck`            | `convertValue`: `byte`, `char` or a raw pointer into `bool`                                                             |
+| `RetypeVoid`      | `retype void`           | `RetypeVoid`           | `retypeVoid`                                                                                                            |
+| `Elementwise`     | `elementwise`           | the worst of its parts | `coerceElementwise`, and `ownership.cpp` for a value built out of parts                                                 |
 
 `HandOver` and `ImplicitMove` never meet in one tree. `CoercionTree::successfulCoercion` asserts
 that a plan has no `ImplicitMove` and a coercion has no `HandOver`, in its parts too.
@@ -158,15 +158,15 @@ How to read it:
 A refusal has the same tree shape. A `CoercionError` (`coercion_error.hpp`) holds a `reason`, the
 `source`/`target` at its level, and a list of `causes`:
 
-| Reason                     | Printed as                       | When                                                                 |
-| -------------------------- | -------------------------------- | -------------------------------------------------------------------- |
-| `IncompatibleTypes`        | `incompatible types`             | no rule fits, or no variant alternative fits                         |
-| `MutabilityMismatch`       | `mutability mismatch`            | an immutable value into a mutable location behind a `ref`/`box`      |
-| `SubPartRefused`           | `a part does not fit`            | this level would fit, but some of its components do not              |
-| `NotImplemented`           | `not implemented`                | meant to work one day, like function subtyping                       |
-| `AmbiguousCoercion`        | `ambiguous, alternatives 0, 1`   | several variant alternatives fit equally well                        |
-| `RequiresExplicitCopyMove` | `requires explicit copy or move` | layer two: the user has to write `copy` or `move`                    |
-| `TypeNotCopyable`          | `type not copyable`              | layer two: the value would have to be copied, but its type cannot be |
+| Reason                     | Printed as                       | When                                                                                            |
+| -------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `IncompatibleTypes`        | `incompatible types`             | no rule fits, or no variant alternative fits                                                    |
+| `ViewAccessMismatch`       | `view access mismatch`           | a read-only view, or a `ref` taken to a place that may only be read, into a view that may write |
+| `SubPartRefused`           | `a part does not fit`            | this level would fit, but some of its components do not                                         |
+| `NotImplemented`           | `not implemented`                | meant to work one day, like function subtyping                                                  |
+| `AmbiguousCoercion`        | `ambiguous, alternatives 0, 1`   | several variant alternatives fit equally well                                                   |
+| `RequiresExplicitCopyMove` | `requires explicit copy or move` | layer two: the user has to write `copy` or `move`                                               |
+| `TypeNotCopyable`          | `type not copyable`              | layer two: the value would have to be copied, but its type cannot be                            |
 
 A cause is a child error together with a `CoercionPath` (`coercion_path.hpp`) that says where the
 child sits: which component, which variant alternative, and so on. The path is stored on the edge
@@ -227,18 +227,18 @@ like the alternatives of a variant or the overloads of a function.
 
 `Rank` (`coercion_rank.hpp`) is an enum ordered from the best to the worst:
 
-| `Rank`             | Meaning                                                                     |
-| ------------------ | --------------------------------------------------------------------------- |
-| `Identity`         | nothing happens to the value (`HandOver` and `ImplicitMove` have this rank) |
-| `MutabilityChange` | only the mutability the value is seen with changes                          |
-| `RefOf`            | the value is implicitly taken by `ref`                                      |
-| `Deref`            | the pointee is read out of a `ref`/`box`                                    |
-| `Numeric`          | a widening numeric conversion                                               |
-| `VariantPack`      | the value is packed into a variant                                          |
-| `LiftToType`       | the value is read as a type                                                 |
-| `UserConversion`   | a user defined conversion                                                   |
-| `ZeroCheck`        | the value is compared against zero, which turns it into a `bool`            |
-| `RetypeVoid`       | a `void` value is seen as a value of another type                           |
+| `Rank`            | Meaning                                                                     |
+| ----------------- | --------------------------------------------------------------------------- |
+| `Identity`        | nothing happens to the value (`HandOver` and `ImplicitMove` have this rank) |
+| `ViewAccessRelax` | a view that may write is only seen as a read-only one                       |
+| `RefOf`           | the value is implicitly taken by `ref`                                      |
+| `Deref`           | the pointee is read out of a `ref`/`box`                                    |
+| `Numeric`         | a widening numeric conversion                                               |
+| `VariantPack`     | the value is packed into a variant                                          |
+| `LiftToType`      | the value is read as a type                                                 |
+| `UserConversion`  | a user defined conversion                                                   |
+| `ZeroCheck`       | the value is compared against zero, which turns it into a `bool`            |
+| `RetypeVoid`      | a `void` value is seen as a value of another type                           |
 
 Every rank except `Identity` belongs to exactly one step of the same name.
 

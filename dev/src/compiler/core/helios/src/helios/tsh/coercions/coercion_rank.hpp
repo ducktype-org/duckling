@@ -25,10 +25,13 @@ namespace compiler::tsh::coercions {
 	enum class Rank : uint8_t {
 		/// Nothing happens to the value.
 		Identity = 0,
-		/// Only the mutability the value is seen with changes. Nothing happens to the value itself.
-		MutabilityChange,
-		/// The value is implicitly taken by `ref`.
+		/// The value is implicitly taken by `ref`. This only happens in `ImplicitRefOf` modes. It
+		/// has to rank higher then `ViewAccessRelax` for `mut fun` overloads to be picked over
+		/// `fun` overloads on mutable places.
 		RefOf,
+		/// A view that may write is only seen as a view that may only read (`ref mut T` -> `ref T`).
+		/// Nothing happens to the value itself.
+		ViewAccessRelax,
 		/// The pointee is read out of a `ref`/`box`.
 		Deref,
 		/// A widening conversion(i.e. `i32` -> `i64`)

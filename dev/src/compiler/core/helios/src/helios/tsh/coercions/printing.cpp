@@ -48,8 +48,8 @@ namespace compiler::tsh::coercions {
 			case Rank::Identity:
 				out << "Identity";
 				return;
-			case Rank::MutabilityChange:
-				out << "MutabilityChange";
+			case Rank::ViewAccessRelax:
+				out << "ViewAccessRelax";
 				return;
 			case Rank::RefOf:
 				out << "RefOf";
@@ -92,7 +92,7 @@ namespace compiler::tsh::coercions {
 
 			variant_match(failure) {
 				variant_case_novalue(IncompatibleTypes) { out << "incompatible types"; }
-				variant_case_novalue(MutabilityMismatch) { out << "mutability mismatch"; }
+				variant_case_novalue(ViewAccessMismatch) { out << "view access mismatch"; }
 				variant_case_novalue(SubPartRefused) { out << "a part does not fit"; }
 				variant_case_novalue(NotImplemented) { out << "not implemented"; }
 				variant_case(AmbiguousCoercion, ambiguous) {

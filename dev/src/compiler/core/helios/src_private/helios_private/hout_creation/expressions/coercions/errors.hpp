@@ -77,8 +77,8 @@ namespace compiler::helios::coercions {
 
 		/// Override for `tsh::coercions::coercion_error::IncompatibleTypes`.
 		base::Optional<MessageReturner> incompatible_types = {};
-		/// Override for `tsh::coercions::coercion_error::MutabilityMismatch`.
-		base::Optional<MessageReturner> mutability_mismatch = {};
+		/// Override for `tsh::coercions::coercion_error::ViewAccessMismatch`.
+		base::Optional<MessageReturner> view_access_mismatch = {};
 		/// Override for `tsh::coercions::coercion_error::NotImplemented`.
 		base::Optional<MessageReturner> not_implemented = {};
 		/// Override for `tsh::coercions::coercion_error::AmbiguousCoercion`.

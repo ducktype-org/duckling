@@ -31,7 +31,8 @@ namespace compiler::tsh::coercions {
 			.points_to_source  = false,
 		};
 
-		const bool implicit_ref_of = mode == CoercionMode::ImplicitRefOf;
+		const bool implicit_ref_of
+			= mode == CoercionMode::ImplicitRefOf or mode == CoercionMode::ImplicitReadOnlyRefOf;
 
 		switch (from) {
 		case Direct:

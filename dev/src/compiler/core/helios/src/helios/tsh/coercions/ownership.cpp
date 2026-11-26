@@ -237,9 +237,38 @@ namespace compiler::tsh::coercions {
 		const ValueType<>& target,
 		const CoercionMode mode
 	) {
-		const ExpressionType<>&  value = source.getValue();
+		CORE_ASSERT(
+			mode != CoercionMode::ImplicitReadOnlyRefOf,
+			"ImplicitReadOnlyRefOf should be only used internally by the coercion."
+		);
+		const ExpressionType<>& value = source.getValue();
+
+		const CoercionMode actual_mode = [&]() {
+			// A reference taken to a place that is immutable can only be a read-only ref.
+			// We have to pass this information to the `ValueTypeCoercion`. It can't know it from
+			// the types alone, since mutability of a place is stored on the `ExpressionType` level.
+			//
+			// For example lets take `var a: List[T]`, `let b: List[T]` and assume `List[T]` has two
+			// following methods: `fun at -> ref T`, `mut fun at -> ref mut T`:
+			// - On a mutable place (ImplicitRefOf) the reference taken to `a` is `ref mut T` (since
+			//   `a` is mutable). ValueTypeCoercion ranks it as `RefOf` and the second overload
+			//   would be ranked as `RefOf` and `ViewAccessRelax` which means the final rank will
+			//   be `ViewAccessRelax` and the `mut fun` overload will be picked.
+			// - On an immutable place (ImplicitReadOnlyRefOf) the reference taken to `b` is `ref
+			//   T`. ValueTypeCoercion ranks it as `RefOf`, the second overload would be rejected
+			//   and the `fun` overload would be picked.
+			//
+			// If we just passed one `ImplicitRefOf` mode to the `ValueTypeCoercion` it would rank
+			// both overloads as `RefOf` and the `mut fun` overload would be picked for both `a` and `b`.
+			if (mode == CoercionMode::ImplicitRefOf
+			    and value.getValueCategory().getPlaceAccess() != PlaceAccess::Mutable) {
+				return CoercionMode::ImplicitReadOnlyRefOf;
+			}
+			return mode;
+		}();
+
 		const ValueTypeCoercion& plan
-			= *ctx.query<QueryValueTypeCoercion>({ value.getValueType(), target, mode });
+			= *ctx.query<QueryValueTypeCoercion>({ value.getValueType(), target, actual_mode });
 
 		// If the `ValueTypeCoercion` failed we return it's error so we don't override it with the
 		// ownership errors.

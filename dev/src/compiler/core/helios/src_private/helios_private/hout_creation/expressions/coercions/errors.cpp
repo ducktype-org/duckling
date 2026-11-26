@@ -112,7 +112,7 @@ namespace compiler::helios::coercions {
 		return VARIANT_VISIT(
 			reason,
 			[&](const IncompatibleTypes&) -> Override { return incompatible_types; },
-			[&](const MutabilityMismatch&) -> Override { return mutability_mismatch; },
+			[&](const ViewAccessMismatch&) -> Override { return view_access_mismatch; },
 			[&](const NotImplemented&) -> Override { return not_implemented; },
 			[&](const AmbiguousCoercion&) -> Override { return ambiguous_coercion; },
 			[&](const TypeNotCopyable&) -> Override { return type_not_copyable; },
@@ -150,7 +150,7 @@ namespace compiler::helios::coercions {
 					coercion_expects_pos
 				);
 			},
-			[&](const MutabilityMismatch&) -> Message {
+			[&](const ViewAccessMismatch&) -> Message {
 				return makeBox<dia::PlaceholderError>(
 					base::strConcat(
 						"Cannot hand a value of type `",

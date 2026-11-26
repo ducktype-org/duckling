@@ -1162,8 +1162,8 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// @TODO: #3285 add backreferences
 			return base::StrID{ base::strConcat(
-				key.getRefKind() == tsh::ReferenceKind::Direct ? ""
-				: key.getRefKind() == tsh::ReferenceKind::Box  ? "X"
+				key.getRefKind() == tsh::ReferenceKind::Direct      ? ""
+				: key.getRefKind() == tsh::ReferenceKind::Box       ? "X"
 				: key.getViewAccess() == tsh::ViewAccess::ReadWrite ? "RK"
 																	: "R",
 				mangle(ctx, key.getType()).valueOrThrow()

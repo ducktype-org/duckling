@@ -31,10 +31,9 @@ namespace compiler::tsh::coercions {
 		struct IncompatibleTypes final {};
 
 		/**
-		 * @brief The target needs a mutable value but we pass an immutable.
-		 * @TODO: #1488 Expand this comment with the actual semantics.
+		 * @brief The target is a view that may write, but the value is a view that may only read.
 		 */
-		struct MutabilityMismatch final {};
+		struct ViewAccessMismatch final {};
 
 		/**
 		 * @brief The types on this level of the tree fit, but something in their sub-tree does not.
@@ -92,7 +91,7 @@ namespace compiler::tsh::coercions {
 
 	using CoercionFailure = std::variant<
 		coercion_error::IncompatibleTypes,
-		coercion_error::MutabilityMismatch,
+		coercion_error::ViewAccessMismatch,
 		coercion_error::SubPartRefused,
 		coercion_error::NotImplemented,
 		coercion_error::AmbiguousCoercion,

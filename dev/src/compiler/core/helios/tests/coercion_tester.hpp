@@ -92,7 +92,7 @@ namespace coercion_testing {
 	inline constexpr std::string_view DEREF             = coercion_step::Deref::NAME;
 	inline constexpr std::string_view HAND_OVER         = coercion_step::HandOver::NAME;
 	inline constexpr std::string_view IMPLICIT_MOVE     = coercion_step::ImplicitMove::NAME;
-	inline constexpr std::string_view MUTABILITY_CHANGE = coercion_step::MutabilityChange::NAME;
+	inline constexpr std::string_view VIEW_ACCESS_RELAX = coercion_step::ViewAccessRelax::NAME;
 	inline constexpr std::string_view REF_OF            = coercion_step::RefOf::NAME;
 	inline constexpr std::string_view NUMERIC           = coercion_step::Numeric::NAME;
 	inline constexpr std::string_view ZERO_CHECK        = coercion_step::ZeroCheck::NAME;

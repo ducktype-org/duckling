@@ -117,7 +117,8 @@ namespace compiler::tsh::coercions {
 		/**
 		 * @brief The location keeps a reference kind.
 		 *
-		 * Nothing converts behind a reference.
+		 * Nothing converts behind a reference. The only allowed change is a view access relax (`ref
+		 * mut T` -> `ref T`).
 		 */
 		ValueTypeCoercion keepReference(
 			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
@@ -129,9 +130,16 @@ namespace compiler::tsh::coercions {
 			if (source.getType() != target.getType())
 				return refused(source, target, coercion_error::IncompatibleTypes{});
 
+			const auto source_access = source.getViewAccess();
+			const auto target_access = target.getViewAccess();
+			if (source_access == ViewAccess::ReadOnly and target_access == ViewAccess::ReadWrite)
+				return refused(source, target, coercion_error::ViewAccessMismatch{});
+
 			// A `box` is copied or moved, a `ref` is only rebound.
 			CoercionNode node = startNode(source, target);
 			handOver(ctx, node);
+			if (source_access != target_access)
+				node.append({ .kind = coercion_step::ViewAccessRelax{}, .result = target });
 			return accepted(std::move(node));
 		}
 
@@ -224,10 +232,19 @@ namespace compiler::tsh::coercions {
 		 * target.
 		 */
 		ValueTypeCoercion takeByRef(
-			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
+			query::Context&    ctx,
+			const ValueType<>& source,
+			const ValueType<>& target,
+			const CoercionMode mode
 		) {
-			const ValueType<>                   referenced = source.toRef();
-			const base::CRef<ValueTypeCoercion> rest       = planPart(ctx, referenced, target);
+			// We take an implicit reference to a value. We decide whether it's writable or not
+			// based on the mode, so we pick a good rank for it. For more info, see the comment in
+			// `ownership.cpp::coercionOf()`
+			const ValueType<> referenced = source.toRef(
+				mode == CoercionMode::ImplicitReadOnlyRefOf ? ViewAccess::ReadOnly
+															: ViewAccess::ReadWrite
+			);
+			const base::CRef<ValueTypeCoercion> rest = planPart(ctx, referenced, target);
 
 			if (rest->isRefused()) {
 				CoercionError error = rest->getError();
@@ -277,20 +294,20 @@ namespace compiler::tsh::coercions {
 
 			CoercionNode node = startNode(source, target);
 
-			// OPT: A composite none of whose parts changes at runtime, like `(const i32, box i32)`
-			// into `(i32, box i32)`, is only seen as the other type. It is handed over and
-			// its mutability changed as a whole, rather then rebuilt for nothing.
-			const auto only_changes_mutability = [](const CoercionNode& part) {
+			// OPT: A composite none of whose parts changes at runtime, like `(ptr mut i32, box
+			// i32)` into `(ptr i32, box i32)`, is only seen as the other type. It is handed over
+			// and the access of its views relaxed as a whole, rather then rebuilt for nothing.
+			const auto only_relaxes_view_access = [](const CoercionNode& part) {
 				return std::ranges::all_of(part.steps, [](const CoercionStep& step) {
 					return v_matches(
-						step.kind, coercion_step::HandOver, coercion_step::MutabilityChange
+						step.kind, coercion_step::HandOver, coercion_step::ViewAccessRelax
 					);
 				});
 			};
 
-			if (std::ranges::all_of(parts, only_changes_mutability)) {
+			if (std::ranges::all_of(parts, only_relaxes_view_access)) {
 				handOver(ctx, node);
-				node.append({ .kind = coercion_step::MutabilityChange{}, .result = target });
+				node.append({ .kind = coercion_step::ViewAccessRelax{}, .result = target });
 				return accepted(std::move(node));
 			}
 
@@ -382,6 +399,32 @@ namespace compiler::tsh::coercions {
 		}
 
 		/**
+		 * @brief A pointer-like type (`ptr`, `manyptr`, `slice`, etc.) may only have their
+		 * ViewAccess relaxed(`ptr mut T` -> `ptr T`).
+		 */
+		ValueTypeCoercion relaxView(
+			query::Context& ctx, const ValueType<>& source, const ValueType<>& target
+		) {
+			const AbstractType from = source.getType();
+			const AbstractType into = target.getType();
+			if (from.getKind() != into.getKind())
+				return refused(source, target, coercion_error::IncompatibleTypes{});
+
+			const auto pointee = [](const AbstractType type) -> ValueType<> {
+				if (type.getKind() == Kind::Slice)
+					return type.as<SliceAbstractType>().getElementType();
+				return ValueType<>::direct(type).getPointeeValueType();
+			};
+			if (pointee(from) != pointee(into))
+				return refused(source, target, coercion_error::IncompatibleTypes{});
+
+			if (pointerViewAccess(from) == ViewAccess::ReadOnly
+			    and pointerViewAccess(into) == ViewAccess::ReadWrite)
+				return refused(source, target, coercion_error::ViewAccessMismatch{});
+			return converted(ctx, source, target, coercion_step::ViewAccessRelax{});
+		}
+
+		/**
 		 * @brief A classical value conversion.
 		 */
 		ValueTypeCoercion convertValue(
@@ -434,8 +477,9 @@ namespace compiler::tsh::coercions {
 				if (into.getKind() == Kind::Bool)
 					return converted(ctx, source, target, coercion_step::ZeroCheck{});
 
-				if (into.getKind() == Kind::RawPointer && RawPointerAbstractType{ from }.isMutable())
-					return converted(ctx, source, target, coercion_step::MutabilityChange{});
+				if (into.getKind() == Kind::RawPointer
+				    && RawPointerAbstractType{ from }.getAccess() == ViewAccess::ReadWrite)
+					return converted(ctx, source, target, coercion_step::ViewAccessRelax{});
 				break;
 
 			case Kind::Tuple:
@@ -444,13 +488,15 @@ namespace compiler::tsh::coercions {
 			case Kind::Function:
 				return functionRule(source, target);
 
-			case Kind::Void:
-				CORE_PANIC("A void value should have been retyped earlier.");
 			case Kind::Pointer:
 			case Kind::ManyPointer:
 			case Kind::CPointer:
-			case Kind::Variant:
 			case Kind::Slice:
+				return relaxView(ctx, source, target);
+
+			case Kind::Void:
+				CORE_PANIC("A void value should have been retyped earlier.");
+			case Kind::Variant:
 			case Kind::StaticArray:
 			case Kind::Class:
 			case Kind::TypeTemplate:
@@ -481,10 +527,10 @@ namespace compiler::tsh::coercions {
 			// First check if we're retyping a `void` type.
 			if (source.getType().getKind() == Kind::Void) return retypeVoid(source, target);
 
-			// Then check if the value is implicitly taken by `ref`, which only the mode allows.
+			// Then check if the value is implicitly taken by `ref`, which only when the mode allows.
 			if (referenceCoercionRule(source.getRefKind(), target.getRefKind(), mode).adjustment
 			    == ReferenceAdjustment::RefOf)
-				return takeByRef(ctx, source, target);
+				return takeByRef(ctx, source, target, mode);
 
 			// Secondly, validate coercions which keep the "pointer like" behaviour.
 			if (target.getRefKind() != ReferenceKind::Direct)

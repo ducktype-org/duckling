@@ -86,17 +86,18 @@ namespace compiler::tsh::coercions {
 		};
 
 		/**
-		 * @brief Only the mutability the value is seen with changes. The value itself doesn't
-		 * change.
+		 * @brief A view that may write is seen a view which may only read. Like a `ref mut` as a
+		 * `ref` or a `ptr mut` as a `ptr`. The value itself doesn't change.
 		 */
-		struct MutabilityChange final {
-			static constexpr Rank             RANK = Rank::MutabilityChange;
-			static constexpr std::string_view NAME = "mutability change";
+		struct ViewAccessRelax final {
+			static constexpr Rank             RANK = Rank::ViewAccessRelax;
+			static constexpr std::string_view NAME = "view access relax";
 		};
 
 		/**
 		 * @brief The value is implicitly taken by `ref`. A `box` is reborrowed as a `ref` to its
-		 * pointee. Only allowed in the CoercionMode::ImplicitRefOf mode, and always the first step.
+		 * pointee. Only allowed in the CoercionMode::ImplicitRefOf and
+		 * CoercionMode::ImplicitReadOnlyRefOf modes, and always the first step.
 		 */
 		struct RefOf final {
 			static constexpr Rank             RANK = Rank::RefOf;
@@ -183,7 +184,7 @@ namespace compiler::tsh::coercions {
 		using Kind = std::variant<
 			coercion_step::HandOver,
 			coercion_step::ImplicitMove,
-			coercion_step::MutabilityChange,
+			coercion_step::ViewAccessRelax,
 			coercion_step::RefOf,
 			coercion_step::Deref,
 			coercion_step::Numeric,
@@ -262,7 +263,7 @@ namespace compiler::tsh::coercions {
 		bool isNoOp() const noexcept {
 			return steps.empty()
 			    || (steps.size() == 1
-			        && v_matches(steps.front().kind, coercion_step::MutabilityChange));
+			        && v_matches(steps.front().kind, coercion_step::ViewAccessRelax));
 		}
 
 		/**

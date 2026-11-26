@@ -167,7 +167,7 @@ namespace compiler::helios::coercions {
 		}
 
 		Box<Expr> applyStep(
-			query::Context&, const step::MutabilityChange&, const tsh::ValueType<>&, Box<Expr> from
+			query::Context&, const step::ViewAccessRelax&, const tsh::ValueType<>&, Box<Expr> from
 		) {
 			// Only what may be done with the value changes, the value itself does not.
 			return from;
