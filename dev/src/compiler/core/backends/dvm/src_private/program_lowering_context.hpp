@@ -267,7 +267,7 @@ namespace compiler::backend_vm::internal {
 
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.
-		/// symbol types) are lowered.
+		/// ValueTypes) are lowered.
 		bool is_comp_time_lowering;
 
 		base::StrID module_id;

@@ -39,5 +39,4 @@ SubDirs:
     # - simple_strings (requires string access operator)
     # - type_deduction (requires deduction for fields with initializers)
     # - variable_simple_declaration (requires i128 and u128, also a VM bugfix)
-    # - while_loops (requires break statements; its `loops_performance` case is native only,
-    #   the DVM cannot run 100M loop iterations within the timeout)
+    # - while_loops (requires break statements)

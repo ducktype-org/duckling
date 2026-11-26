@@ -211,6 +211,12 @@ namespace lexer {
 
 		[[nodiscard]]
 		bool isIdentifier() const;
+		/**
+		 * @brief Checks if the token can be used as a name, i.e. it is an identifier or a keyword
+		 * flagged as `IsIdentifierLike`.
+		 */
+		[[nodiscard]]
+		bool isIdentifierLike() const;
 		[[nodiscard]]
 		bool isNumLiteral() const;
 		[[nodiscard]]

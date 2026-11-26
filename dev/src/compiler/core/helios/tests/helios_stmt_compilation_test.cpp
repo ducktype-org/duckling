@@ -90,10 +90,10 @@ private:
 	 * The caller must be inside a query::utils::withContextDo lambda.
 	 */
 	static code::CodeBlock compileSingleStatementOfFirstFun(
-		query::Context&                   ctx,
-		frontend::ModuleID                module_id,
-		usize                             stmt_index         = 0,
-		base::Optional<tsh::SymbolType<>> custom_return_type = {}
+		query::Context&                  ctx,
+		frontend::ModuleID               module_id,
+		usize                            stmt_index         = 0,
+		base::Optional<tsh::ValueType<>> custom_return_type = {}
 	) {
 		// Locate the function symbol
 		auto root_scope = queryRootScopeOfMainModuleFile(ctx, module_id);
@@ -118,7 +118,7 @@ private:
 		// Compile the first body statement in isolation
 		auto return_type = custom_return_type.has_value()
 		                     ? custom_return_type.value()
-		                     : tsh::SymbolType<>::withDefaultsMut(tsh::getUnitType());
+		                     : tsh::ValueType<>::withDefaultsMut(tsh::getUnitType());
 		body_stmts.at(stmt_index)->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
@@ -492,7 +492,7 @@ private:
 				"test_pkg"
 			);
 			query::utils::withContextDo([&](query::Context& ctx) {
-				auto int_type = tsh::SymbolType<>::withDefaultsMut(
+				auto int_type = tsh::ValueType<>::withDefaultsMut(
 					tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed)
 				);
 				auto block = compileSingleStatementOfFirstFun(ctx, module_id, 0, int_type);

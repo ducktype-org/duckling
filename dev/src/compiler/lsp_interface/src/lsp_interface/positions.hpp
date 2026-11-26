@@ -11,6 +11,7 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
+#include <diagnostic/source_position.hpp>
 #include <token_source/source.hpp>
 
 #include <string_view>
@@ -62,4 +63,9 @@ namespace duck_ls {
 	lsp::Uint codePointsToUtf16Units(
 		const tokenizer::TokenSource& source, usize line, usize code_points
 	);
+
+	/**
+	 * @brief The LSP range of @p position, the place a node takes in the source.
+	 */
+	lsp::Range toLspRange(const dia::SourcePosition& position);
 }

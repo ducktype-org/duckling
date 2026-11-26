@@ -190,3 +190,37 @@ jobs:
         working-directory: dev
         run: |
           python3 toolbox.py license-checker --branch "$PR_BASE_SHA" --no-merge-base --no-fix
+
+      # Check if Duckling files are formatted with duckfmt.
+      - name: Update apt
+        uses: ./.github/actions/apt-get/
+
+      - name: Install the build dependencies
+        uses: ./.github/actions/apt-get/
+        with:
+          packages: libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
+
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
+      # JIT is off, because duckfmt does not need.
+      - name: Configure the build
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          ./toolbox.py setup-build \
+            -b ${{ env.BUILD_DIR }} \
+            -s ${{ env.BUILD_SYSTEM }} \
+            -c ${{ env.CC_COMPILER }} \
+            -x ${{ env.CXX_COMPILER }} \
+            -t Dev \
+            --jit No \
+            --no-coverage \
+            --no-docs \
+            --ccache
+
+      - name: Check Duckling formatting
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} --target duckfmt -j "$(nproc)"
+          python3 toolbox.py duckfmt --all --no-fix --duckfmt ${{ env.BUILD_DIR }}/bin/duckfmt

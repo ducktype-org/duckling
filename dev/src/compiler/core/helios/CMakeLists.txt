@@ -42,6 +42,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
+	src_private/helios_private/tsh/source_type_name.cpp
 	src_private/helios_private/tsh/queries.cpp
 	src_private/helios_private/templates/templates.cpp
 	src/helios/utils/main_return_type.cpp
@@ -83,7 +84,7 @@ add_library(HELIOS STATIC
 	src/helios/tsh/coercions/reference_coercion.cpp
 	src/helios/tsh/coercions/rules.cpp
 	src/helios/tsh/coercions/value_source.cpp
-	src/helios/tsh/symbol_type.cpp
+	src/helios/tsh/value_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
 	src/helios/tsh/value_category.cpp
