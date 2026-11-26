@@ -44,6 +44,11 @@ namespace compiler::frontend {
 
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
+		/**
+		 * @brief Adds nothing: everything a standard module hashes is in ModuleTree.
+		 */
+		void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const override;
+
 	public:
 		ModuleModuleTreeNode();
 

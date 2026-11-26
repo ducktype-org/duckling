@@ -41,6 +41,15 @@ namespace compiler::frontend {
 		return m_parent.value()->getModuleID();
 	}
 
+	void SyntheticReplChainModuleTreeNode::addKindSpecificDataToHash(
+		hashing::ComponentHash::HashAlg& partial
+	) const {
+		auto repl_module_parent = getReplModuleParent();
+		hashing::addToHash(partial, repl_module_parent.has_value());
+		if (repl_module_parent.has_value())
+			hashing::addToHash(partial, ModuleTree::getModuleHash(repl_module_parent.value()));
+	}
+
 	void ScriptModuleTreeNode::makeAbstract() {
 		CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!");
 	}
@@ -55,5 +64,10 @@ namespace compiler::frontend {
 
 	std::vector<base::Ref<SourceFile>> ScriptModuleTreeNode::collectOwnedSourceFiles() const {
 		return {};
+	}
+
+	void ScriptModuleTreeNode::addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial
+	) const {
+		hashing::addToHash(partial, m_script_file.has_value());
 	}
 }

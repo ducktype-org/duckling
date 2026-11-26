@@ -23,6 +23,23 @@
 
 namespace compiler::frontend {
 
+	namespace {
+		/**
+		 * @brief Looks up the submodule `name` of `module`.
+		 * @return Empty if there is no such submodule, or if `module` cannot have submodules
+		 * (REPL chain and script modules).
+		 */
+		base::Optional<ModuleID> findSubmodule(
+			query::Context& ctx, ModuleID module, base::StrID name
+		) {
+			auto module_ref = getModuleRef(module);
+			if (module_ref->getKind() != ModuleKind::Module) return {};
+			auto maybe_child = module_ref->getSubmoduleByName(name).unlock(ctx);
+			if (not maybe_child.has_value()) return {};
+			return maybe_child.value().unlock(ctx).getID();
+		}
+	}
+
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
 	) {
@@ -35,19 +52,9 @@ namespace compiler::frontend {
 		// * check ancestors
 		// * check package dependencies
 
-		base::Optional<ModuleID> current_module;
-
 		auto from_module_ref = getModuleRef(from);
 
-		auto maybe_child = from_module_ref->getSubmoduleByName(path.at(0)).unlock(ctx);
-
-		// auto maybe_child = [&]() -> base::Optional<ModuleAccessLocked> {
-		// 	if (from_module_ref->getKind() == ModuleKind::Module)
-		// 		return from_module_ref->getSubmoduleByName(path.at(0)).unlock(ctx);
-		// 	return ModuleChildAccessLocked{from, path.at(0), {}}.unlock(ctx);
-		// }();
-
-		if (maybe_child.has_value()) current_module = maybe_child.value().unlock(ctx).getID();
+		base::Optional<ModuleID> current_module = findSubmodule(ctx, from, path.at(0));
 
 		if (not current_module.has_value()) {
 			base::Optional<ModuleID> ancestor = ctx.query<QueryParentModule>(from);
@@ -84,14 +91,8 @@ namespace compiler::frontend {
 		}
 
 		// second step: follow children
-		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
-			auto maybe_child2
-				= getModuleRef(current_module.value())->getSubmoduleByName(path.at(i)).unlock(ctx);
-			if (maybe_child2.has_value())
-				current_module = maybe_child2.value().unlock(ctx).getID();
-			else
-				current_module.reset();
-		}
+		for (usize i = 1; i < path.size() and current_module.has_value(); i++)
+			current_module = findSubmodule(ctx, current_module.value(), path.at(i));
 
 		return current_module;
 	}
@@ -104,12 +105,9 @@ namespace compiler::frontend {
 				auto current_module = pkg.getRootModule().unlock(ctx).getID();
 
 				for (const auto& component: path) {
-					auto maybe_child
-						= getModuleRef(current_module)->getSubmoduleByName(component).unlock(ctx);
-					if (maybe_child.has_value())
-						current_module = maybe_child.value().unlock(ctx).getID();
-					else
-						return {};
+					auto maybe_child = findSubmodule(ctx, current_module, component);
+					if (not maybe_child.has_value()) return {};
+					current_module = maybe_child.value();
 				}
 
 				return current_module;

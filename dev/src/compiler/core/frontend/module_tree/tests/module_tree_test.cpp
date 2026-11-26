@@ -81,6 +81,7 @@ public:
 		TESTER_ADD_TEST(testPrintModuleTree);
 		TESTER_ADD_TEST(testFileResolverSubstitution);
 		TESTER_ADD_TEST(testReplChainParentStructure);
+		TESTER_ADD_TEST(testReplChainKindSpecificHash);
 	}
 
 protected:
@@ -801,6 +802,58 @@ private:
 		// Removing the script removes its whole chain and unlinks it from the root.
 		ModuleTreeModifierCommon::removeModuleRecursive(script);
 		ASSERT_NO_VALUE(root->getSubmoduleByName(base::StrID("script")).illegalAccess());
+	}
+
+	void testReplChainKindSpecificHash() {
+		const auto package_id = base::StrID("repl_chain_hash_package_id");
+
+		const auto make_node = [&](base::Ref<ModuleTree> parent) {
+			auto builder = SyntheticReplChainModuleTreeBuilder::create();
+			builder->setName(base::StrID("stmt"));
+			builder->setPackageID(package_id);
+			builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile("1;"));
+			builder->setParent(parent);
+			return builder->finalize();
+		};
+
+		// Two chain heads with the same name and package: a script and a chain node.
+		auto script_builder = ScriptModuleTreeBuilder::create();
+		script_builder->setName(base::StrID("head"));
+		script_builder->setPackageID(package_id);
+		auto script_head = script_builder->finalize();
+
+		auto chain_builder = SyntheticReplChainModuleTreeBuilder::create();
+		chain_builder->setName(base::StrID("head"));
+		chain_builder->setPackageID(package_id);
+		chain_builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile("1;"));
+		auto chain_head = chain_builder->finalize();
+
+		auto below_script = make_node(script_head);
+		auto below_chain  = make_node(chain_head);
+
+		// Same logical path, but only one of them has a REPL module parent, so the module
+		// hashes (and so the module identities) must differ.
+		ASSERT_TRUE(
+			ModuleTree::getPathComponentHash(below_script->getModuleID()).hash
+			== ModuleTree::getPathComponentHash(below_chain->getModuleID()).hash
+		);
+		ASSERT_TRUE(
+			ModuleTree::getModuleHash(below_script->getModuleID())
+			!= ModuleTree::getModuleHash(below_chain->getModuleID())
+		);
+
+		// Script and REPL chain modules have no submodules: asking for them panics.
+		bool exception_thrown = false;
+		try {
+			std::ignore = below_chain->getSubmoduleByName(base::StrID("x"));
+		} catch (const std::exception&) { exception_thrown = true; }
+		ASSERT_TRUE(exception_thrown);
+
+		exception_thrown = false;
+		try {
+			std::ignore = script_head->getSubmodules();
+		} catch (const std::exception&) { exception_thrown = true; }
+		ASSERT_TRUE(exception_thrown);
 	}
 
 	void testComponentHash() {

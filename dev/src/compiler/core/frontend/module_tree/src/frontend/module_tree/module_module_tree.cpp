@@ -28,6 +28,8 @@ namespace compiler::frontend {
 		return source_files;
 	}
 
+	void ModuleModuleTreeNode::addKindSpecificDataToHash(hashing::ComponentHash::HashAlg&) const {}
+
 	ModuleModuleTreeNode::ModuleModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
 
 	SubmodulesAccessLocked ModuleModuleTreeNode::getSubmodules() const {

@@ -109,7 +109,6 @@ namespace compiler::frontend {
 		return FileAccessLocked(main_source_file.value()->getFileID());
 	}
 
-	// PR: remove this impl? or add a todo to switch to panic mode in new PR
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
 		CORE_PANIC("getSubmodules called on a module that does not support submodules!");
 	}
@@ -119,7 +118,6 @@ namespace compiler::frontend {
 	}
 
 	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID) const {
-		// PR: remove this impl?, or add a todo to switch to panic mode in new PR
 		CORE_PANIC("getSubmoduleByName called on a module that does not support submodules!");
 	}
 
@@ -226,8 +224,6 @@ namespace compiler::frontend {
 		// Copy the path component hash to the component hash
 		hashing::ComponentHash::HashAlg partial = m_path_component_hash->partial;
 
-		hashing::addToHash(partial, this->getKind());
-
 		// If a Module has parent
 		hashing::addToHash(partial, m_parent.has_value());
 
@@ -237,16 +233,7 @@ namespace compiler::frontend {
 		// Module kind affects module semantics and therefore must affect module hash.
 		hashing::addToHash(partial, std::to_underlying(getKind()));
 
-		// PR: add protected virtual method addToHashKindSpecificData for kind-specific data
-		// if (isReplModule()) {
-		// 	auto repl_module_parent = getReplModuleParent();
-		// 	hashing::addToHash(partial, repl_module_parent.has_value());
-		// 	if (repl_module_parent.has_value()) {
-		// 		auto repl_parent = repl_module_parent.value();
-
-		// 		hashing::addToHash(partial, ModuleTree::getModuleHash(repl_parent));
-		// 	}
-		// }
+		addKindSpecificDataToHash(partial);
 
 		// We do not need to add source files count or submodule count here,
 		// Because there is a separate SideInput for that
@@ -331,13 +318,15 @@ namespace compiler::frontend {
 
 		// First collect all files to be parsed.
 		std::vector<FileID> files_to_parse;
-		auto                collect_files = [&](this auto&& self, ModuleID mid) -> void {
-            auto module_tree = GetModuleID_Functor::get(mid);
-            if (module_tree->hasMainSourceFile())
-                files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+
+		auto collect_files = [&](this auto&& self, ModuleID mid) -> void {
+			auto module_tree = GetModuleID_Functor::get(mid);
+			if (module_tree->hasMainSourceFile())
+				files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
 
 			// PR: this should use child modules insted of getSubmodules
 			// but collectChildrenModules is private, figure this out
+			if (module_tree->getKind() != ModuleKind::Module) return;
 			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
 				self(submodule.illegalAccess().getID());
 		};

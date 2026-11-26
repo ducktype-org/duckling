@@ -103,7 +103,11 @@ namespace compiler::driver {
 			// Collect module side input
 			out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
 
-			auto submodules_count = module_ref->getSubmodules().illegalAccess().size();
+			// Only standard modules have submodules, and so submodule side inputs.
+			const bool has_submodules = module_ref->getKind() == ModuleKind::Module;
+
+			auto submodules_count
+				= has_submodules ? module_ref->getSubmodules().illegalAccess().size() : 0;
 			out->emplace_back(
 				QuerySubmoduleCountSideInput::getID(),
 				KeyOf_SubmoduleCountSideInput::computeHash(module_id, submodules_count)
@@ -113,7 +117,7 @@ namespace compiler::driver {
 			// Collect ModuleChildSideInput for all lookups done on this module
 			auto module_hash = ModuleTree::getModuleHash(module_id);
 			auto lookup_res  = lookups_map.atMaybe(module_hash);
-			if (lookup_res.has_value()) {
+			if (has_submodules and lookup_res.has_value()) {
 				for (const auto& lookup: *lookup_res.value()) {
 					// Check if the lookup is still valid
 					auto child_ref
@@ -145,8 +149,9 @@ namespace compiler::driver {
 			}
 
 			// Recurse into submodules
-			for (const auto& submodule: module_ref->getSubmodules().illegalAccess())
-				collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
+			if (has_submodules)
+				for (const auto& submodule: module_ref->getSubmodules().illegalAccess())
+					collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
 		}
 
 		std::vector<query::external::InputData> collectInputDataFromGlobalPackagesImpl(

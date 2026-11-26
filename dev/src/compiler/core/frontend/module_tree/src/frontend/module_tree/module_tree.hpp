@@ -182,7 +182,8 @@ namespace compiler::frontend {
 		/**
 		 * Accesses the submodules located in this module.
 		 *
-		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
+		 * @note Panics on REPL chain and script modules, they have no submodules. Check getKind()
+		 * first.
 		 * @note Use this only if you need all submodules. For single submodule access, use
 		 * getSubmoduleByName().
 		 * @return A lazy view that can be unlocked within a query context or accessed illegally
@@ -194,7 +195,8 @@ namespace compiler::frontend {
 		/**
 		 * Access a single submodule edge by name.
 		 *
-		 * @note Only valid for modules that can have submodules (i.e., not REPL or script modules).
+		 * @note Panics on REPL chain and script modules, they have no submodules. Check getKind()
+		 * first.
 		 *
 		 * Registers dependency via QueryModuleChildSideInput when unlocked.
 		 * Use this function in lookups when you need only a submodule with some name.
@@ -341,6 +343,18 @@ namespace compiler::frontend {
 		 * but the interface returns a vector for ease of use and future extensibility.
 		 */
 		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const = 0;
+
+		/**
+		 * @brief Adds the data of this module kind to the module hash.
+		 *
+		 * The module hash is computed from the root down (a parent's hash is always ready
+		 * before its children's) and invalidateHash() only goes down to the children. So only
+		 * data of this module or of its ancestors may be hashed here, never data of a child.
+		 * Data that can change after finalize() must call invalidateHash() when it changes.
+		 * Source file contents and submodules must not be hashed, they have their own side
+		 * inputs.
+		 */
+		virtual void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const = 0;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes

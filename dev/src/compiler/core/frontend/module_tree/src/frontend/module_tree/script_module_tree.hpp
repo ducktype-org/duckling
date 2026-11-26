@@ -44,6 +44,12 @@ namespace compiler::frontend {
 
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
+		/**
+		 * @brief Adds whether the parent is a REPL chain node, and if so, the parent's module
+		 * hash.
+		 */
+		void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const override;
+
 	public:
 		explicit SyntheticReplChainModuleTreeNode();
 
@@ -57,16 +63,6 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]]
 		base::Optional<ModuleID> getReplModuleParent() const;
-
-		SubmodulesAccessLocked getSubmodules() const override {
-			// REPL chain modules have no submodules, so we return an empty SubmodulesAccessLocked.
-			return SubmodulesAccessLocked{ getModuleID(), {} };
-		}
-
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
-			// REPL chain modules have no submodules, so we return an empty ModuleChildAccessLocked.
-			return ModuleChildAccessLocked{ getModuleID(), name, {} };
-		}
 	};
 
 	/**
@@ -100,18 +96,14 @@ namespace compiler::frontend {
 		 */
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
+		/**
+		 * @brief Adds whether the script has a script file. The chain below the script is not
+		 * hashed, it is made of child modules.
+		 */
+		void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const override;
+
 	public:
 		explicit ScriptModuleTreeNode();
-
-		SubmodulesAccessLocked getSubmodules() const override {
-			// Script modules have no submodules, so we return an empty SubmodulesAccessLocked.
-			return SubmodulesAccessLocked{ getModuleID(), {} };
-		}
-
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const override {
-			// Script modules have no submodules, so we return an empty ModuleChildAccessLocked.
-			return ModuleChildAccessLocked{ getModuleID(), name, {} };
-		}
 	};
 
 
