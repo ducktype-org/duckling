@@ -930,12 +930,14 @@ private:
 		const auto bool_type  = compiler::tsh::getBoolType();
 		const auto meta_type  = compiler::tsh::getMetaType();
 
-		const auto int32_mut_value_type   = vt(int32_type);
-		const auto int32_immut_value_type = vt(int32_type);
+		const auto int32_value_type = vt(int32_type);
 
-		ASSERT_EQUAL(int32_immut_value_type, getValueTypeOf("SimpleIntConst", root_scope));
-		ASSERT_EQUAL(int32_immut_value_type, getValueTypeOf("SimpleIntLet", root_scope));
-		ASSERT_EQUAL(int32_mut_value_type, getValueTypeOf("SimpleIntVar", root_scope));
+		ASSERT_EQUAL(int32_value_type, getValueTypeOf("SimpleIntConst", root_scope));
+		ASSERT_EQUAL(int32_value_type, getValueTypeOf("SimpleIntLet", root_scope));
+		ASSERT_EQUAL(int32_value_type, getValueTypeOf("SimpleIntVar", root_scope));
+		ASSERT_EQUAL(Immutable, getSymbolTypeOf("SimpleIntConst", root_scope).getPlaceAccess());
+		ASSERT_EQUAL(Immutable, getSymbolTypeOf("SimpleIntLet", root_scope).getPlaceAccess());
+		ASSERT_EQUAL(Mutable, getSymbolTypeOf("SimpleIntVar", root_scope).getPlaceAccess());
 
 		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));

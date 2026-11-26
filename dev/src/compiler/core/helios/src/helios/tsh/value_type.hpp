@@ -54,7 +54,7 @@ namespace compiler::tsh {
 	 * - `SymbolType` - an object which describes a declared symbol. It includes other symbol
 	 * properties different from the type itself. This includes PlaceAccess, Uniqueness and Leakage.
 	 * - `ExpressionType` - an object which describes an expression. It includes other expression
-	 * properties - mainly `ValueCategory`.`
+	 * properties - mainly `ValueCategory`.
 	 *
 	 * @tparam ABSTRACT_TYPE The underlying class from the AbstractType hierarchy.
 	 */

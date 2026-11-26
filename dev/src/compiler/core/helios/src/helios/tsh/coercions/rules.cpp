@@ -277,9 +277,10 @@ namespace compiler::tsh::coercions {
 
 			CoercionNode node = startNode(source, target);
 
-			// OPT: A composite none of whose parts changes at runtime, like `(const i32, box i32)`
-			// into `(i32, box i32)`, is only seen as the other type. It is handed over and
-			// its mutability changed as a whole, rather then rebuilt for nothing.
+			// OPT: A composite none of whose parts changes at runtime, like a tuple whose only
+			// changing part is a mutable raw pointer seen as an immutable one, is only seen as the
+			// other type. It is handed over and its mutability changed as a whole, rather than
+			// rebuilt for nothing.
 			const auto only_changes_mutability = [](const CoercionNode& part) {
 				return std::ranges::all_of(part.steps, [](const CoercionStep& step) {
 					return v_matches(

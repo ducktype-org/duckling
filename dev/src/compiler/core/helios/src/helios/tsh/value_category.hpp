@@ -62,7 +62,7 @@ namespace compiler::tsh {
 	/**
 	 * @brief Combines two `PlaceAccess`es. Used when accessing a component of a place, like a class
 	 * field or an element of an array. The component may be written to only if both the whole place
-	 * and the component may be .
+	 * and the component may be.
 	 */
 	[[nodiscard]]
 	constexpr PlaceAccess combinePlaceAccess(const PlaceAccess owner, const PlaceAccess part) {

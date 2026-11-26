@@ -1130,13 +1130,13 @@ namespace compiler::helios::code {
 					  }
 				  }(),
 				  [&] {
-					  // An element of a array is a part of the array, so it is as writable as the array.
+					  // An array element is part of the array, so it is as writable as the array.
 					  const auto category = base->expression_type.getValueCategory().withDisabled(
 						  tsh::ValueSemanticsOptions::MOVE
 					  );
 					  if (base->expression_type.getType().getKind() == tsh::Kind::StaticArray)
 						  return category;
-					  // @TODO: #2104 The element of a pointer is writable is the pointer allows is.
+					  // @TODO: #2104 The element of a pointer is writable if the pointer allows it.
 		              // But it's not implemented yet.
 					  return category.withPlaceAccess(tsh::PlaceAccess::Mutable);
 				  }()

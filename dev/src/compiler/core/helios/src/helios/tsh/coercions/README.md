@@ -161,7 +161,7 @@ A refusal has the same tree shape. A `CoercionError` (`coercion_error.hpp`) hold
 | Reason                     | Printed as                       | When                                                                 |
 | -------------------------- | -------------------------------- | -------------------------------------------------------------------- |
 | `IncompatibleTypes`        | `incompatible types`             | no rule fits, or no variant alternative fits                         |
-| `MutabilityMismatch`       | `mutability mismatch`            | an immutable value into a mutable location behind a `ref`/`box`      |
+| `MutabilityMismatch`       | `mutability mismatch`            | not produced now, reserved for `ViewAccess` on references            | # @TODO: #2104 update
 | `SubPartRefused`           | `a part does not fit`            | this level would fit, but some of its components do not              |
 | `NotImplemented`           | `not implemented`                | meant to work one day, like function subtyping                       |
 | `AmbiguousCoercion`        | `ambiguous, alternatives 0, 1`   | several variant alternatives fit equally well                        |

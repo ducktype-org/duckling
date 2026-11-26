@@ -45,8 +45,8 @@ namespace compiler::tsh {
 	 * symbol properties like PlaceAccess, Uniqueness, Leakage.
 	 *
 	 * It only describes declarations which are strictly bound to a symbol, like variables,
-	 * parameters, fields, for iterators and match bindings. It just returned by QueryTypeOfSymbol
-	 * and ideally shouldn't be used for other purposes
+	 * parameters, fields, for iterators and match bindings. It is the result of QueryTypeOfSymbol
+	 * and the type stored for generated variables. Use ValueType everywhere else.
 	 */
 	class SymbolType final {
 	public:

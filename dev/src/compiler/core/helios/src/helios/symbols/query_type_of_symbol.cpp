@@ -261,7 +261,7 @@ namespace compiler::helios {
 			param_types.reserve(declaration.parameters.size());
 			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
 
-			return tsh::SymbolType::var(tsh::ValueType<>::direct(ctx.query<tsh::QueryFunctionType>(
+			return tsh::SymbolType::let(tsh::ValueType<>::direct(ctx.query<tsh::QueryFunctionType>(
 				{ .parameter_types = param_types, .result_type = declaration.return_type }
 			)));
 		}
@@ -308,7 +308,7 @@ namespace compiler::helios {
 						.result_type     = return_type,
 					});
 
-					return tsh::SymbolType::var(tsh::ValueType<>::direct(ctor_abstract_type));
+					return tsh::SymbolType::let(tsh::ValueType<>::direct(ctor_abstract_type));
 				}
 				variant_case(defgen::Method, method) {
 					const auto self = method.owner_type.isSimple()
@@ -344,10 +344,10 @@ namespace compiler::helios {
 						{ .parameter_types = std::move(arg_types), .result_type = return_type }
 					);
 
-					return tsh::SymbolType::var(tsh::ValueType<>::direct(method_abstract_type));
+					return tsh::SymbolType::let(tsh::ValueType<>::direct(method_abstract_type));
 				}
 				variant_case(defgen::BuiltinOperator, op) {
-					return tsh::SymbolType::var(tsh::ValueType<>::direct(op.operator_type));
+					return tsh::SymbolType::let(tsh::ValueType<>::direct(op.operator_type));
 				}
 				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
 					auto [arg_types, return_type]
@@ -370,7 +370,7 @@ namespace compiler::helios {
 					const auto fn_type = ctx.query<tsh::QueryFunctionType>(
 						{ .parameter_types = std::move(arg_types), .result_type = return_type }
 					);
-					return tsh::SymbolType::var(tsh::ValueType<>::direct(fn_type));
+					return tsh::SymbolType::let(tsh::ValueType<>::direct(fn_type));
 				}
 				variant_case(defgen::GeneratedConstant, gen_const) {
 					return tsh::SymbolType::let(gen_const.value.getTypeOfStoredValue(ctx));
@@ -433,14 +433,14 @@ namespace compiler::helios {
 						.parameter_types = {},
 						.result_type     = repl.getReturnType(),
 					});
-					return tsh::SymbolType::var(tsh::ValueType<>::direct(function_abstract_type));
+					return tsh::SymbolType::let(tsh::ValueType<>::direct(function_abstract_type));
 				}
 				variant_case_novalue(defgen::ScriptMainWrapper) {
 					const auto return_type = requiredMainReturnType(ctx);
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
 					                                          .result_type     = return_type });
-					return tsh::SymbolType::var(tsh::ValueType<>::direct(function_abstract_type));
+					return tsh::SymbolType::let(tsh::ValueType<>::direct(function_abstract_type));
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }
 			}
