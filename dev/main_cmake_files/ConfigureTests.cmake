@@ -14,7 +14,16 @@ if(ENABLE_COVERAGE)
 	# -fprofile-exclude-files skips counters in system headers (std, LLVM): the coverage report
 	# drops them anyway, and their shared atomic counters make the instrumented binaries much slower.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage -fprofile-update=atomic")
-	add_compile_options("-fprofile-exclude-files=^/usr/|^${CMAKE_BINARY_DIR}/")
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+		# ccache rejects -fprofile-exclude-files but hashes specs files. ';' since '|' is a pipe in specs.
+		set(COVERAGE_SPECS_FILE "${CMAKE_BINARY_DIR}/coverage.specs")
+		file(CONFIGURE OUTPUT "${COVERAGE_SPECS_FILE}"
+			CONTENT "*cc1plus:\n+ -fprofile-exclude-files=^/usr/;^${CMAKE_BINARY_DIR}/\n" @ONLY
+		)
+		add_compile_options("-specs=${COVERAGE_SPECS_FILE}")
+	else()
+		add_compile_options("-fprofile-exclude-files=^/usr/|^${CMAKE_BINARY_DIR}/")
+	endif()
 
 	find_program(FASTCOV fastcov REQUIRED)
 
