@@ -187,7 +187,7 @@ namespace compiler::mir {
 		 * Also sets its lifetime scope.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addTmp(tsh::SymbolType<> type, ScopeRef scope);
+		MIRLocalMutRef addTmp(tsh::ValueType<> type, ScopeRef scope);
 
 		/**
 		 * Creates an anonymous temporary local value.
@@ -196,7 +196,7 @@ namespace compiler::mir {
 		 * should not have destructors nor scope flags.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addReturnTmp(tsh::SymbolType<> type);
+		MIRLocalMutRef addReturnTmp(tsh::ValueType<> type);
 
 		/**
 		 * Add a temporary local value of type bool
@@ -240,7 +240,7 @@ namespace compiler::mir {
 		query::Context& getContext();
 
 		[[nodiscard]]
-		tsh::SymbolType<> getResultType() const;
+		tsh::ValueType<> getResultType() const;
 
 		/**
 		 * This is needed only for some assertins.

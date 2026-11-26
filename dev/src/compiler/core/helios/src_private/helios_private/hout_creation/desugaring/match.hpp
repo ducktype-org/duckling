@@ -8,7 +8,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/expressions/match_expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>

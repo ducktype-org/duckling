@@ -20,7 +20,7 @@
 #pragma once
 
 #include <abi/type_system/type.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -42,7 +42,5 @@ namespace compiler::tsl {
 	 * Returns `Failed` on query cycles (e.g. mutually recursive value-type
 	 * classes).
 	 */
-	DECLARE_QUERY(
-		QueryCAbiTypeOf, tsh::SymbolType<>, CRef<query::QResult<CAbiConversionResult>>, ({})
-	)
+	DECLARE_QUERY(QueryCAbiTypeOf, tsh::ValueType<>, CRef<query::QResult<CAbiConversionResult>>, ({}))
 }

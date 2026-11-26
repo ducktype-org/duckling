@@ -12,9 +12,9 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -55,7 +55,7 @@ namespace compiler::helios {
 	 * DVM-backend lowering.
 	 *
 	 * It has to be a query to keep the LIR function (and the CTV inside of it) in the cache,
-	 * because the CTV may contain symbol types, that are taken address of when comp-time.
+	 * because the CTV may contain ValueTypes, that are taken address of when comp-time.
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
@@ -68,7 +68,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryCtvMaterializingFunction, lir::Function) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
 			const auto  value_type = key.ctv.getTypeOfStoredValue(ctx);
-			const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
+			const auto& layout = ctx.query<tsl::QueryValueTypeLayout>(value_type)->valueOrThrow();
 			auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
 
 			lir::Block entry_block;
@@ -297,8 +297,8 @@ namespace {
 						using NumT = std::decay_t<decltype(num_val)>;
 
 						// @TODO: #3750 Once CTV will be VMValue based (contain the VMValue and
-					    // compiler::tsh::SymbolType) we should perform this conversion based on the
-					    // `SymbolType` not C++ type sizes.
+					    // compiler::tsh::ValueType) we should perform this conversion based on the
+					    // `ValueType` not C++ type sizes.
 						base::StrID dvm_type_name;
 						if constexpr (sizeof(NumT) <= 1)
 							dvm_type_name = base::StrID("i8");
@@ -334,10 +334,10 @@ namespace {
 				(*maybe_vm_value)->writeBytes<char>(val);
 				return maybe_vm_value;
 			}
-			variant_case(compiler::tsh::SymbolType<>, type) {
+			variant_case(compiler::tsh::ValueType<>, type) {
 				auto maybe_vm_value = get_vm_value(base::StrID("opaque_ptr"));
 				if (!maybe_vm_value) return maybe_vm_value;
-				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
+				(*maybe_vm_value)->writeBytes<const compiler::tsh::ValueType<>*>(&type);
 				return maybe_vm_value;
 			}
 			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, _) {
@@ -408,7 +408,7 @@ namespace {
 				break;
 			case tsh::Kind::Meta: {
 				const auto offset = layout.getOffsetOfFieldSymbol(field.getSymbol()).value();
-				const tsh::SymbolType<>* meta_ptr = nullptr;
+				const tsh::ValueType<>* meta_ptr = nullptr;
 				std::memcpy(&meta_ptr, data + offset.asInt(), sizeof(meta_ptr));
 				elements.emplace_back(*meta_ptr);
 				break;
@@ -432,7 +432,7 @@ namespace {
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::IVMValue> vm_value
+		query::Context& ctx, const compiler::tsh::ValueType<>& type, Ref<vm::IVMValue> vm_value
 	) {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
@@ -510,11 +510,11 @@ namespace {
 					"Expected opaque pointer VM value but received type: "
 						+ vm_value->getType()->getName().str()
 				));
-			auto* meta_ptr = vm_value->readBytes<compiler::tsh::SymbolType<>*>();
+			auto* meta_ptr = vm_value->readBytes<compiler::tsh::ValueType<>*>();
 			return CompileTimeValue{ *meta_ptr };
 		}
 		case compiler::tsh::Kind::Slice: {
-			auto char_slice_type = tsh::SymbolType<>::withDefaultsMut(tsh::getCharSliceType(ctx));
+			auto char_slice_type = tsh::ValueType<>::withDefaultsMut(tsh::getCharSliceType(ctx));
 			if (vm_value->getType()->getName()
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
@@ -523,7 +523,7 @@ namespace {
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
-				auto string_type = tsh::SymbolType<>::withDefaultsMut(tsh::getStringType(ctx));
+				auto string_type = tsh::ValueType<>::withDefaultsMut(tsh::getStringType(ctx));
 				if (vm_value->getType()->getName()
 				    == ctx.query<mangler::QueryMangledType>(string_type)->valueOrThrow())
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
@@ -616,11 +616,11 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		query::Context&                   ctx,
-		CompTimeDVM&                      comptime_dvm,
-		const std::string&                func_name,
-		const VmArguments&                vm_value_args,
-		const compiler::tsh::SymbolType<> return_type
+		query::Context&                  ctx,
+		CompTimeDVM&                     comptime_dvm,
+		const std::string&               func_name,
+		const VmArguments&               vm_value_args,
+		const compiler::tsh::ValueType<> return_type
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 
@@ -680,7 +680,7 @@ namespace compiler::helios {
 		const std::string&                        func_name,
 		const lir::LIRUnit&                       lir_unit,
 		const std::vector<ctv::CompileTimeValue>& args,
-		const tsh::SymbolType<>&                  return_type
+		const tsh::ValueType<>&                   return_type
 	) {
 		static std::mutex vm_evaluation_mutex;
 		std::scoped_lock  lock(vm_evaluation_mutex);

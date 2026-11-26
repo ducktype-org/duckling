@@ -15,7 +15,7 @@
 
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/kind.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
@@ -28,7 +28,7 @@ namespace compiler::tsh::coercions {
 	/**
 	 * @brief Represents the value a coercion is asked about. This is used to provide the
 	 * coercion tree with the information needed to perform ownership decisions on top of the
-	 * `SymbolType` plan.
+	 * `ValueType` plan.
 	 *
 	 * In most coercion cases the `ValueSource`	is a single node with a single `ExpressionType` of
 	 * the coerced value. For more complex cases like coercing tuple literals it creates a tree

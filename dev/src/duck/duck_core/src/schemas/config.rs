@@ -85,10 +85,11 @@ impl FromStr for HumanDeserializableDuration {
             "day" | "days" => 24 * 60 * 60,
             "week" | "weeks" => 7 * 24 * 60 * 60,
             _ => {
-                return Err(QuackError::note(
+                let mut err = QuackError::message(format!("unknown time format `{unit}`"));
+                err.add_note(
                     "known formats are: second, minute, hour, day, week, and their plural forms",
-                ))
-                .context(format!("unknown time format `{unit}`"));
+                );
+                return Err(err);
             }
         };
         let duration = Duration::from_secs(count * seconds_in_unit);

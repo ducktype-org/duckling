@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "../symbol_type.hpp"
 #include "../types.hpp"
+#include "../value_type.hpp"
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -112,7 +112,7 @@ namespace compiler::tsh {
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(QueryPointerType, ValueType<>, PointerAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get a typed many pointer type.
@@ -120,7 +120,7 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(
-		QueryManyPointerType, SymbolType<>, ManyPointerAbstractType, ({ .uses_qresult = false })
+		QueryManyPointerType, ValueType<>, ManyPointerAbstractType, ({ .uses_qresult = false })
 	)
 
 	/**
@@ -128,7 +128,7 @@ namespace compiler::tsh {
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QueryCPointerType, SymbolType<>, CPointerAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(QueryCPointerType, ValueType<>, CPointerAbstractType, ({ .uses_qresult = false }))
 
 
 	/**
@@ -136,7 +136,7 @@ namespace compiler::tsh {
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(QuerySliceType, ValueType<>, SliceAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Key for QueryStaticArrayType.
@@ -145,7 +145,7 @@ namespace compiler::tsh {
 		/**
 		 * @brief The type of the elements in the array.
 		 */
-		SymbolType<> element_type;
+		ValueType<> element_type;
 
 		/**
 		 * @brief The compile-time constant size of the array.
@@ -180,7 +180,7 @@ namespace compiler::tsh {
 	 * @brief Key for QueryTupleType.
 	 */
 	struct KeyFor_QueryTupleType final {
-		std::vector<SymbolType<>> components;
+		std::vector<ValueType<>> components;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryTupleType&) const
@@ -206,7 +206,7 @@ namespace compiler::tsh {
 	 * @brief Key for QueryVariantType.
 	 */
 	struct KeyFor_QueryVariantType final {
-		std::vector<SymbolType<>> underlying_types;
+		std::vector<ValueType<>> underlying_types;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryVariantType&) const
@@ -240,7 +240,7 @@ namespace compiler::tsh {
 	 */
 	struct KeyFor_QueryOptionalType final {
 		/// The type `T` held by the optional `?T`.
-		SymbolType<> value_type;
+		ValueType<> value_type;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryOptionalType&) const
@@ -273,12 +273,12 @@ namespace compiler::tsh {
 		/**
 		 * @brief The types of the parameters of the function.
 		 */
-		std::vector<SymbolType<>> parameter_types;
+		std::vector<ValueType<>> parameter_types;
 
 		/**
 		 * @brief The result type of the function.
 		 */
-		SymbolType<> result_type;
+		ValueType<> result_type;
 
 		/**
 		 * @brief Whether the function type is pure or not.

@@ -21,10 +21,10 @@ namespace compiler::tsl {
 	DECLARE_QUERY(QueryAbstractTypeLayout, tsh::AbstractType, CRef<query::QResult<TypeLayout>>, ({}))
 
 	/**
-	 * @brief Get a TypeLayout for a given SymbolType, taking reference indirection into account.
+	 * @brief Get a TypeLayout for a given ValueType, taking reference indirection into account.
 	 *
 	 * \query_thread_safe_if_cache
 	 * This query uses QueryAbstractTypeLayout directly, hence the grouping.
 	 */
-	DECLARE_QUERY(QuerySymbolTypeLayout, tsh::SymbolType<>, CRef<query::QResult<TypeLayout>>, ({}))
+	DECLARE_QUERY(QueryValueTypeLayout, tsh::ValueType<>, CRef<query::QResult<TypeLayout>>, ({}))
 }
