@@ -1,0 +1,7 @@
+// `0 x` parses as the suffix operator `x` applied to `0`. The only `x` in scope is a variable,
+// which is not an operator function.
+fun main() -> i64 = {
+    var x = 0;
+    var y = 0 x;
+    return 0i64;
+}

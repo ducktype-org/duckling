@@ -1,0 +1,39 @@
+# Operators that cannot be resolved, sometimes after a parse error. The compiler must report a
+# diagnostic and exit with code 1, not abort with an internal panic (exit code 134).
+
+Run: "
+  case @{backend} in
+    dvm)  @{expect_output} --expect-exit 1 --err-regex '@{expected_error}' -- @{compile_dvm_only_cmd}  ;;
+    llvm) @{expect_output} --expect-exit 1 --err-regex '@{expected_error}' -- @{compile_llvm_only_cmd} ;;
+    *)    echo \"Unknown backend\"; exit 1                                                            ;;
+  esac;
+  "
+
+no_matching_function: "Call failed because no matching functions were found"
+
+Tests:
+  # A suffix operator whose name only matches a variable.
+  suffix_operator_named_like_variable:
+    expected_error: "@{no_matching_function}"
+    Cases:
+      dvm: {}
+      llvm: {}
+
+  missing_semicolon_before_assignment:
+    expected_error: "Expected special `;` here(.|\\n)*@{no_matching_function}"
+    Cases:
+      dvm: {}
+      llvm: {}
+
+  unexpected_tokens_after_operand:
+    expected_error: "Unexpected additional tokens during parsing(.|\\n)*@{no_matching_function}"
+    Cases:
+      dvm: {}
+      llvm: {}
+
+  # The only operator with this name is a template.
+  operator_template:
+    expected_error: "Feature not implemented(.|\\n)*Operator call on a template: \\+-"
+    Cases:
+      dvm: {}
+      llvm: {}

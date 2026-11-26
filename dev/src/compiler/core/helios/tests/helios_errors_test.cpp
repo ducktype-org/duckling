@@ -64,6 +64,7 @@ public:
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
+		TESTER_ADD_TEST(testOperatorNamedLikeNonFunction);
 		TESTER_ADD_TEST(testCopyMoveErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 		TESTER_ADD_TEST(testCSymbolNameAttributeErrors);
@@ -2525,6 +2526,80 @@ private:
 			)",
 			{ msg },
 			1
+		);
+	}
+
+	void testOperatorNamedLikeNonFunction() {
+		const std::string_view msg = "Call failed because no matching functions were found.";
+
+		// `0 x` applies the suffix operator `x`, but the only `x` in scope is a variable.
+		checkForErrorOnCompileModule(
+			R"(
+				fun suffixNamedLikeVariable() = {
+					var x = 0;
+					var y = 0 x;
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// The same when the name belongs to a class.
+		checkForErrorOnCompileModule(
+			R"(
+				class Cls { x: i64; }
+				fun suffixNamedLikeClass() = {
+					var y = 0 Cls;
+				}
+			)",
+			{ msg },
+			1
+		);
+
+		// Operator templates cannot be called: an operator call passes no template arguments.
+		const std::string_view nyi = "Feature not implemented";
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type) fun +-(x: i32, y: i32) -> i32 = x;
+				fun infixTemplate() = {
+					var y = 1i32 +- 2i32;
+				}
+			)",
+			{ nyi, "Operator call on a template: +-" },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type) fun -!(x: i32) -> i32 = x;
+				fun prefixTemplate() = {
+					var y = -! 1i32;
+				}
+			)",
+			{ nyi, "Operator call on a template: -!" },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type) fun x(v: i32) -> i32 = v;
+				fun suffixTemplate() = {
+					var y = 0i32 x;
+				}
+			)",
+			{ nyi, "Operator call on a template: x" },
+			1
+		);
+
+		// A non-template overload with the same name is still used.
+		checkForWarningOnCompileModule(
+			R"(
+				template(T: type) fun +-(x: i32, y: i32) -> i32 = x;
+				fun +-(x: i64, y: i64) -> i64 = x;
+				fun infixTemplateAndFunction() = {
+					var y = 1i64 +- 2i64;
+				}
+			)",
+			{},
+			0
 		);
 	}
 

@@ -1,0 +1,7 @@
+// An operator call cannot pass template arguments, so an operator template cannot be called yet.
+template(T: type) fun +-(x: i32, y: i32) -> i32 = x;
+
+fun main() -> i64 = {
+    var a = 1i32 +- 2i32;
+    return 0i64;
+}
