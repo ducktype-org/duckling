@@ -7,6 +7,10 @@
 #pragma once
 
 #include "abstract_type.hpp"
+#include "view_access.hpp"
+
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <hashing/hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -75,7 +79,8 @@ namespace compiler::tsh {
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		ValueType(const ValueType<OTHER_ABSTRACT_TYPE>& other):
 			  abstract_type(other.getType()),
-			  reference_kind(other.getRefKind()) {}
+			  reference_kind(other.getRefKind()),
+			  view_access(other.getViewAccess()) {}
 
 		/**
 		 * @brief Creates a Direct ValueType from an AbstractType.
@@ -91,10 +96,13 @@ namespace compiler::tsh {
 		 * @brief Creates a Ref ValueType from an AbstractType.
 		 *
 		 * @param abstract_type The source abstract type, from the AbstractType hierarchy.
+		 * @param view_access Whether the place may be written through the reference.
 		 * @return A Ref ValueType<ABSTRACT_TYPE>.
 		 */
-		static ValueType<ABSTRACT_TYPE> ref(const ABSTRACT_TYPE abstract_type) {
-			return ValueType<ABSTRACT_TYPE>(abstract_type, ReferenceKind::Ref);
+		static ValueType<ABSTRACT_TYPE> ref(
+			const ABSTRACT_TYPE abstract_type, const ViewAccess view_access
+		) {
+			return ValueType<ABSTRACT_TYPE>(abstract_type, ReferenceKind::Ref, view_access);
 		}
 
 		/**
@@ -123,6 +131,15 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		ReferenceKind getRefKind() const {
 			return reference_kind;
+		}
+
+		/**
+		 * @brief Get the access rules of a reference.
+		 * @return The view access of a Ref, nothing for Direct and Box.
+		 */
+		[[nodiscard]]
+		base::Optional<ViewAccess> getViewAccess() const {
+			return view_access;
 		}
 
 		/**
@@ -216,14 +233,16 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Copies this ValueType with the reference kind replaced. Prefer toDirect(),
-		 * toBox() or toRef() when the new reference kind is known at the call site.
-		 * @param new_reference_kind The reference kind of the result.
-		 * @return This ValueType with the given reference kind.
+		 * @brief Copies this ValueType with the abstract type replaced. The reference kind and the
+		 * view access stay the same.
+		 * @note Used by creating static array types in comp time.
+		 * @param new_abstract_type The abstract type of the result.
+		 * @return This ValueType with the given abstract type.
 		 */
+		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		[[nodiscard]]
-		ValueType withReferenceKind(const ReferenceKind new_reference_kind) const {
-			return ValueType(abstract_type, new_reference_kind);
+		ValueType<OTHER_ABSTRACT_TYPE> withType(const OTHER_ABSTRACT_TYPE new_abstract_type) const {
+			return ValueType<OTHER_ABSTRACT_TYPE>(new_abstract_type, reference_kind, view_access);
 		}
 
 		/**
@@ -232,7 +251,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		ValueType toDirect() const {
-			return withReferenceKind(ReferenceKind::Direct);
+			return ValueType(abstract_type, ReferenceKind::Direct);
 		}
 
 		/**
@@ -241,16 +260,31 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		ValueType toBox() const {
-			return withReferenceKind(ReferenceKind::Box);
+			return ValueType(abstract_type, ReferenceKind::Box);
 		}
 
 		/**
 		 * @brief Copies this ValueType with the reference kind set to Ref.
-		 * @return This ValueType as a non-owning Ref reference.
+		 *
+		 * When referencing a reference the resulting mutability is the weaker of the two.
+		 * - `ref ref T -> ref T`,
+		 * - `ref mut ref T -> ref T`,
+		 * - `ref ref mut T -> ref T`,
+		 * - `ref mut ref mut T -> ref mut T`.`
+		 *
+		 * @param new_view_access The view access of the outer reference.
+		 * @return This ValueType as a ref with the appropriate ViewAccess.
 		 */
 		[[nodiscard]]
-		ValueType toRef() const {
-			return withReferenceKind(ReferenceKind::Ref);
+		ValueType toRef(const ViewAccess new_view_access) const {
+			const bool writable
+				= new_view_access == ViewAccess::ReadWrite
+			  and view_access.copyValueOr(ViewAccess::ReadWrite) == ViewAccess::ReadWrite;
+			return ValueType(
+				abstract_type,
+				ReferenceKind::Ref,
+				writable ? ViewAccess::ReadWrite : ViewAccess::ReadOnly
+			);
 		}
 
 		/**
@@ -277,7 +311,8 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		auto operator<=>(const ValueType<OTHER_ABSTRACT_TYPE>& other) const {
 			if (auto type_cmp = abstract_type <=> other.getType(); type_cmp != 0) return type_cmp;
-			return reference_kind <=> other.getRefKind();
+			if (auto ref_cmp = reference_kind <=> other.getRefKind(); ref_cmp != 0) return ref_cmp;
+			return view_access <=> other.getViewAccess();
 		}
 
 		/**
@@ -296,7 +331,12 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(abstract_type, reference_kind);
+			return hashing::justHash<hashing::SHA256>(
+				abstract_type,
+				reference_kind,
+				view_access.has_value(),
+				view_access.copyValueOr(ViewAccess::ReadOnly)
+			);
 		}
 
 		friend constexpr void addToHash(
@@ -307,24 +347,28 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		std::string toString() const {
-			using enum ReferenceKind;
-			return base::strConcat(
-				reference_kind == Direct ? ""
-				: reference_kind == Box  ? "box "
-										 : "ref ",
-				abstract_type.toString()
-			);
+			switch (reference_kind) {
+			case ReferenceKind::Direct:
+				return abstract_type.toString();
+			case ReferenceKind::Box:
+				return base::strConcat("box ", abstract_type.toString());
+			case ReferenceKind::Ref:
+				return base::strConcat(
+					viewOperator(lang_def::Keyword::Ref, view_access.value()),
+					abstract_type.toString()
+				);
+			}
+			CORE_UNREACHABLE();
 		}
 
 		/**
 		 * @brief Returns a source-oriented representation of this ValueType.
 		 *
-		 * The returned representation includes the reference kind, `ref` or `box`, in the same
-		 * way as @ref toString. The underlying type
-		 * follows Duckling source syntax whenever it has a type-expression spelling and otherwise
-		 * uses the human-readable fallback documented by AbstractType::sourceTypeName. The result
-		 * is intended for user-facing output, subject to the name-qualification limitations
-		 * documented by AbstractType::sourceTypeName.
+		 * The returned representation includes the reference kind, `ref`, `ref mut` or `box`, in the
+		 * same way as @ref toString. The underlying type follows Duckling source syntax whenever it
+		 * has a type-expression spelling and otherwise uses the human-readable fallback documented
+		 * by AbstractType::sourceTypeName. The result is intended for user-facing output, subject
+		 * to the name-qualification limitations documented by AbstractType::sourceTypeName.
 		 *
 		 * @param ctx Query context used to resolve namespace-qualified class names and baked
 		 * template arguments.
@@ -334,16 +378,30 @@ namespace compiler::tsh {
 		std::string sourceTypeName(query::Context& ctx) const;
 
 	private:
-		ABSTRACT_TYPE abstract_type;
-		ReferenceKind reference_kind;
+		ABSTRACT_TYPE              abstract_type;
+		ReferenceKind              reference_kind;
+		base::Optional<ViewAccess> view_access;  ///< Only a ref has it.
 
 		/**
 		 * @brief Constructs the ValueType directly from its contents. Use direct(), ref() or box()
-		 * instead, or withReferenceKind().
+		 * instead.
 		 */
-		ValueType(const ABSTRACT_TYPE abstract_type, const ReferenceKind reference_kind):
+		ValueType(
+			const ABSTRACT_TYPE              abstract_type,
+			const ReferenceKind              reference_kind,
+			const base::Optional<ViewAccess> view_access = {}
+		):
 			  abstract_type(abstract_type),
-			  reference_kind(reference_kind) {}
+			  reference_kind(reference_kind),
+			  view_access(view_access) {
+			CORE_ASSERT(
+				view_access.has_value() == (reference_kind == ReferenceKind::Ref),
+				"Only a Ref ValueType has a view access"
+			);
+		}
+
+		template<std::derived_from<AbstractType>>
+		friend class ValueType;
 	};
 
 	extern template auto ValueType<AbstractType>::getPointeeValueType() const

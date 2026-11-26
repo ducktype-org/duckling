@@ -96,7 +96,7 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a reference-like
 				// alternative is the stored reference itself.
-				const auto payload_type = alternatives[i].toRef();
+				const auto payload_type = alternatives[i].toRef(tsh::ViewAccess::ReadOnly);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name                  = base::StrID(base::strConcat("__alternative_", i)),

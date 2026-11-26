@@ -88,11 +88,11 @@ namespace compiler::tsh {
 		return FloatAbstractType{ &cache.at(size) };
 	}
 
-	RawPointerAbstractType getRawPointerType(bool mutable_pointer) {
+	RawPointerAbstractType getRawPointerType(const ViewAccess access) {
 		static auto raw_pointer_impl
-			= std::array{ RawPointerAbstractTypeImpl{ Mutability::Immutable },
-			              RawPointerAbstractTypeImpl{ Mutability::Mutable } };
-		return RawPointerAbstractType{ &raw_pointer_impl.at(mutable_pointer) };
+			= std::array{ RawPointerAbstractTypeImpl{ ViewAccess::ReadOnly },
+			              RawPointerAbstractTypeImpl{ ViewAccess::ReadWrite } };
+		return RawPointerAbstractType{ &raw_pointer_impl.at(access == ViewAccess::ReadWrite) };
 	}
 
 	ClassAbstractType getStringType(query::Context& ctx) {
@@ -110,7 +110,8 @@ namespace compiler::tsh {
 	}
 
 	SliceAbstractType getCharSliceType(query::Context& ctx) {
-		return ctx.query<QuerySliceType>(tsh::ValueType<>::direct(tsh::getCharType()));
+		return ctx.query<QuerySliceType>({ .pointee = tsh::ValueType<>::direct(tsh::getCharType()),
+		                                   .access  = ViewAccess::ReadOnly });
 	}
 
 	NamespaceAbstractType getNamespaceType() {
@@ -135,7 +136,7 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			return PointerAbstractTypeImpl(key);
+			return PointerAbstractTypeImpl(key.pointee, key.access);
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
@@ -145,7 +146,7 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryManyPointerType, ManyPointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			return ManyPointerAbstractTypeImpl(key);
+			return ManyPointerAbstractTypeImpl(key.pointee, key.access);
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
@@ -155,7 +156,7 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QueryCPointerType, CPointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			return CPointerAbstractTypeImpl(key);
+			return CPointerAbstractTypeImpl(key.pointee, key.access);
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
@@ -165,7 +166,7 @@ namespace compiler::tsh {
 
 	struct IMPLEMENT_QUERY(QuerySliceType, SliceAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			return SliceAbstractTypeImpl(key);
+			return SliceAbstractTypeImpl(key.pointee, key.access);
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF

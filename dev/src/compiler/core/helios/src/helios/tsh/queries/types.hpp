@@ -66,7 +66,7 @@ namespace compiler::tsh {
 	/**
 	 * @brief Simple getter to create and get raw pointer types.
 	 */
-	RawPointerAbstractType getRawPointerType(bool mutable_pointer);
+	RawPointerAbstractType getRawPointerType(ViewAccess access);
 
 	/**
 	 * @brief Get the `String` type, i.e. the `String` class from `core.containers`.
@@ -106,13 +106,36 @@ namespace compiler::tsh {
 	 */
 	ImportAbstractType getImportType();
 
+	/**
+	 * @brief Key for the pointer-like types: `ptr`, `manyptr`, `cptr` and `slice`.
+	 */
+	struct PointerTypeKey final {
+		/**
+		 * @brief The type of the memory the pointer points to.
+		 */
+		ValueType<> pointee;
+
+		/**
+		 * @brief Whether the pointee may be written through the view.
+		 */
+		ViewAccess access;
+
+		[[nodiscard]]
+		auto operator<=>(const PointerTypeKey&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(pointee, access);
+		}
+	};
 
 	/**
 	 * @brief Query to get a typed Pointer type.
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QueryPointerType, ValueType<>, PointerAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(QueryPointerType, PointerTypeKey, PointerAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Query to get a typed many pointer type.
@@ -120,7 +143,7 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(
-		QueryManyPointerType, ValueType<>, ManyPointerAbstractType, ({ .uses_qresult = false })
+		QueryManyPointerType, PointerTypeKey, ManyPointerAbstractType, ({ .uses_qresult = false })
 	)
 
 	/**
@@ -128,7 +151,9 @@ namespace compiler::tsh {
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QueryCPointerType, ValueType<>, CPointerAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(
+		QueryCPointerType, PointerTypeKey, CPointerAbstractType, ({ .uses_qresult = false })
+	)
 
 
 	/**
@@ -136,7 +161,7 @@ namespace compiler::tsh {
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QuerySliceType, ValueType<>, SliceAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(QuerySliceType, PointerTypeKey, SliceAbstractType, ({ .uses_qresult = false }))
 
 	/**
 	 * @brief Key for QueryStaticArrayType.

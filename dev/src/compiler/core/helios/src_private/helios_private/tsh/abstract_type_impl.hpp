@@ -9,9 +9,9 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/kind.hpp>
-#include <helios/tsh/mutability.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/view_access.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -441,13 +441,13 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::RawPointer;
 
-		explicit RawPointerAbstractTypeImpl(const Mutability mutability): mutability(mutability) {
+		explicit RawPointerAbstractTypeImpl(const ViewAccess access): access(access) {
 			representation = "raw_pointer";
 		}
 
 		[[nodiscard]]
-		bool isMutable() const {
-			return mutability == Mutability::Mutable;
+		ViewAccess getAccess() const {
+			return access;
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
@@ -466,11 +466,12 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 
 	private:
-		Mutability mutability;
+		ViewAccess access;
 	};
 
 	class PointerAbstractTypeImpl: public AbstractTypeImpl {
 		ValueType<> pointee;
+		ViewAccess  access;
 
 	public:
 		[[nodiscard]]
@@ -493,8 +494,17 @@ namespace compiler::tsh {
 			return pointee.getType();
 		}
 
-		explicit PointerAbstractTypeImpl(const ValueType<> component): pointee(component) {
-			representation = base::strConcat("ptr ", component.toString());
+		[[nodiscard]]
+		ViewAccess getAccess() const {
+			return access;
+		}
+
+		explicit PointerAbstractTypeImpl(const ValueType<> component, const ViewAccess access):
+			  pointee(component),
+			  access(access) {
+			representation = base::strConcat(
+				viewOperator(lang_def::Keyword::Ptr, access), component.toString()
+			);
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
@@ -525,9 +535,11 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::ManyPointer;
 
-		explicit ManyPointerAbstractTypeImpl(const ValueType<> component):
-			  PointerAbstractTypeImpl(component) {
-			representation = base::strConcat("manyptr ", component.toString());
+		explicit ManyPointerAbstractTypeImpl(const ValueType<> component, const ViewAccess access):
+			  PointerAbstractTypeImpl(component, access) {
+			representation = base::strConcat(
+				viewOperator(lang_def::Keyword::ManyPtr, access), component.toString()
+			);
 		}
 
 		[[nodiscard]]
@@ -546,9 +558,11 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::CPointer;
 
-		explicit CPointerAbstractTypeImpl(const ValueType<> component):
-			  PointerAbstractTypeImpl(component) {
-			representation = base::strConcat("cptr ", component.toString());
+		explicit CPointerAbstractTypeImpl(const ValueType<> component, const ViewAccess access):
+			  PointerAbstractTypeImpl(component, access) {
+			representation = base::strConcat(
+				viewOperator(lang_def::Keyword::CPtr, access), component.toString()
+			);
 		}
 
 		[[nodiscard]]
@@ -557,6 +571,7 @@ namespace compiler::tsh {
 
 	class SliceAbstractTypeImpl final: public AbstractTypeImpl {
 		ValueType<> element;
+		ViewAccess  access;
 
 	public:
 		[[nodiscard]]
@@ -570,12 +585,24 @@ namespace compiler::tsh {
 		}
 
 		/**
+		 * @brief Whether the elements may be written through the slice.
+		 */
+		[[nodiscard]]
+		ViewAccess getAccess() const {
+			return access;
+		}
+
+		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Slice;
 
-		explicit SliceAbstractTypeImpl(const ValueType<> element): element(element) {
-			representation = base::strConcat("slice ", element.toString());
+		explicit SliceAbstractTypeImpl(const ValueType<> element, const ViewAccess access):
+			  element(element),
+			  access(access) {
+			representation = base::strConcat(
+				viewOperator(lang_def::Keyword::Slice, access), element.toString()
+			);
 		}
 
 		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }

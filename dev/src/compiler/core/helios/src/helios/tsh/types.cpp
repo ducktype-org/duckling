@@ -57,7 +57,7 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getSignedness();
 	}
 
-	bool RawPointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
+	ViewAccess RawPointerAbstractType::getAccess() const { return toCPimpl(pimpl)->getAccess(); }
 
 	ValueType<> PointerAbstractType::getPointee() const { return toCPimpl(pimpl)->getPointee(); }
 
@@ -81,6 +81,31 @@ namespace compiler::tsh {
 
 	ValueType<> SliceAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();
+	}
+
+	ViewAccess PointerAbstractType::getAccess() const { return toCPimpl(pimpl)->getAccess(); }
+
+	ViewAccess ManyPointerAbstractType::getAccess() const { return toCPimpl(pimpl)->getAccess(); }
+
+	ViewAccess CPointerAbstractType::getAccess() const { return toCPimpl(pimpl)->getAccess(); }
+
+	ViewAccess SliceAbstractType::getAccess() const { return toCPimpl(pimpl)->getAccess(); }
+
+	base::Optional<ViewAccess> pointerViewAccess(const AbstractType type) {
+		switch (type.getKind()) {
+		case Kind::Pointer:
+			return type.as<PointerAbstractType>().getAccess();
+		case Kind::ManyPointer:
+			return type.as<ManyPointerAbstractType>().getAccess();
+		case Kind::CPointer:
+			return type.as<CPointerAbstractType>().getAccess();
+		case Kind::Slice:
+			return type.as<SliceAbstractType>().getAccess();
+		case Kind::RawPointer:
+			return type.as<RawPointerAbstractType>().getAccess();
+		default:
+			return {};
+		}
 	}
 
 	struct ReferenceConstructionRecord {

@@ -157,16 +157,13 @@ namespace compiler::helios {
 					auto inner_type
 						= sinkStaticArrayDimension(ctx, static_arr.getElementType(), size);
 
-					return tsh::ValueType<>::direct(ctx.query<tsh::QueryStaticArrayType>(
-														{ .element_type = inner_type,
-					                                      .size         = static_arr.getSize() }
-													))
-					    .withReferenceKind(base.getRefKind());
+					return base.withType(tsh::AbstractType(ctx.query<tsh::QueryStaticArrayType>(
+						{ .element_type = inner_type, .size = static_arr.getSize() }
+					)));
 				}
-				return tsh::ValueType<>::direct(ctx.query<tsh::QueryStaticArrayType>(
-													{ .element_type = base, .size = size }
-												))
-				    .withReferenceKind(base.getRefKind());
+				return base.withType(tsh::AbstractType(
+					ctx.query<tsh::QueryStaticArrayType>({ .element_type = base, .size = size })
+				));
 			}
 
 			/**

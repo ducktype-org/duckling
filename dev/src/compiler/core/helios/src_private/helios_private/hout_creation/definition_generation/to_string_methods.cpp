@@ -62,10 +62,9 @@ namespace compiler::helios::defgen {
 		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
 		auto       string_abstract_type = tsh::getStringType(ctx);
 		const auto expected_arg_type
-			= tsh::ValueType<>::direct(string_abstract_type)
-		          .withReferenceKind(
-					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
-				  );
+			= arg_by_reference
+		        ? tsh::ValueType<>::ref(string_abstract_type, tsh::ViewAccess::ReadOnly)
+		        : tsh::ValueType<>::direct(string_abstract_type);
 		const auto& lookup_result = HInterface::ofTypeInstance(string_abstract_type)
 		                                .lookup(ctx, base::StrID("append"))
 		                                ->valueOrThrow();
@@ -267,7 +266,7 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				// A binding is always a reference to the payload, which for a `box` alternative
 				// is a reference to the pointee.
-				const auto payload_type = alternatives[i].toRef();
+				const auto payload_type = alternatives[i].toRef(tsh::ViewAccess::ReadOnly);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name = base::StrID(base::strConcat("__alternative_", i)),

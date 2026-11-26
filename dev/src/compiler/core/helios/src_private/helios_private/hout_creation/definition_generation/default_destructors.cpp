@@ -81,8 +81,9 @@ namespace compiler::helios::defgen {
 			// then frees the memory, so the box itself is all it needs.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				const auto pointee_type = tsh::ValueType<>::direct(type.getType());
-				const auto storage_type
-					= tsh::ValueType<>::direct(ctx.query<tsh::QueryPointerType>({ pointee_type }));
+				const auto storage_type = tsh::ValueType<>::direct(ctx.query<tsh::QueryPointerType>(
+					{ .pointee = pointee_type, .access = tsh::ViewAccess::ReadWrite }
+				));
 
 				body.emplace_back(s.expr(s.call(
 					s.ident(boxFreeSymFor(ctx, type.getType())),
@@ -172,7 +173,7 @@ namespace compiler::helios::defgen {
 			for (usize i = 0; i < alternatives.size(); i++) {
 				if (alternatives[i].isTriviallyDestructible(ctx)) continue;
 
-				const auto payload_type = alternatives[i].toRef();
+				const auto payload_type = alternatives[i].toRef(tsh::ViewAccess::ReadWrite);
 
 				const SymID payload_sym = ctx.query<QueryGeneratedSymbol>({
 					.name                  = base::StrID(base::strConcat("__alternative_", i)),

@@ -13,9 +13,11 @@
  */
 
 #pragma once
+
 #include "abstract_type.hpp"
 #include "function_kind.hpp"
 #include "value_type.hpp"
+#include "view_access.hpp"
 
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -195,8 +197,10 @@ namespace compiler::tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(RawPointerAbstractType, AbstractType)
 
-		[[nodiscard]]
-		bool isMutable() const;
+		/**
+		 * @brief Whether the memory may be written through the pointer.
+		 */
+		[[nodiscard]] ViewAccess getAccess() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(RawPointerAbstractType)
 
@@ -219,6 +223,11 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		ValueType<> getPointee() const;
+
+		/**
+		 * @brief Whether the pointee may be written through this view.
+		 */
+		[[nodiscard]] ViewAccess getAccess() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -253,6 +262,11 @@ namespace compiler::tsh {
 		ValueType<> getPointee() const;
 
 		/**
+		 * @brief Whether the pointee may be written through this view.
+		 */
+		[[nodiscard]] ViewAccess getAccess() const;
+
+		/**
 		 * @brief Gets the underlying type of the Pointer type.
 		 * @return The underlying type.
 		 */
@@ -283,6 +297,11 @@ namespace compiler::tsh {
 		[[nodiscard]] ValueType<> getPointee() const;
 
 		/**
+		 * @brief Whether the pointee may be written through this view.
+		 */
+		[[nodiscard]] ViewAccess getAccess() const;
+
+		/**
 		 * @brief Gets the underlying type of the Pointer type.
 		 * @return The underlying type.
 		 */
@@ -302,6 +321,11 @@ namespace compiler::tsh {
 		SETUP_TYPE_WITH_BASE(SliceAbstractType, AbstractType)
 
 		[[nodiscard]] ValueType<> getElementType() const;
+
+		/**
+		 * @brief Whether the pointee may be written through this view.
+		 */
+		[[nodiscard]] ViewAccess getAccess() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(SliceAbstractType)
 
@@ -611,4 +635,10 @@ namespace compiler::tsh {
 
 		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateAbstractType)
 	};
+
+	/**
+	 * @brief Whether the pointee may be written through a pointer-like type.
+	 * @return The ViewAccess for a pointer-like type, nothing for any other type.
+	 */
+	[[nodiscard]] base::Optional<ViewAccess> pointerViewAccess(AbstractType type);
 }

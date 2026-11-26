@@ -136,6 +136,24 @@ namespace compiler::tsh {
 		}
 	}
 
+	/**
+	 * @brief Renders a view, like `ptr mut T`.
+	 */
+	static SourceTypeName renderView(
+		query::Context&         ctx,
+		const lang_def::Keyword view,
+		const ViewAccess        access,
+		const ValueType<>&      viewed
+	) {
+		return {
+			.text = base::strConcat(
+				viewOperator(view, access),
+				renderValueTypeName(ctx, viewed).nestedIn(TypeNamePrecedence::Prefix)
+			),
+			.precedence = TypeNamePrecedence::Prefix,
+		};
+	}
+
 	SourceTypeName renderAbstractTypeName(query::Context& ctx, const AbstractType type) {
 		switch (type.getKind()) {
 		case Kind::Unit:
@@ -165,36 +183,31 @@ namespace compiler::tsh {
 			};
 		case Kind::Meta:
 			return { .text = "type", .precedence = TypeNamePrecedence::Atomic };
-		case Kind::Pointer:
-			return {
-				.text = "ptr "
-				      + renderValueTypeName(ctx, type.as<PointerAbstractType>().getPointee())
-				            .nestedIn(TypeNamePrecedence::Prefix),
-				.precedence = TypeNamePrecedence::Prefix,
-			};
-		case Kind::ManyPointer:
-			return {
-				.text = "manyptr "
-				      + renderValueTypeName(ctx, type.as<ManyPointerAbstractType>().getPointee())
-				            .nestedIn(TypeNamePrecedence::Prefix),
-				.precedence = TypeNamePrecedence::Prefix,
-			};
-		case Kind::CPointer:
-			return {
-				.text = "cptr "
-				      + renderValueTypeName(ctx, type.as<CPointerAbstractType>().getPointee())
-				            .nestedIn(TypeNamePrecedence::Prefix),
-				.precedence = TypeNamePrecedence::Prefix,
-			};
+		case Kind::Pointer: {
+			const auto pointer = type.as<PointerAbstractType>();
+			return renderView(
+				ctx, lang_def::Keyword::Ptr, pointer.getAccess(), pointer.getPointee()
+			);
+		}
+		case Kind::ManyPointer: {
+			const auto pointer = type.as<ManyPointerAbstractType>();
+			return renderView(
+				ctx, lang_def::Keyword::ManyPtr, pointer.getAccess(), pointer.getPointee()
+			);
+		}
+		case Kind::CPointer: {
+			const auto pointer = type.as<CPointerAbstractType>();
+			return renderView(
+				ctx, lang_def::Keyword::CPtr, pointer.getAccess(), pointer.getPointee()
+			);
+		}
 		case Kind::Slice: {
-			const auto element = type.as<SliceAbstractType>().getElementType();
-			if (element == ValueType<>::direct(getCharType()))
+			const auto slice   = type.as<SliceAbstractType>();
+			const auto element = slice.getElementType();
+			if (element == ValueType<>::direct(getCharType())
+			    and slice.getAccess() == ViewAccess::ReadOnly)
 				return { .text = "str", .precedence = TypeNamePrecedence::Atomic };
-			return {
-				.text
-				= "slice " + renderValueTypeName(ctx, element).nestedIn(TypeNamePrecedence::Prefix),
-				.precedence = TypeNamePrecedence::Prefix,
-			};
+			return renderView(ctx, lang_def::Keyword::Slice, slice.getAccess(), element);
 		}
 		case Kind::StaticArray: {
 			auto        array   = type.as<StaticArrayAbstractType>();
@@ -269,18 +282,23 @@ namespace compiler::tsh {
 	}
 
 	SourceTypeName renderValueTypeName(query::Context& ctx, const ValueType<> type) {
-		using enum ReferenceKind;
-		const std::string prefix = base::strConcat(
-			type.getRefKind() == Direct ? ""
-			: type.getRefKind() == Box  ? "box "
-										: "ref "
-		);
-		auto inner = renderAbstractTypeName(ctx, type.getType());
-		if (prefix.empty()) return inner;
-		return {
-			.text       = prefix + inner.nestedIn(TypeNamePrecedence::Prefix),
-			.precedence = TypeNamePrecedence::Prefix,
-		};
+		switch (type.getRefKind()) {
+		case ReferenceKind::Direct:
+			return renderAbstractTypeName(ctx, type.getType());
+		case ReferenceKind::Box:
+			return {
+				.text = base::strConcat(
+					"box ",
+					renderAbstractTypeName(ctx, type.getType()).nestedIn(TypeNamePrecedence::Prefix)
+				),
+				.precedence = TypeNamePrecedence::Prefix,
+			};
+		case ReferenceKind::Ref:
+			return renderView(
+				ctx, lang_def::Keyword::Ref, type.getViewAccess().value(), type.toDirect()
+			);
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::string AbstractType::sourceTypeName(query::Context& ctx) const {

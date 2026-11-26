@@ -856,8 +856,10 @@ namespace compiler::mir {
 
 				if (projects_payload) {
 					const auto pointer_type = tsh::ValueType<>::direct(
-						function.getContext().query<tsh::QueryPointerType>({ alternative_type.value(
-						) })
+						function.getContext().query<tsh::QueryPointerType>(
+							{ .pointee = alternative_type.value(),
+					          .access  = tsh::ViewAccess::ReadWrite }
+						)
 					);
 					payload_ptr = function.addTmp(pointer_type, expr_scope);
 
@@ -939,7 +941,8 @@ namespace compiler::mir {
 
 			if (subject_is_direct) {
 				assign_ref_subject = first_entry.value()->addHole();
-				ref_subject_local  = function.addTmp(subject_type.toRef(), expr_scope);
+				ref_subject_local
+					= function.addTmp(subject_type.toRef(tsh::ViewAccess::ReadWrite), expr_scope);
 			}
 
 			auto       assign_subject = first_entry.value()->addHole();
@@ -1705,14 +1708,25 @@ namespace compiler::mir {
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateBox } };
 			case Ref:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateRef } };
+			case RefMut:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateRefMut } };
 			case Ptr:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreatePtr } };
+			case PtrMut:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreatePtrMut } };
 			case ManyPtr:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateManyPtr } };
+			case ManyPtrMut:
+				return { Operation::MetaTypeOperation,
+					     MetaParameters{ MetaKind::CreateManyPtrMut } };
 			case CPtr:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateCPtr } };
+			case CPtrMut:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateCPtrMut } };
 			case Slice:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateSlice } };
+			case SliceMut:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateSliceMut } };
 			case SizeOf:
 				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::SizeOf } };
 			case AlignOf:

@@ -53,7 +53,8 @@ namespace compiler::lir {
 	}
 
 	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::ValueType<> pointee_type) {
-		const auto ref_type   = pointee_type.toRef();
+		// The right of the reference does not change its layout so it doesn't make a difference.
+		const auto ref_type   = pointee_type.toRef(tsh::ViewAccess::ReadWrite);
 		auto&      ref_layout = ctx.query<tsl::QueryValueTypeLayout>(ref_type)->valueOrPanicMsg(
             "layout query failed at LIR stage"
         );
