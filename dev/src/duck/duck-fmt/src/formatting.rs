@@ -14,7 +14,6 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 
 use crate::duckfmt::DuckFmt;
-use crate::fmt_config::package_fmt_config_path;
 use crate::package_root::find_package_root;
 use crate::util::filesystem::{TryFileVisitor, visit_duckling_source_files};
 use crate::{DuckContext, QuackResult};
@@ -24,7 +23,6 @@ use crate::{DuckContext, QuackResult};
 pub struct FormatOptions {
     pub check: bool,
     pub print: bool,
-    pub config_path: Option<PathBuf>,
 }
 
 impl FormatOptions {
@@ -33,7 +31,6 @@ impl FormatOptions {
         Self {
             check: matches.get_flag("check"),
             print: matches.get_flag("print"),
-            config_path: matches.get_one("config").cloned(),
         }
     }
 }
@@ -68,19 +65,6 @@ impl PackageFormatter {
             return Ok(());
         }
         duckfmt_command.add_files_to_format(&files);
-
-        // Config from [`FormatOptions`] is more important than package's config.
-        let config_path = self.options.config_path.or_else(|| {
-            let pkg_config_path = package_fmt_config_path(&self.root);
-            if pkg_config_path.exists() {
-                Some(pkg_config_path)
-            } else {
-                None
-            }
-        });
-        if let Some(config_path) = config_path {
-            duckfmt_command.set_fmt_config_path(&config_path);
-        }
         duckfmt_command.execute_and_replace()?;
         Ok(())
     }

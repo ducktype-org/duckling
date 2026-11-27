@@ -9,7 +9,7 @@
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 use crate::util::command_ext::CommandExt;
@@ -63,12 +63,6 @@ impl DuckFmtProcessBuilder {
         if !print {
             self.inner.arg("-i");
         }
-        self
-    }
-
-    /// Set the `duckfmt` configuration file.
-    pub fn set_fmt_config_path(&mut self, path: &Path) -> &mut Self {
-        self.inner.arg("-c").arg(path);
         self
     }
 

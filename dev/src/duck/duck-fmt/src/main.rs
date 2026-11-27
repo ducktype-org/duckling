@@ -9,7 +9,6 @@
 //! Submodules:
 //! - [`cli`] - command line interface of `duck-fmt`,
 //! - [`duckfmt`] - builder of the `duckfmt` process,
-//! - [`fmt_config`] - locating `duckfmt` config inside a package,
 //! - [`formatting`] - main logic for formatting a package.
 
 use std::ffi::{OsStr, OsString};
@@ -20,7 +19,6 @@ use crate::formatting::{FormatOptions, PackageFormatter, run_raw_duckfmt_with_ar
 
 mod cli;
 mod duckfmt;
-mod fmt_config;
 mod formatting;
 
 /// Main entry point to the `duck-fmt` binary.

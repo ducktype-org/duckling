@@ -7,11 +7,10 @@
 //! Command line interface of `duck-fmt`.
 
 use std::ffi::OsString;
-use std::path::PathBuf;
 
 use clap::{Arg, Command, value_parser};
+use duck_core::cli::flag;
 use duck_core::cli::styles::get_styles;
-use duck_core::cli::{flag, optional};
 
 /// Returns command line interface of `duck-fmt` as a [`Command`].
 pub(super) fn cli() -> Command {
@@ -24,11 +23,6 @@ pub(super) fn cli() -> Command {
             flag("print", "Do not rewrite the files; print each formatted file on stdout")
             .short('p')
             .conflicts_with("check")
-        )
-        .arg(
-            optional("config", "Path to a JSON formatter configuration file")
-            .short('c')
-            .value_parser(value_parser!(PathBuf))
         )
         .arg(
             Arg::new("args")
