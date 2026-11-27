@@ -119,7 +119,7 @@ namespace compiler::frontend {
 
 	usize ModuleTree::getSubmoduleCount() const {
 		// ADD: not in query assertions!
-		
+
 		const auto standard_node = tryAs<StandardModuleTreeNode>();
 		if (not standard_node.has_value()) return 0;
 		return standard_node.value()->getSubmodules().illegalAccess().size();

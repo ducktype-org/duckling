@@ -237,12 +237,12 @@ namespace compiler::helios::mangler {
 					     auto parent_module
 					     = ctx.query<frontend::QueryParentModule>(current_module);) {
 						current_module = parent_module.value();
-						
+
 						// We skip repl-chain modules from the mangling,
 						// they don't represent real code namespaceing.
 						// Script module node covers it.
 						if (ctx.query<frontend::QueryIsReplModule>(current_module)) continue;
-						
+
 						modules.push_back(frontend::moduleName(current_module).strView());
 					}
 

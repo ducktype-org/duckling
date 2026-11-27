@@ -206,7 +206,7 @@ namespace compiler::frontend {
 
 	base::Ref<ModuleTree> ModuleTreeBuilderCommon::finalizeCommon(base::Box<ModuleTree> node) {
 		assertNotFinalized();
-		
+
 		// @TODO: #4246 bring this assertion back
 		// CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
 
