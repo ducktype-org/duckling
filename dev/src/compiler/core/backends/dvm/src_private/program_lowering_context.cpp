@@ -468,9 +468,7 @@ base::StrID ProgramLoweringContext::getTslNameInternal(CRef<tsl::TypeLayout> lay
 			}
 			CORE_UNREACHABLE();
 		}
-		variant_case(tsl::ClassTypeLayout, class_layout) {
-			return class_layout.getMangledName();
-		}
+		variant_case(tsl::ClassTypeLayout, class_layout) { return class_layout.getMangledName(); }
 		variant_case(tsl::VariantTypeLayout, variant_layout) {
 			std::string variant_type_name = "vnt";
 			for (usize i{ 0 }; i < variant_layout.getNumAlternatives(); i++) {
