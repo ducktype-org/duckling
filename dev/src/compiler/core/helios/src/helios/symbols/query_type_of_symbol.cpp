@@ -277,21 +277,17 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_ref = getSymRef(key);
 
-			variant_match(symbol_ref->other) {
-				variant_case_novalue(
-					PstImplementedSemantics,
-					ClassMemberSemantics,
-					BuiltinSemantics,
-					TemplateInstanceSemantics
-				) {
-					// @note: function are handled in a special way, using QueryDeclOfFun.
-					if (isFunctionLike(kind(key))) return handleFunction(ctx, key);
+			if (symbol_ref->maybe_pst_data.has_value()) {
+				// @note: function are handled in a special way, using QueryDeclOfFun.
+				if (isFunctionLike(kind(key))) return handleFunction(ctx, key);
 
-					PstVisitor_GetTypeOf visitor(ctx);
-					maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
+				PstVisitor_GetTypeOf visitor(ctx);
+				maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
 
-					return visitor.symbol_type_qresult;
-				}
+				return visitor.symbol_type_qresult;
+			}
+
+			variant_match(symbol_ref->maybe_generated_data.value()) {
 				variant_case(defgen::Constructor, ctor) {
 					const auto target_type = ctor.type;
 
@@ -463,7 +459,7 @@ namespace compiler::helios {
 					                                          .result_type     = return_type });
 					return tsh::ValueType<>::withDefaults(function_abstract_type);
 				}
-				variant_default { CORE_PANIC("Unknown symbol data type"); }
+				variant_default { CORE_PANIC("Unknown generated symbol data type"); }
 			}
 			CORE_UNREACHABLE();
 		}

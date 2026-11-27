@@ -21,7 +21,7 @@
 namespace compiler::helios {
 	ScopeID scopeOfNamespaceLike(query::Context& ctx, SymID symbol) {
 		if (kind(symbol) == SymbolKind::Module) {
-			auto module_id = getSymRef(symbol)->getData<defgen::Module>()->module_id;
+			auto module_id = getSymRef(symbol)->getGeneratedData<defgen::Module>()->module_id;
 			return queryRootScopeOfMainModuleFile(ctx, module_id);
 		}
 		CORE_ASSERT(kind(symbol) == SymbolKind::Namespace, "Invalid call");

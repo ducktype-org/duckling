@@ -12,7 +12,6 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/tsh/source_type_name.hpp>
@@ -51,24 +50,23 @@ namespace compiler::tsh {
 		}
 
 		std::string sourceSymbolName(query::Context& ctx, const helios::SymID symbol) {
-			auto       result = helios::name(symbol).str();
-			const auto instance
-				= helios::getSymRef(symbol)->getDataOpt<helios::TemplateInstanceSemantics>();
-			if_opt_some(instance, data) {
-				result += "["
-				        + base::strJoin(
-							  data->template_arguments_symbols
-								  | std::views::transform([&](const helios::SymID argument) {
-										return renderCompileTimeValue(
-											ctx,
-											helios::getSymRef(argument)
-												->getData<helios::defgen::GeneratedConstant>()
-												->value
-										);
-									}),
-							  ", "
-						)
-				        + "]";
+			auto result = helios::name(symbol).str();
+			if_opt_some(helios::getSymRef(symbol)->maybe_template_instance_data, data) {
+				result
+					+= "["
+				     + base::strJoin(
+						   data.template_arguments_symbols
+							   | std::views::transform([&](const helios::SymID argument) {
+									 return renderCompileTimeValue(
+										 ctx,
+										 helios::getSymRef(argument)
+											 ->getGeneratedData<helios::defgen::GeneratedConstant>()
+											 ->value
+									 );
+								 }),
+						   ", "
+					 )
+				     + "]";
 			}
 			return result;
 		}

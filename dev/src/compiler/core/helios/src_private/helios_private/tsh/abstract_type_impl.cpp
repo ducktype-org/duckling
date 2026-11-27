@@ -20,7 +20,6 @@
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -364,17 +363,16 @@ namespace compiler::tsh {
 	}
 
 	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol): symbol(symbol) {
-		representation      = "Class " + name(symbol).str();
-		const auto instance = compiler::helios::getSymRef(symbol)
-		                          ->getDataOpt<compiler::helios::TemplateInstanceSemantics>();
-		if_opt_some(instance, data) {
+		representation = "Class " + name(symbol).str();
+		if_opt_some(compiler::helios::getSymRef(symbol)->maybe_template_instance_data, data) {
 			representation
 				+= "["
 			     + base::strJoin(
-					   data->template_arguments_symbols
+					   data.template_arguments_symbols
 						   | std::views::transform([](const compiler::helios::SymID arg) {
 								 return compiler::helios::getSymRef(arg)
-				                     ->getData<compiler::helios::defgen::GeneratedConstant>()
+				                     ->getGeneratedData<compiler::helios::defgen::GeneratedConstant>(
+									 )
 				                     ->value.toString();
 							 }),
 					   ", "

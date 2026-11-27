@@ -34,7 +34,6 @@
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/templates/templates.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -55,22 +54,11 @@ namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
 		if (not isFunctionLike(kind(id))) return false;
 
-		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(
-				PstImplementedSemantics, ClassMemberSemantics, TemplateInstanceSemantics
-			) {
-				return kind(id) != SymbolKind::FunctionDeclaration;
-			}
-			variant_case(BuiltinSemantics, data) {
-				// Only if implemented in HOUT, then it can be called with code of fun.
-				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
-			}
-			variant_case_novalue(GENERATED_SYMBOL_SEMANTICS_LIST) {
-				return kind(id) != SymbolKind::FunctionDeclaration;
-			}
-			variant_default { CORE_PANIC("Not implemented."); }
+		// Only if implemented in HOUT, then it can be called with code of fun.
+		if_opt_some(getSymRef(id)->maybe_builtin_data, builtin_data) {
+			return getBuiltinOrigins(builtin_data.builtin).contains(BuiltinOrigin::HOUT);
 		}
-		CORE_UNREACHABLE();
+		return kind(id) != SymbolKind::FunctionDeclaration;
 	}
 
 	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
@@ -92,31 +80,22 @@ namespace compiler::helios {
 			return EmissionPolicy::OwnerOnly;
 		};
 
-		variant_match(getSymRef(id)->other) {
-			variant_case(PstImplementedSemantics, pst_data) {
-				return pst_emission_policy(pst_data.getElement());
-			}
-			variant_case(ClassMemberSemantics, member_data) {
-				return pst_emission_policy(member_data.getElement());
-			}
-			variant_case(TemplateInstanceSemantics, instance_data) {
-				return pst_emission_policy(instance_data.getElement());
-			}
-			variant_case(BuiltinSemantics, data) {
-				// Only if HOUT implements the builtin we want to replicate it.
-				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT)
-				         ? EmissionPolicy::Replicated
-				         : EmissionPolicy::OwnerOnly;
-			}
+		const auto& sym_ref = getSymRef(id);
+		if_opt_some(sym_ref->maybe_builtin_data, builtin_data) {
+			// Only if HOUT implements the builtin we want to replicate it.
+			return getBuiltinOrigins(builtin_data.builtin).contains(BuiltinOrigin::HOUT)
+			         ? EmissionPolicy::Replicated
+			         : EmissionPolicy::OwnerOnly;
+		}
+		if_opt_some(sym_ref->maybe_pst_data, pst_data) {
+			return pst_emission_policy(pst_data.getElement());
+		}
+
+		variant_match(sym_ref->maybe_generated_data.value()) {
 			variant_case_novalue(
 				defgen::BuiltinOperator, defgen::ScriptMainWrapper, defgen::ReplEmptyVariable
 			) {
 				return EmissionPolicy::OwnerOnly;
-			}
-			variant_case(defgen::BuiltinTemplatedSymbol, data) {
-				return getBuiltinOrigins(data.getBuiltinKind()).contains(BuiltinOrigin::HOUT)
-				         ? EmissionPolicy::Replicated
-				         : EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
 				defgen::Constructor,
@@ -131,19 +110,19 @@ namespace compiler::helios {
 			) {
 				return EmissionPolicy::Replicated;
 			}
-			variant_default { CORE_PANIC("Unhandled symbol semantics"); }
+			variant_default { CORE_PANIC("Unhandled generated symbol data"); }
 		}
 		CORE_UNREACHABLE();
 	}
 
-	bool isIgnoredByLookup(SymID id) { return getSymRef(id)->common.is_ignored_by_lookup; }
+	bool isIgnoredByLookup(SymID id) { return getSymRef(id)->common_data.is_ignored_by_lookup; }
 
-	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
+	base::StrID name(SymID id) { return getSymRef(id)->common_data.name; }
 
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
-			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
-				|| getSymRef(id)->common.kind == SymbolKind::Function,
+			getSymRef(id)->common_data.kind == SymbolKind::FunctionDeclaration
+				|| getSymRef(id)->common_data.kind == SymbolKind::Function,
 			"Not a function."
 		);
 
@@ -161,7 +140,7 @@ namespace compiler::helios {
 	}
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
-		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+		CORE_ASSERT(getSymRef(id)->common_data.kind == SymbolKind::Variable, "Not a variable.");
 
 		// For now if the symbol doesn't have a PST element it is not global,
 		// Maybe be not true if we have generated globals in the future.
@@ -239,15 +218,12 @@ namespace compiler::helios {
 	}
 
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
-		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
-			return builtin.value()->builtin;
-
-		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>())
-			return templated.value()->getBuiltinKind();
-		return {};
+		return getSymRef(id)->maybe_builtin_data.map([](const BuiltinData& data) {
+			return data.builtin;
+		});
 	}
 
-	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
+	SymbolKind kind(SymID id) { return getSymRef(id)->common_data.kind; }
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getScope().value(); }
 
@@ -263,7 +239,7 @@ namespace compiler::helios {
 
 	template<typename Attribute>
 	bool hasAttribute(SymID id) {
-		return std::ranges::any_of(getSymRef(id)->common.attributes, [](auto a) {
+		return std::ranges::any_of(getSymRef(id)->common_data.attributes, [](auto a) {
 			return base::holds<Attribute>(a);
 		});
 	}
@@ -273,7 +249,7 @@ namespace compiler::helios {
 
 	template<typename Attribute>
 	base::Optional<CRef<Attribute>> getAttribute(SymID id) {
-		return getAttrInVector<Attribute>(getSymRef(id)->common.attributes);
+		return getAttrInVector<Attribute>(getSymRef(id)->common_data.attributes);
 	}
 
 #define MAKE_GET_ATTR_INSTANCE(attr) \
@@ -653,19 +629,17 @@ namespace compiler::helios {
 			common.attributes           = attributesFromPSTStatement(ctx, stmt);
 			common.is_ignored_by_lookup = std::ranges::any_of(common.attributes, &disablesLookup);
 
-			// Check if it is a builtin.
-			if_opt_some(getAttrInVector<attributes::Builtin>(common.attributes), builtin_data) {
-				return SymbolData::makeBuiltinSymbolData(
-					std::move(common),
-					BuiltinSemantics{
-						scope,
-						stmt->getHash(),
-						builtin_data->builtin,
-					}
-				);
+			SymbolData data{
+				.common_data = std::move(common),
+				.maybe_pst_data
+				= PstSymbolData{ .scope = scope, .pst_element_hash = stmt->getHash() },
+			};
+
+			if_opt_some(getAttrInVector<attributes::Builtin>(data.common_data.attributes), builtin) {
+				data.maybe_builtin_data = BuiltinData{ builtin->builtin };
 			}
 
-			if (isClassMember(common.kind)) {
+			if (isClassMember(data.common_data.kind)) {
 				auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
 				if_opt_none(owner_class_element) {
 					ctx.log<dia::PlaceholderError>(
@@ -674,34 +648,20 @@ namespace compiler::helios {
 					return query::Failed();
 				}
 
-				return SymbolData::makeClassMemberSymbolData(
-					std::move(common),
-					ClassMemberSemantics(
-						scope,
-						stmt->getHash(),
-						ctx.query<tsh::QueryClassType>(
-							ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
-						)
-					)
-				);
+				data.maybe_type_member_data = TypeMemberData{ ctx.query<tsh::QueryClassType>(
+					ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+				) };
 			}
 
 			if (isTemplateInstanceRoot(scope)) {
 				if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
-					return SymbolData::makeTemplateInstanceSymbolData(
-						std::move(common),
-						TemplateInstanceSemantics(
-							scope,
-							stmt->getHash(),
-							instance.template_symbol,
-							instance.template_arguments_symbols
-						)
-					);
+					data.maybe_template_instance_data = TemplateInstanceData{
+						.template_symbol            = instance.template_symbol,
+						.template_arguments_symbols = instance.template_arguments_symbols,
+					};
 				}
 			}
-			return SymbolData::makePSTSymbolData(
-				std::move(common), PstImplementedSemantics(scope, stmt->getHash())
-			);
+			return data;
 		}
 
 		/**
@@ -715,13 +675,13 @@ namespace compiler::helios {
 		) {
 			if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 				auto parameter = parameter_opt.value();
-				return SymbolData::makePSTSymbolData(
-					{
+				return {
+					.common_data = {
 						.name = parameter->getName().unlock(ctx)->unwrap(),
 						.kind = SymbolKind::Parameter,
 					},
-					PstImplementedSemantics(scope, element->getHash())
-				);
+					.maybe_pst_data = PstSymbolData{ .scope = scope, .pst_element_hash = element->getHash() },
+				};
 			}
 
 			if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
@@ -732,13 +692,13 @@ namespace compiler::helios {
 				auto parent_elem = parent_opt.value().unlock(ctx);
 				if (parent_elem.dynamicCast<pst::For>().has_value()
 				    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
-					return SymbolData::makePSTSymbolData(
-						{
+					return {
+						.common_data = {
 							.name = ident_wrapper->unwrap(),
 							.kind = SymbolKind::Variable,
 						},
-						PstImplementedSemantics(scope, element->getHash())
-					);
+						.maybe_pst_data = PstSymbolData{ .scope = scope, .pst_element_hash = element->getHash() },
+					};
 				} else {
 					CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
 				}
@@ -821,45 +781,38 @@ namespace compiler::helios {
 
 			// Get the const's data
 
-			variant_match(getSymRef(key)->other) {
-				variant_case(defgen::GeneratedConstant, const_data) { return const_data.value; }
-
-				variant_case_novalue(PstImplementedSemantics, TemplateInstanceSemantics) {
-					const auto pst
-						= maybeSymbolPst(key).value().unlock(ctx).dynamicCast<pst::Const>().value();
-					// The parser accepts `const x: T;`, but a const needs a value.
-					const auto value_holder = pst->getValue();
-					if (!value_holder.has_value()) {
-						ctx.log<ConstWithoutValueError>(pst->getStablePosition());
-						return query::Failed();
-					}
-
-					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
-
-					// Get the coerced HOUT expression
-					const auto hout_qresult = getHoutOfExprWithExpectedType(
-						ctx,
-						value_holder.value().unlock(ctx)->getExpr(),
-						type,
-						pst->getName().unlock(ctx)->getStablePosition()
-					);
-					if (hout_qresult.hasFailed()) return query::Failed();
-					refuseBlockExpr(ctx, *hout_qresult.valueOrThrow(), "a const initializer");
-
-					// Evaluate the HOUT expression at compile-time
-					auto ctv = ctx.query<QueryEvaluateHOUTExpression>(
-						{ hout_qresult.valueOrThrow().ref() }
-					);
-					if (ctv.hasFailed()) return query::Failed();
-					return ctv.valueOrThrow();
-				}
-
-				variant_default {
-					CORE_PANIC("Unexpected SymbolData::other type in QueryConstValueOf");
-				}
+			if (const auto const_data
+			    = getSymRef(key)->getGeneratedDataOpt<defgen::GeneratedConstant>()) {
+				return const_data.value()->value;
 			}
 
-			CORE_UNREACHABLE();
+			CORE_ASSERT(getSymRef(key)->isPstImplemented(), "Unexpected const symbol data.");
+			const auto pst
+				= maybeSymbolPst(key).value().unlock(ctx).dynamicCast<pst::Const>().value();
+			// The parser accepts `const x: T;`, but a const needs a value.
+			const auto value_holder = pst->getValue();
+			if (!value_holder.has_value()) {
+				ctx.log<ConstWithoutValueError>(pst->getStablePosition());
+				return query::Failed();
+			}
+
+			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
+
+			// Get the coerced HOUT expression
+			const auto hout_qresult = getHoutOfExprWithExpectedType(
+				ctx,
+				value_holder.value().unlock(ctx)->getExpr(),
+				type,
+				pst->getName().unlock(ctx)->getStablePosition()
+			);
+			if (hout_qresult.hasFailed()) return query::Failed();
+			refuseBlockExpr(ctx, *hout_qresult.valueOrThrow(), "a const initializer");
+
+			// Evaluate the HOUT expression at compile-time
+			auto ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+			if (ctv.hasFailed()) return query::Failed();
+			return ctv.valueOrThrow();
 		}
 
 		QUERY_AUTO_CACHE_COPY

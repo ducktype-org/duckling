@@ -435,29 +435,19 @@ namespace compiler::helios::mangler {
 
 				// This function can be only called for symbols
 				// that have clear PST-path mangling.
-				// This means that all PstImplementedSemantics work, and few
+				// This means that all symbols created from the PST work, and few
 				// additional cases that are handled below.
 				auto ancestor_opt = [&]() {
-					variant_match(getSymRef(symbol_id)->other) {
-						variant_case_novalue(
-							PstImplementedSemantics,
-							ClassMemberSemantics,
-							BuiltinSemantics,
-							TemplateInstanceSemantics
-						) {
-							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
-							return getPSTElementParent(ctx, ancestor);
-						}
-						variant_case(defgen::GeneratedConstant, const_data) {
-							// @TODO: #2587 adjust code here
-
-							auto scope = const_data.scope;
-							auto ancestor
-								= ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
-							return PSTParentResult{ ancestor };
-						}
+					if_opt_some(maybeSymbolPst(symbol_id), pst_element) {
+						return getPSTElementParent(ctx, pst_element.unlock(ctx));
 					}
-					CORE_UNREACHABLE();
+
+					// @TODO: #2587 adjust code here
+					const auto const_data
+						= getSymRef(symbol_id)->getGeneratedData<defgen::GeneratedConstant>();
+					auto ancestor
+						= ScopeAccess_Functor::get(const_data->scope)->relatedPSTElement().value();
+					return PSTParentResult{ ancestor };
 				}();
 
 				// it's not compiler-generated and it's ancestor is a template statement
@@ -632,8 +622,8 @@ namespace compiler::helios::mangler {
 					// The empty storage of a REPL global variable stands for the variable itself,
 					// so everything referring to the variable has to refer to that storage.
 					if (auto empty_variable
-					    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol_id)->other))
-						return symbolEncoding(ctx, empty_variable->original_variable);
+					    = getSymRef(symbol_id)->getGeneratedDataOpt<defgen::ReplEmptyVariable>())
+						return symbolEncoding(ctx, empty_variable.value()->original_variable);
 
 					return path(ctx, symbol_id);
 				}
@@ -643,17 +633,12 @@ namespace compiler::helios::mangler {
 				case SymbolKind::Constructor:
 				case SymbolKind::Destructor:
 				case SymbolKind::FunctionDeclaration: {
-					variant_match(getSymRef(symbol_id)->other) {
-						variant_case_novalue(
-							PstImplementedSemantics,
-							ClassMemberSemantics,
-							BuiltinSemantics,
-							TemplateInstanceSemantics
-						) {
-							// If the symbol originates from the PST (including builtins), use its path.
-							return path(ctx, symbol_id) + func(ctx, symbol_id);
-						}
-						// If the symbol is generated, it has no path.
+					// If the symbol originates from the PST (including builtins), use its path.
+					if (getSymRef(symbol_id)->maybe_pst_data.has_value())
+						return path(ctx, symbol_id) + func(ctx, symbol_id);
+
+					// If the symbol is generated, it has no path.
+					variant_match(getSymRef(symbol_id)->maybe_generated_data.value()) {
 						variant_case(defgen::Constructor, ctor) {
 							// The mangled type identifies which type the constructor belongs to
 							// (works for any kind: class, tuple, static array, ...). The infix tag
