@@ -7,6 +7,7 @@
 #include "query_type_of_symbol.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/visitors/pst_visitor.hpp>
@@ -297,7 +298,9 @@ namespace compiler::helios {
 					case defgen::Constructor::Kind::Default:
 						break;
 					case defgen::Constructor::Kind::Copy:
-						param_types.push_back(tsh::ValueType<>::ref(target_type));
+						param_types.push_back(
+							tsh::ValueType<>::ref(target_type, tsh::ViewAccess::ReadOnly)
+						);
 						break;
 					}
 
@@ -311,9 +314,12 @@ namespace compiler::helios {
 					return tsh::SymbolType::var(tsh::ValueType<>::direct(ctor_abstract_type));
 				}
 				variant_case(defgen::Method, method) {
-					const auto self = method.owner_type.isSimple()
-					                    ? tsh::ValueType<>::direct(method.owner_type)
-					                    : tsh::ValueType<>::ref(method.owner_type);
+					const auto self_of = [&](const tsh::ViewAccess access) {
+						return method.owner_type.isSimple()
+						         ? tsh::ValueType<>::direct(method.owner_type)
+						         : tsh::ValueType<>::ref(method.owner_type, access);
+					};
+					const auto read_only_self = self_of(tsh::ViewAccess::ReadOnly);
 
 
 					// The self parameter and return type depend on the concrete method kind.
@@ -321,21 +327,22 @@ namespace compiler::helios {
 						= [&]() -> std::pair<std::vector<tsh::ValueType<>>, tsh::ValueType<>> {
 						switch (method.kind) {
 						case defgen::Method::Kind::ToString:
-							return { { self }, tsh::ValueType<>::direct(tsh::getStringType(ctx)) };
+							return { { read_only_self }, tsh::ValueType<>::direct(tsh::getStringType(ctx)) };
 						case defgen::Method::Kind::LengthMethod:
-							return { { self },
+							return { { read_only_self },
 								     tsh::ValueType<>::direct(tsh::getIntegralType(
 										 ctx, 64, tsh::IntegralAbstractType::Signedness::Signed
 									 )) };
 						case defgen::Method::Kind::DefaultDestructor:
-							return { { self }, tsh::ValueType<>::direct(tsh::getUnitType()) };
+							return { { self_of(tsh::ViewAccess::ReadWrite) },
+								     tsh::ValueType<>::direct(tsh::getUnitType()) };
 						case defgen::Method::Kind::Equal:
 						case defgen::Method::Kind::NotEqual:
 						case defgen::Method::Kind::Lesser:
 						case defgen::Method::Kind::LesserEqual:
 						case defgen::Method::Kind::Greater:
 						case defgen::Method::Kind::GreaterEqual:
-							return { { self, self }, tsh::ValueType<>::direct(tsh::getBoolType()) };
+							return { { read_only_self, read_only_self }, tsh::ValueType<>::direct(tsh::getBoolType()) };
 						}
 						CORE_UNREACHABLE();
 					}();
@@ -355,7 +362,9 @@ namespace compiler::helios {
 						switch (builtin.kind) {
 						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn: {
 							const auto ptr_type = tsh::ValueType<>::direct(
-								ctx.query<tsh::QueryPointerType>({ builtin.type })
+								ctx.query<tsh::QueryPointerType>({ .pointee = builtin.type,
+							                                       .access
+							                                       = tsh::ViewAccess::ReadWrite })
 							);
 							return {
 								{ ptr_type, builtin.type },
@@ -388,7 +397,14 @@ namespace compiler::helios {
 				}
 				variant_case(defgen::SelfParameter, param) {
 					const auto class_type = classMemberOwner(param.method_symbol);
-					return tsh::SymbolType::var(tsh::ValueType<>::ref(class_type));
+					bool mutable_method = true;
+					if (auto method_pst = maybeSymbolPst(param.method_symbol))
+						if (auto method = method_pst.value().unlock(ctx).dynamicCast<pst::Method>())
+							mutable_method = method.value()->isMut();
+					return tsh::SymbolType::var(tsh::ValueType<>::ref(
+						class_type,
+						mutable_method ? tsh::ViewAccess::ReadWrite : tsh::ViewAccess::ReadOnly
+					));
 				}
 				variant_case(defgen::Field, field) {
 					// @TODO: #2515 Implement other cases
@@ -401,10 +417,11 @@ namespace compiler::helios {
 						);
 					case tsh::Kind::Slice: {
 						if (field.index == 0) {
-							auto element_type
-								= field.parent_type.as<tsh::SliceAbstractType>().getElementType();
-							auto many_pointer_type
-								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							const auto slice = field.parent_type.as<tsh::SliceAbstractType>();
+							// The pointer of a slice can write only if the slice may.
+							auto many_pointer_type = ctx.query<tsh::QueryManyPointerType>(
+								{ .pointee = slice.getElementType(), .access = slice.getAccess() }
+							);
 							return tsh::SymbolType::var(tsh::ValueType<>::direct(many_pointer_type));
 						}
 						if (field.index == 1) {
