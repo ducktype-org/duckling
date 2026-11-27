@@ -148,8 +148,7 @@ namespace compiler::driver {
 				collectQueryInputsFromPst(pst, *out);
 			}
 
-			// Recurse into child modules: the submodules of a standard module, and the REPL chain
-			// below a script or a REPL chain module.
+			// Recurse into all child modules, not just submodules.
 			for (const auto& child: module_ref->collectChildrenModules())
 				collectFromModule(lookups_map, child->getModuleID(), out);
 		}

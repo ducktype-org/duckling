@@ -233,14 +233,16 @@ namespace compiler::helios::mangler {
 					std::vector<std::string_view> modules;
 					modules.push_back(frontend::moduleName(module_id).strView());
 
-					// A REPL chain module's parent is the previous statement of its chain, so the
-					// walk skips the names of the chain modules above it: the path is the
-					// modules enclosing the chain, then the module's own name.
 					for (auto current_module = module_id;
 					     auto parent_module
 					     = ctx.query<frontend::QueryParentModule>(current_module);) {
 						current_module = parent_module.value();
+						
+						// We skip repl-chain modules from the mangling,
+						// they don't represent real code namespaceing.
+						// Script module node covers it.
 						if (ctx.query<frontend::QueryIsReplModule>(current_module)) continue;
+						
 						modules.push_back(frontend::moduleName(current_module).strView());
 					}
 

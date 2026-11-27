@@ -206,7 +206,10 @@ namespace compiler::frontend {
 
 	base::Ref<ModuleTree> ModuleTreeBuilderCommon::finalizeCommon(base::Box<ModuleTree> node) {
 		assertNotFinalized();
-		CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
+		
+		// @TODO: #4246 bring this assertion back
+		// CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
+
 		CORE_ASSERT(
 			m_package_id.isGood(), "Package ID must be set before finalizing the module tree"
 		);

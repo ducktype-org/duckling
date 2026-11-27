@@ -320,6 +320,7 @@ namespace compiler::frontend {
 		 * structure (i.e. whose parent is this module): the submodules of a standard module, and
 		 * the REPL child of a script or a REPL chain module.
 		 * @note This registers no query dependency. Use it outside queries only.
+		 // ADD no query assertions?
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const
