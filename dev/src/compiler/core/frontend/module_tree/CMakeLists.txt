@@ -8,7 +8,7 @@ add_library(ModuleTree
 	src/frontend/module_tree/source_file.cpp
 	src/frontend/module_tree/file_id.cpp
 	src/frontend/module_tree/module_id.cpp
-	src/frontend/module_tree/module_module_tree.cpp
+	src/frontend/module_tree/standard_module_tree.cpp
 	src/frontend/module_tree/script_module_tree.cpp
 )
 

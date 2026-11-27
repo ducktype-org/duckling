@@ -524,7 +524,7 @@ private:
 	) {
 		const auto package_id  = base::StrID(base::generateRandomString(32));
 		const auto make_module = [&](std::string_view name, std::string_view contents) {
-			auto builder = compiler::frontend::ModuleModuleTreeBuilder::create();
+			auto builder = compiler::frontend::StandardModuleTreeBuilder::create();
 			builder->setPackageID(package_id);
 			builder->setName(base::StrID(name));
 			builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(contents, ".dk"));

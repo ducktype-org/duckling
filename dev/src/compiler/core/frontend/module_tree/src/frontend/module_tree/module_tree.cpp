@@ -9,7 +9,7 @@
 #include "access.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
-#include "module_module_tree.hpp"
+#include "standard_module_tree.hpp"
 #include "module_tree_builder.hpp"
 #include "queries.hpp"
 #include "script_module_tree.hpp"
@@ -89,7 +89,7 @@ namespace compiler::frontend {
 	bool ModuleTree::hasMainSourceFile() const {
 		switch (getKind()) {
 		case ModuleKind::Module:
-			return as<ModuleModuleTreeNode>()->m_main_source_file.has_value();
+			return as<StandardModuleTreeNode>()->m_main_source_file.has_value();
 		case ModuleKind::ReplChain:
 			return as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file.has_value();
 		case ModuleKind::Script:
@@ -104,7 +104,7 @@ namespace compiler::frontend {
 		CORE_ASSERT(hasMainSourceFile(), "Main source file does not exist!");
 		const auto& main_source_file
 			= getKind() == ModuleKind::Module
-		        ? as<ModuleModuleTreeNode>()->m_main_source_file
+		        ? as<StandardModuleTreeNode>()->m_main_source_file
 		        : as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file;
 		return FileAccessLocked(main_source_file.value()->getFileID());
 	}
@@ -299,7 +299,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTree(const fs::File& file, base::StrID package_id) {
-		return ModuleModuleTreeBuilder::create(file, package_id)->getModuleID();
+		return StandardModuleTreeBuilder::create(file, package_id)->getModuleID();
 	}
 
 	void parseAllFilesInModuleTree(ModuleID module_id) {
@@ -318,7 +318,7 @@ namespace compiler::frontend {
 
 			// PR: this should use child modules insted of getSubmodules
 			// but collectChildrenModules is private, figure this out
-			const auto module_node = module_tree->tryAs<ModuleModuleTreeNode>();
+			const auto module_node = module_tree->tryAs<StandardModuleTreeNode>();
 			if (not module_node.has_value()) return;
 			for (const auto& submodule: module_node.value()->getSubmodules().illegalAccess())
 				self(submodule.illegalAccess().getID());
@@ -381,7 +381,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {
-		return ModuleModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
+		return StandardModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
 	}
 
 	ModuleID createModuleTreeFromContents(
@@ -490,7 +490,7 @@ namespace compiler::frontend {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult    out{};
-			const auto module_node = module_tree->as<ModuleModuleTreeNode>();
+			const auto module_node = module_tree->as<StandardModuleTreeNode>();
 			for (const auto& module: module_node->getSubmodules().unlock(ctx)) {
 				auto module_id  = module.unlock(ctx).getID();
 				auto module_ref = getModuleRef(module_id);

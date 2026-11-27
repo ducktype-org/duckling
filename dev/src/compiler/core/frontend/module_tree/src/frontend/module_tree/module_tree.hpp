@@ -62,11 +62,11 @@ namespace compiler::frontend {
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
 
 	class ModuleTreeBuilderCommon;
-	class ModuleModuleTreeBuilder;
+	class StandardModuleTreeBuilder;
 	class ScriptModuleTreeBuilder;
 	class SyntheticReplChainModuleTreeBuilder;
 	class ModuleTreeModifierCommon;
-	class ModuleModuleTreeModifier;
+	class StandardModuleTreeModifier;
 	class ScriptModuleTreeModifier;
 	class SyntheticReplChainModuleTreeModifier;
 	struct GetModuleID_Functor;
@@ -103,7 +103,7 @@ namespace compiler::frontend {
 	 * synthetic REPL chain module (one statement of a REPL session or script).
 	 *
 	 * @note This is an abstract class, the instances include:
-	 * - ModuleModuleTreeNode: Represents a standard module.
+	 * - StandardModuleTreeNode: Represents a standard module.
 	 * - ScriptModuleTreeNode / SyntheticReplChainModuleTreeNode: script and REPL nodes.
 	 *
 	 * @note Parent structure (m_parent):
@@ -112,7 +112,7 @@ namespace compiler::frontend {
 	 * - a synthetic REPL chain module has the previous chain module or the script module that
 	 *   starts the chain as parent, or none (first statement of a REPL session); it is the
 	 *   parent's REPL child.
-	 * Each node is built with the builder of its kind (ModuleModuleTreeBuilder,
+	 * Each node is built with the builder of its kind (StandardModuleTreeBuilder,
 	 * ScriptModuleTreeBuilder, SyntheticReplChainModuleTreeBuilder) and modified with the
 	 * matching modifier.
 	 *
@@ -138,11 +138,11 @@ namespace compiler::frontend {
 	 */
 	class ModuleTree {
 		friend class ModuleTreeBuilderCommon;
-		friend class ModuleModuleTreeBuilder;
+		friend class StandardModuleTreeBuilder;
 		friend class ScriptModuleTreeBuilder;
 		friend class SyntheticReplChainModuleTreeBuilder;
 		friend class ModuleTreeModifierCommon;
-		friend class ModuleModuleTreeModifier;
+		friend class StandardModuleTreeModifier;
 		friend class ScriptModuleTreeModifier;
 		friend class SyntheticReplChainModuleTreeModifier;
 		friend struct GetModuleID_Functor;
@@ -163,7 +163,7 @@ namespace compiler::frontend {
 
 		/**
 		 * Checks if a module contains main source file.
-		 * For a standard module this is ModuleModuleTreeNode::m_main_source_file, for a synthetic
+		 * For a standard module this is StandardModuleTreeNode::m_main_source_file, for a synthetic
 		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
 		 * A script module never has one.
 		 * @return True if the main source file exists, false otherwise.

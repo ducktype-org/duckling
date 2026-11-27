@@ -10,12 +10,12 @@
 #include <driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
-#include <frontend/module_tree/module_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/access/source_position_locked.hpp>
 #include <frontend/pst_parser/base_element/lang_parser_element.hpp>
@@ -109,7 +109,7 @@ namespace duck_ls {
 			main_file->getPST()->getLogger()->collectDiagnostics(out);
 
 			for (const auto& submodule_id_locked:
-			     module->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess())
+			     module->as<StandardModuleTreeNode>()->getSubmodules().illegalAccess())
 				collectErrorsFromModuleTree(
 					getModuleRef(submodule_id_locked.illegalAccess().getID()), out
 				);
@@ -125,7 +125,7 @@ namespace duck_ls {
 
 			bool all_submodules_parsed_successfully = true;
 			for (const auto& submodule_id_locked:
-			     module->as<ModuleModuleTreeNode>()->getSubmodules().illegalAccess())
+			     module->as<StandardModuleTreeNode>()->getSubmodules().illegalAccess())
 				all_submodules_parsed_successfully &= isModuleTreeParsedSuccessfully(
 					getModuleRef(submodule_id_locked.illegalAccess().getID())
 				);
@@ -197,7 +197,7 @@ namespace duck_ls {
 	void Compiler::loadPackage(
 		const fs::FilePath& package_root, const packages::RawPackageInfo& raw_package_info
 	) {
-		auto module_id = ModuleModuleTreeBuilder::create(
+		auto module_id = StandardModuleTreeBuilder::create(
 							 fs::File(package_root), raw_package_info.package_id, getResolver()
 		)
 		                     ->getModuleID();
@@ -239,7 +239,7 @@ namespace duck_ls {
 			std::erase(tracked_packages, module_ref->getModuleID());
 			raw_package_infos.erase(raw_package_it);
 
-			ModuleModuleTreeModifier::removeModuleRecursive(module_ref);
+			StandardModuleTreeModifier::removeModuleRecursive(module_ref);
 		} else {
 			auto package_id = packageIdForRoot(*package_root);
 
@@ -277,8 +277,8 @@ namespace duck_ls {
 			);
 		collectInputsFor(current, previous_inputs);
 
-		ModuleModuleTreeModifier::removeMainSourceFile(module);
-		ModuleModuleTreeModifier::setMainSourceFile(module, replacement);
+		StandardModuleTreeModifier::removeMainSourceFile(module);
+		StandardModuleTreeModifier::setMainSourceFile(module, replacement);
 
 		std::vector<query::external::InputData> new_inputs;
 		collectInputsFor(replacement, new_inputs);
@@ -340,7 +340,7 @@ namespace duck_ls {
 
 		if (files->updateDocument(uri, version, changes).isBad()) return base::BAD;
 
-		ModuleModuleTreeModifier::fileModified(file);
+		StandardModuleTreeModifier::fileModified(file);
 
 		std::vector<query::external::InputData> new_inputs;
 		collectInputsFor(file, new_inputs);

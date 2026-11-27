@@ -7,7 +7,7 @@
 #include "queries.hpp"
 
 #include "functors.hpp"
-#include "module_module_tree.hpp"
+#include "standard_module_tree.hpp"
 #include "module_tree.hpp"
 
 #include <frontend/module_tree/access.hpp>
@@ -33,7 +33,7 @@ namespace compiler::frontend {
 		base::Optional<ModuleID> findSubmodule(
 			query::Context& ctx, ModuleID module, base::StrID name
 		) {
-			const auto module_node = getModuleRef(module)->tryAs<ModuleModuleTreeNode>();
+			const auto module_node = getModuleRef(module)->tryAs<StandardModuleTreeNode>();
 			if (not module_node.has_value()) return {};
 			auto maybe_child = module_node.value()->getSubmoduleByName(name).unlock(ctx);
 			if (not maybe_child.has_value()) return {};

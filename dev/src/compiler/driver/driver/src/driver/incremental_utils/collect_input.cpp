@@ -7,7 +7,7 @@
 #include "collect_input.hpp"
 
 #include <frontend/module_tree/functors.hpp>
-#include <frontend/module_tree/module_module_tree.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
@@ -105,7 +105,7 @@ namespace compiler::driver {
 			out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
 
 			// Only standard modules have submodules, and so submodule side inputs.
-			const auto module_node = module_ref->tryAs<ModuleModuleTreeNode>();
+			const auto module_node = module_ref->tryAs<StandardModuleTreeNode>();
 
 			const auto submodules_count
 				= module_node.has_value()

@@ -27,7 +27,7 @@ fs::File root_dir("path/to/project");
 auto module_tree = compiler::frontend::ModuleTreeBuilder::create(root_dir, "package_id");
 
 // Access submodules (only standard modules have them, so cast to the node class first)
-for (const auto& [name, submodule] : module_tree->as<ModuleModuleTreeNode>()->getSubmodules()) {
+for (const auto& [name, submodule] : module_tree->as<StandardModuleTreeNode>()->getSubmodules()) {
     std::cout << "Submodule: " << name.strView() << std::endl;
 }
 

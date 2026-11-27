@@ -7,10 +7,10 @@
 #include "module_tree_modifier.hpp"
 
 #include "module_flags/module_flags.hpp"
-#include "module_module_tree.hpp"
 #include "module_tree.hpp"
 #include "script_module_tree.hpp"
 #include "source_file.hpp"
+#include "standard_module_tree.hpp"
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
@@ -72,7 +72,7 @@ namespace compiler::frontend {
 		auto parent = module->m_parent.value();
 
 		if (parent->getKind() == ModuleKind::Module) {
-			auto& submodules = parent->as<ModuleModuleTreeNode>()->m_submodules;
+			auto& submodules = parent->as<StandardModuleTreeNode>()->m_submodules;
 			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
                 return pair.value == module;
             });
@@ -173,13 +173,13 @@ namespace compiler::frontend {
 	}
 
 	/*********************
-	 * ModuleModuleTreeModifier
+	 * StandardModuleTreeModifier
 	 *********************/
 
-	void ModuleModuleTreeModifier::setMainSourceFile(
+	void StandardModuleTreeModifier::setMainSourceFile(
 		base::Ref<ModuleTree> module, const fs::File& file
 	) {
-		auto& main_source_file = module->as<ModuleModuleTreeNode>()->m_main_source_file;
+		auto& main_source_file = module->as<StandardModuleTreeNode>()->m_main_source_file;
 		CORE_ASSERT(
 			!main_source_file.has_value(), "Main source file is already set, remove it first"
 		);
@@ -188,11 +188,11 @@ namespace compiler::frontend {
 		module->updateModuleHashFromRootToThis();
 	}
 
-	void ModuleModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
+	void StandardModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
-		auto& main_source_file = module->as<ModuleModuleTreeNode>()->m_main_source_file;
+		auto& main_source_file = module->as<StandardModuleTreeNode>()->m_main_source_file;
 		CORE_ASSERT(
 			main_source_file.has_value(),
 			base::strConcat(
@@ -206,7 +206,7 @@ namespace compiler::frontend {
 		module->updateModuleHashFromRootToThis();
 	}
 
-	void ModuleModuleTreeModifier::addSubmodule(
+	void StandardModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
 		CORE_ASSERT(
@@ -215,7 +215,7 @@ namespace compiler::frontend {
 		);
 
 		base::StrID name       = submodule->getName();
-		auto&       submodules = module->as<ModuleModuleTreeNode>()->m_submodules;
+		auto&       submodules = module->as<StandardModuleTreeNode>()->m_submodules;
 		CORE_ASSERT(
 			!submodules.contains(name),
 			base::strConcat(
@@ -243,11 +243,13 @@ namespace compiler::frontend {
 		submodule->invalidateHash();
 	}
 
-	void ModuleModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+	void StandardModuleTreeModifier::addOtherFile(
+		base::Ref<ModuleTree> module, const fs::File& file
+	) {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
-		auto& other_files = module->as<ModuleModuleTreeNode>()->m_other_files;
+		auto& other_files = module->as<StandardModuleTreeNode>()->m_other_files;
 		if (!other_files.contains(ext_id)) other_files.put(ext_id, std::vector<fs::File>());
 
 		CORE_ASSERT(
@@ -266,13 +268,13 @@ namespace compiler::frontend {
 		other_files.at(ext_id).push_back(file);
 	}
 
-	void ModuleModuleTreeModifier::removeOtherFile(
+	void StandardModuleTreeModifier::removeOtherFile(
 		base::Ref<ModuleTree> module, const fs::File& file
 	) {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
-		auto& other_files = module->as<ModuleModuleTreeNode>()->m_other_files;
+		auto& other_files = module->as<StandardModuleTreeNode>()->m_other_files;
 		CORE_ASSERT(
 			other_files.contains(ext_id),
 			base::strConcat(
@@ -301,14 +303,14 @@ namespace compiler::frontend {
 		files.erase(it);
 	}
 
-	void ModuleModuleTreeModifier::setParent(
+	void StandardModuleTreeModifier::setParent(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> parent
 	) {
 		CORE_ASSERT(module->getKind() == ModuleKind::Module, "Module must be a standard module");
 		addSubmodule(parent, module);
 	}
 
-	void ModuleModuleTreeModifier::removeSingleModule(base::Ref<ModuleTree> module) {
+	void StandardModuleTreeModifier::removeSingleModule(base::Ref<ModuleTree> module) {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
@@ -344,7 +346,7 @@ namespace compiler::frontend {
 		base::Ref<ModuleTree> script, base::Ref<ModuleTree> parent
 	) {
 		CORE_ASSERT(script->getKind() == ModuleKind::Script, "Module must be a script module");
-		ModuleModuleTreeModifier::addSubmodule(parent, script);
+		StandardModuleTreeModifier::addSubmodule(parent, script);
 	}
 
 	/*********************

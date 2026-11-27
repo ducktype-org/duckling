@@ -217,7 +217,7 @@ private:
 	void testReplChainModulePathKeepsEnclosingModules() {
 		const auto package_id = base::StrID("repl_chain_mangling_package_id");
 
-		auto root_builder = frontend::ModuleModuleTreeBuilder::create();
+		auto root_builder = frontend::StandardModuleTreeBuilder::create();
 		root_builder->setName(base::StrID("root"));
 		root_builder->setPackageID(package_id);
 		root_builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile("", ".dk"));

@@ -5,7 +5,7 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/module_tree/functors.hpp>
-#include <frontend/module_tree/module_module_tree.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 
@@ -22,7 +22,7 @@ int main() {
 
 	// First argument is some kind of a path to a module we want to parse.
 	// It returns a std::shared_ptr.
-	Ref<ModuleTree> module_tree = compiler::frontend::ModuleModuleTreeBuilder::create(
+	Ref<ModuleTree> module_tree = compiler::frontend::StandardModuleTreeBuilder::create(
 		fs::File("../tests/test_module"), base::StrID("test_package_id")
 	);
 
@@ -38,7 +38,7 @@ int main() {
 
 		// Each unlock(ctx) emits a QueryModuleSideInput edge so incremental rebuilds know what changed.
 		for (const auto& submodule_locked:
-		     module_tree->as<compiler::frontend::ModuleModuleTreeNode>()->getSubmodules().unlock(ctx
+		     module_tree->as<compiler::frontend::StandardModuleTreeNode>()->getSubmodules().unlock(ctx
 		     )) {
 			const auto submodule_access = submodule_locked.unlock(ctx);
 			submodules.emplace_back(getModuleRef(submodule_access.getID()));

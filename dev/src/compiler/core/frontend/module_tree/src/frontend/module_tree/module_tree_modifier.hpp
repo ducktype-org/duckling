@@ -18,7 +18,7 @@ namespace compiler::frontend {
 
 	/**
 	 * @brief Modifications that work the same for every module kind, and the helpers shared by the
-	 * per-kind modifiers (ModuleModuleTreeModifier, ScriptModuleTreeModifier and
+	 * per-kind modifiers (StandardModuleTreeModifier, ScriptModuleTreeModifier and
 	 * SyntheticReplChainModuleTreeModifier).
 	 *
 	 * All modifications are performed in-place. This class cannot be instantiated.
@@ -84,12 +84,12 @@ namespace compiler::frontend {
 	};
 
 	/**
-	 * @brief Modifier for standard modules (ModuleModuleTreeNode).
+	 * @brief Modifier for standard modules (StandardModuleTreeNode).
 	 *
 	 * @note The API operates on the standard/script module layer and does not go into synthetic
 	 * REPL chain modules unless explicitly stated.
 	 */
-	class ModuleModuleTreeModifier final: public ModuleTreeModifierCommon {
+	class StandardModuleTreeModifier final: public ModuleTreeModifierCommon {
 	public:
 		/**
 		 * @brief Sets the main source file for the given module.
@@ -140,7 +140,7 @@ namespace compiler::frontend {
 		static void removeSingleModule(base::Ref<ModuleTree> module);
 
 	private:
-		ModuleModuleTreeModifier() = default;
+		StandardModuleTreeModifier() = default;
 	};
 
 	/**

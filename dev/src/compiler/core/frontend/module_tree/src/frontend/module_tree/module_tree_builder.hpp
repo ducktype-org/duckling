@@ -21,7 +21,7 @@
 #include <vector>
 
 namespace compiler::frontend {
-	class ModuleModuleTreeNode;
+	class StandardModuleTreeNode;
 	class ScriptModuleTreeNode;
 	class SyntheticReplChainModuleTreeNode;
 
@@ -29,7 +29,7 @@ namespace compiler::frontend {
 	 * @brief Common data and steps shared by the three module tree builders.
 	 *
 	 * Holds what every module kind has (name, package ID, parent) and the finalization steps that
-	 * do not depend on the kind. It cannot be used on its own; use ModuleModuleTreeBuilder,
+	 * do not depend on the kind. It cannot be used on its own; use StandardModuleTreeBuilder,
 	 * ScriptModuleTreeBuilder or SyntheticReplChainModuleTreeBuilder.
 	 */
 	class ModuleTreeBuilderCommon {
@@ -83,25 +83,25 @@ namespace compiler::frontend {
 	};
 
 	/**
-	 * @brief Builder for standard modules (ModuleModuleTreeNode).
+	 * @brief Builder for standard modules (StandardModuleTreeNode).
 	 *
 	 * Allows step-by-step construction of module trees with assertions that check the correctness
 	 * of module creation. Also builds whole module trees from the file system.
 	 */
-	class ModuleModuleTreeBuilder final: public ModuleTreeBuilderCommon {
+	class StandardModuleTreeBuilder final: public ModuleTreeBuilderCommon {
 	public:
 		/**
 		 * @brief Creates a new builder instance.
-		 * @return Boxed ModuleModuleTreeBuilder.
+		 * @return Boxed StandardModuleTreeBuilder.
 		 */
-		static base::Box<ModuleModuleTreeBuilder> create();
+		static base::Box<StandardModuleTreeBuilder> create();
 
 		/**
 		 * @brief Creates a new builder instance with a random package ID.
 		 * This is used for testing purposes.
-		 * @return Boxed ModuleModuleTreeBuilder.
+		 * @return Boxed StandardModuleTreeBuilder.
 		 */
-		static base::Box<ModuleModuleTreeBuilder> createWithRandomPackageID();
+		static base::Box<StandardModuleTreeBuilder> createWithRandomPackageID();
 
 		/**
 		 * @brief Factory method to create ModuleTree from filesystem tree.
@@ -172,7 +172,7 @@ namespace compiler::frontend {
 		base::Ref<ModuleTree> finalize();
 
 	private:
-		ModuleModuleTreeBuilder() = default;
+		StandardModuleTreeBuilder() = default;
 
 		/**
 		 * @brief Builds the module tree from a directory structure.

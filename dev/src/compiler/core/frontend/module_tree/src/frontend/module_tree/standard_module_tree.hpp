@@ -13,7 +13,7 @@ namespace compiler::frontend {
 	/**
 	 * @brief Standard module node.
 	 */
-	class ModuleModuleTreeNode final: public ModuleTree {
+	class StandardModuleTreeNode final: public ModuleTree {
 		/**
 		 * The main source file of the module.
 		 * @note This should always be set in standard compilation pipeline.
@@ -35,8 +35,8 @@ namespace compiler::frontend {
 		void makeAbstract() final;
 
 		friend class ModuleTree;
-		friend class ModuleModuleTreeBuilder;
-		friend class ModuleModuleTreeModifier;
+		friend class StandardModuleTreeBuilder;
+		friend class StandardModuleTreeModifier;
 		friend class ModuleTreeModifierCommon;
 
 	protected:
@@ -50,7 +50,7 @@ namespace compiler::frontend {
 		void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const override;
 
 	public:
-		ModuleModuleTreeNode();
+		StandardModuleTreeNode();
 
 		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const override;
 

@@ -7,7 +7,7 @@
 #include "module_tree_builder.hpp"
 
 #include "functors.hpp"
-#include "module_module_tree.hpp"
+#include "standard_module_tree.hpp"
 #include "module_tree.hpp"
 #include "module_tree_modifier.hpp"
 #include "script_module_tree.hpp"
@@ -47,14 +47,14 @@ namespace {
 
 namespace compiler::frontend {
 
-	Ref<ModuleTree> ModuleModuleTreeBuilder::create(
+	Ref<ModuleTree> StandardModuleTreeBuilder::create(
 		const fs::File&     root,
 		base::StrID         package_id,
 		const FileResolver& file_resolver,
 		const std::regex&   file_reject,
 		const std::regex&   dir_reject
 	) {
-		base::Box<ModuleModuleTreeBuilder> builder = ModuleModuleTreeBuilder::create();
+		base::Box<StandardModuleTreeBuilder> builder = StandardModuleTreeBuilder::create();
 
 		if (root.isDirectory())
 			builder->buildFromDirectory(root, package_id, file_resolver, file_reject, dir_reject);
@@ -64,7 +64,7 @@ namespace compiler::frontend {
 		return builder->finalize();
 	}
 
-	Ref<ModuleTree> ModuleModuleTreeBuilder::createWithRandomPackageID(
+	Ref<ModuleTree> StandardModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
 		return create(
@@ -76,7 +76,7 @@ namespace compiler::frontend {
 		);
 	}
 
-	void ModuleModuleTreeBuilder::buildFromDirectory(
+	void StandardModuleTreeBuilder::buildFromDirectory(
 		const fs::File&     directory,
 		base::StrID         package_id,
 		const FileResolver& file_resolver,
@@ -103,8 +103,8 @@ namespace compiler::frontend {
 				if (!isDirectoryNameValid(base::StrID(file.name()), dir_reject)) continue;
 
 				// build sub-module from directory
-				base::Box<ModuleModuleTreeBuilder> submodule_builder
-					= ModuleModuleTreeBuilder::create();
+				base::Box<StandardModuleTreeBuilder> submodule_builder
+					= StandardModuleTreeBuilder::create();
 				submodule_builder->buildFromDirectory(
 					file, package_id, file_resolver, file_reject, dir_reject
 				);
@@ -130,7 +130,7 @@ namespace compiler::frontend {
 		}
 	}
 
-	void ModuleModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
+	void StandardModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
 		base::StrID stem      = base::StrID(file.stem());
 		std::string extension = file.extension();
 		CORE_ASSERT(
@@ -142,7 +142,7 @@ namespace compiler::frontend {
 		setMainSourceFile(file);
 	}
 
-	void ModuleModuleTreeBuilder::handleNewFile(const fs::File& file) {
+	void StandardModuleTreeBuilder::handleNewFile(const fs::File& file) {
 		CORE_ASSERT(
 			file.isFile(),
 			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
@@ -157,8 +157,8 @@ namespace compiler::frontend {
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
 			} else {
-				base::Box<ModuleModuleTreeBuilder> submodule_builder
-					= ModuleModuleTreeBuilder::create();
+				base::Box<StandardModuleTreeBuilder> submodule_builder
+					= StandardModuleTreeBuilder::create();
 				submodule_builder->buildFromSingleFile(file, this->m_package_id);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
@@ -219,26 +219,26 @@ namespace compiler::frontend {
 	}
 
 	/*********************
-	 * ModuleModuleTreeBuilder
+	 * StandardModuleTreeBuilder
 	 *********************/
 
-	base::Box<ModuleModuleTreeBuilder> ModuleModuleTreeBuilder::create() {
-		return base::makeBox<ModuleModuleTreeBuilder>(ModuleModuleTreeBuilder());
+	base::Box<StandardModuleTreeBuilder> StandardModuleTreeBuilder::create() {
+		return base::makeBox<StandardModuleTreeBuilder>(StandardModuleTreeBuilder());
 	}
 
-	base::Box<ModuleModuleTreeBuilder> ModuleModuleTreeBuilder::createWithRandomPackageID() {
-		base::Box<ModuleModuleTreeBuilder> builder = ModuleModuleTreeBuilder::create();
+	base::Box<StandardModuleTreeBuilder> StandardModuleTreeBuilder::createWithRandomPackageID() {
+		base::Box<StandardModuleTreeBuilder> builder = StandardModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 		return builder;
 	}
 
-	void ModuleModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
+	void StandardModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
 		assertNotFinalized();
 		CORE_ASSERT(!m_main_source_file_path.has_value(), "Main source file already set");
 		m_main_source_file_path = file;
 	}
 
-	void ModuleModuleTreeBuilder::addSubmodule(base::Ref<ModuleTree> submodule) {
+	void StandardModuleTreeBuilder::addSubmodule(base::Ref<ModuleTree> submodule) {
 		assertNotFinalized();
 		CORE_ASSERT(
 			submodule->getKind() == ModuleKind::Module or submodule->getKind() == ModuleKind::Script,
@@ -251,7 +251,7 @@ namespace compiler::frontend {
 		m_submodules.put(submodule->getName(), submodule);
 	}
 
-	void ModuleModuleTreeBuilder::addOtherFile(const fs::File& file) {
+	void StandardModuleTreeBuilder::addOtherFile(const fs::File& file) {
 		assertNotFinalized();
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
@@ -260,20 +260,20 @@ namespace compiler::frontend {
 		m_other_files.at(ext_id).push_back(file);
 	}
 
-	void ModuleModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
+	void StandardModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
 		CORE_ASSERT(
 			parent->getKind() == ModuleKind::Module, "Parent module must be a standard module"
 		);
 		setParentCommon(parent);
 	}
 
-	base::Ref<ModuleTree> ModuleModuleTreeBuilder::finalize() {
-		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<ModuleModuleTreeNode>());
-		auto            node       = module_ref->as<ModuleModuleTreeNode>();
+	base::Ref<ModuleTree> StandardModuleTreeBuilder::finalize() {
+		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<StandardModuleTreeNode>());
+		auto            node       = module_ref->as<StandardModuleTreeNode>();
 
 		node->m_other_files = std::move(m_other_files);
 
-		if (m_parent.has_value()) ModuleModuleTreeModifier::setParent(module_ref, m_parent.value());
+		if (m_parent.has_value()) StandardModuleTreeModifier::setParent(module_ref, m_parent.value());
 
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value())
@@ -281,7 +281,7 @@ namespace compiler::frontend {
 				= SourceFile::create(m_main_source_file_path.value(), module_ref);
 
 		for (const auto& [name, submodule]: m_submodules)
-			ModuleModuleTreeModifier::addSubmodule(module_ref, submodule);
+			StandardModuleTreeModifier::addSubmodule(module_ref, submodule);
 
 		return module_ref;
 	}
