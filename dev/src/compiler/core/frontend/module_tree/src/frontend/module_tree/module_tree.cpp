@@ -9,11 +9,11 @@
 #include "access.hpp"
 #include "functors.hpp"
 #include "module_flags/module_flags.hpp"
-#include "standard_module_tree.hpp"
 #include "module_tree_builder.hpp"
 #include "queries.hpp"
 #include "script_module_tree.hpp"
 #include "source_file.hpp"
+#include "standard_module_tree.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/worker/worker_manager.hpp>
@@ -109,12 +109,22 @@ namespace compiler::frontend {
 		return FileAccessLocked(main_source_file.value()->getFileID());
 	}
 
-	packages::PackageAccessLocked ModuleTree::getPackage() const {
-		return packages::PackageAccessLocked(m_package_id);
+	base::Optional<ModuleID> ModuleTree::findSubmodule(query::Context& ctx, base::StrID name) const {
+		const auto standard_node = tryAs<StandardModuleTreeNode>();
+		if (not standard_node.has_value()) return {};
+		auto maybe_child = standard_node.value()->getSubmoduleByName(name).unlock(ctx);
+		if (not maybe_child.has_value()) return {};
+		return maybe_child.value().unlock(ctx).getID();
 	}
 
-	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
-		CORE_PANIC("getOtherFiles called on a module that does not support other files!");
+	usize ModuleTree::getSubmoduleCount() const {
+		const auto standard_node = tryAs<StandardModuleTreeNode>();
+		if (not standard_node.has_value()) return 0;
+		return standard_node.value()->getSubmodules().illegalAccess().size();
+	}
+
+	packages::PackageAccessLocked ModuleTree::getPackage() const {
+		return packages::PackageAccessLocked(m_package_id);
 	}
 
 	base::StrID ModuleTree::getName() const { return m_name; }
@@ -151,8 +161,8 @@ namespace compiler::frontend {
 			output << indent << "├> Missing main module file!\n";
 
 
-		if (getKind() == ModuleKind::Module)
-			for (const auto& [ext, files]: getOtherFiles())
+		if (const auto standard_node = tryAs<StandardModuleTreeNode>(); standard_node.has_value())
+			for (const auto& [ext, files]: standard_node.value()->getOtherFiles())
 				for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
 
 		for (const auto& child: collectChildrenModules())
@@ -316,12 +326,8 @@ namespace compiler::frontend {
 			if (module_tree->hasMainSourceFile())
 				files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
 
-			// PR: this should use child modules insted of getSubmodules
-			// but collectChildrenModules is private, figure this out
-			const auto module_node = module_tree->tryAs<StandardModuleTreeNode>();
-			if (not module_node.has_value()) return;
-			for (const auto& submodule: module_node.value()->getSubmodules().illegalAccess())
-				self(submodule.illegalAccess().getID());
+			for (const auto& child: module_tree->collectChildrenModules())
+				self(child->getModuleID());
 		};
 		collect_files(module_id);
 
@@ -416,19 +422,21 @@ namespace compiler::frontend {
 	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO: #1389 verify Functor correctness and fix incremental here.
+			CORE_ASSERT(
+				GetModuleID_Functor::get(key)->isReplModule(),
+				"QueryReplModuleParent called on a module that is not a REPL chain module"
+			);
 
-			auto module_tree = GetModuleID_Functor::get(key);
-			if (!module_tree->isReplModule()) return {};
+			// The previous statement is the parent, unless the chain starts here (no parent, or
+			// the script module that starts the chain).
+			auto parent = ctx.query<QueryParentModule>(key);
+			if (not parent.has_value() or not ctx.query<QueryIsReplModule>(parent.value()))
+				return {};
 
-			auto repl_parent
-				= module_tree->as<SyntheticReplChainModuleTreeNode>()->getReplModuleParent();
-
-			if (repl_parent.has_value()) {
-				// Register dependency on the parent module contents so incremental rebuilds propagate
-				ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
-					ModuleTree::getModuleHash(repl_parent.value()) });
-			}
-			return repl_parent;
+			// Register dependency on the parent module contents so incremental rebuilds propagate
+			ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
+				ModuleTree::getModuleHash(parent.value()) });
+			return parent;
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -489,9 +497,11 @@ namespace compiler::frontend {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
-			PResult    out{};
-			const auto module_node = module_tree->as<StandardModuleTreeNode>();
-			for (const auto& module: module_node->getSubmodules().unlock(ctx)) {
+			PResult out{};
+			// Only standard modules have submodules.
+			const auto module_node = module_tree->tryAs<StandardModuleTreeNode>();
+			if (not module_node.has_value()) return out;
+			for (const auto& module: module_node.value()->getSubmodules().unlock(ctx)) {
 				auto module_id  = module.unlock(ctx).getID();
 				auto module_ref = getModuleRef(module_id);
 				out.put(module_ref->getName(), module_id);

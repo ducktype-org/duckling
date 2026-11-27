@@ -6,12 +6,12 @@
 
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_flags/module_flags.hpp>
-#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/script_module_tree.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/packages/access.hpp>
 
 #include <base/config/build_type.hpp>
@@ -55,6 +55,13 @@ namespace {
 	// Helper to list the submodules of a standard module outside queries
 	std::vector<ModuleAccessLocked> submodulesOf(base::CRef<ModuleTree> module) {
 		return module->as<StandardModuleTreeNode>()->getSubmodules().illegalAccess();
+	}
+
+	// Helper to access the other files of a standard module
+	const base::HashMap<base::StrID, std::vector<fs::File>>& otherFilesOf(
+		base::CRef<ModuleTree> module
+	) {
+		return module->as<StandardModuleTreeNode>()->getOtherFiles();
 	}
 }
 
@@ -183,22 +190,22 @@ private:
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, submodulesOf(mt).size());
-		ASSERT_EQUAL(1, mt->getOtherFiles().size());
+		ASSERT_EQUAL(1, otherFilesOf(mt).size());
 
 		auto another_module = getSubmodule(submodulesOf(mt), base::StrID("another"));
 		ASSERT_TRUE(getRef(another_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
-			2, getRef(another_module)->getOtherFiles().size()
+			2, otherFilesOf(getRef(another_module)).size()
 		);  // 2, because there are 2 different file extensions
-		ASSERT_EQUAL(2, getRef(another_module)->getOtherFiles()[base::StrID(".txt")].size());
-		ASSERT_EQUAL(1, getRef(another_module)->getOtherFiles()[base::StrID("")].size());
+		ASSERT_EQUAL(2, otherFilesOf(getRef(another_module))[base::StrID(".txt")].size());
+		ASSERT_EQUAL(1, otherFilesOf(getRef(another_module))[base::StrID("")].size());
 		ASSERT_EQUAL(1, submodulesOf(getRef(another_module)).size());
 
 
 		ASSERT_TRUE(hasSubmodule(submodulesOf(mt), base::StrID("awe")));
 		auto awe_module = getSubmodule(submodulesOf(mt), base::StrID("awe"));
 		ASSERT_EQUAL(0, submodulesOf(getRef(awe_module)).size());
-		ASSERT_EQUAL(0, getRef(awe_module)->getOtherFiles().size());
+		ASSERT_EQUAL(0, otherFilesOf(getRef(awe_module)).size());
 		ASSERT_TRUE(getRef(awe_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
 			"awe.dk", getRef(getRef(awe_module)->getMainSourceFile())->getFileIllegalAccess().name()
@@ -320,7 +327,7 @@ private:
 
 		// Check files (source/other)
 		bool found_file = false, found_file_txt = false, found_skipped = false;
-		for (const auto& [ext, files]: mt->getOtherFiles()) {
+		for (const auto& [ext, files]: otherFilesOf(mt)) {
 			for (const auto& file: files) {
 				if (file.name() == "file") found_file = true;
 				if (file.name() == "file.txt") found_file_txt = true;
@@ -334,7 +341,7 @@ private:
 
 		// Check content of file.txt
 		bool checked_content = false;
-		for (const auto& [ext, files]: mt->getOtherFiles()) {
+		for (const auto& [ext, files]: otherFilesOf(mt)) {
 			for (const auto& file: files) {
 				if (file.name() == "file.txt") {
 					ASSERT_EQUAL("content\n", file.getContent().view());
@@ -346,7 +353,7 @@ private:
 
 		// Check submodule's files
 		auto another_dir = getSubmodule(submodulesOf(mt), base::StrID("another_directory"));
-		ASSERT_EQUAL(0, getRef(another_dir)->getOtherFiles().size());
+		ASSERT_EQUAL(0, otherFilesOf(getRef(another_dir)).size());
 	}
 
 	void testVirtualFilesLikeModuleTree() {
@@ -374,7 +381,7 @@ private:
 
 		// Test files in root (should be in other files or source files)
 		bool found_file1 = false;
-		for (const auto& [ext, files]: mt->getOtherFiles()) {
+		for (const auto& [ext, files]: otherFilesOf(mt)) {
 			for (const auto& file: files) {
 				if (file.name() == "file1.txt") {
 					ASSERT_EQUAL("File1 content", file.getContent().view());
@@ -387,7 +394,7 @@ private:
 		// Test files in subDir1
 		auto sub1        = getSubmodule(submodulesOf(mt), base::StrID("subDir1"));
 		bool found_file2 = false;
-		for (const auto& [ext, files]: getRef(sub1)->getOtherFiles()) {
+		for (const auto& [ext, files]: otherFilesOf(getRef(sub1))) {
 			for (const auto& file: files) {
 				if (file.name() == "file2.txt") {
 					ASSERT_EQUAL("File2 content", file.getContent().view());
@@ -434,14 +441,14 @@ private:
 		auto other_file = root_dir.createSubFile("other3", "other3.txt");
 		StandardModuleTreeModifier::addOtherFile(mt, other_file);
 		bool found_other3 = false;
-		for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
+		for (auto& f: otherFilesOf(mt)[base::StrID(".txt")])
 			if (f.name() == "other3.txt") found_other3 = true;
 		ASSERT_TRUE(found_other3);
 
 		// Test removeOtherFile
 		StandardModuleTreeModifier::removeOtherFile(mt, other_file);
 		bool still_other3 = false;
-		for (auto& f: mt->getOtherFiles()[base::StrID(".txt")])
+		for (auto& f: otherFilesOf(mt)[base::StrID(".txt")])
 			if (f.name() == "other3.txt") still_other3 = true;
 		ASSERT_EQUAL(false, still_other3);
 
@@ -499,7 +506,8 @@ private:
 			auto root_mod
 				= StandardModuleTreeBuilder::create(root_dir, base::StrID("original_package_id"));
 			sub_dir = root_dir.createSubDirectory("submod");
-			sub_mod = StandardModuleTreeBuilder::create(sub_dir, base::StrID("original_package_id"));
+			sub_mod
+				= StandardModuleTreeBuilder::create(sub_dir, base::StrID("original_package_id"));
 			StandardModuleTreeModifier::addSubmodule(root_mod, sub_mod);
 
 			// Attempt to change package ID for non-root module (should throw)
@@ -674,7 +682,7 @@ private:
 		ASSERT_EQUAL("manual_mod", mt->getName().strView());
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_TRUE(hasSubmodule(submodulesOf(parent_mod), mt->getName()));
-		ASSERT_EQUAL(1, mt->getOtherFiles().size());
+		ASSERT_EQUAL(1, otherFilesOf(mt).size());
 		ASSERT_EQUAL(1, submodulesOf(mt).size());
 		ASSERT_EQUAL(
 			"subdir",
@@ -746,11 +754,22 @@ private:
 		auto second = make_node("second", first);
 		ASSERT_EQUAL(first->getParentModule()->illegalAccess().getID(), script->getModuleID());
 		ASSERT_EQUAL(second->getParentModule()->illegalAccess().getID(), first->getModuleID());
-		ASSERT_NO_VALUE(first->as<SyntheticReplChainModuleTreeNode>()->getReplModuleParent());
+		ASSERT_NO_VALUE(query::entryPoint<QueryReplModuleParent>(first->getModuleID()));
 		ASSERT_EQUAL(
-			second->as<SyntheticReplChainModuleTreeNode>()->getReplModuleParent().value(),
+			query::entryPoint<QueryReplModuleParent>(second->getModuleID()).value(),
 			first->getModuleID()
 		);
+
+		// Only standard modules have submodules. Recursive walkers that reach a script or a
+		// chain node get no submodules instead of a panic, and follow the child modules instead.
+		ASSERT_EQUAL(1, query::entryPoint<QuerySubmodules>(root->getModuleID())->size());
+		ASSERT_EQUAL(0, query::entryPoint<QuerySubmodules>(script->getModuleID())->size());
+		ASSERT_EQUAL(0, query::entryPoint<QuerySubmodules>(first->getModuleID())->size());
+		ASSERT_EQUAL(0, script->getSubmoduleCount());
+		ASSERT_EQUAL(1, script->collectChildrenModules().size());
+		ASSERT_EQUAL(first->getModuleID(), script->collectChildrenModules().at(0)->getModuleID());
+		ASSERT_EQUAL(second->getModuleID(), first->collectChildrenModules().at(0)->getModuleID());
+		ASSERT_EQUAL(0, second->collectChildrenModules().size());
 
 		// Chains are linear: a node that already has a REPL child cannot get a second one.
 		bool exception_thrown = false;

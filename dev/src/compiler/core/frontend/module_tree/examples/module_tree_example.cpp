@@ -5,9 +5,9 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/module_tree/functors.hpp>
-#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 
 #include <init/init.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -38,8 +38,9 @@ int main() {
 
 		// Each unlock(ctx) emits a QueryModuleSideInput edge so incremental rebuilds know what changed.
 		for (const auto& submodule_locked:
-		     module_tree->as<compiler::frontend::StandardModuleTreeNode>()->getSubmodules().unlock(ctx
-		     )) {
+		     module_tree->as<compiler::frontend::StandardModuleTreeNode>()->getSubmodules().unlock(
+				 ctx
+			 )) {
 			const auto submodule_access = submodule_locked.unlock(ctx);
 			submodules.emplace_back(getModuleRef(submodule_access.getID()));
 		}
@@ -52,12 +53,16 @@ int main() {
 
 	// Everything that is not the module's own source is kept by extension, outside the query
 	// graph, so it needs no context to be read.
-	for (const auto& [extension, files]: module_tree->getOtherFiles())
+	for (const auto& [extension, files]:
+	     module_tree->as<compiler::frontend::StandardModuleTreeNode>()->getOtherFiles())
 		for (const auto& file: files)
 			std::cout << extension.strView() << ": " << file.getContent().view().stringView()
 					  << '\n';
 
 	for (const auto& submodule_ref: submodules)
 		std::cout << submodule_ref->getName().strView() << " has "
-				  << submodule_ref->getOtherFiles().size() << " kind(s) of other file" << '\n';
+				  << submodule_ref->as<compiler::frontend::StandardModuleTreeNode>()
+						 ->getOtherFiles()
+						 .size()
+				  << " kind(s) of other file" << '\n';
 }

@@ -42,6 +42,9 @@ either in the scheme or it's implementation, they should be reflected here.
 <module-name> ::= <identifier>                                      // module name
                 | <identifier> "I" <templ-arg>* "E"                 // templated module instantiation
 <script-name> ::= <identifier>                                      // script name
+// The <module-name>+ of a module path skips the REPL chain modules above the symbol's module:
+// a REPL statement keeps the names of the modules enclosing its chain and its own name, but not
+// the names of the earlier statements of the chain.
 
 // note that function symbols nad function types are different
 <function> ::= <function-type> <parameter-name>* "E"

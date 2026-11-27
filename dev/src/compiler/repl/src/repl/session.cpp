@@ -12,7 +12,6 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_modifier.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/module_tree/script_module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/repl_utils/extractors.hpp>
@@ -971,13 +970,12 @@ namespace compiler::repl {
 						REPL,
 						"Module created: #",
 						module_id.queryUnstablePerfectHash().toStringHex(),
-						", isRepl=",
-						module_ref->isReplModule(),
 						", hasParent=",
-						module_ref->as<frontend::SyntheticReplChainModuleTreeNode>()
-							->getReplModuleParent()
-							.has_value(),
+						module_ref->getParentModule().has_value(),
 						"\n"
+					);
+					CORE_ASSERT(
+						module_ref->isReplModule(), "A REPL statement must be a REPL chain module"
 					);
 					m_session_history.emplace_back(stmt_source, module_id);
 					++m_line_counter;

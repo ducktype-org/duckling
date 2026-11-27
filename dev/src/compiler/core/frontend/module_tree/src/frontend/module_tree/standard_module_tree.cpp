@@ -7,10 +7,6 @@
 #include "standard_module_tree.hpp"
 
 namespace compiler::frontend {
-	void StandardModuleTreeNode::makeAbstract() {
-		CORE_PANIC("makeAbstract called on StandardModuleTreeNode!");
-	}
-
 	const base::HashMap<base::StrID, std::vector<fs::File>>& StandardModuleTreeNode::getOtherFiles(
 	) const {
 		return m_other_files;
@@ -28,7 +24,8 @@ namespace compiler::frontend {
 		return source_files;
 	}
 
-	void StandardModuleTreeNode::addKindSpecificDataToHash(hashing::ComponentHash::HashAlg&) const {}
+	void StandardModuleTreeNode::addKindSpecificDataToHash(hashing::ComponentHash::HashAlg&) const {
+	}
 
 	StandardModuleTreeNode::StandardModuleTreeNode(): ModuleTree() { kind = ModuleKind::Module; }
 

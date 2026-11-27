@@ -217,11 +217,6 @@ namespace compiler::frontend {
 		static base::Box<ScriptModuleTreeBuilder> create();
 
 		/**
-		 * @brief Sets the script file this module is created from.
-		 */
-		void setScriptFile(const fs::File& file);
-
-		/**
 		 * @brief Sets the parent module.
 		 * @param parent The parent module, must be a standard module.
 		 */
@@ -235,8 +230,6 @@ namespace compiler::frontend {
 
 	private:
 		ScriptModuleTreeBuilder() = default;
-
-		base::Optional<fs::File> m_script_file;
 	};
 
 	/**

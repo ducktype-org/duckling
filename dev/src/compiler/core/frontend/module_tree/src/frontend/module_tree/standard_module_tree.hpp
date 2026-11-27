@@ -32,16 +32,12 @@ namespace compiler::frontend {
 		 */
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
 
-		void makeAbstract() final;
-
 		friend class ModuleTree;
 		friend class StandardModuleTreeBuilder;
 		friend class StandardModuleTreeModifier;
 		friend class ModuleTreeModifierCommon;
 
 	protected:
-		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
-
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
 		/**
@@ -52,7 +48,16 @@ namespace compiler::frontend {
 	public:
 		StandardModuleTreeNode();
 
-		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const override;
+		[[nodiscard]]
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
+
+		/**
+		 * @brief Accesses all the other files that are located inside the module.
+		 * @return A base::HashMap that maps a file extension to a vector with files with this
+		 * extension.
+		 */
+		[[nodiscard]]
+		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
 
 		/**
 		 * @brief Accesses the submodules located in this module.

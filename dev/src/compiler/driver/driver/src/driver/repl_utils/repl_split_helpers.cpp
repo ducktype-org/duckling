@@ -53,6 +53,8 @@ namespace compiler::repl {
 		 * @note: This is similar to createReplModule, but without parent and history.
 		 */
 		base::Ref<frontend::ModuleTree> createProbeReplModule(std::string_view input) {
+			// @TODO: #2762 build the probe below a script module node, inside a package (a
+			// synthetic one if needed), instead of as a root module of a fake package.
 			auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
 			builder->setPackageID(base::StrID("repl_session"));
 			builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile(input));

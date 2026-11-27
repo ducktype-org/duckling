@@ -37,11 +37,7 @@ namespace compiler::frontend {
 		friend class SyntheticReplChainModuleTreeModifier;
 		friend class ModuleTreeModifierCommon;
 
-		void makeAbstract() final;
-
 	protected:
-		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
-
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
 		/**
@@ -54,27 +50,20 @@ namespace compiler::frontend {
 		explicit SyntheticReplChainModuleTreeNode();
 
 		[[nodiscard]]
-		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const;
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 
-		/**
-		 * @brief The previous statement of the chain.
-		 * @return The parent module if it is a REPL chain node, empty if the parent is the script
-		 * that starts the chain or if there is no parent.
-		 */
 		[[nodiscard]]
-		base::Optional<ModuleID> getReplModuleParent() const;
+		const base::Optional<base::Ref<SourceFile>>& getSyntheticSourceFile() const;
 	};
 
 	/**
 	 * Script specific data.
 	 *
-	 * @note Scripts dont have a main source file like standard modules.
+	 * @note Scripts don't have a main source file like standard modules.
 	 * Instead, a synthetic module chain is created to represent the script module.
 	 * @note The parent of a script is a standard module (or none), like for standard modules.
 	 */
 	class ScriptModuleTreeNode final: public ModuleTree {
-		base::Optional<fs::File> m_script_file;
-
 		/**
 		 * The first node of the synthetic REPL chain of this script, if any.
 		 * It is set by SyntheticReplChainModuleTreeModifier::setParent.
@@ -85,25 +74,23 @@ namespace compiler::frontend {
 		friend class ScriptModuleTreeModifier;
 		friend class ModuleTreeModifierCommon;
 
-		void makeAbstract() final;
-
 	protected:
-		[[nodiscard]]
-		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
-
 		/**
 		 * @brief A script owns no source file itself, its synthetic chain modules own them.
 		 */
 		std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const override;
 
 		/**
-		 * @brief Adds whether the script has a script file. The chain below the script is not
-		 * hashed, it is made of child modules.
+		 * @brief Adds nothing: the chain below the script is not hashed, it is made of child
+		 * modules.
 		 */
 		void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const override;
 
 	public:
 		explicit ScriptModuleTreeNode();
+
+		[[nodiscard]]
+		std::vector<base::Ref<ModuleTree>> collectChildrenModules() const override;
 	};
 
 

@@ -7,11 +7,11 @@
 #include "module_tree_builder.hpp"
 
 #include "functors.hpp"
-#include "standard_module_tree.hpp"
 #include "module_tree.hpp"
 #include "module_tree_modifier.hpp"
 #include "script_module_tree.hpp"
 #include "source_file.hpp"
+#include "standard_module_tree.hpp"
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
@@ -130,7 +130,9 @@ namespace compiler::frontend {
 		}
 	}
 
-	void StandardModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
+	void StandardModuleTreeBuilder::buildFromSingleFile(
+		const fs::File& file, base::StrID package_id
+	) {
 		base::StrID stem      = base::StrID(file.stem());
 		std::string extension = file.extension();
 		CORE_ASSERT(
@@ -273,7 +275,8 @@ namespace compiler::frontend {
 
 		node->m_other_files = std::move(m_other_files);
 
-		if (m_parent.has_value()) StandardModuleTreeModifier::setParent(module_ref, m_parent.value());
+		if (m_parent.has_value())
+			StandardModuleTreeModifier::setParent(module_ref, m_parent.value());
 
 		// Create SourceFiles from stored paths
 		if (m_main_source_file_path.has_value())
@@ -294,12 +297,6 @@ namespace compiler::frontend {
 		return base::makeBox<ScriptModuleTreeBuilder>(ScriptModuleTreeBuilder());
 	}
 
-	void ScriptModuleTreeBuilder::setScriptFile(const fs::File& file) {
-		assertNotFinalized();
-		CORE_ASSERT(!m_script_file.has_value(), "Script file already set");
-		m_script_file = file;
-	}
-
 	void ScriptModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
 		CORE_ASSERT(
 			parent->getKind() == ModuleKind::Module, "Parent of a script must be a standard module"
@@ -309,8 +306,6 @@ namespace compiler::frontend {
 
 	base::Ref<ModuleTree> ScriptModuleTreeBuilder::finalize() {
 		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<ScriptModuleTreeNode>());
-
-		module_ref->as<ScriptModuleTreeNode>()->m_script_file = m_script_file;
 
 		if (m_parent.has_value()) ScriptModuleTreeModifier::setParent(module_ref, m_parent.value());
 

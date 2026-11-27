@@ -7,10 +7,10 @@
 #include "collect_input.hpp"
 
 #include <frontend/module_tree/functors.hpp>
-#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
@@ -104,22 +104,19 @@ namespace compiler::driver {
 			// Collect module side input
 			out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
 
-			// Only standard modules have submodules, and so submodule side inputs.
-			const auto module_node = module_ref->tryAs<StandardModuleTreeNode>();
-
-			const auto submodules_count
-				= module_node.has_value()
-			        ? module_node.value()->getSubmodules().illegalAccess().size()
-			        : 0;
 			out->emplace_back(
 				QuerySubmoduleCountSideInput::getID(),
-				KeyOf_SubmoduleCountSideInput::computeHash(module_id, submodules_count)
+				KeyOf_SubmoduleCountSideInput::computeHash(
+					module_id, module_ref->getSubmoduleCount()
+				)
 					.queryStablePerfectHash()
 			);
 
-			// Collect ModuleChildSideInput for all lookups done on this module
-			auto module_hash = ModuleTree::getModuleHash(module_id);
-			auto lookup_res  = lookups_map.atMaybe(module_hash);
+			// Collect ModuleChildSideInput for all lookups done on this module.
+			// Only standard modules have submodules, so only they are looked up.
+			const auto module_node = module_ref->tryAs<StandardModuleTreeNode>();
+			auto       module_hash = ModuleTree::getModuleHash(module_id);
+			auto       lookup_res  = lookups_map.atMaybe(module_hash);
 			if (module_node.has_value() and lookup_res.has_value()) {
 				for (const auto& lookup: *lookup_res.value()) {
 					// Check if the lookup is still valid
@@ -151,10 +148,10 @@ namespace compiler::driver {
 				collectQueryInputsFromPst(pst, *out);
 			}
 
-			// Recurse into submodules
-			if (module_node.has_value())
-				for (const auto& submodule: module_node.value()->getSubmodules().illegalAccess())
-					collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);
+			// Recurse into child modules: the submodules of a standard module, and the REPL chain
+			// below a script or a REPL chain module.
+			for (const auto& child: module_ref->collectChildrenModules())
+				collectFromModule(lookups_map, child->getModuleID(), out);
 		}
 
 		std::vector<query::external::InputData> collectInputDataFromGlobalPackagesImpl(

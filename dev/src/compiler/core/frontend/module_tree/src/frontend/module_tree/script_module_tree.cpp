@@ -7,10 +7,6 @@
 #include "script_module_tree.hpp"
 
 namespace compiler::frontend {
-	void SyntheticReplChainModuleTreeNode::makeAbstract() {
-		CORE_PANIC("makeAbstract called on SyntheticReplChainModuleTreeNode!");
-	}
-
 	std::vector<base::Ref<ModuleTree>> SyntheticReplChainModuleTreeNode::collectChildrenModules(
 	) const {
 		std::vector<base::Ref<ModuleTree>> children;
@@ -35,23 +31,14 @@ namespace compiler::frontend {
 		return m_synthetic_source_file;
 	}
 
-	base::Optional<ModuleID> SyntheticReplChainModuleTreeNode::getReplModuleParent() const {
-		if (!m_parent.has_value() or m_parent.value()->getKind() != ModuleKind::ReplChain)
-			return {};
-		return m_parent.value()->getModuleID();
-	}
-
 	void SyntheticReplChainModuleTreeNode::addKindSpecificDataToHash(
 		hashing::ComponentHash::HashAlg& partial
 	) const {
-		auto repl_module_parent = getReplModuleParent();
-		hashing::addToHash(partial, repl_module_parent.has_value());
-		if (repl_module_parent.has_value())
-			hashing::addToHash(partial, ModuleTree::getModuleHash(repl_module_parent.value()));
-	}
-
-	void ScriptModuleTreeNode::makeAbstract() {
-		CORE_PANIC("makeAbstract called on ScriptModuleTreeNode!");
+		const bool parent_is_chain_node
+			= m_parent.has_value() and m_parent.value()->getKind() == ModuleKind::ReplChain;
+		hashing::addToHash(partial, parent_is_chain_node);
+		if (parent_is_chain_node)
+			hashing::addToHash(partial, ModuleTree::getModuleHash(m_parent.value()->getModuleID()));
 	}
 
 	ScriptModuleTreeNode::ScriptModuleTreeNode(): ModuleTree() { kind = ModuleKind::Script; }
@@ -66,8 +53,5 @@ namespace compiler::frontend {
 		return {};
 	}
 
-	void ScriptModuleTreeNode::addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial
-	) const {
-		hashing::addToHash(partial, m_script_file.has_value());
-	}
+	void ScriptModuleTreeNode::addKindSpecificDataToHash(hashing::ComponentHash::HashAlg&) const {}
 }

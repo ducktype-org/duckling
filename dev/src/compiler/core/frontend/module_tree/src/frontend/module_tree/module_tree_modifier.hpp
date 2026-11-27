@@ -23,6 +23,9 @@ namespace compiler::frontend {
 	 *
 	 * All modifications are performed in-place. This class cannot be instantiated.
 	 * If you are using this class you should know what you are doing.
+	 *
+	 * @note The split of the modifiers per module kind is not a settled design. Nobody is attached
+	 * to it, so reshape these classes freely when the code needs it.
 	 */
 	class ModuleTreeModifierCommon {
 	public:

@@ -32,6 +32,9 @@ namespace compiler::repl {
 		std::string_view                          module_name_prefix,
 		ReplSessionID                             session_id
 	) {
+		// @TODO: #2762 the first statement of a chain should have a script module node as its
+		// parent, inside a package (a synthetic one if needed), instead of being a root module of
+		// a fake package.
 		auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
 		builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile(input));

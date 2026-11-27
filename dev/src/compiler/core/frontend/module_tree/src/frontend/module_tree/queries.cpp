@@ -7,7 +7,6 @@
 #include "queries.hpp"
 
 #include "functors.hpp"
-#include "standard_module_tree.hpp"
 #include "module_tree.hpp"
 
 #include <frontend/module_tree/access.hpp>
@@ -24,23 +23,6 @@
 
 namespace compiler::frontend {
 
-	namespace {
-		/**
-		 * @brief Looks up the submodule `name` of `module`.
-		 * @return Empty if there is no such submodule, or if `module` cannot have submodules
-		 * (REPL chain and script modules).
-		 */
-		base::Optional<ModuleID> findSubmodule(
-			query::Context& ctx, ModuleID module, base::StrID name
-		) {
-			const auto module_node = getModuleRef(module)->tryAs<StandardModuleTreeNode>();
-			if (not module_node.has_value()) return {};
-			auto maybe_child = module_node.value()->getSubmoduleByName(name).unlock(ctx);
-			if (not maybe_child.has_value()) return {};
-			return maybe_child.value().unlock(ctx).getID();
-		}
-	}
-
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
 	) {
@@ -55,7 +37,7 @@ namespace compiler::frontend {
 
 		auto from_module_ref = getModuleRef(from);
 
-		base::Optional<ModuleID> current_module = findSubmodule(ctx, from, path.at(0));
+		base::Optional<ModuleID> current_module = from_module_ref->findSubmodule(ctx, path.at(0));
 
 		if (not current_module.has_value()) {
 			base::Optional<ModuleID> ancestor = ctx.query<QueryParentModule>(from);
@@ -91,9 +73,9 @@ namespace compiler::frontend {
 			}
 		}
 
-		// second step: follow children
+		// second step: follow submodules
 		for (usize i = 1; i < path.size() and current_module.has_value(); i++)
-			current_module = findSubmodule(ctx, current_module.value(), path.at(i));
+			current_module = getModuleRef(current_module.value())->findSubmodule(ctx, path.at(i));
 
 		return current_module;
 	}
@@ -105,8 +87,9 @@ namespace compiler::frontend {
 			if (pkg.getPackageID() == package_name) {
 				auto current_module = pkg.getRootModule().unlock(ctx).getID();
 
+				// follow submodules
 				for (const auto& component: path) {
-					auto maybe_child = findSubmodule(ctx, current_module, component);
+					auto maybe_child = getModuleRef(current_module)->findSubmodule(ctx, component);
 					if (not maybe_child.has_value()) return {};
 					current_module = maybe_child.value();
 				}

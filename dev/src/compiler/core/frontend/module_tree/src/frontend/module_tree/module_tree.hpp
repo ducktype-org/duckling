@@ -180,12 +180,20 @@ namespace compiler::frontend {
 		FileAccessLocked getMainSourceFile() const;
 
 		/**
-		 * Accesses all the other files that are located inside the module.
-		 * @return A base::HashMap that maps a file extension to a vector
-		 * with files with this extension.
+		 * @brief Looks up the submodule `name` of this module.
+		 * Registers the same dependency as StandardModuleTreeNode::getSubmoduleByName().
+		 * @return Empty if there is no such submodule, or if this module cannot have submodules
+		 * (script and REPL chain modules).
 		 */
 		[[nodiscard]]
-		virtual const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
+		base::Optional<ModuleID> findSubmodule(query::Context& ctx, base::StrID name) const;
+
+		/**
+		 * @brief The number of submodules of this module, 0 for a script or REPL chain module.
+		 * @note This registers no query dependency. Use it outside queries only.
+		 */
+		[[nodiscard]]
+		usize getSubmoduleCount() const;
 
 		/**
 		 * Parses the name of the module.
@@ -302,19 +310,6 @@ namespace compiler::frontend {
 			return {};
 		}
 
-		ModuleTree(const ModuleTree&)                = delete;
-		ModuleTree& operator=(const ModuleTree&)     = delete;
-		ModuleTree(ModuleTree&&) noexcept            = delete;
-		ModuleTree& operator=(ModuleTree&&) noexcept = delete;
-
-	protected:
-		ModuleTree();
-
-		/**
-		 * Dummy function to make this class abstract.
-		 */
-		virtual void makeAbstract() = 0;
-
 		/**
 		 * @brief Collects all child modules of this module.
 		 * @return A vector containing references to all child modules.
@@ -322,11 +317,21 @@ namespace compiler::frontend {
 		 * @important Submodules and child modules are not the same thing.
 		 * Submodules reflect the high-level Duckling module structure,
 		 * whereas child modules include all modules that are direct children in the module tree
-		 * structure (i.e. whose parent is this module).
+		 * structure (i.e. whose parent is this module): the submodules of a standard module, and
+		 * the REPL child of a script or a REPL chain module.
+		 * @note This registers no query dependency. Use it outside queries only.
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const
 			= 0;
+
+		ModuleTree(const ModuleTree&)                = delete;
+		ModuleTree& operator=(const ModuleTree&)     = delete;
+		ModuleTree(ModuleTree&&) noexcept            = delete;
+		ModuleTree& operator=(ModuleTree&&) noexcept = delete;
+
+	protected:
+		ModuleTree();
 
 		/**
 		 * @brief Collects all source files owned by this module.

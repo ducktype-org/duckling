@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/mangler/mangler.hpp>
 
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
@@ -272,7 +273,7 @@ private:
 			"repl_" + std::to_string(session_id.asInt()) + "_7", first_ref->getName().strView()
 		);
 		ASSERT_NO_VALUE(
-			first_ref->as<frontend::SyntheticReplChainModuleTreeNode>()->getReplModuleParent(),
+			query::entryPoint<frontend::QueryReplModuleParent>(first_ref->getModuleID()),
 			"First chained module should not have REPL parent"
 		);
 		assertTrue(first_ref->hasMainSourceFile(), "Chained module should have main source file");
@@ -285,12 +286,11 @@ private:
 			"script_" + std::to_string(session_id.asInt()) + "_8", second_ref->getName().strView()
 		);
 		ASSERT_HAS_VALUE(
-			second_ref->as<frontend::SyntheticReplChainModuleTreeNode>()->getReplModuleParent(),
+			query::entryPoint<frontend::QueryReplModuleParent>(second_ref->getModuleID()),
 			"Second chained module should have REPL parent"
 		);
 		ASSERT_EQUAL(
-			second_ref->as<frontend::SyntheticReplChainModuleTreeNode>()->getReplModuleParent().value(
-			),
+			query::entryPoint<frontend::QueryReplModuleParent>(second_ref->getModuleID()).value(),
 			first_ref->getModuleID()
 		);
 	}
