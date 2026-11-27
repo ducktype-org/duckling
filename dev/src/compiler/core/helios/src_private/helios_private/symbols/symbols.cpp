@@ -61,25 +61,7 @@ namespace compiler::helios {
 		return kind(id) != SymbolKind::FunctionDeclaration;
 	}
 
-	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
-		// This is a very simple, and very suboptimal heuristic for now, we can improve it
-		// later if needed.
-		// @TODO: #2996 change it to a better implementation.
-		// Symbol should just know this!
-		auto pst_emission_policy = [&ctx](pst::AccessLocked<pst::LangElement> pst_element) {
-			auto pst_element_ancestor = getPSTElementParent(ctx, pst_element.unlock(ctx));
-			while (pst_element_ancestor.isLangElement()) {
-				auto element = pst_element_ancestor.getAsLangElement().unlock(ctx);
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// Symbols from within templates, are (probably) replicated
-					return EmissionPolicy::Replicated;
-				}
-				pst_element_ancestor = getPSTElementParent(ctx, element);
-			}
-
-			return EmissionPolicy::OwnerOnly;
-		};
-
+	EmissionPolicy emissionPolicy(SymID id) {
 		const auto& sym_ref = getSymRef(id);
 		if_opt_some(sym_ref->maybe_builtin_data, builtin_data) {
 			// Only if HOUT implements the builtin we want to replicate it.
@@ -87,8 +69,9 @@ namespace compiler::helios {
 			         ? EmissionPolicy::Replicated
 			         : EmissionPolicy::OwnerOnly;
 		}
-		if_opt_some(sym_ref->maybe_pst_data, pst_data) {
-			return pst_emission_policy(pst_data.getElement());
+		if (sym_ref->maybe_pst_data.has_value()) {
+			return sym_ref->maybe_template_instance_data.has_value() ? EmissionPolicy::Replicated
+			                                                         : EmissionPolicy::OwnerOnly;
 		}
 
 		variant_match(sym_ref->maybe_generated_data.value()) {
@@ -387,6 +370,53 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief The template instance data of the symbols declared in @p element, inherited from
+		 * the nearest ancestor of @p element that declares a symbol.
+		 */
+		base::Optional<TemplateInstanceData> inheritedTemplateInstanceData(
+			query::Context& ctx, const pst::Access<pst::LangElement>& element
+		) {
+			return std::invoke(
+				[&ctx](
+					this auto self, const pst::Access<pst::LangElement>& current
+				) -> base::Optional<TemplateInstanceData> {
+					auto parent = getPSTElementParent(ctx, current);
+					if (!parent.isLangElement()) return {};
+
+					auto parent_element = parent.getAsLangElement().unlock(ctx);
+					switch (parent_element->getElementKind()) {
+					case pst::ElementKind::Fun:
+					case pst::ElementKind::Class:
+					case pst::ElementKind::Namespace:
+					case pst::ElementKind::ClassMethod:
+					case pst::ElementKind::ClassSpecial: {
+						const auto parent_symbol
+							= ctx.query<QuerySymbolOfSTMT>(parent.getAsLangElement());
+						if (parent_symbol.hasFailed()) return {};
+
+						const auto  parent_sym = parent_symbol.valueOrPanic();
+						const auto& parent_data
+							= getSymRef(parent_sym)->maybe_template_instance_data;
+						if (not parent_data.has_value()) return {};
+
+						if (const auto* member
+					        = std::get_if<TemplateInstanceData::Member>(&parent_data->data))
+							return TemplateInstanceData{ *member };
+						return TemplateInstanceData{ TemplateInstanceData::Member{ parent_sym } };
+					}
+
+					case pst::ElementKind::TemplateStmt:
+						return {};
+
+					default:
+						return self(parent_element);
+					}
+				},
+				element
+			);
+		}
+
+		/**
 		 * @brief Logs that a `using`/`import` form parses but is not compiled yet.
 		 */
 		void logSelectorNotSupported(
@@ -653,11 +683,15 @@ namespace compiler::helios {
 				) };
 			}
 
-			if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
-				data.maybe_template_instance_data = TemplateInstanceData{
-					.unbaked_template_symbol    = instance.unbaked_template_symbol,
-					.template_arguments_symbols = instance.template_arguments_symbols,
-				};
+			const auto instance = templates::getTemplateInstanceData(ctx, stmt);
+			if (instance.has_value()) {
+				data.maybe_template_instance_data
+					= TemplateInstanceData{ TemplateInstanceData::Root{
+						.unbaked_template_symbol    = instance->unbaked_template_symbol,
+						.template_arguments_symbols = instance->template_arguments_symbols,
+					} };
+			} else {
+				data.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, stmt);
 			}
 			return data;
 		}
@@ -679,6 +713,7 @@ namespace compiler::helios {
 						.kind = SymbolKind::Parameter,
 					},
 					.maybe_pst_data = PstSymbolData{ .scope = scope, .pst_element_hash = element->getHash() },
+					.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, element),
 				};
 			}
 
@@ -696,6 +731,7 @@ namespace compiler::helios {
 							.kind = SymbolKind::Variable,
 						},
 						.maybe_pst_data = PstSymbolData{ .scope = scope, .pst_element_hash = element->getHash() },
+						.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, element),
 					};
 				} else {
 					CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");

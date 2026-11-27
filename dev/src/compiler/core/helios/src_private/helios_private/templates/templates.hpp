@@ -107,6 +107,9 @@ namespace compiler::helios::templates {
 	 * the declaration of a template instance.
 	 * @note Only reads the data stored by QueryBakeTemplateSymID in the PST parent of @p element,
 	 * it is not a step of the bake process.
+	 *
+	 * @TODO: #3892 revisit it, the baked PST still contains the `TemplateStmt` wrapping the
+	 * instance, so the bake data is found through it instead of a dedicated template root element.
 	 */
 	base::Optional<TemplateBakePSTLinkedData::PostponedData> getTemplateInstanceData(
 		query::Context& ctx, pst::Access<pst::LangElement> element

@@ -141,12 +141,14 @@ namespace compiler::helios {
 	 * be inserted into every module, or we should keep the definition to
 	 * the module where the definition is located.
 	 * This also translates to LLVM weak/strong linkage.
+	 * Symbols declared inside template instances and the builtins implemented in HOUT are
+	 * replicated.
 	 */
 	enum class EmissionPolicy {
 		OwnerOnly,
 		Replicated,
 	};
-	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id);
+	EmissionPolicy emissionPolicy(SymID id);
 
 	/**
 	 * @brief Whether the symbol can be called
