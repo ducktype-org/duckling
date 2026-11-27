@@ -60,12 +60,6 @@ namespace compiler::helios {
 	u64 scopeDepth(ScopeID);
 
 	/**
-	 * @brief Whether the scope is the one of a baked template root, in which the template
-	 * instance is declared.
-	 */
-	bool isTemplateInstanceRoot(ScopeID);
-
-	/**
 	 * @brief Query root scope for given module.
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.
