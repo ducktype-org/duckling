@@ -64,7 +64,7 @@ namespace compiler::helios::templates {
 			/**
 			 * @brief The template symbol ID the template was baked from.
 			 */
-			SymID template_symbol;
+			SymID unbaked_template_symbol;
 
 			/**
 			 * @brief The symbols for the template arguments.
@@ -105,6 +105,8 @@ namespace compiler::helios::templates {
 	/**
 	 * @brief The bake data of @p element, if it is the inner statement of a baked template, i.e.
 	 * the declaration of a template instance.
+	 * @note Only reads the data stored by QueryBakeTemplateSymID in the PST parent of @p element,
+	 * it is not a step of the bake process.
 	 */
 	base::Optional<TemplateBakePSTLinkedData::PostponedData> getTemplateInstanceData(
 		query::Context& ctx, pst::Access<pst::LangElement> element

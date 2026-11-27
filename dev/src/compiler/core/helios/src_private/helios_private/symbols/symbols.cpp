@@ -653,13 +653,11 @@ namespace compiler::helios {
 				) };
 			}
 
-			if (isTemplateInstanceRoot(scope)) {
-				if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
-					data.maybe_template_instance_data = TemplateInstanceData{
-						.template_symbol            = instance.template_symbol,
-						.template_arguments_symbols = instance.template_arguments_symbols,
-					};
-				}
+			if_opt_some(templates::getTemplateInstanceData(ctx, stmt), instance) {
+				data.maybe_template_instance_data = TemplateInstanceData{
+					.unbaked_template_symbol    = instance.unbaked_template_symbol,
+					.template_arguments_symbols = instance.template_arguments_symbols,
+				};
 			}
 			return data;
 		}
