@@ -374,7 +374,7 @@ namespace compiler::helios::code {
 						query::throwFailed();
 					}
 					auto ctv        = ctx.query<QueryConstValueOf>({ symbol }).valueOrThrow();
-					auto typeop_opt = ctv.get<ctv::CompileTimeValue::TypeOperator>();
+					auto typeop_opt = ctv.get<TypeOperator>();
 					if_opt_none(typeop_opt) {
 						ctx.log<dia::PlaceholderError>(
 							base::strConcat(
@@ -386,47 +386,50 @@ namespace compiler::helios::code {
 					}
 					return typeop_opt.value();
 				}();
+				variant_match(type_operator.kind) {
+					variant_case(TypeOperator::Placeholder, pl) {
+						auto operand_ctv = getTypeCTVFromPST(ctx, stmt->getExpr()).valueOrThrow();
+						node             = makeBox<LiteralTypeExpr>(
+                            ctx,
+                            pstOrigin(stmt),
+                            ctx.query<tsh::QueryTemplateDeductionPlaceholderType>({
+											.template_symbol = pl.template_decl,
+											.parameter_index = pl.parameter_index,
+											.operand         = operand_ctv.get<tsh::ValueType<>>().value(),
+                            })
+                        );
+						return;
+					}
+					variant_case_novalue(
+						TypeOperator::Direct, TypeOperator::Ref, TypeOperator::Box
+					) {
+						auto operand = subExprFromPSTWithType(
+										   ctx,
+										   unlockOrFail(ctx, stmt->getExpr()),
+										   tsh::ValueType<>::withDefaultsMut(tsh::getMetaType())
+						)
+						                   .valueOrThrow();
 
 
-				if (base::holds<tsh::TemplateDeductionPlaceholderAbstractType>(type_operator.op)) {
-					const auto placeholder
-						= std::get<tsh::TemplateDeductionPlaceholderAbstractType>(type_operator.op);
-					const auto operand_ctv = getTypeCTVFromPST(ctx, stmt->getExpr());
-					if (operand_ctv.hasFailed()) return;
-					node = makeBox<LiteralTypeExpr>(
-						ctx,
-						pstOrigin(stmt),
-						ctx.query<tsh::QueryTemplateDeductionPlaceholderType>({
-							.template_symbol = placeholder.getTemplate(),
-							.parameter_index = placeholder.getParameterIndex(),
-							.operand = operand_ctv.valueOrPanic().get<tsh::ValueType<>>().value(),
-						})
-					);
-					return;
+						if (base::holds<TypeOperator::Direct>(type_operator.kind)) {
+							node = std::move(operand);
+							return;
+						}
+						if (base::holds<TypeOperator::Ref>(type_operator.kind)) {
+							node = makeBox<UnaryOperatorExpr>(
+								ctx, pstOrigin(stmt), BuiltinUnary::Ref, std::move(operand)
+							);
+							return;
+						}
+						if (base::holds<TypeOperator::Box>(type_operator.kind)) {
+							node = makeBox<UnaryOperatorExpr>(
+								ctx, pstOrigin(stmt), BuiltinUnary::Box, std::move(operand)
+							);
+							return;
+						}
+					}
 				}
 
-				auto operand = subExprFromPSTWithType(
-								   ctx,
-								   unlockOrFail(ctx, stmt->getExpr()),
-								   tsh::ValueType<>::withDefaultsMut(tsh::getMetaType())
-				)
-				                   .valueOrThrow();
-
-				switch (std::get<TypeOperator::Kind>(type_operator.op)) {
-				case TypeOperator::Kind::Identity:
-					node = std::move(operand);
-					return;
-				case TypeOperator::Kind::Ref:
-					node = makeBox<UnaryOperatorExpr>(
-						ctx, pstOrigin(stmt), BuiltinUnary::Ref, std::move(operand)
-					);
-					return;
-				case TypeOperator::Kind::Box:
-					node = makeBox<UnaryOperatorExpr>(
-						ctx, pstOrigin(stmt), BuiltinUnary::Box, std::move(operand)
-					);
-					return;
-				}
 				CORE_UNREACHABLE();
 			}
 
@@ -447,9 +450,9 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// A `-` before a numeric literal is a part of the literal. If not for that values
-				// like `-128i8` couldn't be parsed since `128` does not fit into `i8` (same for
-				// other INT_MIN flavours).
+				// A `-` before a numeric literal is a part of the literal. If not for that
+				// values like `-128i8` couldn't be parsed since `128` does not fit into `i8`
+				// (same for other INT_MIN flavours).
 				if (op->unwrap() == lang_def::NamedOperator::Minus) {
 					const auto literal
 						= stmt->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprNumericValue>();
@@ -470,8 +473,8 @@ namespace compiler::helios::code {
 				// Handle taking references
 				if (op->unwrap() == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1956 remove the check bellow.
-					// This is a temporary check to prevent us from taking reference of types that
-					// do not carry information.
+					// This is a temporary check to prevent us from taking reference of types
+					// that do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
 						ctx.log<dia::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
@@ -503,8 +506,8 @@ namespace compiler::helios::code {
 				// operand, so `ptrof` of a `box T` place is a `ptr box T` addressing the box itself.
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Ptrof)) {
 					// @TODO: #1956 remove the check below.
-					// This is a temporary check to prevent us from taking the address of types that
-					// do not carry information.
+					// This is a temporary check to prevent us from taking the address of types
+					// that do not carry information.
 					if (not inner_type.getType().carriesInformation(ctx)) {
 						ctx.log<dia::NotYetImplementedCodeError>(
 							"Taking a pointer to a type that does not carry information is not "
@@ -550,7 +553,8 @@ namespace compiler::helios::code {
 					    == tsh::PrimaryCategory::Temporary) {
 						// The move is not needed, and should be discouraged.
 						ctx.log<dia::PlaceholderError>(
-							"A temporary is moved out of implicitly, `move` is not needed here.",
+							"A temporary is moved out of implicitly, `move` is not needed "
+							"here.",
 							stmt->getStablePosition()
 						);
 						return;
@@ -738,8 +742,8 @@ namespace compiler::helios::code {
 			}
 
 			/**
-			 * @brief Creates the function type `<parameters> -> <result>` of @p arrow. It is a raw
-			 * function when the parameters are prefixed with `funptr`, otherwise a closure.
+			 * @brief Creates the function type `<parameters> -> <result>` of @p arrow. It is a
+			 * raw function when the parameters are prefixed with `funptr`, otherwise a closure.
 			 */
 			void createFunctionType(pst::Access<pst::expr::BinaryOperator> arrow) {
 				auto parameters_expr = arrow->getLeftOperand();
@@ -921,8 +925,8 @@ namespace compiler::helios::code {
 			 * @brief Compiles `if const condition then if_true else if_false`, evaluating the
 			 * condition at compile time and compiling only the taken branch.
 			 *
-			 * The branch that is not taken is never lowered to HOUT, so it may contain code that
-			 * would not compile for the current instantiation.
+			 * The branch that is not taken is never lowered to HOUT, so it may contain code
+			 * that would not compile for the current instantiation.
 			 */
 			void compileConstTernary(pst::Access<pst::expr::Ternary> stmt) {
 				auto condition = unlockOrFail(ctx, stmt->getCondition());
@@ -958,8 +962,8 @@ namespace compiler::helios::code {
 
 				// Both if-else-then branches must produce the same type (note that backend may
 				// assume this). For now we just enforce it here by an error.
-				// @TODO: #4029 In the future we might want to introduce some kind of common-type
-				// and coerce all branches to common type.
+				// @TODO: #4029 In the future we might want to introduce some kind of
+				// common-type and coerce all branches to common type.
 				const auto true_type  = if_true->expression_type.getValueType();
 				const auto false_type = if_false->expression_type.getValueType();
 				const bool true_void  = true_type.getType().getKind() == tsh::Kind::Void;
@@ -969,7 +973,8 @@ namespace compiler::helios::code {
 				            != false_type.withMutability(tsh::Mutability::Mutable)) {
 					ctx.log<dia::PlaceholderError>(
 						base::strConcat(
-							"Both branches of an `if ... then ... else ...` expression have to be "
+							"Both branches of an `if ... then ... else ...` expression have to "
+							"be "
 							"of the same type, but the `then` branch is `",
 							true_type.withMutability(tsh::Mutability::Mutable).sourceTypeName(ctx),
 							"` and the `else` branch is `",
@@ -1010,8 +1015,8 @@ namespace compiler::helios::code {
 
 				// Comparison chain construction is unusual, because it reuses some of its
 				// arguments. Thus, we need to appropriately construct ReusableExpr instances,
-				// which we pass to operator resolution. The resolved expressions (binary operators
-				// or calls) are then passed to the final ChainComparisonExpr.
+				// which we pass to operator resolution. The resolved expressions (binary
+				// operators or calls) are then passed to the final ChainComparisonExpr.
 
 				// The lhs argument of the comparison to be processed.
 				auto lhs = std::move(result_exprs.at(0));
@@ -1021,8 +1026,9 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> comparisons;
 				comparisons.reserve(operator_count);
 
-				// Perform operator resolution for each operator in the chain. Reuse the expressions
-				// which are between two operators. The last expressions is not reused, but that's fine.
+				// Perform operator resolution for each operator in the chain. Reuse the
+				// expressions which are between two operators. The last expressions is not
+				// reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
 					// clang-format off
 					const auto op = stmt->getOperator(op_idx).unlock(ctx);

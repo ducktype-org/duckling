@@ -27,6 +27,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <algorithm>
+#include <expected>
 #include <ranges>
 
 namespace compiler::helios::templates {
@@ -54,15 +55,6 @@ namespace compiler::helios::templates {
 		};
 
 		/**
-		 * @brief Whether the template parameter is a `typeoperator`.
-		 */
-		bool isTypeOperatorParameter(
-			query::Context& ctx, const TemplateDeclarationSignature::Parameter& parameter
-		) {
-			return parameter.type.getType() == tsh::getTypeOperatorType(ctx);
-		}
-
-		/**
 		 * @brief The declared parameters of a function, a function declaration or a method.
 		 */
 		pst::AccessLocked<pst::ParamList> getFunctionLikeParams(
@@ -84,22 +76,44 @@ namespace compiler::helios::templates {
 		 * @brief Bakes the function template with a placeholder for each of its parameters and
 		 * returns the parameters of the baked function.
 		 */
-		std::vector<ParameterPattern> getParameterPatterns(
+		std::expected<std::vector<ParameterPattern>, TemplateDeductionFailure> getParameterPatterns(
 			query::Context& ctx, SymID template_sym_id, const TemplateDeclarationSignature& signature
 		) {
+			using TypeOperator = ctv::CompileTimeValue::TypeOperator;
+
 			TemplateBakeKey key{ .template_sym_id = template_sym_id, .template_arguments = {} };
 			for (const auto& [index, parameter]: std::views::enumerate(signature.parameters)) {
-				const auto placeholder = ctx.query<tsh::QueryTemplateDeductionPlaceholderType>({
-					.template_symbol = template_sym_id,
-					.parameter_index = static_cast<usize>(index),
-				});
-				if (isTypeOperatorParameter(ctx, parameter))
-					key.template_arguments.emplace_back(ctv::CompileTimeValue::TypeOperator{
-						.op = placeholder });
-				else
+				auto param_type = parameter.type.getType();
+				switch (param_type.getKind()) {
+				case tsh::Kind::Meta: {
+					// Where the type is expected we create "placeholder" instance
+					// used for deduction.
+					const auto placeholder = ctx.query<tsh::QueryTemplateDeductionPlaceholderType>({
+						.template_symbol = template_sym_id,
+						.parameter_index = base::safeIntConv<usize>(index),
+					});
 					key.template_arguments.emplace_back(
 						tsh::ValueType<>::withDefaultsMut(placeholder)
 					);
+					break;
+				}
+				case tsh::Kind::Function: {
+					if (param_type == tsh::getTypeOperatorType(ctx)) {
+						key.template_arguments.emplace_back(TypeOperator(TypeOperator::Placeholder{
+							.template_decl   = template_sym_id,
+							.parameter_index = base::safeIntConv<usize>(index) }));
+						break;
+					}
+					[[fallthrough]];
+				}
+				default: {
+					return std::unexpected(TemplateDeductionFailure{
+						.reason          = TemplateDeductionFailure::Reason::NonTypeParameter,
+						.parameter_index = base::safeIntConv<usize>(index),
+						.parameter_name  = parameter.name,
+					});
+				}
+				}
 			}
 
 			const SymID baked  = ctx.query<QueryBakeTemplateSymID>(key).valueOrThrow();
@@ -145,8 +159,8 @@ namespace compiler::helios::templates {
 			variant_match(value.getStorage()) {
 				variant_case(tsh::ValueType<>, type) { return containsPlaceholder(type.getType()); }
 				variant_case(ctv::CompileTimeValue::TypeOperator, type_operator) {
-					return std::holds_alternative<tsh::TemplateDeductionPlaceholderAbstractType>(
-						type_operator.op
+					return base::holds<ctv::CompileTimeValue::TypeOperator::Placeholder>(
+						type_operator.kind
 					);
 				}
 				variant_case(ctv::CompileTimeValue::TypeTuple, tuple) {
@@ -234,14 +248,14 @@ namespace compiler::helios::templates {
 				return tsh::TemplateDeductionPlaceholderAbstractType(type).getOperand();
 			}
 
-			static TypeOperator::Kind typeOperatorOf(tsh::ReferenceKind ref_kind) {
+			static TypeOperator typeOperatorOf(tsh::ReferenceKind ref_kind) {
 				switch (ref_kind) {
 				case tsh::ReferenceKind::Direct:
-					return TypeOperator::Kind::Identity;
+					return TypeOperator::Direct{};
 				case tsh::ReferenceKind::Ref:
-					return TypeOperator::Kind::Ref;
+					return TypeOperator::Ref{};
 				case tsh::ReferenceKind::Box:
-					return TypeOperator::Kind::Box;
+					return TypeOperator::Box{};
 				}
 				CORE_UNREACHABLE();
 			}
@@ -259,10 +273,7 @@ namespace compiler::helios::templates {
 				if (not operand.has_value()) return false;
 				if (param.getRefKind() != tsh::ReferenceKind::Direct) return true;
 
-				bind(
-					placeholderIndex(param.getType()),
-					TypeOperator{ .op = typeOperatorOf(arg.getRefKind()) }
-				);
+				bind(placeholderIndex(param.getType()), typeOperatorOf(arg.getRefKind()));
 				if (nested)
 					deduceNested(operand.value(), arg.toDirect());
 				else
@@ -363,12 +374,10 @@ namespace compiler::helios::templates {
 					variant_case(TypeOperator, param_operator) {
 						const auto arg_operator = arg.get<TypeOperator>();
 						if (arg_operator.has_value()
-						    and std::holds_alternative<TypeOperator::Kind>(arg_operator->op))
+						    and not base::holds<TypeOperator::Placeholder>(arg_operator->kind))
 							bind(
-								std::get<tsh::TemplateDeductionPlaceholderAbstractType>(
-									param_operator.op
-								)
-									.getParameterIndex(),
+								std::get<TypeOperator::Placeholder>(param_operator.kind)
+									.parameter_index,
 								arg_operator.value()
 							);
 					}
@@ -531,18 +540,10 @@ namespace compiler::helios::templates {
 			const auto signature
 				= getTemplateDeclarationSignature(ctx, key.template_sym_id).valueOrThrow();
 
-			for (const auto& [index, parameter]: std::views::enumerate(signature.parameters)) {
-				if (parameter.type.getType().getKind() != tsh::Kind::Meta
-				    and not isTypeOperatorParameter(ctx, parameter)) {
-					return TemplateDeductionResult{ TemplateDeductionFailure{
-						.reason          = TemplateDeductionFailure::Reason::NonTypeParameter,
-						.parameter_index = static_cast<usize>(index),
-						.parameter_name  = parameter.name,
-					} };
-				}
-			}
-
-			const auto patterns = getParameterPatterns(ctx, key.template_sym_id, signature);
+			const auto patterns_result = getParameterPatterns(ctx, key.template_sym_id, signature);
+			if (not patterns_result.has_value())
+				return TemplateDeductionResult{ patterns_result.error() };
+			const auto& patterns = patterns_result.value();
 
 			TemplateArgumentDeducer deducer(ctx, signature.parameters.size());
 

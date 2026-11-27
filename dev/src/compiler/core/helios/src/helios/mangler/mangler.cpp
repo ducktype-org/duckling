@@ -931,18 +931,14 @@ namespace compiler::helios::mangler {
 				);
 			}
 			variant_case(compiler::ctv::CompileTimeValue::TypeOperator, type_operator) {
-				using Kind = compiler::ctv::CompileTimeValue::TypeOperator::Kind;
-				CORE_ASSERT(
-					std::holds_alternative<Kind>(type_operator.op),
-					"A template deduction placeholder is never mangled"
-				);
-				switch (std::get<Kind>(type_operator.op)) {
-				case Kind::Identity:
-					return "oi";
-				case Kind::Ref:
-					return "or";
-				case Kind::Box:
-					return "ob";
+				using TypeOperator = compiler::ctv::CompileTimeValue::TypeOperator;
+				variant_match(type_operator.kind) {
+					variant_case_novalue(TypeOperator::Direct) { return "oi"; }
+					variant_case_novalue(TypeOperator::Ref) { return "or"; }
+					variant_case_novalue(TypeOperator::Box) { return "ob"; }
+					variant_case_novalue(TypeOperator::Placeholder) {
+						CORE_PANIC("A template deduction placeholder is never mangled");
+					}
 				}
 				CORE_UNREACHABLE();
 			}

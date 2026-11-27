@@ -7,6 +7,7 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/tsh/value_type.hpp>
 
@@ -96,28 +97,22 @@ namespace compiler::ctv {
 		 * like the `refkind` template parameter in `fun f(x: refkind T)`.
 		 */
 		struct TypeOperator {
-			enum class Kind : uint8_t {
-				/**
-				 * @brief Gives the operand as it is: `T`.
-				 */
-				Identity,
+			struct Direct {};
 
-				/**
-				 * @brief Gives a reference to the operand: `ref T`.
-				 */
-				Ref,
+			struct Ref {};
 
-				/**
-				 * @brief Gives a box of the operand: `box T`.
-				 */
-				Box,
+			struct Box {};
+
+			struct Placeholder {
+				helios::SymID template_decl;
+				usize         parameter_index{};
 			};
 
-			/**
-			 * @brief The operator, or the placeholder standing for a `typeoperator` template
-			 * parameter while the template arguments are deduced.
-			 */
-			std::variant<Kind, tsh::TemplateDeductionPlaceholderAbstractType> op;
+			std::variant<Direct, Ref, Box, Placeholder> kind;
+
+			template<typename T>
+			requires std::constructible_from<std::variant<Direct, Ref, Box, Placeholder>, T>
+			TypeOperator(T&& value): kind(std::forward<T>(value)) {}
 		};
 
 	private:

@@ -88,17 +88,13 @@ namespace compiler::ctv {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
 			variant_case(TypeOperator, type_operator) {
-				hashing::addToHash(hasher, type_operator.op.index());
-				variant_match(type_operator.op) {
-					variant_case(TypeOperator::Kind, op_kind) {
-						hashing::addToHash(hasher, op_kind);
-					}
-					variant_case(tsh::TemplateDeductionPlaceholderAbstractType, placeholder) {
-						hashing::addToHash(
-							hasher,
-							tsh::ValueType<>::withDefaults(placeholder).queryUnstablePerfectHash()
-						);
-					}
+				hashing::addToHash(hasher, type_operator.kind.index());
+				if (const auto* placeholder
+				    = std::get_if<TypeOperator::Placeholder>(&type_operator.kind)) {
+					hashing::addToHash(
+						hasher, placeholder->template_decl.queryUnstablePerfectHash()
+					);
+					hashing::addToHash(hasher, placeholder->parameter_index);
 				}
 			}
 			variant_case(VMValue, vm_value) {
@@ -141,19 +137,16 @@ namespace compiler::ctv {
 			}
 			variant_case(tsh::ValueType<>, val) { return val.toString(); }
 			variant_case(TypeOperator, type_operator) {
-				variant_match(type_operator.op) {
-					variant_case(TypeOperator::Kind, op_kind) {
-						switch (op_kind) {
-						case TypeOperator::Kind::Identity:
-							return "typeoperator(ident)";
-						case TypeOperator::Kind::Ref:
-							return "typeoperator(ref)";
-						case TypeOperator::Kind::Box:
-							return "typeoperator(box)";
-						}
-					}
-					variant_case(tsh::TemplateDeductionPlaceholderAbstractType, placeholder) {
-						return placeholder.toString();
+				variant_match(type_operator.kind) {
+					variant_case_novalue(TypeOperator::Direct) { return "typeoperator(ident)"; }
+					variant_case_novalue(TypeOperator::Ref) { return "typeoperator(ref)"; }
+					variant_case_novalue(TypeOperator::Box) { return "typeoperator(box)"; }
+					variant_case(TypeOperator::Placeholder, placeholder) {
+						return base::strConcat(
+							"typeoperator(placeholder ",
+							std::to_string(placeholder.parameter_index),
+							")"
+						);
 					}
 				}
 				CORE_UNREACHABLE();
