@@ -466,7 +466,7 @@ namespace compiler::helios::code {
 			}
 
 			// We have a single non-function candidate. Perform lookup for its call operators.
-			// @TODO: #982 #1532 Perform proper lookup in type for different cases.
+			// @TODO: #1532 Perform proper lookup in type for different cases.
 			switch (auto symbol = looked_up_callees.front(); kind(symbol)) {
 			case SymbolKind::Class: {
 				// Retrieve constructors of the class.
@@ -527,8 +527,7 @@ namespace compiler::helios::code {
 						lookup_result->leaves.front(), pstOrigin(ident), ident
 					);
 					UNPACK_QRESULT_MOVE(auto value_state =, value_result);
-					auto res = processIndirectCall(
-						query_ctx,
+					auto res = processValueCall(
 						value_state.getExpr(),
 						multiplePstOriginOrdered({ ident, call_expr }),
 						call_expr
@@ -558,6 +557,7 @@ namespace compiler::helios::code {
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
 		 * - `i64[42]` - used for static array type creation.
+		 * - `self(42)` - a call through a value, like a call of the `()` operator of a class.
 		 *
 		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
 		 * only supported explicit conversion syntax.
@@ -580,10 +580,13 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				query_ctx.log<dia::PlaceholderError>(
-					"Unsupported keyword literal in call expression.", call_expr->getStablePosition()
+				// Any other keyword literal is treated as a value,
+				// and handled normally (probably reporting an error)
+				auto call_result = processValueCall(
+					std::move(hout_expr), multiplePstOriginOrdered({ keyword, call_expr }), call_expr
 				);
-				break;
+				UNPACK_QRESULT_MOVE(auto expr =, call_result);
+				return ChainState::ofExpr(std::move(expr));
 			}
 			case lexer::Token::Square: {
 				auto square_call_res
@@ -649,12 +652,8 @@ namespace compiler::helios::code {
 			// was deleted in PR #1239. See it for reference.
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				// @TODO: #982 improve type lookup and provide correct
-				// candidates for processFunctionCall. Write tests for this case, when it will be
-				// implemented.
-				auto expr_result = processIndirectCall(
-					query_ctx, std::move(current_expr), pstOrigin(call_expr), call_expr
-				);
+				auto expr_result
+					= processValueCall(std::move(current_expr), pstOrigin(call_expr), call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, expr_result);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -860,8 +859,7 @@ namespace compiler::helios::code {
 				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
 					auto field_result = processPSTExpr(std::move(current_expr), expr_access);
 					UNPACK_QRESULT_MOVE(auto field_state =, field_result);
-					auto res = processIndirectCall(
-						query_ctx,
+					auto res = processValueCall(
 						field_state.getExpr(),
 						multiplePstOriginOrdered({ expr_access, call_expr }),
 						call_expr
@@ -900,6 +898,7 @@ namespace compiler::helios::code {
 		 * and current state is a namespace.
 		 * For example:
 		 * - `my_ns.foo()` - this may result in function overload.
+		 * - `my_ns.value()` - a call through a value, like a call of the `()` operator of a class.
 		 * A square call after an access is not paired with it, see @p run.
 		 */
 		auto processPSTExpr(
@@ -921,6 +920,22 @@ namespace compiler::helios::code {
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				if (callees.size() == 1 && not isFunctionLike(kind(callees.front()))) {
+					auto value_result = processNamespaceOrValue(
+						lookup_result->leaves.front(),
+						pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access),
+						expr_access
+					);
+					UNPACK_QRESULT_MOVE(auto value_state =, value_result);
+					auto res = processValueCall(
+						value_state.getExpr(),
+						multiplePstOriginOrdered({ expr_access, call_expr }),
+						call_expr
+					);
+					UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
+					return ChainState::ofExpr(std::move(expr));
+				}
 
 				auto expr_result
 					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
@@ -1018,6 +1033,32 @@ namespace compiler::helios::code {
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
+		/**
+		 * @brief Processes a round call through a value, like `object(10)` or `make()(10)`.
+		 *
+		 * A value of a class with a `()` operator calls the operator, with the value as `self`.
+		 * Any other value is called directly, which requires it to be of a function type.
+		 *
+		 * @param callee The expression producing the called value.
+		 * @param whole_call_origin The origin of the whole call expression.
+		 * @param call_expr The PST call expression (the `(...)` part).
+		 */
+		auto processValueCall(
+			Box<Expr> callee, ElementOrigin whole_call_origin, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<Box<Expr>> {
+			auto candidates_result = findBracketOperatorCandidates(
+				query_ctx, callee.ref(), base::StrID("()"), call_expr
+			);
+			// Fails only when the operators exist, but are inaccessible.
+			UNPACK_QRESULT_MOVE(const auto candidates =, candidates_result);
+
+			// Empty when the value is not of a class, or its class has no `()` operator.
+			if (not candidates.empty())
+				return processBracketOperatorCall(
+					query_ctx, candidates, call_expr, std::move(callee)
+				);
+			return processIndirectCall(query_ctx, std::move(callee), whole_call_origin, call_expr);
+		}
 
 		/**
 		 * Helper function of @p processPSTExpr that processes a value given the

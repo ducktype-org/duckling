@@ -357,6 +357,10 @@ namespace compiler::helios {
 		) {
 			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
 
+			// The parser only accepts these names on methods, and without a fixity.
+			if (name == base::StrID("()") || name == base::StrID("[]"))
+				return Operatoriness::Bracket;
+
 			const bool is_operator = lexer::isOperatorSymbolString(name.strView());
 			if (fixity != pst::OperatorFixity::None && !(is_operator && arity == 1)) {
 				ctx.log<InvalidOperatorFixityError>(source_position);
@@ -524,6 +528,12 @@ namespace compiler::helios {
 						stmt->getOperatorFixity(),
 						stmt->getStablePosition()
 					);
+					if (operatoriness == HOUTFunctionDeclaration::Operatoriness::Bracket) {
+						ctx.log<StaticBracketOperatorError>(
+							stmt->getStablePosition(), name(original_symbol).str()
+						);
+						query::throwFailed();
+					}
 					emplaceDeclaration(params, stmt->getRet(), operatoriness);
 					return;
 				}

@@ -201,6 +201,7 @@ either in the scheme or it's implementation, they should be reflected here.
 <operatoriness> ::= "i"                                     // infix (binary)
                   | "p"                                     // prefix (unary)
                   | "s"                                      // suffix (unary, postfix)
+                  | "b"                                     // bracket (`()` or `[]` method)
 
 <op-translit-unit> ::= <fixed-operator-tag>                    // one recognized operator character
                   | "x" <hex-codepoint> "_"                 // escape for any other codepoint
@@ -213,6 +214,8 @@ either in the scheme or it's implementation, they should be reflected here.
 <fixed-operator-tag> ::= "nt"                               // !
                        | "rm"                                // %
                        | "an"                                // &
+                       | "lp"                                // (
+                       | "rp"                                // )
                        | "ml"                                // *
                        | "pl"                                // +
                        | "mi"                                // -
@@ -223,7 +226,9 @@ either in the scheme or it's implementation, they should be reflected here.
                        | "eq"                                // =
                        | "gt"                                // >
                        | "qm"                                // ?
+                       | "ls"                                // [
                        | "bs"                                // \
+                       | "rs"                                // ]
                        | "eo"                                // ^
                        | "bt"                                // `
                        | "or"                                // |

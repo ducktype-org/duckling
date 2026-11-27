@@ -1,0 +1,34 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "bracket_operator_outside_class"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+  operator:
+    description: "The bracket operator, `()` or `[]`."
+
+header_message:
+  - "Operator `"
+  - param: "operator"
+  - "` can only be declared as a method of a class."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "declared outside of a class"

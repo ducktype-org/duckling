@@ -2626,7 +2626,7 @@ private:
 			= foo_class_info.declared_interface.getMethodsView()
 		    | std::views::transform([](const auto& method) { return method.getSymbol(); })
 		    | std::ranges::to<std::vector>();
-		ASSERT_EQUAL(3, foo_methods.size());
+		ASSERT_EQUAL(5, foo_methods.size());
 
 		auto find_method = [&](std::string_view name) {
 			for (const auto& method: foo_methods)
@@ -2638,6 +2638,8 @@ private:
 		const auto infix_method  = mangle({ .symbol_key = find_method("+*") });
 		const auto prefix_method = mangle({ .symbol_key = find_method("-*") });
 		const auto suffix_method = mangle({ .symbol_key = find_method("++") });
+		const auto round_method  = mangle({ .symbol_key = find_method("()") });
+		const auto square_method = mangle({ .symbol_key = find_method("[]") });
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
@@ -2654,6 +2656,14 @@ private:
 		ASSERT_EQUAL(
 			"_Q_M18mangling_operatorsN3FooOs4plplEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
 			suffix_method.str()
+		);
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOb4lprpEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
+			round_method.str()
+		);
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOb4lsrsEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
+			square_method.str()
 		);
 	}
 

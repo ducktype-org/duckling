@@ -59,22 +59,37 @@ namespace pst {
 	}
 
 	/**
+	 * @brief Checks if the token @p at tokens ahead names a bracket operator, like the `()` of
+	 * `fun ()(x: i64)` or the `[]` of `fun [](i: i64)`: a round or square bracket group followed by
+	 * the parameter list.
+	 */
+	inline bool isBracketOperatorName(LangParserState& state, i64 at) {
+		return (state[at].isBracketGroup(Token::Round) || state[at].isBracketGroup(Token::Square))
+		    && state[at + 1].isBracketGroup(Token::Round);
+	}
+
+	/**
 	 * @brief Consumes a contextual operator fixity specifier when it precedes an operator name.
 	 *
-	 * `prefix` and `suffix` remain regular identifiers everywhere else, including as function names.
+	 * `prefix` and `suffix` remain regular identifiers everywhere else, including as function
+	 * names. The bracket operators `()` and `[]` have no fixity, so a specifier before them is
+	 * reported and skipped.
 	 */
 	inline OperatorFixity parseOperatorFixity(LangParserState& state) {
-		if (!state[0].isIdentifier() || !state[1].isOperatorSymbol()) return OperatorFixity::None;
+		const bool bracket_operator = isBracketOperatorName(state, 1);
+		if (!state[0].isIdentifier() || !(state[1].isOperatorSymbol() || bracket_operator))
+			return OperatorFixity::None;
 
-		const auto fixity = state[0].getStrValue();
-		if (fixity == "prefix") {
+		const auto fixity_str = state[0].getStrValue();
+		if (fixity_str != "prefix" && fixity_str != "suffix") return OperatorFixity::None;
+
+		if (bracket_operator) {
+			state.logInt(makeBox<error::BracketOperatorFixityError>(state.getPosition()));
 			state.tokens().next();
-			return OperatorFixity::Prefix;
+			return OperatorFixity::None;
 		}
-		if (fixity == "suffix") {
-			state.tokens().next();
-			return OperatorFixity::Suffix;
-		}
-		return OperatorFixity::None;
+
+		state.tokens().next();
+		return fixity_str == "prefix" ? OperatorFixity::Prefix : OperatorFixity::Suffix;
 	}
 }
