@@ -137,7 +137,7 @@ impl Node {
                         let serde_yaml_ng::Value::String(key) = key else {
                             qp_bail!(
                                 "unsupported key `{}` in a YAML mapping at {source}",
-                                describe_value(&key)
+                                describe_yaml(&key)
                             )
                         };
                         let value = Self::from_yaml(value, source.clone())?;
@@ -369,7 +369,7 @@ impl Node {
 /// Describe [`Value`] without an article.
 ///
 /// [`Value`]: serde_yaml_ng::Value
-fn describe_value(value: &serde_yaml_ng::Value) -> &'static str {
+fn describe_yaml(value: &serde_yaml_ng::Value) -> &'static str {
     match value {
         serde_yaml_ng::Value::Null => "null",
         serde_yaml_ng::Value::Bool(..) => "boolean",
