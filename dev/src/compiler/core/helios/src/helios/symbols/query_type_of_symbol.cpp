@@ -327,7 +327,8 @@ namespace compiler::helios {
 						= [&]() -> std::pair<std::vector<tsh::ValueType<>>, tsh::ValueType<>> {
 						switch (method.kind) {
 						case defgen::Method::Kind::ToString:
-							return { { read_only_self }, tsh::ValueType<>::direct(tsh::getStringType(ctx)) };
+							return { { read_only_self },
+								     tsh::ValueType<>::direct(tsh::getStringType(ctx)) };
 						case defgen::Method::Kind::LengthMethod:
 							return { { read_only_self },
 								     tsh::ValueType<>::direct(tsh::getIntegralType(
@@ -342,7 +343,8 @@ namespace compiler::helios {
 						case defgen::Method::Kind::LesserEqual:
 						case defgen::Method::Kind::Greater:
 						case defgen::Method::Kind::GreaterEqual:
-							return { { read_only_self, read_only_self }, tsh::ValueType<>::direct(tsh::getBoolType()) };
+							return { { read_only_self, read_only_self },
+								     tsh::ValueType<>::direct(tsh::getBoolType()) };
 						}
 						CORE_UNREACHABLE();
 					}();
@@ -361,11 +363,10 @@ namespace compiler::helios {
 						= [&]() -> std::pair<std::vector<tsh::ValueType<>>, tsh::ValueType<>> {
 						switch (builtin.kind) {
 						case defgen::BuiltinTemplatedSymbol::Kind::MoveIn: {
-							const auto ptr_type = tsh::ValueType<>::direct(
-								ctx.query<tsh::QueryPointerType>({ .pointee = builtin.type,
-							                                       .access
-							                                       = tsh::ViewAccess::ReadWrite })
-							);
+							const auto ptr_type
+								= tsh::ValueType<>::direct(ctx.query<tsh::QueryPointerType>(
+									{ .pointee = builtin.type, .access = tsh::ViewAccess::ReadWrite }
+								));
 							return {
 								{ ptr_type, builtin.type },
 								tsh::ValueType<>::direct(tsh::getUnitType()),
@@ -396,8 +397,8 @@ namespace compiler::helios {
 					);
 				}
 				variant_case(defgen::SelfParameter, param) {
-					const auto class_type = classMemberOwner(param.method_symbol);
-					bool mutable_method = true;
+					const auto class_type     = classMemberOwner(param.method_symbol);
+					bool       mutable_method = true;
 					if (auto method_pst = maybeSymbolPst(param.method_symbol))
 						if (auto method = method_pst.value().unlock(ctx).dynamicCast<pst::Method>())
 							mutable_method = method.value()->isMut();

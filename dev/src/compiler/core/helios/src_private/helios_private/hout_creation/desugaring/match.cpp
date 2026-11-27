@@ -180,7 +180,14 @@ namespace compiler::helios::desugaring {
 			// alternative. If not, then the cases coerce from ref type (subject is also a
 			// reference) and we check here if adding "deref" will be valid. The "derefs" are
 			// added in MIR.
-			if (not match_subject.moves_ownership) source_type = source_type.toRef();
+			// The reference to the variant payload is writable is the subject if. As its own ref if
+			// it's a ref, or as its place when it is not a ref.
+			if (not match_subject.moves_ownership)
+				source_type = source_type.toRef(
+					match_subject.whole_type.getViewAccess().copyValueOr(tsh::viewAccessOfPlace(
+						match_subject.expr->expression_type.getValueCategory().getPlaceAccess()
+					))
+				);
 
 			const auto coercion = coercions::validCoercionOf(
 				ctx,
