@@ -15,6 +15,7 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/view_access.hpp>
 
 #include <base/extend_cpp/flag.hpp>
 #include <base/extend_cpp/stringifyable_enum.hpp>
@@ -67,6 +68,25 @@ namespace compiler::tsh {
 	[[nodiscard]]
 	constexpr PlaceAccess combinePlaceAccess(const PlaceAccess owner, const PlaceAccess part) {
 		return std::max(owner, part);
+	}
+
+	/**
+	 * @brief The mutability of a place when we reach it through a view. If we reach it through a
+	 * mutable view type (`ref mut T`, `ptr mut T`, etc.) then it's mutable. Otherwise it's
+	 * immutable.
+	 */
+	[[nodiscard]]
+	constexpr PlaceAccess placeAccessThroughView(const ViewAccess view_access) {
+		return view_access == ViewAccess::ReadWrite ? PlaceAccess::Mutable : PlaceAccess::Immutable;
+	}
+
+	/**
+	 * @brief The right of a view when we reference a value. If the value was mutable then the view
+	 * type is writable, otherwise it's read-only.
+	 */
+	[[nodiscard]]
+	constexpr ViewAccess viewAccessOfPlace(const PlaceAccess place_access) {
+		return place_access == PlaceAccess::Mutable ? ViewAccess::ReadWrite : ViewAccess::ReadOnly;
 	}
 
 	/**

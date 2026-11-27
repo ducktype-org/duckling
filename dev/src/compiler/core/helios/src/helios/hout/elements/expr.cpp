@@ -1155,15 +1155,29 @@ namespace compiler::helios::code {
 					  }
 				  }(),
 				  [&] {
-					  // An element of a array is a part of the array, so it is as writable as the array.
 					  const auto category = base->expression_type.getValueCategory().withDisabled(
 						  tsh::ValueSemanticsOptions::MOVE
 					  );
-					  if (base->expression_type.getType().getKind() == tsh::Kind::StaticArray)
+					  const auto base_type = base->expression_type.getType();
+					  switch (base_type.getKind()) {
+					  // Array type creation does not create any new place.
+					  case tsh::Kind::Meta:
+					  // An element of an array is mutable if the whole array is writable.
+					  case tsh::Kind::StaticArray:
 						  return category;
-					  // @TODO: #2104 The element of a pointer is writable is the pointer allows is.
-		              // But it's not implemented yet.
-					  return category.withPlaceAccess(tsh::PlaceAccess::Mutable);
+					  // An element reached through a view type is writable when the view is.
+					  case tsh::Kind::ManyPointer:
+					  case tsh::Kind::CPointer:
+					  case tsh::Kind::Slice: {
+						  const tsh::ViewAccess pointer_view_access
+							  = tsh::pointerViewAccess(base_type).value();
+						  return category.withPlaceAccess(
+							  tsh::placeAccessThroughView(pointer_view_access)
+						  );
+					  }
+					  default:
+						  CORE_PANIC("Cannot index a non-array like type");
+					  }
 				  }()
 			  ),
 			  origin
@@ -1340,7 +1354,13 @@ namespace compiler::helios::code {
 		  inner(std::move(inner)) {}
 
 	tsh::ExpressionType<> RefOfExpr::typeOfRefTo(const tsh::ExpressionType<>& inner_type) {
-		return { inner_type.getValueType().toRef(), [&]() -> tsh::ValueCategory {
+		const tsh::ValueType<>& inner_value_type = inner_type.getValueType();
+		// We take a reference of a value. It's only writable if the value is mutable.
+		// A reference to a reference creates a reference with the weaker `ViewAccess`.
+		const tsh::ViewAccess view_access = inner_value_type.getViewAccess().copyValueOr(
+			tsh::viewAccessOfPlace(inner_type.getValueCategory().getPlaceAccess())
+		);
+		return { inner_value_type.toRef(view_access), [&]() -> tsh::ValueCategory {
 					switch (inner_type.getValueType().getRefKind()) {
 					case tsh::ReferenceKind::Direct:
 						return tsh::ValueCategory(tsh::PrimaryCategory::Temporary);
@@ -1373,10 +1393,13 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  // The whole ValueType of the operand becomes the pointee, so its reference kind
-	              // survives: `ptrof` on a `box T` place gives `ptr box T`.
-				  tsh::ValueType<>::direct(
-					  ctx.query<tsh::QueryPointerType>({ inner->expression_type.getValueType() })
-				  ),
+	              // survives: `ptrof` on a `box T` place gives `ptr box T`. The pointer may write
+	              // only if the place may be written to.
+				  tsh::ValueType<>::direct(ctx.query<tsh::QueryPointerType>({
+					  .pointee = inner->expression_type.getValueType(),
+					  .access  = tsh::viewAccessOfPlace(inner->expression_type.getValueCategory()
+                                                           .getPlaceAccess()),
+				  })),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin
@@ -1437,16 +1460,25 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getValueType().getPointeeValueType(),
 				  // Dereferencing creates a non-owned lvalue.
-				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
-					  .withPlaceAccess(
-						  // A box owns its content, so the content is as writable as the box.
-	                      // @TODO: #2104 Whether a pointee may be written depends on the view type.
-	                      // Which is NYI so for now we can always write to it.
-						  inner->expression_type.getValueType().getRefKind()
-								  == tsh::ReferenceKind::Box
-							  ? inner->expression_type.getValueCategory().getPlaceAccess()
-							  : tsh::PlaceAccess::Mutable
-					  )
+				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced).withPlaceAccess([&] {
+					  const tsh::ValueType<>& inner_type = inner->expression_type.getValueType();
+					  switch (inner_type.getRefKind()) {
+					  // A box owns its content, so the content is as writable as the box.
+					  case tsh::ReferenceKind::Box:
+						  return inner->expression_type.getValueCategory().getPlaceAccess();
+					  // When dereferencing a reference, the produced place is mutable only if the
+			          // reference was writable.
+					  case tsh::ReferenceKind::Ref:
+						  return tsh::placeAccessThroughView(inner_type.getViewAccess().value());
+					  // Now we know we dereference a pointer. The produced value is writable only
+			          // if the pointer was writable.
+					  case tsh::ReferenceKind::Direct:
+						  return tsh::placeAccessThroughView(
+							  tsh::pointerViewAccess(inner_type.getType()).value()
+						  );
+					  }
+					  CORE_UNREACHABLE();
+				  }())
 			  ),
 			  origin
 		  ),
