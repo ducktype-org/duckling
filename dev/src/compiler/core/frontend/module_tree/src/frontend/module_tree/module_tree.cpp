@@ -416,34 +416,6 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIsReplModule);
 
-	/***************************
-	 * QueryReplModuleParent *
-	 ***************************/
-	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: #1389 verify Functor correctness and fix incremental here.
-			CORE_ASSERT(
-				GetModuleID_Functor::get(key)->isReplModule(),
-				"QueryReplModuleParent called on a module that is not a REPL chain module"
-			);
-
-			// The previous statement is the parent, unless the chain starts here (no parent, or
-			// the script module that starts the chain).
-			auto parent = ctx.query<QueryParentModule>(key);
-			if (not parent.has_value() or not ctx.query<QueryIsReplModule>(parent.value()))
-				return {};
-
-			// Register dependency on the parent module contents so incremental rebuilds propagate
-			ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
-				ModuleTree::getModuleHash(parent.value()) });
-			return parent;
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplModuleParent);
-
 	/*********************
 	 * QueryParentModule *
 	 *********************/

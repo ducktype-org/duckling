@@ -689,7 +689,12 @@ namespace compiler::helios {
 			auto current_module_id = module(scope);
 			if (not ctx.query<frontend::QueryIsReplModule>(current_module_id)) return {};
 
-			auto repl_parent_opt = ctx.query<frontend::QueryReplModuleParent>(current_module_id);
+			// The previous REPL statement is the parent module. The chain starts at a module whose
+			// parent is missing or is not a REPL module (e.g. the script that started the chain).
+			auto repl_parent_opt = ctx.query<frontend::QueryParentModule>(current_module_id);
+			if (repl_parent_opt.has_value()
+			    and not ctx.query<frontend::QueryIsReplModule>(repl_parent_opt.value()))
+				repl_parent_opt = {};
 
 			CORE_DEV_LOG(
 				REPL,

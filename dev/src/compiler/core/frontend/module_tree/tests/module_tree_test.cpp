@@ -754,11 +754,11 @@ private:
 		auto second = make_node("second", first);
 		ASSERT_EQUAL(first->getParentModule()->illegalAccess().getID(), script->getModuleID());
 		ASSERT_EQUAL(second->getParentModule()->illegalAccess().getID(), first->getModuleID());
-		ASSERT_NO_VALUE(query::entryPoint<QueryReplModuleParent>(first->getModuleID()));
-		ASSERT_EQUAL(
-			query::entryPoint<QueryReplModuleParent>(second->getModuleID()).value(),
-			first->getModuleID()
-		);
+		const auto parent_of = [](const auto& node) {
+			return query::entryPoint<QueryParentModule>(node->getModuleID()).value();
+		};
+		ASSERT_EQUAL(parent_of(first), script->getModuleID());
+		ASSERT_EQUAL(parent_of(second), first->getModuleID());
 
 		// Only standard modules have submodules. Recursive walkers that reach a script or a
 		// chain node get no submodules instead of a panic, and follow the child modules instead.

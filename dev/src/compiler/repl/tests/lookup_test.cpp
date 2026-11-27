@@ -74,13 +74,13 @@ private:
 		auto mod2_ref = frontend::GetModuleID_Functor::get(module2);
 		assertTrue(mod2_ref->isReplModule(), "Statement 2 should be REPL module");
 		ASSERT_HAS_VALUE(
-			query::entryPoint<frontend::QueryReplModuleParent>(mod2_ref->getModuleID()),
+			query::entryPoint<frontend::QueryParentModule>(mod2_ref->getModuleID()),
 			"Statement 2 should have parent linkage"
 		);
 
 		// Verify parent is module1
 		const auto parent_hash
-			= query::entryPoint<frontend::QueryReplModuleParent>(mod2_ref->getModuleID())
+			= query::entryPoint<frontend::QueryParentModule>(mod2_ref->getModuleID())
 		          .value()
 		          .queryUnstablePerfectHash();
 		const auto expected_hash = module1.queryUnstablePerfectHash();
@@ -109,7 +109,7 @@ private:
 		auto mod3_ref = frontend::GetModuleID_Functor::get(module3);
 		assertTrue(mod3_ref->isReplModule(), "Statement 3 should be REPL module");
 		assertTrue(
-			query::entryPoint<frontend::QueryReplModuleParent>(mod3_ref->getModuleID())
+			query::entryPoint<frontend::QueryParentModule>(mod3_ref->getModuleID())
 					.value()
 					.queryUnstablePerfectHash()
 				== module2.queryUnstablePerfectHash(),
@@ -120,7 +120,7 @@ private:
 		// Query module 3 to verify it's properly set up for lookup propagation
 		auto mod3_queried = frontend::GetModuleID_Functor::get(module3);
 		auto mod3_parent_opt
-			= query::entryPoint<frontend::QueryReplModuleParent>(mod3_queried->getModuleID());
+			= query::entryPoint<frontend::QueryParentModule>(mod3_queried->getModuleID());
 		ASSERT_HAS_VALUE(
 			mod3_parent_opt, "Queried module 3 should have parent linkage for lookup propagation"
 		);
@@ -134,16 +134,16 @@ private:
 
 			// Verify module 2's parent exists for further chain traversal
 			ASSERT_HAS_VALUE(
-				query::entryPoint<frontend::QueryReplModuleParent>(mod2_from_parent->getModuleID()),
+				query::entryPoint<frontend::QueryParentModule>(mod2_from_parent->getModuleID()),
 				"Module 2 should have module 1 as parent for full lookup chain"
 			);
 		}
 
 		// === Verify lookup chain: module3 -> module2 -> module1 ===
 		// This validates the actual lookup path that scopes.cpp will traverse
-		auto mod2_from_mod3 = query::entryPoint<frontend::QueryReplModuleParent>(module3).value();
+		auto mod2_from_mod3 = query::entryPoint<frontend::QueryParentModule>(module3).value();
 		auto mod1_from_mod2
-			= query::entryPoint<frontend::QueryReplModuleParent>(mod2_from_mod3).value();
+			= query::entryPoint<frontend::QueryParentModule>(mod2_from_mod3).value();
 
 		assertTrue(
 			module2.queryUnstablePerfectHash() == mod2_from_mod3.queryUnstablePerfectHash(),

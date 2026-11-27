@@ -273,7 +273,7 @@ private:
 			"repl_" + std::to_string(session_id.asInt()) + "_7", first_ref->getName().strView()
 		);
 		ASSERT_NO_VALUE(
-			query::entryPoint<frontend::QueryReplModuleParent>(first_ref->getModuleID()),
+			query::entryPoint<frontend::QueryParentModule>(first_ref->getModuleID()),
 			"First chained module should not have REPL parent"
 		);
 		assertTrue(first_ref->hasMainSourceFile(), "Chained module should have main source file");
@@ -286,11 +286,11 @@ private:
 			"script_" + std::to_string(session_id.asInt()) + "_8", second_ref->getName().strView()
 		);
 		ASSERT_HAS_VALUE(
-			query::entryPoint<frontend::QueryReplModuleParent>(second_ref->getModuleID()),
+			query::entryPoint<frontend::QueryParentModule>(second_ref->getModuleID()),
 			"Second chained module should have REPL parent"
 		);
 		ASSERT_EQUAL(
-			query::entryPoint<frontend::QueryReplModuleParent>(second_ref->getModuleID()).value(),
+			query::entryPoint<frontend::QueryParentModule>(second_ref->getModuleID()).value(),
 			first_ref->getModuleID()
 		);
 	}
