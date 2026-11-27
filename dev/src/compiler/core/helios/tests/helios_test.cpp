@@ -164,7 +164,9 @@ private:
 	auto getSliceTypeNoContext(compiler::tsh::ValueType<> element_type) {
 		return std::any_cast<compiler::tsh::SliceAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
-				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
+				return ctx.query<compiler::tsh::QuerySliceType>(
+					{ .pointee = element_type, .access = compiler::tsh::ViewAccess::ReadOnly }
+				);
 			})
 		);
 	}
@@ -180,7 +182,7 @@ private:
 	 * Shorthand to create a reference to mutable ValueType from an abstract type.
 	 */
 	static compiler::tsh::ValueType<> refvt(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::ValueType<>::ref(abstract_type);
+		return compiler::tsh::ValueType<>::ref(abstract_type, compiler::tsh::ViewAccess::ReadOnly);
 	}
 
 	static const compiler::helios::code::Expr* stripImplicitMove(
@@ -219,7 +221,7 @@ private:
 			{
 				auto simple_ref
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_REF", root_scope);
-				auto expected = vt(i64_type).toRef();
+				auto expected = vt(i64_type).toRef(compiler::tsh::ViewAccess::ReadOnly);
 				ASSERT_EQUAL(expected, simple_ref);
 			}
 			{
@@ -231,7 +233,7 @@ private:
 			{
 				auto simple_ref_mut
 					= getConstValueAs<compiler::tsh::ValueType<>>("SIMPLE_REF_MUT", root_scope);
-				auto expected = vt(i64_type).toRef();
+				auto expected = vt(i64_type).toRef(compiler::tsh::ViewAccess::ReadWrite);
 				ASSERT_EQUAL(expected, simple_ref_mut);
 			}
 			{
@@ -254,6 +256,47 @@ private:
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
 			}
+			{
+				using compiler::tsh::ViewAccess;
+				const auto i64_vt  = vt(i64_type);
+				const auto type_of = [&](const std::string_view name) {
+					return getConstValueAs<compiler::tsh::ValueType<>>(name, root_scope);
+				};
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryPointerType>(
+						{ .pointee = i64_vt, .access = ViewAccess::ReadOnly }
+					)),
+					type_of("SIMPLE_PTR")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryPointerType>(
+						{ .pointee = i64_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("SIMPLE_PTR_MUT")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryManyPointerType>(
+						{ .pointee = i64_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("SIMPLE_MANYPTR_MUT")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryCPointerType>(
+						{ .pointee = i64_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("SIMPLE_CPTR_MUT")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QuerySliceType>(
+						{ .pointee = i64_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("SIMPLE_SLICE_MUT")
+				);
+				// The weaker view wins.
+				ASSERT_EQUAL(i64_vt.toRef(ViewAccess::ReadOnly), type_of("NESTED_REF"));
+				// A writable view if different from an read-only one.
+				ASSERT_EQUAL(getConstValueAs<bool>("CMP_VIEW", root_scope), true);
+			}
 		}
 
 		// Function evaluation.
@@ -270,13 +313,51 @@ private:
 			}
 			{
 				auto c_type   = getConstValueAs<compiler::tsh::ValueType<>>("C", root_scope);
-				auto expected = vt(i32_type).toRef();
+				auto expected = vt(i32_type).toRef(compiler::tsh::ViewAccess::ReadOnly);
 				ASSERT_EQUAL(expected, c_type);
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::ValueType<>>("D", root_scope);
-				auto expected = vt(i32_type).toRef();
+				auto expected = vt(i32_type).toRef(compiler::tsh::ViewAccess::ReadWrite);
 				ASSERT_EQUAL(expected, d_type);
+			}
+			{
+				using compiler::tsh::ViewAccess;
+				const auto i32_vt  = vt(i32_type);
+				const auto type_of = [&](const std::string_view name) {
+					return getConstValueAs<compiler::tsh::ValueType<>>(name, root_scope);
+				};
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryPointerType>(
+						{ .pointee = i32_vt, .access = ViewAccess::ReadOnly }
+					)),
+					type_of("PTR")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryPointerType>(
+						{ .pointee = i32_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("PTR_MUT")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryManyPointerType>(
+						{ .pointee = i32_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("MANYPTR_MUT")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QueryCPointerType>(
+						{ .pointee = i32_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("CPTR_MUT")
+				);
+				ASSERT_EQUAL(
+					vt(query::entryPoint<compiler::tsh::QuerySliceType>(
+						{ .pointee = i32_vt, .access = ViewAccess::ReadWrite }
+					)),
+					type_of("SLICE_MUT")
+				);
+				ASSERT_EQUAL(vt(i64_type).toRef(ViewAccess::ReadOnly), type_of("NESTED_REF_FN"));
 			}
 			{
 				auto e_type   = getConstValueAs<compiler::tsh::ValueType<>>("E", root_scope);
@@ -323,7 +404,7 @@ private:
 			{
 				auto second_type
 					= getConstValueAs<compiler::tsh::ValueType<>>("SECOND", root_scope);
-				auto expected = vt(i64_type).toRef();
+				auto expected = vt(i64_type).toRef(compiler::tsh::ViewAccess::ReadOnly);
 				ASSERT_EQUAL(expected, second_type);
 			}
 			{  // Type Comparisons
@@ -1454,8 +1535,10 @@ private:
 		std::stringstream out_vref;
 		tree_vref->debugPrint(out_vref);
 		const auto int32_type    = getIntegralTypeNoContext(32, Signed);
-		const auto int32ref_type = compiler::tsh::SymbolType::let(vt(int32_type).toRef());
-		const auto vref_type     = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
+		const auto int32ref_type = compiler::tsh::SymbolType::let(
+			vt(int32_type).toRef(compiler::tsh::ViewAccess::ReadOnly)
+		);
+		const auto vref_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vref);
 		ASSERT_EQUAL(int32ref_type, vref_type->valueOrThrow());
 
 		// Only the type of `VBOX` is checked here. Its initializer is a `boxAlloc` call into
@@ -1595,7 +1678,7 @@ private:
 			auto test_simple_ref       = getChain("test_simple_ref", top_scope).back();
 			auto test_simple_ref_scope = getFunctionBodyScope(test_simple_ref);
 			auto i32_type              = getIntegralTypeNoContext(32, Signed);
-			auto expected_type         = vt(i32_type).toRef();
+			auto expected_type         = vt(i32_type).toRef(compiler::tsh::ViewAccess::ReadWrite);
 			ASSERT_EQUAL(expected_type, getValueTypeOf("r", test_simple_ref_scope));
 		}
 		{
@@ -2459,8 +2542,12 @@ private:
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
 			          ->valueOrPanic();
+			const auto self_access = compiler::helios::name(method.getSymbol()) == "getField"
+			                           ? compiler::tsh::ViewAccess::ReadOnly
+			                           : compiler::tsh::ViewAccess::ReadWrite;
 			ASSERT_EQUAL(
-				refvt(example_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				compiler::tsh::ValueType<>::ref(example_class_abstract_type, self_access),
+				method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -2477,8 +2564,12 @@ private:
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
 			          ->valueOrPanic();
+			const auto self_access = compiler::helios::name(method.getSymbol()) == "setInner"
+			                           ? compiler::tsh::ViewAccess::ReadWrite
+			                           : compiler::tsh::ViewAccess::ReadOnly;
 			ASSERT_EQUAL(
-				refvt(wrapper_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				compiler::tsh::ValueType<>::ref(wrapper_class_abstract_type, self_access),
+				method_hout.declaration->parameters.at(0).type
 			);
 		}
 
@@ -2494,8 +2585,13 @@ private:
 			auto method_hout
 				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ method.getSymbol() })
 			          ->valueOrPanic();
+			const auto method_name = compiler::helios::name(method.getSymbol());
+			const auto self_access = method_name == "setX" or method_name == "setY"
+			                           ? compiler::tsh::ViewAccess::ReadWrite
+			                           : compiler::tsh::ViewAccess::ReadOnly;
 			ASSERT_EQUAL(
-				refvt(point_class_abstract_type), method_hout.declaration->parameters.at(0).type
+				compiler::tsh::ValueType<>::ref(point_class_abstract_type, self_access),
+				method_hout.declaration->parameters.at(0).type
 			);
 		}
 

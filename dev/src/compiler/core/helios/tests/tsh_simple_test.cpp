@@ -279,7 +279,7 @@ private:
 			assertTrue(int_vt.isCopyable(ctx), "Int should be copyable.");
 			assertTrue(int_vt.isTriviallyCopyable(ctx), "Int should be trivially copyable.");
 
-			const auto int_ref_vt = int_vt.toRef();
+			const auto int_ref_vt = int_vt.toRef(ViewAccess::ReadOnly);
 			assertFalse(
 				int_ref_vt.isDefaultConstructible(ctx),
 				"Reference to Int should NOT be default constructible."
@@ -364,29 +364,34 @@ private:
 	 * between each other and retain AbstractTypermation as expected.
 	 */
 	void simplePointer() {
-		const auto raw_1 = getRawPointerType(false);
+		const auto raw_1 = getRawPointerType(ViewAccess::ReadOnly);
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
-		const auto raw_2 = getRawPointerType(true);
+		const auto raw_2 = getRawPointerType(ViewAccess::ReadWrite);
 		assertTrue(
 			raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer."
 		);
 		assertTrue(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
-		const auto raw_3 = getRawPointerType(false);
+		const auto raw_3 = getRawPointerType(ViewAccess::ReadOnly);
 		assertTrue(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");
-		const auto raw_4 = getRawPointerType(true);
+		const auto raw_4 = getRawPointerType(ViewAccess::ReadWrite);
 		assertTrue(raw_2 == raw_4, "There should be only one mutable Raw Pointer.");
 
 		const AbstractType           type_raw = raw_1;
 		const RawPointerAbstractType raw_5    = type_raw;
 		assertTrue(raw_5.getKind() == RawPointer, "Raw Pointer should survive casting.");
 
-		const auto ptr_1 = query::entryPoint<QueryPointerType>({ vt(raw_1) });
+		const auto ptr_1 = query::entryPoint<QueryPointerType>({ .pointee = vt(raw_1),
+		                                                         .access  = ViewAccess::ReadOnly });
 		assertTrue(ptr_1.getKind() == Pointer, "Pointer should have kind Pointer.");
-		const auto ptr_2 = query::entryPoint<QueryPointerType>(vt(raw_1));
+		const auto ptr_2 = query::entryPoint<QueryPointerType>({ .pointee = vt(raw_1),
+		                                                         .access  = ViewAccess::ReadOnly });
 		assertTrue(ptr_1 == ptr_2, "Pointers to the same type and mutability should be equal.");
-		const auto ptr_3 = query::entryPoint<QueryPointerType>(vt(raw_2));
+		const auto ptr_3 = query::entryPoint<QueryPointerType>({ .pointee = vt(raw_2),
+		                                                         .access  = ViewAccess::ReadOnly });
 		assertTrue(ptr_1 != ptr_3, "Pointers to different types should be different.");
-		const auto ptr_4 = query::entryPoint<QueryPointerType>(vt(raw_1));
+		const auto ptr_4 = query::entryPoint<QueryPointerType>({ .pointee = vt(raw_1),
+		                                                         .access = ViewAccess::ReadWrite });
+		assertTrue(ptr_1 != ptr_4, "A `ptr` and a `ptr mut` should be different.");
 
 		const AbstractType        type_ptr = ptr_4;
 		const PointerAbstractType ptr_5    = type_ptr;
@@ -487,7 +492,7 @@ private:
 			);
 
 			// Test non-default-constructible static array with ref element)
-			const auto ref_type    = ValueType<>::ref(int_16);
+			const auto ref_type    = ValueType<>::ref(int_16, ViewAccess::ReadOnly);
 			const auto arr_of_refs = ctx.query<QueryStaticArrayType>({ ref_type, 5 });
 			assertFalse(
 				vt(arr_of_refs).isDefaultConstructible(ctx),
@@ -552,7 +557,7 @@ private:
 			);
 
 			// Test non-default-constructible tuple with Ref element.
-			const auto ref_type    = ValueType<>::ref(int_16);
+			const auto ref_type    = ValueType<>::ref(int_16, ViewAccess::ReadOnly);
 			const auto tup_of_refs = ctx.query<QueryTupleType>({ { ref_type, vt(int_32) } });
 			assertFalse(
 				vt(tup_of_refs).isDefaultConstructible(ctx),
@@ -581,7 +586,7 @@ private:
 				mixed_tuple.carriesInformation(ctx),
 				"Tuple with an int component should carry information"
 			);
-			const auto unit_ref  = ValueType<>::ref(unit);
+			const auto unit_ref  = ValueType<>::ref(unit, ViewAccess::ReadOnly);
 			const auto ref_tuple = ctx.query<QueryTupleType>({ { unit_ref, vt(unit) } });
 			assertTrue(
 				ref_tuple.carriesInformation(ctx),

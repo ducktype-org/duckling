@@ -135,7 +135,9 @@ private:
 	auto getSliceTypeNoContext(compiler::tsh::ValueType<> element_type) {
 		return std::any_cast<compiler::tsh::SliceAbstractType>(
 			query::utils::withContextCompute([&](query::Context& ctx) {
-				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
+				return ctx.query<compiler::tsh::QuerySliceType>(
+					{ .pointee = element_type, .access = compiler::tsh::ViewAccess::ReadOnly }
+				);
 			})
 		);
 	}
@@ -961,7 +963,7 @@ private:
 
 		auto i32_type
 			= getIntegralTypeNoContext(32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
-		auto ref_i32 = vt(i32_type).toRef();
+		auto ref_i32 = vt(i32_type).toRef(compiler::tsh::ViewAccess::ReadOnly);
 		auto box_i32 = vt(i32_type).toBox();
 
 		auto get_var_stmt = [&](usize index) -> const VariableStmt& {
@@ -1282,7 +1284,10 @@ private:
 					// The subject is borrowed, so the constraint is the type the payload is
 					// bound with: a mutable reference to the alternative.
 					ASSERT_TRUE(match_case.constraint_type.has_value());
-					ASSERT_EQUAL(alternatives.at(i).toRef(), match_case.constraint_type.value());
+					ASSERT_EQUAL(
+						alternatives.at(i).toRef(compiler::tsh::ViewAccess::ReadOnly),
+						match_case.constraint_type.value()
+					);
 					ASSERT_TRUE(cloned->cases.at(i).constraint_type.has_value());
 					ASSERT_EQUAL(
 						match_case.constraint_type.value(),
@@ -1481,7 +1486,9 @@ private:
 				// The payload is destroyed in place, so it is bound as a mutable reference.
 				ASSERT_TRUE(owning_case.constraint_type.has_value());
 				ASSERT_EQUAL(
-					variant_type.getUnderlyingTypes().at(0).toRef(),
+					variant_type.getUnderlyingTypes().at(0).toRef(
+						compiler::tsh::ViewAccess::ReadWrite
+					),
 					owning_case.constraint_type.value()
 				);
 				ASSERT_TRUE(
@@ -1740,10 +1747,18 @@ private:
 		const auto pof_elem_type   = getValueTypeOf("pof_elem", body_scope);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_vt });
-			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>({ vt(ptr_i32) });
-			const auto manyptr_i32 = ctx.query<compiler::tsh::QueryManyPointerType>({ i32_vt });
-			const auto cptr_i32    = ctx.query<compiler::tsh::QueryCPointerType>({ i32_vt });
+			const auto ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>(
+				{ .pointee = i32_vt, .access = compiler::tsh::ViewAccess::ReadOnly }
+			);
+			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>(
+				{ .pointee = vt(ptr_i32), .access = compiler::tsh::ViewAccess::ReadOnly }
+			);
+			const auto manyptr_i32 = ctx.query<compiler::tsh::QueryManyPointerType>(
+				{ .pointee = i32_vt, .access = compiler::tsh::ViewAccess::ReadOnly }
+			);
+			const auto cptr_i32 = ctx.query<compiler::tsh::QueryCPointerType>(
+				{ .pointee = i32_vt, .access = compiler::tsh::ViewAccess::ReadOnly }
+			);
 
 			const auto ptr_i32_vt     = vt(ptr_i32);
 			const auto ptr_ptr_i32_vt = vt(ptr_ptr_i32);
@@ -1765,14 +1780,25 @@ private:
 			// `ptrof x` is `ptr S` for the whole ValueType `S` of `x`: unlike `&x`, a `box`/`ref`
 			// operand is not collapsed, the pointer addresses the box/reference itself.
 			using compiler::tsh::ReferenceKind;
-			ASSERT_EQUAL(ptr_i32_vt, pof_direct_type);
+			using compiler::tsh::ViewAccess;
 			ASSERT_EQUAL(
-				vt(ctx.query<compiler::tsh::QueryPointerType>({ i32_vt.toBox() })), pof_box_type
+				vt(ctx.query<compiler::tsh::QueryPointerType>({ .pointee = i32_vt,
+			                                                    .access = ViewAccess::ReadWrite })),
+				pof_direct_type
 			);
 			ASSERT_EQUAL(
-				vt(ctx.query<compiler::tsh::QueryPointerType>({ i32_vt.toRef() })), pof_ref_type
+				vt(ctx.query<compiler::tsh::QueryPointerType>({ .pointee = i32_vt.toBox(),
+			                                                    .access = ViewAccess::ReadWrite })),
+				pof_box_type
 			);
-			// Indexing a `manyptr i32` gives an `i32` place, so its address is a plain `ptr i32`.
+			ASSERT_EQUAL(
+				vt(ctx.query<compiler::tsh::QueryPointerType>({ .pointee
+			                                                    = i32_vt.toRef(ViewAccess::ReadOnly),
+			                                                    .access = ViewAccess::ReadWrite })),
+				pof_ref_type
+			);
+			// Indexing a `manyptr i32` gives an `i32` place that may only be read through it, so
+			// its address is a plain `ptr i32`.
 			ASSERT_EQUAL(ptr_i32_vt, pof_elem_type);
 		});
 

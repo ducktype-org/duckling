@@ -159,7 +159,7 @@ private:
 			}
 			testPrinting(functional_layout, ctx);
 
-			const RawPointerAbstractType raw_pointer_type = getRawPointerType(false);
+			const RawPointerAbstractType raw_pointer_type = getRawPointerType(ViewAccess::ReadOnly);
 
 			auto raw_pointer_layout = queryLayout(ctx, raw_pointer_type);
 			assertTrue(
@@ -179,7 +179,8 @@ private:
 			testPrinting(raw_pointer_layout, ctx);
 
 			const PointerAbstractType unit_pointer_type
-				= ctx.query<QueryPointerType>({ vt(unit_type) });
+				= ctx.query<QueryPointerType>({ .pointee = vt(unit_type),
+			                                    .access  = ViewAccess::ReadOnly });
 			auto unit_pointer_layout = queryLayout(ctx, unit_pointer_type);
 			assertTrue(
 				unit_pointer_layout->getSize() == POINTER_SIZE,
@@ -372,9 +373,10 @@ private:
 			const ValueType<> i8_type = vt(
 				getIntegralType(ctx, 8, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			const ValueType<>       f16_type     = vt(getFloatType(ctx, 16));
-			const ValueType<>       f64_type     = vt(getFloatType(ctx, 64));
-			const ValueType<>       f16_ref      = ValueType<>::ref(getFloatType(ctx, 16));
+			const ValueType<> f16_type = vt(getFloatType(ctx, 16));
+			const ValueType<> f64_type = vt(getFloatType(ctx, 64));
+			const ValueType<> f16_ref
+				= ValueType<>::ref(getFloatType(ctx, 16), ViewAccess::ReadOnly);
 			const ValueType<>       f16_box      = ValueType<>::box(getFloatType(ctx, 16));
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
@@ -565,7 +567,7 @@ private:
 			auto i64 = ValueType<>::direct(
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
-			auto ref_i64 = i64.toRef();
+			auto ref_i64 = i64.toRef(ViewAccess::ReadOnly);
 			auto box_i64 = i64.toBox();
 
 			auto i64_layout     = queryValueTypeLayout(ctx, i64);

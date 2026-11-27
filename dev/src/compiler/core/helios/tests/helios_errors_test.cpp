@@ -2663,7 +2663,7 @@ private:
 					var p = &x as ptr i64;
 				}
 			)",
-			{ "Invalid cast from type", "ref i32", "ptr i64" },
+			{ "Invalid cast from type", "ref mut i32", "ptr i64" },
 			1
 		);
 		checkForErrorOnCompileModule(

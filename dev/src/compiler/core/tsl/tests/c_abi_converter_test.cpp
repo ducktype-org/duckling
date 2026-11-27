@@ -31,7 +31,9 @@ namespace {
 
 	ValueType<> directOf(AbstractType abstract_type) { return ValueType<>::direct(abstract_type); }
 
-	ValueType<> refOf(AbstractType abstract_type) { return ValueType<>::ref(abstract_type); }
+	ValueType<> refOf(AbstractType abstract_type) {
+		return ValueType<>::ref(abstract_type, ViewAccess::ReadOnly);
+	}
 
 	ValueType<> boxOf(AbstractType abstract_type) { return ValueType<>::box(abstract_type); }
 
@@ -126,7 +128,8 @@ private:
 			assertTrue(base::holds<ats::CharType>(char_conv->value), "expected CharType");
 
 			const CPointerAbstractType c_pointer
-				= ctx.query<QueryCPointerType>({ directOf(i32Of(ctx)) });
+				= ctx.query<QueryCPointerType>({ .pointee = directOf(i32Of(ctx)),
+			                                     .access  = ViewAccess::ReadOnly });
 			const auto& ptr_conv = queryConv(ctx, directOf(c_pointer));
 			ASSERT_HAS_VALUE(ptr_conv);
 			assertTrue(base::holds<ats::PointerType>(ptr_conv->value), "expected PointerType");
@@ -174,9 +177,11 @@ private:
 			const auto i128_type
 				= getIntegralType(ctx, 128, IntegralAbstractType::Signedness::Signed);
 			const PointerAbstractType typed_pointer
-				= ctx.query<QueryPointerType>({ directOf(i32_type) });
+				= ctx.query<QueryPointerType>({ .pointee = directOf(i32_type),
+			                                    .access  = ViewAccess::ReadOnly });
 			const ManyPointerAbstractType many_pointer
-				= ctx.query<QueryManyPointerType>({ directOf(i32_type) });
+				= ctx.query<QueryManyPointerType>({ .pointee = directOf(i32_type),
+			                                        .access  = ViewAccess::ReadOnly });
 			const TupleAbstractType tuple
 				= ctx.query<QueryTupleType>({ { directOf(i32_type), directOf(i32_type) } });
 			const FunctionAbstractType function
@@ -184,7 +189,7 @@ private:
 
 			const std::vector<std::pair<ValueType<>, std::string>> rejected = {
 				{ directOf(i128_type), "i128" },
-				{ directOf(getRawPointerType(false)), "raw pointer" },
+				{ directOf(getRawPointerType(ViewAccess::ReadOnly)), "raw pointer" },
 				{ directOf(typed_pointer), "typed pointer" },
 				{ directOf(many_pointer), "many-pointer" },
 				{ refOf(i32_type), "ref" },

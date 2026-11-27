@@ -43,8 +43,8 @@ public:
 private:
 	const ValueType<> boolean           = direct(getBoolType());
 	const ValueType<> byte_type         = direct(getByteType());
-	const ValueType<> mutable_pointer   = direct(getRawPointerType(true));
-	const ValueType<> immutable_pointer = direct(getRawPointerType(false));
+	const ValueType<> mutable_pointer   = direct(getRawPointerType(ViewAccess::ReadWrite));
+	const ValueType<> immutable_pointer = direct(getRawPointerType(ViewAccess::ReadOnly));
 
 	void referenceKinds() {
 		using enum ReferenceKind;
@@ -132,8 +132,8 @@ private:
 		using enum Rank;
 
 		const std::vector<Rank> best_to_worst{
-			Identity,    MutabilityChange, RefOf,          Deref,     Numeric,
-			VariantPack, LiftToType,       UserConversion, ZeroCheck, RetypeVoid,
+			Identity,    RefOf,      ViewAccessRelax, Deref,     Numeric,
+			VariantPack, LiftToType, UserConversion,  ZeroCheck, RetypeVoid,
 		};
 		for (usize i = 1; i < best_to_worst.size(); i++) {
 			const CoercionRank better = CoercionRank::of(best_to_worst[i - 1]);
@@ -151,12 +151,13 @@ private:
 			);
 		}
 		ASSERT_EQUAL(true, CoercionRank::identity().isIdentity());
-		ASSERT_EQUAL(false, CoercionRank::of(MutabilityChange).isIdentity());
+		ASSERT_EQUAL(false, CoercionRank::of(ViewAccessRelax).isIdentity());
 
 		plan("i32", "i32").succeeds().ranks(Identity);
 		plan("box i32", "box i32").succeeds().ranks(Identity);
-		plan(mutable_pointer, immutable_pointer).succeeds().ranks(MutabilityChange);
-		plan("i32", "ref i32", CoercionMode::ImplicitRefOf).succeeds().ranks(RefOf);
+		plan(mutable_pointer, immutable_pointer).succeeds().ranks(ViewAccessRelax);
+		plan("i32", "ref mut i32", CoercionMode::ImplicitRefOf).succeeds().ranks(RefOf);
+		plan("i32", "ref i32", CoercionMode::ImplicitRefOf).succeeds().ranks(ViewAccessRelax);
 		plan("box i32", "i32").succeeds().ranks(Deref);
 		plan("ref i32", "i64").succeeds().ranks(Numeric);
 		plan("(i32, i32)", "(i64, i64)").succeeds().ranks(Numeric);
@@ -206,7 +207,7 @@ private:
 		plan(byte_type, variantOf({ boolean, type("u8") })).succeeds().packsInto("bool");
 		plan(mutable_pointer, variantOf({ immutable_pointer, boolean }))
 			.succeeds()
-			.steps({ MUTABILITY_CHANGE, VARIANT_PACK });
+			.steps({ VIEW_ACCESS_RELAX, VARIANT_PACK });
 
 		// An alternative may keep the reference, so the value is offered to the alternatives
 		// before its pointee is read out.
@@ -290,7 +291,7 @@ private:
 		plan(mutable_pointer, immutable_pointer)
 			.succeeds()
 			.doesNothing()
-			.steps({ MUTABILITY_CHANGE });
+			.steps({ VIEW_ACCESS_RELAX });
 		plan("()", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("((), ())", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("ref ((), type)", "type").succeeds().steps({ DEREF, LIFT_TO_TYPE });
@@ -320,6 +321,17 @@ private:
 		plan("box i32", "i32").succeeds().steps({ DEREF });
 		plan("ref i32", "i64").succeeds().steps({ DEREF, NUMERIC });
 		plan("ref i32", "ref i32").succeeds().steps({});
+
+		// A `ref mut` may be seen as a `ref`, but not the other way.
+		plan("ref mut i32", "ref i32").succeeds().doesNothing().steps({ VIEW_ACCESS_RELAX });
+		plan("ref i32", "ref mut i32").refuses().because<coercion_error::ViewAccessMismatch>();
+
+		// The same holds for pointers and slices, and nothing converts behind them.
+		plan("ptr mut i32", "ptr i32").succeeds().steps({ VIEW_ACCESS_RELAX });
+		plan("ptr i32", "ptr mut i32").refuses().because<coercion_error::ViewAccessMismatch>();
+		plan("slice mut i32", "slice i32").succeeds().steps({ VIEW_ACCESS_RELAX });
+		plan("slice i32", "slice mut i32").refuses().because<coercion_error::ViewAccessMismatch>();
+		plan("ptr mut i32", "ptr i64").refuses().because<coercion_error::IncompatibleTypes>();
 		plan("box i32", "box i32").succeeds().steps({ HAND_OVER });
 		plan("Owner", "Owner").succeeds().steps({ HAND_OVER });
 
@@ -547,9 +559,13 @@ private:
 		// Only the mode allows taking a value by `ref`.
 		plan("i32", "ref i32").refuses().because<IncompatibleTypes>();
 		plan("box i32", "ref i32").refuses().because<IncompatibleTypes>();
-		plan("i32", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
-		plan("box i32", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
-		plan("Owner", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+		plan("i32", "ref mut i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		plan("box i32", "ref mut i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		plan("Owner", "ref mut Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+
+		plan("i32", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF, VIEW_ACCESS_RELAX });
+		plan("i32", "ref i32", ImplicitReadOnlyRefOf).succeeds().steps({ REF_OF });
+		plan("i32", "ref mut i32", ImplicitReadOnlyRefOf).refuses().because<ViewAccessMismatch>();
 
 		// A `ref` is kept as it is.
 		plan("ref i32", "ref i32", ImplicitRefOf).succeeds().steps({});
@@ -571,11 +587,11 @@ private:
 			.because<IncompatibleTypes>();
 
 		// The value is not handed over, so no ownership is needed for it.
-		coerce("x", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
-		coerce("b", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
-		coerce("o", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
-		coerce("global_box", "ref i32", ImplicitRefOf).succeeds().steps({ REF_OF });
-		coerce("makeOwner()", "ref Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("x", "ref mut i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("b", "ref mut i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("o", "ref mut Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("global_box", "ref mut i32", ImplicitRefOf).succeeds().steps({ REF_OF });
+		coerce("makeOwner()", "ref mut Owner", ImplicitRefOf).succeeds().steps({ REF_OF });
 		coerce("r", "ref (box i32, i32)", ImplicitRefOf).succeeds().steps({});
 	}
 
