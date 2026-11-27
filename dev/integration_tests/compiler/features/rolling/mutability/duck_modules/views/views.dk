@@ -8,10 +8,14 @@ fun set(r: ref mut i64) = {
 
 fun read(r: ref i64) -> i64 = r;
 
-# A `slice mut` cannot be made yet, so this is only compiled, never called.
 fun writeSlice(s: slice mut i64) = {
 	s[0] = 5;
 }
+
+fun seeSliceAsReadOnly(s: slice mut i64) -> slice i64 = s;
+
+# A view inside a tuple is relaxed with the tuple.
+fun seeTupleAsReadOnly(t: (ptr mut i64, i64)) -> (ptr i64, i64) = t;
 
 fun main() -> i64 = {
 	var a: i64 = 1;
@@ -52,5 +56,18 @@ fun main() -> i64 = {
 	let cp = &f as cptr mut i64;
 	cp[0] = 4;
 	builtin_output_i64(f); # 4
+
+	var buffer = allocation[i64].many_alloc(2);
+	var view = builtins.slice_mut_from_ptr_len[i64](buffer, 2);
+	writeSlice(view);
+	view[1] = view[0] + 1;
+	let read_only = seeSliceAsReadOnly(view);
+	builtin_output_i64(read_only[0]); # 5
+	builtin_output_i64(buffer[1]); # 6
+	allocation[i64].many_free(buffer);
+
+	var g: i64 = 8;
+	let pair = seeTupleAsReadOnly((ptrof g, 1i64));
+	builtin_output_i64(*pair._1); # 8
 	return 0;
 }

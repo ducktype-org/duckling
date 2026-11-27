@@ -14,6 +14,10 @@ template(T: type)
 fundecl slice_from_ptr_len(p: manyptr T, l: i64) -> slice T;
 
 template(T: type)
+@builtin("slice_from_ptr_len")
+fundecl slice_mut_from_ptr_len(p: manyptr mut T, l: i64) -> slice mut T;
+
+template(T: type)
 @builtin("dvm_alloc_arr")
 fundecl dvm_alloc_arr(size: i64) -> manyptr mut T;
 

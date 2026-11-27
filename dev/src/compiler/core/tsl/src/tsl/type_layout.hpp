@@ -58,7 +58,8 @@ namespace compiler::tsl {
 
 
 		/**
-		 * @brief Compact textual representation of the underlying AbstractType.
+		 * @brief Compact textual representation of the underlying AbstractType. The access of its
+		 * views is removed (see tsh::withoutViewAccess), because it does not change the layout.
 		 */
 		base::StrID mangled_name;
 

@@ -240,4 +240,77 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeTemplateType)
+
+	ValueType<> removeViewAccess(query::Context& ctx, const ValueType<>& type) {
+		const auto strip     = [&](const ValueType<>& part) { return removeViewAccess(ctx, part); };
+		const auto strip_all = [&](const std::vector<ValueType<>>& parts) {
+			std::vector<ValueType<>> stripped;
+			stripped.reserve(parts.size());
+			for (const auto& part: parts) stripped.push_back(strip(part));
+			return stripped;
+		};
+		constexpr auto READ_ONLY = ViewAccess::ReadOnly;
+
+		const AbstractType abstract_type = [&]() -> AbstractType {
+			const AbstractType of = type.getType();
+			switch (of.getKind()) {
+			case Kind::RawPointer:
+				return getRawPointerType(READ_ONLY);
+			case Kind::Pointer:
+				return ctx.query<QueryPointerType>(
+					{ .pointee = strip(of.as<PointerAbstractType>().getPointee()),
+				      .access  = READ_ONLY }
+				);
+			case Kind::ManyPointer:
+				return ctx.query<QueryManyPointerType>({
+					.pointee = strip(of.as<ManyPointerAbstractType>().getPointee()),
+					.access  = READ_ONLY,
+				});
+			case Kind::CPointer:
+				return ctx.query<QueryCPointerType>({
+					.pointee = strip(of.as<CPointerAbstractType>().getPointee()),
+					.access  = READ_ONLY,
+				});
+			case Kind::Slice:
+				return ctx.query<QuerySliceType>({
+					.pointee = strip(of.as<SliceAbstractType>().getElementType()),
+					.access  = READ_ONLY,
+				});
+			case Kind::StaticArray: {
+				const auto array = of.as<StaticArrayAbstractType>();
+				return ctx.query<QueryStaticArrayType>(
+					{ .element_type = strip(array.getElementType()), .size = array.getSize() }
+				);
+			}
+			case Kind::Tuple:
+				return ctx.query<QueryTupleType>(
+					{ .components = strip_all(of.as<TupleAbstractType>().getComponents()) }
+				);
+			case Kind::Variant: {
+				const auto variant = of.as<VariantAbstractType>();
+				if (variant.representsOptionalType())
+					return ctx.query<QueryOptionalType>(
+						{ .value_type = strip(variant.getOptionalValueType()) }
+					);
+				return ctx.query<QueryVariantType>({ .underlying_types
+				                                     = strip_all(variant.getUnderlyingTypes()) });
+			}
+			case Kind::Function: {
+				const auto function = of.as<FunctionAbstractType>();
+				return ctx.query<QueryFunctionType>({
+					.parameter_types = strip_all(function.getParameterTypes()),
+					.result_type     = strip(function.getResultType()),
+					.pure            = function.isPure(),
+					.kind            = function.getFunctionKind(),
+				});
+			}
+			default:
+				return of;
+			}
+		}();
+
+		if (type.getRefKind() == ReferenceKind::Ref)
+			return ValueType<>::ref(abstract_type, READ_ONLY);
+		return type.withType(abstract_type);
+	}
 }

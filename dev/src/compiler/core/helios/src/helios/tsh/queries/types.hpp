@@ -387,4 +387,18 @@ namespace compiler::tsh {
 		TypeTemplateAbstractType,
 		({ .uses_qresult = false })
 	)
+
+	/**
+	 * @brief A view type @p type with every view in it read-only. Removes the view access of refs,
+	 * pointers and slices, also inside tuples, variants, optionals, static arrays and function types.
+	 *
+	 * @note The ViewAccess does not change the layout of the value. If not for that a `slice mut T`
+	 * and a `slice T` would be different structs (because of different mangled names) in LLVM and
+	 * DVM and would fail the LLVM and DVM type check.
+	 * The same holds for a tuple, a variant or an array holding a view, like `(ptr mut i64, i64)`
+	 * seen as `(ptr i64, i64)`.
+	 * @note Functions are still mangled with the mutability in consideration. This normalization is
+	 * only used for creating layouts.
+	 */
+	[[nodiscard]] ValueType<> removeViewAccess(query::Context& ctx, const ValueType<>& type);
 }

@@ -351,7 +351,10 @@ namespace compiler::tsl {
 		  size(size),
 		  alignment(computeDefaultAlignment(size)),
 		  source_type(source_type),
-		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
+		  mangled_name(
+			  ctx.query<helios::mangler::QueryMangledType>(tsh::removeViewAccess(ctx, source_type))
+				  ->valueOrThrow()
+		  ) {}
 
 	TypeLayoutABC::TypeLayoutABC(
 		Bits size, Bytes alignment, tsh::ValueType<> source_type, query::Context& ctx
@@ -359,7 +362,10 @@ namespace compiler::tsl {
 		  size(size),
 		  alignment(alignment),
 		  source_type(source_type),
-		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
+		  mangled_name(
+			  ctx.query<helios::mangler::QueryMangledType>(tsh::removeViewAccess(ctx, source_type))
+				  ->valueOrThrow()
+		  ) {}
 
 	Bits TypeLayoutABC::roundUpToDefaultAlignment(const Bits size_in_bits) {
 		return bytes2bits(base::bytesRoundTo(
