@@ -190,6 +190,9 @@ def artifacts_dir_for_root(root: Path) -> Path:
 def artifacts_for_profile(root: Path, profile: str) -> Path:
     return root / profile
 
+def iis_path_for_root(root: Path) -> Path:
+    return root / ".duck_sync" / "iis_expl.txt"
+
 
 def unit_dir_name_for(name: str, version: str, source: Path | str) -> str:
     if isinstance(source, Path):

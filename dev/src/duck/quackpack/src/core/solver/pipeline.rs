@@ -8,6 +8,7 @@
 //! the [`Gatherer`] and the [`SolverEngine`]. The steps are described in the [module documentation](super).
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use tracing::{debug, trace};
 
@@ -68,17 +69,26 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
         let ctx = self.root_pcx.ctx();
         ctx.info_verbose("starting solving the dependency graph")?;
         let root = SolverRoot::new(self.root_pcx)?;
+        let iis_path = self.root_pcx.package().iis_expl_path();
 
         let Some(previous_freeze) = self.previous_solver_freeze(&root)? else {
             return self
-                .solve_from(&root, SolverFreeze::empty_with_root(root.id)?)
+                .solve_from(
+                    &root,
+                    SolverFreeze::empty_with_root(root.id)?,
+                    Some(iis_path),
+                )
                 .await;
         };
-        match self.solve_from(&root, previous_freeze).await {
+        match self.solve_from(&root, previous_freeze, None).await {
             Err(e) if e.has_in_chain::<NoSolutionError>() => {
                 ctx.info_verbose("no solution found, retrying without previous freeze")?;
-                self.solve_from(&root, SolverFreeze::empty_with_root(root.id)?)
-                    .await
+                self.solve_from(
+                    &root,
+                    SolverFreeze::empty_with_root(root.id)?,
+                    Some(iis_path),
+                )
+                .await
             }
             result => result,
         }
@@ -105,11 +115,14 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
     /// Steps 2-7, starting from `initial_freeze` as the a priori knowledge.
     ///
     /// The fetcher lock is held only while manifests are fetched (steps 2-4).
+    ///
+    /// `generate_iis` specifies if and where to write explanation if no solution was found.
     #[tracing::instrument(skip_all)]
     async fn solve_from(
         &self,
         root: &SolverRoot,
         initial_freeze: SolverFreeze,
+        generate_iis: Option<PathBuf>,
     ) -> QuackResult<SolverAnswer> {
         let ctx = self.root_pcx.ctx();
         let fetcher_lock = ctx.duck_home().open_fetcher_lockfile(ctx)?;
@@ -140,7 +153,7 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
             .gather(root, &gatherer, &valid_freeze, manifests)
             .await?;
         drop(fetcher_lock);
-        self.run_engine(root, input)
+        self.run_engine(root, input, generate_iis)
     }
 
     /// Step 4: runs the [`Gatherer`] on the root dependencies not realized in `valid_freeze`,
@@ -167,11 +180,17 @@ impl<'duck, 'ctx, Access: GitAccess> Solver<'duck, 'ctx, Access> {
 
     /// Steps 5-7: runs the [`SolverEngine`] and builds the new, trimmed freeze from its output.
     #[tracing::instrument(skip_all)]
-    fn run_engine(&self, root: &SolverRoot, input: SolverInput) -> QuackResult<SolverAnswer> {
+    fn run_engine(
+        &self,
+        root: &SolverRoot,
+        input: SolverInput,
+        generate_iis: Option<PathBuf>,
+    ) -> QuackResult<SolverAnswer> {
         self.root_pcx
             .ctx()
             .info_verbose("starting the solver engine")?;
-        let (solution, manifests) = SolverEngine::run_engine(input, root)?;
+        let (solution, manifests) =
+            SolverEngine::run_engine(input, root, generate_iis, self.root_pcx.ctx())?;
         debug!(?solution);
         let new_freeze = solution.trim(&manifests, root.features.clone())?;
         Ok(SolverAnswer {

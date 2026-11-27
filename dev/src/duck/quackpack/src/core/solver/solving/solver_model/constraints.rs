@@ -13,7 +13,6 @@ use std::rc::Rc;
 use russcip::builder::cons::{ConsBuilder as RawConstraint, cons};
 use russcip::{ProblemCreated, Variable};
 
-use crate::core::identity::Identity;
 use crate::core::solver::dependency_edge::DependencyEdge;
 use crate::core::solver::solving::scip_ext::ConsBuilderExt;
 use crate::core::solver::solving::solver_model::{PresentFeature, SolverModel};
@@ -30,12 +29,14 @@ pub enum Constraint {
     /// The root package must occur in the solution with this feature.
     RequireRootFeature(FeatureName),
     /// Dependency's parent must not occur in the solution, because no realization of the dependency was found.
+    ///
     /// Note
     /// ----
     /// Possible only in merciful mode.
     ForbidPackageBecauseNoRealization { pkg: PackageId, dep_dname: StrId },
     /// This package must not occur in the solution with this feature,
     /// because no realization of the dependency was found.
+    ///
     /// Note
     /// ----
     /// Possible only in merciful mode.
@@ -48,17 +49,20 @@ pub enum Constraint {
     /// This is because `forcing_feature` forces some unsupported feature of realization.
     ForbidFeatureBecauseForces {
         pkg: PackageId,
+        dep_dname: StrId,
         enabling_feature: PresentFeature,
         forcing_feature: PresentFeature,
         realization: PackageId,
     },
     /// This package must not occur in the solution with this feature,
     /// because parent is preexistent, but `feature` forces some feature which realization does not support.
+    ///
     /// Note
     /// ----
     /// Possible only when reusing previous freeze.
     ForbidPreexistingFeatureBecauseForces {
         pkg: PackageId,
+        dep_dname: StrId,
         realization: PackageId,
         feature: FeatureName,
     },
@@ -74,16 +78,18 @@ pub enum Constraint {
         dep: DependencyEdge,
         enabling_feature: PresentFeature,
         forcing_feature: PresentFeature,
-        realization: Version,
+        realization: PackageId,
         forced_features: Vec<FeatureName>,
     },
     /// Non-preexistent feature of a preexistent package forces some features of realization.
+    ///
     /// Note
     /// ----
     /// Possible only when reusing previous freeze.
     RequireForcedFeatureForPreexisting {
         parent: PackageId,
         parent_feature: FeatureName,
+        dep_dname: StrId,
         realization: PackageId,
         forced_features: Vec<FeatureName>,
     },
@@ -94,14 +100,10 @@ pub enum Constraint {
         expands_to: Vec<FeatureName>,
     },
     /// Forbid two packages with the same [`Identity`] from being chosen simultaneously.
-    ForbidMultipleVersions {
-        id: Identity,
-        versions: Vec<PackageId>,
-    },
+    ForbidMultipleVersions { versions: Vec<PackageId> },
     /// Forbid packages with a given [`Identity`] and different from a given [`PackageId`] from being chosen.
     /// This should be used when some package with the given [`Identity`] preexists.
     ForbidDifferentVersions {
-        id: Identity,
         different_versions: Vec<PackageId>,
         preexistent_version: PackageId,
     },
@@ -109,9 +111,10 @@ pub enum Constraint {
 
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Add a constraint to the model.
+    /// Each constraint gets a unique identifier which is equal to its index in the [`Self::constraints`] list.
     fn add_constraint(&mut self, constraint: Constraint, scip_constraint: RawConstraint<'_>) {
         let id = self.constraints.len();
-        let name = format!("CONSTRAINT_{id}");
+        let name = format!("{id}");
         let scip_constraint = scip_constraint.name(&name);
         self.model.add(scip_constraint);
         self.constraints.push(constraint);
@@ -190,12 +193,14 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn forbid_package_feature_because_forces(
         &mut self,
         pkg: PackageId,
+        dep_dname: StrId,
         enabling_feature: PresentFeature,
         forcing_feature: PresentFeature,
         realization: PackageId,
     ) -> QuackResult<()> {
         let constraint = Constraint::ForbidFeatureBecauseForces {
             pkg,
+            dep_dname,
             enabling_feature,
             forcing_feature,
             realization,
@@ -223,11 +228,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     pub fn forbid_preexistent_package_feature_because_forces(
         &mut self,
         pkg: PackageId,
+        dep_dname: StrId,
         realization: PackageId,
         feature: FeatureName,
     ) -> QuackResult<()> {
         let constraint = Constraint::ForbidPreexistingFeatureBecauseForces {
             pkg,
+            dep_dname,
             realization,
             feature,
         };
@@ -291,7 +298,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             dep,
             enabling_feature,
             forcing_feature,
-            realization,
+            realization: PackageId::new(dep.dep_identity, realization),
             forced_features,
         };
         self.add_constraint(constraint, scip_constraint);
@@ -304,6 +311,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         &mut self,
         parent: PackageId,
         parent_feature: FeatureName,
+        dep_dname: StrId,
         realization: PackageId,
         forced_features: Vec<FeatureName>,
     ) -> QuackResult<()> {
@@ -319,6 +327,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         let constraint = Constraint::RequireForcedFeatureForPreexisting {
             parent,
             parent_feature,
+            dep_dname,
             realization,
             forced_features,
         };
@@ -352,20 +361,13 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Forbid more that one version of the package to be chosen.
-    pub fn forbid_more_that_one_version(
-        &mut self,
-        identity: Identity,
-        versions: Vec<PackageId>,
-    ) -> QuackResult<()> {
+    pub fn forbid_more_that_one_version(&mut self, versions: Vec<PackageId>) -> QuackResult<()> {
         let version_vars = versions
             .iter()
             .map(|pkg| self.get_package_variable(*pkg, None))
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         let scip_constraint = RawConstraint::at_most_one(get_refs_vec(&version_vars));
-        let constraint = Constraint::ForbidMultipleVersions {
-            id: identity,
-            versions,
-        };
+        let constraint = Constraint::ForbidMultipleVersions { versions };
         self.add_constraint(constraint, scip_constraint);
         Ok(())
     }
@@ -373,7 +375,6 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Forbid all versions of the package other than the preexisting one.
     pub fn forbid_versions_different_from_preexisting(
         &mut self,
-        identity: Identity,
         preexistent_version: PackageId,
         different_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
@@ -383,7 +384,6 @@ impl<'a> SolverModel<'a, ProblemCreated> {
             .collect::<QuackResult<Vec<Rc<Variable>>>>()?;
         let scip_constraint = RawConstraint::none(get_refs_vec(&forbidden_version_vars));
         let constraint = Constraint::ForbidDifferentVersions {
-            id: identity,
             different_versions,
             preexistent_version,
         };

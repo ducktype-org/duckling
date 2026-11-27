@@ -9,30 +9,39 @@
 //! -----
 //! By `child` in the context of a given dependency relation we mean the package realising that dependency.
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use russcip::prelude::var;
-use russcip::{Model, ProblemCreated, Variable, WithSolutions};
+use russcip::{Model, ProblemCreated, Solution, Solved, Status, Variable, WithSolutions};
 use tracing::debug;
 
 use crate::core::solver::solver_freeze::SolverFreeze;
 use crate::core::solver::solving::input::SolverInput;
+use crate::core::solver::solving::solver_model::iis::generate_iis_explanation;
 use crate::core::solver::solving::solver_model::solution::freeze_from_solution;
 use crate::core::{FeatureName, PackageId};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId};
 
 mod constraints;
+mod iis;
 mod solution;
 
 pub use constraints::Constraint;
 
-// @TODO: #3544 store information about minimal unsolvable subprogram and display it here.
+/// Error signifying that no solution was found by SCIP.
+/// Contains the resulting [`Status`].
+/// Introduced so that callers can check if error was caused by no solution or anything else.
 #[derive(Debug)]
-pub struct NoSolutionError();
+pub struct NoSolutionError(pub(crate) Status);
 
 impl std::fmt::Display for NoSolutionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "no dependency resolution found")
+        write!(
+            f,
+            "no solution to the dependency problem found; SCIP run's status is {:?}",
+            self.0
+        )
     }
 }
 
@@ -58,6 +67,7 @@ pub struct SolverModel<'a, State> {
     model: Model<State>,
 
     input: &'a SolverInput,
+    root: PackageId,
 
     package_vars: HashMap<PackageId, Rc<Variable>>,
     package_to_feature_vars: HashMap<PackageId, FeaturesToVars>,
@@ -78,10 +88,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     const FEATURE_COST_FUNCITON: f64 = 0.001;
 
     /// Creates an empty model, given packages already placed in the previous freeze and their features.
-    pub fn new(input: &'a SolverInput) -> Self {
+    pub fn new(input: &'a SolverInput, root: PackageId) -> Self {
         SolverModel {
             model: Model::default().hide_output(),
             input,
+            root,
             package_vars: HashMap::new(),
             package_to_feature_vars: HashMap::new(),
             constraints: vec![],
@@ -150,19 +161,63 @@ impl<'a> SolverModel<'a, ProblemCreated> {
 impl<'a> SolverModel<'a, ProblemCreated> {
     /// Given a constructed problem (with variables and constraints added), calls SCIP to solve it,
     /// constructs the output and returns it.
+    ///
+    /// `generate_iis` specifies if and where to write explanation in case no solution was found.
     #[tracing::instrument(skip_all)]
-    pub fn solve(self, main_pkg: PackageId) -> QuackResult<SolverFreeze> {
-        let solve = self.model.minimize().solve();
-        let Some(solution) = solve.best_sol() else {
-            qp_bail!(NoSolutionError())
-        };
+    pub fn solve(
+        self,
+        ctx: &DuckContext,
+        generate_iis: Option<PathBuf>,
+    ) -> QuackResult<SolverFreeze> {
+        let model = self.model.minimize().set_param("iis/silent", true).solve();
+        let solution = get_solution(&model, self.root, self.constraints, generate_iis, ctx)?;
         debug!(?solution);
         freeze_from_solution(
             self.package_vars,
             self.package_to_feature_vars,
             self.input,
             &solution,
-            main_pkg,
+            self.root,
         )
+    }
+}
+
+/// Obtains a solution from a solved model.
+/// If it has a solution, returns it, if it is infeasible generates the IIS and dumps its description to the disk.
+fn get_solution<'a>(
+    model: &'a Model<Solved>,
+    root: PackageId,
+    constraints: Vec<Constraint>,
+    generate_iis: Option<PathBuf>,
+    ctx: &DuckContext,
+) -> QuackResult<Solution<'a>> {
+    if let Some(solution) = model.best_sol() {
+        // If there is a solution return it.
+        Ok(solution)
+    } else {
+        // No solution found.
+        let status = model.status();
+        let mut err = Into::<QuackError>::into(NoSolutionError(status));
+        if matches!(status, Status::Infeasible)
+            && let Some(location) = generate_iis
+        {
+            // If the problem is infeasible, explain the IIS to the user.
+            let iis_succ = generate_iis_explanation(model, root, constraints, ctx, &location)
+                .context("failed to obtain IIS and explain it");
+            match iis_succ {
+                Ok(()) => {
+                    err.add_note(format!(
+                        "the explanation why there is no solution was written to `{}`",
+                        location.display()
+                    ));
+                }
+                Err(e) => {
+                    err.add_note(format!(
+                        "failed to generate explanation for why there is no solution: {e}",
+                    ));
+                }
+            }
+        }
+        Err(err)
     }
 }

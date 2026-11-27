@@ -156,6 +156,7 @@ fun main() = {
 
 const DEFAULT_GITIGNORE: &str = "\
 .duck_build
+.duck_sync
 ";
 
 /// Initialize a new project with the given options.

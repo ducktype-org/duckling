@@ -9,6 +9,7 @@
 //! the constraints of [`SolverModel`].
 use std::collections::HashMap;
 use std::iter::once;
+use std::path::PathBuf;
 
 use itertools::iproduct;
 use russcip::ProblemCreated;
@@ -21,7 +22,7 @@ use crate::core::solver::solving::input::{PackageData, SolverInput};
 use crate::core::solver::solving::solver_model::SolverModel;
 use crate::core::solver::util::get_possible_realizations;
 use crate::core::{Dependency, FeatureName, Manifest, PackageId, Selector};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
 /// Struct performing dependencies resolving.
@@ -33,27 +34,36 @@ pub struct SolverEngine<'a> {
 impl<'a> SolverEngine<'a> {
     /// Main entry point.
     /// Creates an engine and runs it.
+    ///
+    /// `generate_iis` specifies if and where to write explanation if no solution was found.
     #[tracing::instrument(skip_all)]
     pub(in crate::core::solver) fn run_engine(
         input: SolverInput,
         root: &SolverRoot,
+        generate_iis: Option<PathBuf>,
+        ctx: &DuckContext,
     ) -> QuackResult<(SolverFreeze, HashMap<PackageId, Box<Manifest>>)> {
-        let engine = SolverEngine::new(&input);
-        let solution = engine.run(root)?;
+        let engine = SolverEngine::new(&input, root.id);
+        let solution = engine.run(root, generate_iis, ctx)?;
         let manifests = input.into_manifests();
         Ok((solution, manifests))
     }
 
     /// Creates a new [`SolverEngine`] from the given [`SolverInput`] reference.
-    fn new(input: &'a SolverInput) -> Self {
+    fn new(input: &'a SolverInput, root: PackageId) -> Self {
         Self {
             input,
-            model: SolverModel::new(input),
+            model: SolverModel::new(input, root),
         }
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
-    fn run(mut self, root: &SolverRoot) -> QuackResult<SolverFreeze> {
+    fn run(
+        mut self,
+        root: &SolverRoot,
+        generate_iis: Option<PathBuf>,
+        ctx: &DuckContext,
+    ) -> QuackResult<SolverFreeze> {
         self.create_package_variables();
         for (package, data) in self.input.packages_data.iter() {
             for dependency in data
@@ -72,7 +82,7 @@ impl<'a> SolverEngine<'a> {
         }
         self.force_features_expansion()?;
         self.force_singular_versions()?;
-        self.model.solve(root.id)
+        self.model.solve(ctx, generate_iis)
     }
 
     /// Creates necessary variables for all the packages.
@@ -139,6 +149,7 @@ impl<'a> SolverEngine<'a> {
                 self.model
                     .forbid_preexistent_package_feature_because_forces(
                         parent,
+                        manifest_dependency.diagnostic_name(),
                         realization,
                         parent_feature,
                     )?;
@@ -146,6 +157,7 @@ impl<'a> SolverEngine<'a> {
                 self.model.require_forced_features_for_preexisting(
                     parent,
                     parent_feature,
+                    manifest_dependency.diagnostic_name(),
                     realization,
                     forced,
                 )?;
@@ -191,15 +203,30 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let is_dep_forced_default = manifest_dependency.is_enabled_for(&[].into());
         if is_dep_forced_default {
-            self.model
-                .require_dep_realization(edge, None, possible_realizations)?;
+            if possible_realizations.is_empty() {
+                // Splitting no realizations case gives better diagnostics.
+                self.model
+                    .forbid_package_because_no_realization(edge.parent, edge.dep_ename)?;
+            } else {
+                self.model
+                    .require_dep_realization(edge, None, possible_realizations)?;
+            }
         } else {
             for dep_forcing_feature in manifest_dependency.enabling_features() {
-                self.model.require_dep_realization(
-                    edge,
-                    Some(*dep_forcing_feature),
-                    possible_realizations.clone(),
-                )?;
+                if possible_realizations.is_empty() {
+                    // Splitting no realizations case gives better diagnostics.
+                    self.model.forbid_package_feature_because_no_realization(
+                        edge.parent,
+                        *dep_forcing_feature,
+                        edge.dep_ename,
+                    )?;
+                } else {
+                    self.model.require_dep_realization(
+                        edge,
+                        Some(*dep_forcing_feature),
+                        possible_realizations.clone(),
+                    )?;
+                }
             }
         }
         Ok(())
@@ -242,6 +269,7 @@ impl<'a> SolverEngine<'a> {
                 } else {
                     self.model.forbid_package_feature_because_forces(
                         edge.parent,
+                        manifest_dependency.diagnostic_name(),
                         *enabling,
                         *forcing,
                         *realization,
@@ -330,8 +358,11 @@ impl<'a> SolverEngine<'a> {
                         .map(|version| PackageId::new(*full_identity, version)),
                 );
         }
-        for (identity, package_versions) in packages_for_identity {
-            self.force_singular_version(identity, package_versions)?;
+        for package_versions in packages_for_identity.into_values() {
+            if package_versions.len() < 2 {
+                continue;
+            }
+            self.force_singular_version(package_versions)?;
         }
         Ok(())
     }
@@ -342,11 +373,7 @@ impl<'a> SolverEngine<'a> {
     /// This has a different workflow, depending on whether any version is preexisting.
     /// This is necessary, since for preexisting packages we do not care whether their variables will evaluate to 0 or 1,
     /// so we can't just always add a constraint that many versions are prohibited.
-    fn force_singular_version(
-        &mut self,
-        identity: Identity,
-        package_versions: Vec<PackageId>,
-    ) -> QuackResult<()> {
+    fn force_singular_version(&mut self, package_versions: Vec<PackageId>) -> QuackResult<()> {
         let mut preexistent_version = None;
         for pkg in package_versions.iter() {
             if self.input.preexists(*pkg) {
@@ -355,26 +382,23 @@ impl<'a> SolverEngine<'a> {
             }
         }
         if let Some(preexistent_version) = preexistent_version {
-            self.forbid_versions_not_preexisting(identity, package_versions, preexistent_version)
+            self.forbid_versions_not_preexisting(package_versions, preexistent_version)
         } else {
-            self.forbid_more_than_one_version(identity, package_versions)
+            self.forbid_more_than_one_version(package_versions)
         }
     }
 
     /// Forbid a package being chosen in more than one version.
     fn forbid_more_than_one_version(
         &mut self,
-        identity: Identity,
         package_versions: Vec<PackageId>,
     ) -> QuackResult<()> {
-        self.model
-            .forbid_more_that_one_version(identity, package_versions)
+        self.model.forbid_more_that_one_version(package_versions)
     }
 
     /// Forbid a package in all versions except a single preexisting one.
     fn forbid_versions_not_preexisting(
         &mut self,
-        identity: Identity,
         package_versions: Vec<PackageId>,
         preexistent_version: PackageId,
     ) -> QuackResult<()> {
@@ -382,11 +406,8 @@ impl<'a> SolverEngine<'a> {
             .into_iter()
             .filter(|pkg| *pkg != preexistent_version)
             .collect();
-        self.model.forbid_versions_different_from_preexisting(
-            identity,
-            preexistent_version,
-            different_versions,
-        )
+        self.model
+            .forbid_versions_different_from_preexisting(preexistent_version, different_versions)
     }
 }
 
@@ -497,7 +518,7 @@ metadata:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -574,7 +595,7 @@ dependencies:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -653,7 +674,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -732,7 +753,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -845,7 +866,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -927,7 +948,7 @@ features:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let (output, _) = SolverEngine::run_engine(input, &root).unwrap();
+        let (output, _) = SolverEngine::run_engine(input, &root, None, &ctx).unwrap();
         assert_eq!(output.main_pkg, pkg_a);
         assert_eq!(
             output.package_freezes,
@@ -1032,8 +1053,11 @@ metadata:
         };
 
         let root = solver_root(&input, pkg_a, HashSet::new());
-        let err = SolverEngine::run_engine(input, &root).unwrap_err();
-        assert_eq!(err.to_string(), "no dependency resolution found");
+        let err = SolverEngine::run_engine(input, &root, None, &ctx).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "no solution to the dependency problem found; SCIP run's status is Infeasible"
+        );
     }
 
     #[test]
@@ -1095,7 +1119,10 @@ metadata:
         };
 
         let root = solver_root(&input, pkg_a, ["new".into()].into());
-        let err = SolverEngine::run_engine(input, &root).unwrap_err();
-        assert_eq!(err.to_string(), "no dependency resolution found");
+        let err = SolverEngine::run_engine(input, &root, None, &ctx).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "no solution to the dependency problem found; SCIP run's status is Infeasible"
+        );
     }
 }
