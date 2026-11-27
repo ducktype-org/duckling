@@ -363,12 +363,17 @@ namespace compiler::tsh {
 	}
 
 	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol): symbol(symbol) {
-		representation = "Class " + name(symbol).str();
-		if_opt_some(compiler::helios::getSymRef(symbol)->maybe_template_instance_data, data) {
+		representation       = "Class " + name(symbol).str();
+		const auto& instance = compiler::helios::getSymRef(symbol)->maybe_template_instance_data;
+		const auto* data
+			= instance.has_value()
+		        ? std::get_if<compiler::helios::TemplateInstanceData::Root>(&instance->data)
+		        : nullptr;
+		if (data != nullptr) {
 			representation
 				+= "["
 			     + base::strJoin(
-					   data.template_arguments_symbols
+					   data->template_arguments_symbols
 						   | std::views::transform([](const compiler::helios::SymID arg) {
 								 return compiler::helios::getSymRef(arg)
 				                     ->getGeneratedData<compiler::helios::defgen::GeneratedConstant>(

@@ -552,7 +552,7 @@ namespace pst {
 
 		/**
 		 * @brief Returns whether the element has additional root data.
-		 * @TODO: #2996 Remove this in favor of some kind of having more proper
+		 * @TODO: #3892 Remove this in favor of some kind of having more proper
 		 * knowledge of PST origin (bake/expand/user/etc).
 		 * This is currently used to hack-in the check for whether a template is baked or not, which
 		 * is not a good solution.

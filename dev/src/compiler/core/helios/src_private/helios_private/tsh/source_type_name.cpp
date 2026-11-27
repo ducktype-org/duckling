@@ -50,12 +50,16 @@ namespace compiler::tsh {
 		}
 
 		std::string sourceSymbolName(query::Context& ctx, const helios::SymID symbol) {
-			auto result = helios::name(symbol).str();
-			if_opt_some(helios::getSymRef(symbol)->maybe_template_instance_data, data) {
+			auto        result   = helios::name(symbol).str();
+			const auto& instance = helios::getSymRef(symbol)->maybe_template_instance_data;
+			const auto* data     = instance.has_value()
+			                         ? std::get_if<helios::TemplateInstanceData::Root>(&instance->data)
+			                         : nullptr;
+			if (data != nullptr) {
 				result
 					+= "["
 				     + base::strJoin(
-						   data.template_arguments_symbols
+						   data->template_arguments_symbols
 							   | std::views::transform([&](const helios::SymID argument) {
 									 return renderCompileTimeValue(
 										 ctx,
