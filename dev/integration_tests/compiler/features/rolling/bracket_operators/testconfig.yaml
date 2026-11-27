@@ -1,0 +1,9 @@
+# Tests for user-defined `()` and `[]` operators
+
+Tests:
+  bracket_operators:
+    Cases:
+      all:
+        Output:
+          String: "1\n34\n3\n6\n111\n13\n2\n40\n4\n1080\n49\n10\n2\n8\n7\n8\n6\n13\n"
+        ExitCode: 0

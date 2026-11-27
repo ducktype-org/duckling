@@ -30,9 +30,30 @@ namespace pst {
 	}
 
 	/**
-	 * @brief Parses a function name: an identifier or a non-reserved operator symbol.
+	 * @brief Parses a function name: an identifier, a non-reserved operator symbol, or a bracket
+	 * operator (`()` or `[]`) when @p allow_bracket_operators is set.
 	 */
-	MBox<IdentifierWrapper> IdentifierWrapper::parseFunctionName(LangParserState& state) {
+	MBox<IdentifierWrapper> IdentifierWrapper::parseFunctionName(
+		LangParserState& state, bool allow_bracket_operators
+	) {
+		if (isBracketOperatorName(state, 0)) {
+			const auto op = state[0].isBracketGroup(Token::Round) ? "()" : "[]";
+			if (!state[0].getRecursive().empty()) {
+				state.logInt(makeBox<BracketOperatorNameNotEmptyError>(state.getPosition()));
+				return nullptr;
+			}
+			if (!allow_bracket_operators) {
+				state.logInt(makeBox<BracketOperatorOutsideClassError>(state.getPosition(), op));
+				return nullptr;
+			}
+
+			Box<IdentifierWrapper> out = makeBox<IdentifierWrapper>(state, base::StrID(op));
+
+			PARSE().eatOne();
+
+			PST_RETURN out;
+		}
+
 		if (!state[0].isOperatorSymbol()) return IdentifierWrapper::parse(state);
 
 		auto op = state[0].asBinaryOperator().value();
