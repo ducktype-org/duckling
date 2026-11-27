@@ -507,46 +507,21 @@ namespace compiler::helios::mangler {
 						                      ->unwrap()
 						                      .strView());
 
-						if (template_stmt_v->hasAdditionalRootData()) {
-							// We are inside a baked template
+						const auto instance = templates::getTemplateInstanceData(
+							ctx, template_stmt_v->getInnerStatement().unlock(ctx)
+						);
+						CORE_ASSERT(
+							instance.has_value(),
+							"TemplateStmt is not baked, it should not happen in mangling"
+						);
 
-							const auto root_data = template_stmt_v->getAdditionalRootData();
-							variant_match(root_data.pst_parent) {
-								variant_case(
-									pst::AdditionalRootData::BakedTemplateParent, template_parent
-								) {
-									const auto& template_bake_data_any
-										= template_parent.template_bake_data;
-									auto template_bake_data
-										= base::anyCast<templates::TemplateBakePSTLinkedData>(
-											template_bake_data_any
-										);
-
-									ret += "I";
-									for (const auto& bake_argument:
-									     template_bake_data.postponed_data
-									         ->load(std::memory_order_acquire)
-									         ->template_arguments_symbols) {
-										auto value
-											= ctx.query<helios::QueryConstValueOf>(bake_argument)
-										          .valueOrThrow();
-										ret += mangleCTV(ctx, value);
-									}
-									ret += "E";
-								}
-								variant_default {
-									CORE_PANIC(
-										"TemplateStmt has no PST parent, this should not happen "
-										"here."
-									);
-								}
-							}
-						} else {
-							CORE_PANIC(
-								"TemplateStmt has no additional root data meaning it is not baked"
-								"It should not happen in mangling"
-							);
+						ret += "I";
+						for (const auto& bake_argument: instance->template_arguments_symbols) {
+							auto value
+								= ctx.query<helios::QueryConstValueOf>(bake_argument).valueOrThrow();
+							ret += mangleCTV(ctx, value);
 						}
+						ret += "E";
 						break;
 					}
 					default:
