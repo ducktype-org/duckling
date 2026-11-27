@@ -23,7 +23,6 @@ pub mod indent;
 pub mod interning;
 pub mod once_ext;
 pub mod set_once;
-pub mod yaml_config;
 
 pub mod test_utils;
 

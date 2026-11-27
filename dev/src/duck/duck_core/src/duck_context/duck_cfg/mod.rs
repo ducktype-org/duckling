@@ -9,17 +9,19 @@ use std::time::Duration;
 
 use tracing::trace;
 
-use crate::duck_context::aliases::{Alias, Aliases};
-use crate::duck_context::duck_home::DuckHome;
+use self::node::Node;
+use super::aliases::{Alias, Aliases};
+use super::duck_home::DuckHome;
 use crate::schemas::config::{NetworkConfig, SecurityConfig, StorageConfig};
 use crate::util::interning::InternedUrl;
 use crate::util::once_ext::OnceExt;
-use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
+
+pub mod node;
 
 #[derive(Debug, Default)]
 pub struct DuckCfg {
-    inner: YamlConfig,
+    inner: Node,
     // Fast config accessors.
     security: OnceLock<SecurityConfig>,
     network: OnceLock<NetworkConfig>,
@@ -50,7 +52,10 @@ const DEFAULT_NUMBER_OF_OPEN_CONNECTIONS: usize = 64;
 impl DuckCfg {
     /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
-        let inner = YamlConfig::new(home.user_config().to_path_buf())?;
+        let inner = Node::from_path(home.user_config())?;
+        let Some(inner) = inner else {
+            return Ok(Self::default());
+        };
         trace!(?inner, "parsed the user config");
         Ok(Self {
             inner,
@@ -63,19 +68,19 @@ impl DuckCfg {
     /// Get the `security:` configuration table.
     pub fn security(&self) -> QuackResult<&SecurityConfig> {
         self.security
-            .try_init_with(|| self.inner.deserialize_optional_or_default("security"))
+            .try_init_with(|| self.inner.deserialize_or_default("security"))
     }
 
     /// Get the `network:` configuration table.
     pub fn network(&self) -> QuackResult<&NetworkConfig> {
         self.network
-            .try_init_with(|| self.inner.deserialize_optional_or_default("network"))
+            .try_init_with(|| self.inner.deserialize_or_default("network"))
     }
 
     /// Get the `storage:` configuration table.
     pub fn storage(&self) -> QuackResult<&StorageConfig> {
         self.storage
-            .try_init_with(|| self.inner.deserialize_optional_or_default("storage"))
+            .try_init_with(|| self.inner.deserialize_or_default("storage"))
     }
 
     /// Whether we should autofix unknown subcommands.
@@ -100,22 +105,14 @@ impl DuckCfg {
 
     /// Get all known aliases.
     pub fn aliases(&self) -> QuackResult<Aliases> {
-        Ok(self
-            .inner
-            .deserialize_optional("aliases")?
-            .unwrap_or_default())
+        Ok(self.inner.deserialize("aliases")?.unwrap_or_default())
     }
 
     /// Get an alias for the given `key`.
     pub fn alias_for(&self, key: &str) -> QuackResult<Option<Alias>> {
         self.inner
-            .deserialize_optional(&format!("aliases.{key}"))
+            .deserialize(&format!("aliases.{key}"))
             .with_context(|| format!("failed to get the alias expansions of `{key}`"))
-    }
-
-    /// Get the underlying [`YamlConfig`].
-    pub fn yaml_config(&self) -> &YamlConfig {
-        &self.inner
     }
 
     /// Get the lifetime of temporary storage venvs.
