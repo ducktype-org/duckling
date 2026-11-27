@@ -18,6 +18,8 @@
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
+#include <iostream>
+
 
 using namespace vm;
 
@@ -47,7 +49,24 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	const exec::ExecFunction& func = functions->at(exec::execFunctionIndex(func_info->id.asInt()));
 
 	exit_value = createStartAndExecuteFunction(func, args);
-	applyEvent(thread_event::Finish{ exit_value });
+
+	switch (runtime_data.trap) {
+	case Trap::None:
+		applyEvent(thread_event::Finish{ exit_value });
+		break;
+	case Trap::Stopped:
+		applyEvent(thread_event::Kill{});
+		break;
+	default: {
+		// Matches what `IVMThread::safeRun` prints for a safe-mode panic.
+		std::string message = runtime_data.trap == Trap::HostError
+		                        ? runtime_data.trap_message
+		                        : std::string(trapMessage(runtime_data.trap));
+		std::cerr << "VMThread has panicked: " << message << "\n";
+		applyEvent(thread_event::Panic{ std::move(message) });
+		break;
+	}
+	}
 }
 
 void vm::fast::FastVMThread::executeOneStep() {
@@ -101,6 +120,10 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 }
 
 i64 vm::fast::FastVMThread::executeFunction(const exec::ExecFunction& start_function, const RunArguments&) {
+	runtime_data.trap = Trap::None;
+	runtime_data.trap_message.clear();
+	runtime_data.resetFrames();
+	runtime_data.exit_instruction = &start_function.data.back();
 	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
 	byte*  local_stack = runtime_data.local_stack_base;
 	FastExecutor::eval(runtime_data, local_stack, frame, *this);

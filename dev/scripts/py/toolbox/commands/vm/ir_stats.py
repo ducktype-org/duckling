@@ -53,6 +53,12 @@ from click import Choice, Path, command, option
     "the built binary. Only x86, bytes, rthr and calls are reported.",
 )
 @option(
+    "--ir-only",
+    is_flag=True,
+    default=False,
+    help="Report only the LLVM IR columns; skips code generation, so it works for any target.",
+)
+@option(
     "-f",
     "--filter",
     default=DEFAULT_FILTER,
@@ -67,8 +73,9 @@ from click import Choice, Path, command, option
     "--check-no-unwind",
     is_flag=True,
     default=False,
-    help="Fail if any reported function can unwind: it contains invoke/landingpad/resume, throws, or "
-    "directly calls a function LLVM does not know to be nounwind.",
+    help="Fail if an exception can leave a reported function. A handler or dispatcher must contain no "
+    "invoke/landingpad/resume or throw and call only nounwind functions; a `FastHelpers::` helper must "
+    "send every exception to a catch-all (FAST_HELPER_BOUNDARY).",
 )
 def ir_stats(*args, **kwargs):
     """
