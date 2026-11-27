@@ -80,9 +80,9 @@ namespace compiler::helios {
 			// stands for, except for the initial value. It shares the same symbol as for the
 			// original variable, to have the same mangling.
 			if (auto empty_variable
-			    = std::get_if<defgen::ReplEmptyVariable>(&getSymRef(symbol)->other)) {
+			    = getSymRef(symbol)->getGeneratedDataOpt<defgen::ReplEmptyVariable>()) {
 				const auto& original
-					= ctx.query<QueryHOUTGlobalData>(empty_variable->original_variable)
+					= ctx.query<QueryHOUTGlobalData>(empty_variable.value()->original_variable)
 				          ->valueOrThrow();
 				CORE_ASSERT(
 					original.data_type == HOUTGlobalDataType::Variable,

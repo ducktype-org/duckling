@@ -15,7 +15,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/hashmap.hpp>

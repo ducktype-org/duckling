@@ -39,7 +39,6 @@
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -753,19 +752,15 @@ namespace compiler::helios {
 			case SymbolKind::Method:
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor: {
-				variant_match(getSymRef(key)->other) {
-					variant_case_novalue(
-						PstImplementedSemantics,
-						ClassMemberSemantics,
-						BuiltinSemantics,
-						TemplateInstanceSemantics
-					) {
-						DeclarationVisitor decl_maker(ctx, key);
-						stmt(ctx, key).value()->acceptVisitor(decl_maker);
-						auto result = std::move(decl_maker.out).value();
-						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
-						return result;
-					}
+				if (getSymRef(key)->maybe_pst_data.has_value()) {
+					DeclarationVisitor decl_maker(ctx, key);
+					stmt(ctx, key).value()->acceptVisitor(decl_maker);
+					auto result = std::move(decl_maker.out).value();
+					verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
+					return result;
+				}
+
+				variant_match(getSymRef(key)->maybe_generated_data.value()) {
 					variant_case(defgen::Constructor, ctor_data) {
 						switch (ctor_data.kind) {
 						case defgen::Constructor::Kind::Implicit:

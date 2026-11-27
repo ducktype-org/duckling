@@ -88,7 +88,8 @@ private:
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
 			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
-			ASSERT_MATCHES(sym_ref->other, helios::defgen::ReplInputWrapper);
+			ASSERT_TRUE(sym_ref->getGeneratedDataOpt<helios::defgen::ReplInputWrapper>().has_value()
+			);
 
 			auto mangled
 				= helios::mangler::getSimpleMangledName(ctx, wrapper.declaration->original_symbol);
@@ -151,10 +152,12 @@ private:
 
 			auto sym_ref = helios::getSymRef(sym);
 
-			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
-			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
-			ASSERT_EQUAL(repl_data->counter.copyValueOr(0), 31u);
-			ASSERT_MATCHES(repl_data->element, helios::defgen::ReplInputWrapper::Instruction);
+			auto repl_data = sym_ref->getGeneratedDataOpt<helios::defgen::ReplInputWrapper>();
+			assertTrue(repl_data.has_value(), "Expected ReplInputWrapper generated symbol");
+			ASSERT_EQUAL(repl_data.value()->counter.copyValueOr(0), 31u);
+			ASSERT_MATCHES(
+				repl_data.value()->element, helios::defgen::ReplInputWrapper::Instruction
+			);
 		});
 	}
 

@@ -368,7 +368,7 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryGeneratedComparisonMethod, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey comparison_sym) {
-			const auto method      = std::get<Method>(getSymRef(comparison_sym)->other);
+			const auto method      = *getSymRef(comparison_sym)->getGeneratedData<Method>();
 			const auto owner_type  = method.owner_type;
 			const auto defgen_kind = method.kind;
 			const auto comp_kind   = comparisonMethodInfo(defgen_kind).kind;

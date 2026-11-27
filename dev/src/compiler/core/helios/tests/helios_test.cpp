@@ -3764,10 +3764,10 @@ private:
 		};
 
 		auto expect_generated = [&](SymID sym, Kind kind, OwnerKind owner_kind) {
-			const auto* method = std::get_if<Method>(&compiler::helios::getSymRef(sym)->other);
-			ASSERT_TRUE(method != nullptr);
-			ASSERT_TRUE(method->kind == kind);
-			ASSERT_TRUE(method->owner_type.getKind() == owner_kind);
+			const auto method = compiler::helios::getSymRef(sym)->getGeneratedDataOpt<Method>();
+			ASSERT_TRUE(method.has_value());
+			ASSERT_TRUE(method.value()->kind == kind);
+			ASSERT_TRUE(method.value()->owner_type.getKind() == owner_kind);
 		};
 
 		auto expect_returns = [&](SymID fn_sym, bool value) {
@@ -3823,7 +3823,7 @@ private:
 		// A user-defined `==` replaces the generated one in the type's interface.
 		const SymID custom_equal = operator_called_from(getChain("customEqual", root_scope).back());
 		ASSERT_TRUE(
-			not std::holds_alternative<Method>(compiler::helios::getSymRef(custom_equal)->other)
+			not compiler::helios::getSymRef(custom_equal)->getGeneratedDataOpt<Method>().has_value()
 		);
 		ASSERT_EQUAL(std::string("=="), compiler::helios::name(custom_equal).str());
 

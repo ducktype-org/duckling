@@ -12,7 +12,6 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/tsh/value_type.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -154,61 +153,41 @@ namespace compiler::helios {
 		}
 	}
 
-	SymbolData::SymbolData(CommonSymbolData common, SymbolSemantics other):
-		  common(std::move(common)),
-		  other(std::move(other)),
-		  id(SymbolDataID::next()) {}
-
-	SymbolData SymbolData::makeBuiltinSymbolData(
-		CommonSymbolData common_data, BuiltinSemantics builtin_data
-	) {
-		return { std::move(common_data), builtin_data };
-	}
-
-	SymbolData SymbolData::makePSTSymbolData(
-		CommonSymbolData common_data, PstImplementedSemantics pst_data
-	) {
-		return { std::move(common_data), pst_data };
-	}
-
-	SymbolData SymbolData::makeClassMemberSymbolData(
-		CommonSymbolData common_data, ClassMemberSemantics class_member_data
-	) {
-		return { std::move(common_data), class_member_data };
-	}
-
-	SymbolData SymbolData::makeTemplateInstanceSymbolData(
-		CommonSymbolData common_data, TemplateInstanceSemantics template_instance_data
-	) {
-		return { std::move(common_data), std::move(template_instance_data) };
-	}
-
 	SymbolData SymbolData::makeGeneratedSymbolData(
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
-		SymbolKind kind{};
-		bool       ignored_by_lookup = false;
+		SymbolKind                     kind{};
+		bool                           ignored_by_lookup = false;
+		base::Optional<TypeMemberData> type_member_data;
+		base::Optional<BuiltinData>    builtin_data;
 		variant_match(generated_data) {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
 			}
-			variant_case_novalue(defgen::BuiltinTemplatedSymbol) {
+			variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
 				// `MoveIn` is a LIR builtin: its call is replaced by an instruction, so it never
 				// gets a body.
-				kind = SymbolKind::FunctionDeclaration;
+				kind         = SymbolKind::FunctionDeclaration;
+				builtin_data = BuiltinData{ builtin.getBuiltinKind() };
 			}
-			variant_case_novalue(
-				defgen::Constructor,
-				defgen::Method,
-				defgen::ReplInputWrapper,
-				defgen::ScriptMainWrapper
-			) {
+			variant_case(defgen::Constructor, constructor) {
+				kind             = SymbolKind::Function;
+				type_member_data = TypeMemberData{ constructor.type };
+			}
+			variant_case(defgen::Method, method) {
+				kind             = SymbolKind::Function;
+				type_member_data = TypeMemberData{ method.owner_type };
+			}
+			variant_case_novalue(defgen::ReplInputWrapper, defgen::ScriptMainWrapper) {
 				kind = SymbolKind::Function;
 			}
 			variant_case_novalue(defgen::Parameter, defgen::SelfParameter) {
 				kind = SymbolKind::Parameter;
 			}
-			variant_case_novalue(defgen::Field) { kind = SymbolKind::Field; }
+			variant_case(defgen::Field, field) {
+				kind             = SymbolKind::Field;
+				type_member_data = TypeMemberData{ field.parent_type };
+			}
 			variant_case_novalue(defgen::ControlFlowLocal) {
 				kind              = SymbolKind::Variable;
 				ignored_by_lookup = true;
@@ -222,25 +201,22 @@ namespace compiler::helios {
 		}
 
 		return {
-			{
+			.common_data = {
 				.name                 = name,
 				.kind                 = kind,
 				.is_ignored_by_lookup = ignored_by_lookup,
 			},
-			std::visit(
-				[](auto&& x) -> SymbolData::SymbolSemantics { return std::forward<decltype(x)>(x); },
-				generated_data
-			),
+			.maybe_type_member_data = type_member_data,
+			.maybe_builtin_data     = builtin_data,
+			.maybe_generated_data   = std::move(generated_data),
 		};
 	}
 
 	base::Optional<ScopeID> SymbolData::getScope() const {
+		if_opt_some(maybe_pst_data, pst_data) return pst_data.scope;
+
 		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
-		variant_match(other) {
-			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
-			variant_case(ClassMemberSemantics, member_data) { return member_data.scope; }
-			variant_case(BuiltinSemantics, data) { return data.scope; }
-			variant_case(TemplateInstanceSemantics, data) { return data.scope; }
+		variant_match(maybe_generated_data.value()) {
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
@@ -251,19 +227,12 @@ namespace compiler::helios {
 	}
 
 	bool SymbolData::isPstImplemented() const {
-		return std::holds_alternative<PstImplementedSemantics>(other)
-		    or std::holds_alternative<ClassMemberSemantics>(other)
-		    or std::holds_alternative<TemplateInstanceSemantics>(other);
+		return maybe_pst_data.has_value() and not maybe_builtin_data.has_value();
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
-		variant_match(other) {
-			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
-			variant_case(ClassMemberSemantics, data) { return data.getElement(); }
-			variant_case(BuiltinSemantics, data) { return data.getElement(); }
-			variant_case(TemplateInstanceSemantics, data) { return data.getElement(); }
-			variant_default { return {}; }
-		}
+		if_opt_some(maybe_pst_data, pst_data) return pst_data.getElement();
+		return {};
 	}
 
 	base::Optional<pst::Access<pst::Stmt>> SymbolData::stmtCast(query::Context& ctx) const {

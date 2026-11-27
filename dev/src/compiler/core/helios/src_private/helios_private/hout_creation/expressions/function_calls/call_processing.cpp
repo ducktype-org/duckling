@@ -1001,13 +1001,10 @@ namespace compiler::helios::code {
 		// handling which may not be simply a single function call.
 		// Note: this does not include numeric operators on numeric arguments,
 		// as that case is handled earlier, before considering overload resolution.
-		variant_match(getSymRef(callee_sym)->other) {
-			variant_case_novalue(defgen::BuiltinOperator) {
-				return constructHOUTBuiltinOpExpr(
-					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
-				);
-			}
-			variant_default {}
+		if (getSymRef(callee_sym)->getGeneratedDataOpt<defgen::BuiltinOperator>().has_value()) {
+			return constructHOUTBuiltinOpExpr(
+				ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
+			);
 		}
 
 		// Otherwise, we construct a normal function call expression.
@@ -1052,12 +1049,10 @@ namespace compiler::helios::code {
 		// Now construct the expression.
 		// If the function is a builtin operator, we use special
 		// handling which may not be simply a single function call.
-		variant_match(getSymRef(callee_sym)->other) {
-			variant_case(defgen::BuiltinOperator, generated) {
-				return constructHOUTBuiltinOpExpr(
-					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
-				);
-			}
+		if (getSymRef(callee_sym)->getGeneratedDataOpt<defgen::BuiltinOperator>().has_value()) {
+			return constructHOUTBuiltinOpExpr(
+				ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
+			);
 		}
 
 		// Otherwise, we construct a normal function call expression.
