@@ -544,14 +544,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "duck-fmt"
-version = "0.1.0"
-dependencies = [
- "clap",
- "duck_core",
-]
-
-[[package]]
 name = "duck_core"
 version = "0.3.0"
 dependencies = [

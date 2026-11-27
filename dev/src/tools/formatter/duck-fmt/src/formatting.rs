@@ -7,7 +7,7 @@
 //! Main logic for formatting a package.
 
 use std::convert::Infallible;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::ops::ControlFlow;
 use std::path::PathBuf;
 
@@ -20,34 +20,41 @@ use crate::{DuckContext, QuackResult};
 
 #[derive(Debug)]
 /// Options of `duck-fmt`.
-pub struct FormatOptions {
+pub struct FormatOptions<'a> {
     pub check: bool,
     pub print: bool,
+    pub additional_args: Vec<&'a OsStr>,
 }
 
-impl FormatOptions {
+impl<'a> FormatOptions<'a> {
     /// Creates [`FormatOptions`] from [`ArgMatches`].
-    pub fn from_matches(matches: &ArgMatches) -> Self {
+    pub fn from_matches(matches: &'a ArgMatches) -> Self {
+        let args = matches
+            .get_many::<OsString>("args")
+            .unwrap_or_default()
+            .map(OsString::as_os_str)
+            .collect();
         Self {
             check: matches.get_flag("check"),
             print: matches.get_flag("print"),
+            additional_args: args,
         }
     }
 }
 
 #[derive(Debug)]
 /// Struct responsible for formatting a single package, given [`FormatOptions`].
-pub struct PackageFormatter {
+pub struct PackageFormatter<'a> {
     /// Root of the package.
     root: PathBuf,
     /// [`FormatOptions`] to be used.
-    options: FormatOptions,
+    options: FormatOptions<'a>,
 }
 
-impl PackageFormatter {
+impl<'a> PackageFormatter<'a> {
     /// Create a new [`PackageFormatter`].
     /// This searches for the package's root with [`find_package_root`].
-    pub fn new(ctx: &DuckContext, options: FormatOptions) -> QuackResult<Self> {
+    pub fn new(ctx: &DuckContext, options: FormatOptions<'a>) -> QuackResult<Self> {
         let root = find_package_root(ctx.cwd())?;
         Ok(Self { root, options })
     }
@@ -60,11 +67,8 @@ impl PackageFormatter {
         duckfmt_command.set_print(self.options.print);
 
         let files = self.collect_source_files()?;
-        if files.is_empty() {
-            // Nothing to do.
-            return Ok(());
-        }
         duckfmt_command.add_files_to_format(&files);
+        duckfmt_command.add_raw_args(&self.options.additional_args);
         duckfmt_command.execute_and_replace()?;
         Ok(())
     }
@@ -88,12 +92,4 @@ impl PackageFormatter {
         visit_duckling_source_files(src, &mut collector)?;
         Ok(collector.inner)
     }
-}
-
-/// Runs `duckfmt` with the supplied `args`.
-pub fn run_raw_duckfmt_with_args(args: &[&OsStr]) -> QuackResult<()> {
-    let mut duckfmt_command = DuckFmt::new().process_builder();
-    duckfmt_command.raw_args(args);
-    duckfmt_command.execute_and_replace()?;
-    Ok(())
 }

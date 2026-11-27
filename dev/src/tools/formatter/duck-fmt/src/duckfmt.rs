@@ -6,11 +6,14 @@
 
 //! Low-level creator of `duckfmt` instance.
 
+use core::fmt;
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
 use std::process::Command;
+
+use tracing::debug;
 
 use crate::util::command_ext::CommandExt;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId};
@@ -73,13 +76,14 @@ impl DuckFmtProcessBuilder {
     }
 
     /// Adds raw args to `duckfmt` instance.
-    pub fn raw_args(&mut self, args: &[&OsStr]) -> &mut Self {
+    pub fn add_raw_args(&mut self, args: &[&OsStr]) -> &mut Self {
         self.inner.args(args);
         self
     }
 
     /// Execute the built command by replacing current process.
     pub fn execute_and_replace(&mut self) -> QuackResult<Infallible> {
+        debug!("replacing the current process with `{self}`");
         self.inner
             .exec_replace()
             .context("failed to spawn duckfmt")
@@ -96,5 +100,11 @@ fn add_path_hint_to_missing_duckfmt(mut error: QuackError) -> QuackError {
         error
     } else {
         error
+    }
+}
+
+impl fmt::Display for DuckFmtProcessBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.display().fmt(f)
     }
 }

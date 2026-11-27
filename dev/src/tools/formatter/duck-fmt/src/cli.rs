@@ -26,11 +26,10 @@ pub(super) fn cli() -> Command {
         )
         .arg(
             Arg::new("args")
-                .help("Arguments passed to `duckfmt`")
+                .help("Additional arguments passed to `duckfmt`")
                 .trailing_var_arg(true)
                 .num_args(0..)
                 .value_parser(value_parser!(OsString))
-                .conflicts_with_all(["check", "print"]),
         )
         .styles(get_styles())
         .about("Formats all Duckling files inside the current package using `duckfmt`")
