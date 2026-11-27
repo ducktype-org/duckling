@@ -10,19 +10,14 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::{fmt, io};
 
-use serde::de::{MapAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use tracing::{debug, trace};
 
 use crate::util::filesystem::read_from_path_to_string;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 pub mod de;
-
-const SOURCED_NAME: &str = "$__private_Sourced";
-const VALUE_FIELD: &str = "$__private_value";
-const SOURCE_FIELD: &str = "$__private_source";
-const SOURCED_FIELDS: &[&str] = &[VALUE_FIELD, SOURCE_FIELD];
+pub use de::Sourced;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 /// Source of the [`Node`].
@@ -41,13 +36,6 @@ impl fmt::Display for Source {
             Self::Path(path_buf) => write!(f, "file at `{}`", path_buf.display()),
         }
     }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
-/// A wrapped value, with a special [`Deserialize`] impl.
-pub struct Sourced<T> {
-    pub value: T,
-    pub source: Source,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -188,7 +176,7 @@ impl Node {
     /// Use [`deserialize_or_default`] if you want a fallback.
     ///
     /// [`deserialize_or_default`]: Self::deserialize_or_default
-    pub fn deserialize<'de, T>(&self, key: &str) -> QuackResult<Option<T>>
+    pub fn deserialize<'de, T>(&'de self, key: &str) -> QuackResult<Option<T>>
     where
         T: Deserialize<'de>,
     {
@@ -212,7 +200,7 @@ impl Node {
     /// Try to deserialize `T` from the given `key`.
     ///
     /// If `key` was not found, returns `Ok(Default::default())`.
-    pub fn deserialize_or_default<'de, T>(&self, key: &str) -> QuackResult<T>
+    pub fn deserialize_or_default<'de, T>(&'de self, key: &str) -> QuackResult<T>
     where
         T: Deserialize<'de> + Default,
     {
@@ -239,7 +227,7 @@ impl Node {
         };
         for (i, &part) in parts.iter().enumerate() {
             if part.is_empty() {
-                return Err(Self::make_empty_key_fragment_error(i, key));
+                return Err(make_empty_key_fragment_error(i, key));
             }
             let Some(next) = current.get(part) else {
                 debug!(
@@ -262,76 +250,119 @@ impl Node {
         Ok(current.get(last))
     }
 
-    /// Make an error message, if i-th part of the key is empty (there are two consecutive dots).
-    fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
-        i += 1;
-        let last_two = i % 100;
-        let digit = last_two % 10;
-        let decimal = last_two - digit;
-        let suffix = match digit {
-            1 if decimal != 10 => "st",
-            2 if decimal != 10 => "nd",
-            3 if decimal != 10 => "rd",
-            _ => "th",
+    /// Try to cast this [`Node`] to an [`i64`].
+    pub fn as_i64(&self) -> QuackResult<i64> {
+        let Self::Integer(value, _) = self else {
+            qp_bail!(
+                "expected an integer not {}",
+                describe_node_with_article(self)
+            );
         };
-        qp_err!("{i}{suffix} part of the key `{key}` is empty")
+        Ok(*value)
     }
-}
 
-impl<'de> Deserialize<'de> for Source {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let (discriminant, value) = <(u32, String)>::deserialize(deserializer)?;
-
-        match discriminant {
-            0 => Ok(Source::Builtin),
-            1 => Ok(Source::Path(value.into())),
-            other => Err(serde::de::Error::custom(format!(
-                "unexpected discriminant: {other}"
-            ))),
-        }
+    /// Try to cast this [`Node`] to a [`bool`].
+    pub fn as_bool(&self) -> QuackResult<bool> {
+        let Self::Boolean(value, _) = self else {
+            qp_bail!(
+                "expected a boolean not {}",
+                describe_node_with_article(self)
+            );
+        };
+        Ok(*value)
     }
-}
 
-impl<'de, T> Deserialize<'de> for Sourced<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct SourcedVisitor<T>(std::marker::PhantomData<T>);
+    /// Try to cast this [`Node`] to a [`str`].
+    pub fn as_str(&self) -> QuackResult<&str> {
+        let Self::String(string, _) = self else {
+            qp_bail!("expected a string not {}", describe_node_with_article(self));
+        };
+        Ok(string)
+    }
 
-        impl<'de, T> Visitor<'de> for SourcedVisitor<T>
-        where
-            T: Deserialize<'de>,
-        {
-            type Value = Sourced<T>;
+    /// Try to cast this [`Node`] to a slice.
+    pub fn as_seq(&self) -> QuackResult<&[Node]> {
+        let Self::Seq(slice, _) = self else {
+            qp_bail!(
+                "expected a sequence not {}",
+                describe_node_with_article(self)
+            );
+        };
+        Ok(slice)
+    }
 
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a value with source metadata")
-            }
+    /// Try to cast this [`Node`] to a [`HashMap`].
+    pub fn as_map(&self) -> QuackResult<&HashMap<String, Node>> {
+        let Self::Map(map, _) = self else {
+            qp_bail!(
+                "expected a mapping not {}",
+                describe_node_with_article(self)
+            );
+        };
+        Ok(map)
+    }
 
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let value = map.next_value()?;
+    /// Try to cast this [`Node`] to a [`str`].
+    pub fn as_str_mut(&mut self) -> QuackResult<&mut String> {
+        let Self::String(string, _) = self else {
+            qp_bail!("expected a string not {}", describe_node_with_article(self));
+        };
+        Ok(string)
+    }
 
-                let source = map.next_value()?;
+    /// Try to cast this [`Node`] to a slice.
+    pub fn as_seq_mut(&mut self) -> QuackResult<&mut Vec<Node>> {
+        let Self::Seq(slice, _) = self else {
+            qp_bail!(
+                "expected a sequence not {}",
+                describe_node_with_article(self)
+            );
+        };
+        Ok(slice)
+    }
 
-                Ok(Sourced { value, source })
-            }
-        }
+    /// Try to cast this [`Node`] to a [`HashMap`].
+    pub fn as_map_mut(&mut self) -> QuackResult<&mut HashMap<String, Node>> {
+        let Self::Map(map, _) = self else {
+            qp_bail!(
+                "expected a mapping not {}",
+                describe_node_with_article(self)
+            );
+        };
+        Ok(map)
+    }
 
-        deserializer.deserialize_struct(
-            SOURCED_NAME,
-            SOURCED_FIELDS,
-            SourcedVisitor(std::marker::PhantomData),
-        )
+    /// Try to cast this [`Node`] to a [`str`].
+    pub fn to_string(self) -> QuackResult<String> {
+        let Self::String(string, _) = self else {
+            qp_bail!(
+                "expected a string not {}",
+                describe_node_with_article(&self)
+            );
+        };
+        Ok(string)
+    }
+
+    /// Try to cast this [`Node`] to a slice.
+    pub fn to_seq(self) -> QuackResult<Vec<Node>> {
+        let Self::Seq(slice, _) = self else {
+            qp_bail!(
+                "expected a sequence not {}",
+                describe_node_with_article(&self)
+            );
+        };
+        Ok(slice)
+    }
+
+    /// Try to cast this [`Node`] to a [`HashMap`].
+    pub fn to_map(self) -> QuackResult<HashMap<String, Node>> {
+        let Self::Map(map, _) = self else {
+            qp_bail!(
+                "expected a mapping not {}",
+                describe_node_with_article(&self)
+            );
+        };
+        Ok(map)
     }
 }
 
@@ -367,6 +398,21 @@ fn describe_node_with_article(node: &Node) -> &'static str {
         Node::Seq(..) => "a sequence",
         Node::Map(..) => "a map",
     }
+}
+
+/// Make an error message, if i-th part of the key is empty (there are two consecutive dots).
+fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
+    i += 1;
+    let last_two = i % 100;
+    let digit = last_two % 10;
+    let decimal = last_two - digit;
+    let suffix = match digit {
+        1 if decimal != 10 => "st",
+        2 if decimal != 10 => "nd",
+        3 if decimal != 10 => "rd",
+        _ => "th",
+    };
+    qp_err!("{i}{suffix} part of the key `{key}` is empty")
 }
 
 #[cfg(test)]
