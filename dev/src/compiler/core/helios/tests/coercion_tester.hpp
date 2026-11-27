@@ -162,9 +162,6 @@ namespace coercion_testing {
 		/// The worst thing this node does, parts included, is @p rank.
 		const NodeCheck& ranks(Rank rank) const;
 
-		/// Nothing at all happens to the value at runtime.
-		const NodeCheck& doesNothing() const;
-
 		/// The value is packed into the alternative `ValueType::toString` writes as
 		/// @p alternative.
 		const NodeCheck& packsInto(std::string_view alternative) const;
@@ -560,11 +557,6 @@ var global_pair: (box i32, i32) = (new 1, 2);
 
 	inline const NodeCheck& NodeCheck::ranks(const Rank rank) const {
 		expect(node->rank.getRank() == rank, "the rank differs");
-		return *this;
-	}
-
-	inline const NodeCheck& NodeCheck::doesNothing() const {
-		expect(node->isNoOp(), "expected nothing to happen to the value");
 		return *this;
 	}
 

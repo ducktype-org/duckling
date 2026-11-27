@@ -1,0 +1,80 @@
+# Places that may be changed: `var` declarations, parameters without `let`, and the parts of
+# such places.
+
+class S {
+	x: i64 = 0;
+}
+
+class Inner {
+	x: i64 = 0;
+}
+
+class Outer {
+	inner: Inner = Inner();
+}
+
+var global_counter: i64 = 1;
+
+fun changeParam(x: i64) -> i64 = {
+	x = 10;
+	return x;
+}
+
+fun changeVarParam(var x: i64) -> i64 = {
+	x = x + 10;
+	return x;
+}
+
+# A binding without `let` is a copy of the payload, so it may be changed.
+fun bindingCopy(v: i64 | bool) -> i64 = {
+	var out: i64 = 0;
+	match (v) {
+		case i : i64 = {
+			i = i + 1;
+			out = i;
+		};
+		case _ = {};
+	};
+	return out;
+}
+
+fun main() -> i64 = {
+	var x: i64 = 0;
+	x = 1;
+	x += 1;
+	builtin_output_i64(x); # 2
+
+	global_counter = 2;
+	builtin_output_i64(global_counter); # 2
+
+	builtin_output_i64(changeParam(1)); # 10
+	builtin_output_i64(changeVarParam(1)); # 11
+
+	var s = S();
+	s.x = 1;
+	builtin_output_i64(s.x); # 1
+
+	var o = Outer();
+	o.inner.x = 3;
+	builtin_output_i64(o.inner.x); # 3
+
+	var arr: i64[2] = [1i64, 2i64];
+	arr[0] = 5;
+	builtin_output_i64(arr[0]); # 5
+
+	# An iterator without `let` is a copy of the element, so it may be changed even when the array
+	# may not, and the array stays the same.
+	let constant_arr: i64[2] = [1i64, 2i64];
+	var total: i64 = 0;
+	for (e in constant_arr) {
+		e = e * 10;
+		total += e;
+	}
+	for (var e2 in constant_arr) { e2 = 5; }
+	builtin_output_i64(total); # 30
+	builtin_output_i64(constant_arr[0]); # 1
+	builtin_output_i64(constant_arr[1]); # 2
+
+	builtin_output_i64(bindingCopy(41)); # 42
+	return 0;
+}

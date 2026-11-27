@@ -192,6 +192,11 @@ class String {
 		return builtins.slice_from_ptr_len[char](pointer, len);
 	}
 
+	fun at(i: i64) -> ref char = {
+		if (i < 0i64 or i >= len) panicking.panic();
+		return &pointer[i];
+	}
+
 	mut fun at(i: i64) -> ref mut char = {
 		if (i < 0i64 or i >= len) panicking.panic();
 		return &pointer[i];
@@ -581,6 +586,11 @@ class List {
 		if (len == 0i64) panicking.panic();
 		len = len - 1i64;
 		return builtins.move_out[T](ptrof pointer[len]);
+	}
+
+	fun at(i: i64) -> ref T = {
+		if (i < 0i64 or i >= len) panicking.panic();
+		return &pointer[i];
 	}
 
 	mut fun at(i: i64) -> ref mut T = {

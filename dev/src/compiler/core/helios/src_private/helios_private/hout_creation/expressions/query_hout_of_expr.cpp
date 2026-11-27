@@ -863,10 +863,28 @@ namespace compiler::helios::code {
 				// assume this). For now we just enforce it here by an error.
 				// @TODO: #4029 In the future we might want to introduce some kind of common-type
 				// and coerce all branches to common type.
-				const auto true_type  = if_true->expression_type.getValueType();
-				const auto false_type = if_false->expression_type.getValueType();
+				auto       true_type  = if_true->expression_type.getValueType();
+				auto       false_type = if_false->expression_type.getValueType();
 				const bool true_void  = true_type.getType().getKind() == tsh::Kind::Void;
 				const bool false_void = false_type.getType().getKind() == tsh::Kind::Void;
+
+				// @TODO: #4029 Proper common type logic.
+				if (true_type != false_type and true_type.getRefKind() == tsh::ReferenceKind::Ref
+				    and false_type.getRefKind() == tsh::ReferenceKind::Ref
+				    and true_type.getType() == false_type.getType()) {
+					const auto read_only     = true_type.toRef(tsh::ViewAccess::ReadOnly);
+					auto       coerce_branch = [&](Box<Expr>& branch) {
+                        auto coerced = coercions::coerceFromBox(
+                            ctx, std::move(branch), read_only, stmt->getStablePosition()
+                        );
+                        if (coerced.hasFailed()) return false;
+                        branch = std::move(coerced).valueOrThrow();
+                        return true;
+					};
+					if (not coerce_branch(if_true) or not coerce_branch(if_false)) return;
+					true_type  = read_only;
+					false_type = read_only;
+				}
 				if (!true_void and !false_void and true_type != false_type) {
 					ctx.log<dia::PlaceholderError>(
 						base::strConcat(

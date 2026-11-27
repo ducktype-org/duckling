@@ -45,6 +45,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testMutabilityErrors);
 		TESTER_ADD_TEST(testBlockExprOutsideFunctionBody);
 		TESTER_ADD_TEST(testMainReturnErrors);
 		TESTER_ADD_TEST(testCopyabilityErrors);
@@ -602,101 +603,6 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-					let x: i64 = 0;
-					x = 1;
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A {
-					let y: i64 = 2;
-					fun setY() = { y = 10; return; }
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun f(let x: i64) = { x = 10; }
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun f(v: i64 | bool) = match (v) {
-					case let i : i64 = { i = 10; };
-					case _ = {};
-				};
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					let x: i64 = 0;
-					x += 1;
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun f() = {
-					let arr: i64[2] = [1i64, 2i64];
-					for (let e in arr) { e = 5; }
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class S { x: i64 = 0; }
-				fun f() = {
-					let s = S();
-					s.x = 1;
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun f() = {
-					let arr: i64[2] = [1i64, 2i64];
-					arr[0] = 5;
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				let G: i64 = 1;
-				fun f() = { G = 2; }
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
 					var x: i32 = 0;
 					var y: i64 = 1;
 					x += y;
@@ -993,69 +899,6 @@ private:
 			);
 		}
 
-
-		// ============================ Mutability errors ============================
-		{
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					let x: i64;
-				}
-			)",
-				{ "Immutable variables must have an initial value." },
-				1
-			);
-
-			// The parser accepts a const without a value, so HELIOS must report it.
-			checkForErrorOnCompileModule(
-				R"(
-				const g: i64;
-			)",
-				{ "A const must have a value." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				namespace n { const g: bool; }
-			)",
-				{ "A const must have a value." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					const g: i64;
-					return 0;
-				}
-			)",
-				{ "A const must have a value." },
-				1
-			);
-
-			// Using the const must not report the missing value a second time.
-			checkForErrorOnCompileModule(
-				R"(
-				const g: i64;
-				const h: i64 = g + 1;
-				fun main() -> i64 = { return h; }
-			)",
-				{ "A const must have a value." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					let x: i64 = 1;
-					x = 123;
-				}
-			)",
-				{ "Left side of assignment can't be immutable." },
-				1
-			);
-		}
 
 		// ============================ Variant errors ============================
 		{
@@ -1611,6 +1454,185 @@ private:
 				1
 			);
 		}
+	}
+
+	void testMutabilityErrors() {
+		const auto assignment_error = [&](const std::string_view module) {
+			checkForErrorOnCompileModule(
+				module, { "Left side of assignment can't be immutable." }, 1
+			);
+		};
+		const auto access_error = [&](const std::string_view module, const std::string_view phrase
+		                          ) { checkForErrorOnCompileModule(module, { phrase }, 1); };
+
+		// ============================ Declared places ============================
+		assignment_error(R"(fun f() = { let x: i64 = 0; x = 1; })");
+		assignment_error(R"(fun f() = { let x = 0i64; x = 1; })");
+		assignment_error(R"(fun f() = { let x: i64 = 0; x += 1; })");
+		assignment_error(R"(fun f() = { let x: i64 = 0; x -= 1; })");
+		assignment_error(R"(fun f() = { const c: i64 = 1; c = 2; })");
+		assignment_error(R"(
+			let G: i64 = 1;
+			fun f() = { G = 2; }
+		)");
+		assignment_error(R"(
+			const C: i64 = 1;
+			fun f() = { C = 2; }
+		)");
+		assignment_error(R"(fun f(let x: i64) = { x = 10; })");
+
+		checkForErrorOnCompileModule(
+			R"(fun f() = { let x: i64; })", { "Immutable variables must have an initial value." }, 1
+		);
+
+		checkForErrorOnCompileModule(R"(const g: i64;)", { "A const must have a value." }, 1);
+
+		// ============================ Fields and elements ============================
+		assignment_error(R"(
+			class S { x: i64 = 0; }
+			fun f() = { let s = S(); s.x = 1; }
+		)");
+		assignment_error(R"(
+			class S { let x: i64 = 0; }
+			fun f() = { var s = S(); s.x = 1; }
+		)");
+		assignment_error(R"(
+			class Inner { x: i64 = 0; }
+			class Outer { inner: Inner = Inner(); }
+			fun f() = { let o = Outer(); o.inner.x = 1; }
+		)");
+		assignment_error(R"(fun f() = { let arr: i64[2] = [1i64, 2i64]; arr[0] = 5; })");
+		assignment_error(R"(fun f(let arr: i64[2]) = { arr[0] = 5; })");
+
+		// ============================ Iterators and bindings ============================
+		assignment_error(R"(
+			fun f() = {
+				let arr: i64[2] = [1i64, 2i64];
+				for (let e in arr) { e = 5; }
+			}
+		)");
+		assignment_error(R"(
+			fun f(v: i64 | bool) = match (v) {
+				case let i : i64 = { i = 10; };
+				case _ = {};
+			};
+		)");
+
+		// ============================ References ============================
+		// Only a `ref mut` may be written through.
+		assignment_error(R"(fun f(r: ref i64) = { r = 7; })");
+		assignment_error(R"(
+			fun f() = {
+				var a: i64 = 1;
+				let r: ref i64 = &a;
+				r = 5;
+			}
+		)");
+		// A reference taken to a place that may not be changed may not write.
+		access_error(
+			R"(
+				fun set(r: ref mut i64) = { r = 7; }
+				fun f() = { let a: i64 = 1; set(&a); }
+			)",
+			"`ref i64` over to `ref mut i64`"
+		);
+		access_error(
+			R"(fun f() = { let a: i64 = 1; var r: ref mut i64 = &a; })",
+			"`ref i64` over to `ref mut i64`"
+		);
+		access_error(R"(fun f(r: ref i64) -> ref mut i64 = r;)", "`ref i64` over to `ref mut i64`");
+		// A `ref` and a `ref mut` branch common type to `ref`.
+		access_error(
+			R"(
+				fun f(c: bool, r: ref i64) = {
+					var a: i64 = 1;
+					let t: ref mut i64 = if c then &a else r;
+				}
+			)",
+			"`ref i64` over to `ref mut i64`"
+		);
+		access_error(
+			R"(
+				fun set(r: ref mut i64) = { r = 7; }
+				fun f(c: bool, r: ref i64) = { var a: i64 = 1; set(if c then &a else r); }
+			)",
+			"`ref i64` over to `ref mut i64`"
+		);
+
+		// ============================ Pointers and slices ============================
+		// Only a `ptr mut`, `manyptr mut`, `cptr mut` or `slice mut` may be written through.
+		assignment_error(R"(fun f(p: ptr i64) = { *p = 5; })");
+		assignment_error(R"(fun f(m: manyptr i64) = { m[0] = 5; })");
+		assignment_error(R"(fun f(c: cptr i64) = { c[0] = 5; })");
+		assignment_error(R"(fun f(s: slice i64) = { s[0] = 5; })");
+		access_error(
+			R"(fun f() = { let a: i64 = 1; var p: ptr mut i64 = ptrof a; })",
+			"`ptr i64` over to `ptr mut i64`"
+		);
+		access_error(R"(fun f(p: ptr i64) -> ptr mut i64 = p;)", "`ptr i64` over to `ptr mut i64`");
+		access_error(
+			R"(fun f(s: slice i64) -> slice mut i64 = s;)", "`slice i64` over to `slice mut i64`"
+		);
+		// An element reached through a read-only view is read-only, so is a pointer to it.
+		access_error(
+			R"(fun f(m: manyptr i64) -> ptr mut i64 = ptrof m[0];)",
+			"`ptr i64` over to `ptr mut i64`"
+		);
+
+		// ============================ Methods ============================
+		// Only a `mut fun` may change its `self`.
+		assignment_error(R"(
+			class S {
+				x: i64 = 0;
+				fun bump() = { x = 1; }
+			}
+		)");
+		assignment_error(R"(
+			class A {
+				let y: i64 = 2;
+				mut fun setY() = { y = 10; }
+			}
+		)");
+		// A `mut fun` may not be called on a place that may not be changed.
+		access_error(
+			R"(
+				class S {
+					x: i64 = 0;
+					mut fun bump() = { x = 1; }
+				}
+				fun f() = { let s = S(); s.bump(); }
+			)",
+			"`Class S` over to `ref mut Class S`"
+		);
+		access_error(
+			R"(
+				class S {
+					x: i64 = 0;
+					mut fun bump() = { x = 1; }
+				}
+				fun f(s: ref S) = { s.bump(); }
+			)",
+			"`ref Class S` over to `ref mut Class S`"
+		);
+		access_error(
+			R"(
+				class S {
+					x: i64 = 0;
+					mut fun bump() = { x = 1; }
+					fun get() -> i64 = { bump(); return x; }
+				}
+			)",
+			"`ref Class S` over to `ref mut Class S`"
+		);
+
+		assignment_error(R"(
+			class S {
+				x: i64 = 0;
+				fun at() -> ref i64 = &x;
+				mut fun at() -> ref mut i64 = &x;
+			}
+			fun f() = { let s = S(); s.at() = 5; }
+		)");
 	}
 
 	/**

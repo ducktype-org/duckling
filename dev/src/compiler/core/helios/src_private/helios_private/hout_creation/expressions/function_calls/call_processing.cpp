@@ -80,23 +80,8 @@ namespace compiler::helios::code {
 	using tsh::coercions::Coercion;
 	using tsh::coercions::CoercionMode;
 	using tsh::coercions::CoercionRank;
-	using tsh::coercions::Rank;
 
 	using ArgumentCoercions = std::vector<base::Optional<Coercion>>;
-
-	namespace {
-		/**
-		 * @brief Whether @p rank means that the argument is passed as is with no runtime effects,
-		 * which at most relaxes the mutability it is seen with.
-		 * @TODO: #1488 Revisit this.
-		 * TODOP: Review this.
-		 */
-		bool isExactRank(const CoercionRank rank) {
-			// Not by the order of the ranks: `RefOf` ranks before `ViewAccessRelax`, but taking a
-			// reference is not passing the argument as is.
-			return rank.getRank() == Rank::Identity or rank.getRank() == Rank::ViewAccessRelax;
-		}
-	}
 
 	struct Match final {
 		/**
@@ -124,7 +109,9 @@ namespace compiler::helios::code {
 		 */
 		[[nodiscard]]
 		bool isExact() const {
-			return std::ranges::all_of(argument_ranks, isExactRank);
+			return std::ranges::all_of(argument_ranks, [](const CoercionRank rank) {
+				return rank.isIdentity();
+			});
 		}
 
 		/**
@@ -522,7 +509,7 @@ namespace compiler::helios::code {
 					for (usize i{ 0 }; i < match.coercions.size(); i++) {
 						if_opt_none(match.coercions[i]) continue;
 						const Coercion& coercion = match.coercions[i].value();
-						if (not isExactRank(coercion.getRank())) {
+						if (not coercion.getRank().isIdentity()) {
 							if_opt_none(decl.parameters[i].origin.getStablePosition()) continue;
 							auto param_pos = decl.parameters[i].origin.getStablePosition().value();
 

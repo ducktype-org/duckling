@@ -288,10 +288,7 @@ private:
 		plan("char", "bool").succeeds().steps({ ZERO_CHECK });
 		plan(byte_type, boolean).succeeds().steps({ ZERO_CHECK });
 		plan(mutable_pointer, boolean).succeeds().steps({ ZERO_CHECK });
-		plan(mutable_pointer, immutable_pointer)
-			.succeeds()
-			.doesNothing()
-			.steps({ VIEW_ACCESS_RELAX });
+		plan(mutable_pointer, immutable_pointer).succeeds().steps({ VIEW_ACCESS_RELAX });
 		plan("()", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("((), ())", "type").succeeds().steps({ LIFT_TO_TYPE });
 		plan("ref ((), type)", "type").succeeds().steps({ DEREF, LIFT_TO_TYPE });
@@ -323,7 +320,7 @@ private:
 		plan("ref i32", "ref i32").succeeds().steps({});
 
 		// A `ref mut` may be seen as a `ref`, but not the other way.
-		plan("ref mut i32", "ref i32").succeeds().doesNothing().steps({ VIEW_ACCESS_RELAX });
+		plan("ref mut i32", "ref i32").succeeds().steps({ VIEW_ACCESS_RELAX });
 		plan("ref i32", "ref mut i32").refuses().because<coercion_error::ViewAccessMismatch>();
 
 		// The same holds for pointers and slices, and nothing converts behind them.

@@ -1,0 +1,33 @@
+# Methods: only a `mut fun` changes `self`. With a `fun` and a `mut fun` of the same name, a place
+# that may be changed picks the `mut fun` and a place that may not picks the `fun`.
+
+class Counter {
+	x: i64 = 0;
+
+	mut fun bump() = { x = x + 1; }
+
+	fun get() -> i64 = x;
+
+	fun at() -> ref i64 = &x;
+
+	mut fun at() -> ref mut i64 = &x;
+}
+
+fun bumpThrough(c: ref mut Counter) = { c.bump(); }
+
+fun main() -> i64 = {
+	var c = Counter();
+	c.bump();
+	builtin_output_i64(c.get()); # 1
+
+	bumpThrough(&c);
+	builtin_output_i64(c.get()); # 2
+
+	c.at() = 5;
+	builtin_output_i64(c.get()); # 5
+
+	let k = Counter();
+	builtin_output_i64(k.get()); # 0
+	builtin_output_i64(k.at()); # 0
+	return 0;
+}

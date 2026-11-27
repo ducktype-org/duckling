@@ -253,17 +253,11 @@ namespace compiler::tsh::coercions {
 		}
 
 		/**
-		 * @brief Whether nothing at all happens to the value at runtime, so it can be used as
-		 * it is, i.e. a coercion that only relaxes mutability.
-		 *
-		 * @note `HandOver` and `ImplicitMove` are not no-ops, because the value still has to be
-		 * copied or moved into its new place.
+		 * @brief Whether the coercion does nothing at all.
 		 */
 		[[nodiscard]]
 		bool isNoOp() const noexcept {
-			return steps.empty()
-			    || (steps.size() == 1
-			        && v_matches(steps.front().kind, coercion_step::ViewAccessRelax));
+			return steps.empty();
 		}
 
 		/**

@@ -127,8 +127,7 @@ namespace compiler::tsh::coercions {
 		}
 
 		/**
-		 * @brief Whether nothing at all happens to the value, so that it may be used as it is (i.e.
-		 * a coercion that only relaxes mutability)
+		 * @brief Whether the coercion does nothing at all.
 		 */
 		[[nodiscard]]
 		bool isNoOp() const {

@@ -1,0 +1,56 @@
+# Writing through views that may write (`ref mut`, `ptr mut`, `manyptr mut`, `cptr mut`), and
+# seeing them as read-only views.
+import core.containers.*;
+
+fun set(r: ref mut i64) = {
+	r = 7;
+}
+
+fun read(r: ref i64) -> i64 = r;
+
+# A `slice mut` cannot be made yet, so this is only compiled, never called.
+fun writeSlice(s: slice mut i64) = {
+	s[0] = 5;
+}
+
+fun main() -> i64 = {
+	var a: i64 = 1;
+	set(&a);
+	builtin_output_i64(a); # 7
+
+	# `let` only means the reference can't be rebound, a writing through `ref mut` is still allowed.
+	var b: i64 = 1;
+	let r: ref mut i64 = &b;
+	r = 5;
+	builtin_output_i64(b); # 5
+
+	# `ref mut` -> `ref` is allowed.
+	builtin_output_i64(read(&a)); # 7
+
+	# Two `ref mut` branches stay a `ref mut`.
+	var c: i64 = 1;
+	var d: i64 = 2;
+	set(if true then &c else &d);
+	set(if false then &c else &d);
+	builtin_output_i64(c); # 7
+	builtin_output_i64(d); # 7
+
+	var e: i64 = 1;
+	var p: ptr mut i64 = ptrof e;
+	*p = 2;
+	var q: ptr i64 = p;
+	builtin_output_i64(e); # 2
+	builtin_output_i64(*q); # 2
+
+	var m = allocation[i64].many_alloc(2);
+	m[0] = 3;
+	m[1] = m[0] + 1;
+	builtin_output_i64(m[1]); # 4
+	allocation[i64].many_free(m);
+
+	var f: i64 = 1;
+	let cp = &f as cptr mut i64;
+	cp[0] = 4;
+	builtin_output_i64(f); # 4
+	return 0;
+}

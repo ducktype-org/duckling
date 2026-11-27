@@ -167,9 +167,14 @@ namespace compiler::helios::coercions {
 		}
 
 		Box<Expr> applyStep(
-			query::Context&, const step::ViewAccessRelax&, const tsh::ValueType<>&, Box<Expr> from
+			query::Context&,
+			const step::ViewAccessRelax&,
+			const tsh::ValueType<>& result,
+			Box<Expr>               from
 		) {
 			// Only what may be done with the value changes, the value itself does not.
+			from->expression_type
+				= tsh::ExpressionType<>(result, from->expression_type.getValueCategory());
 			return from;
 		}
 

@@ -75,17 +75,17 @@ fun bumpInPlace(v: ref mut (i32 | f32)) -> i64 = {
 # ===== A `ref` alternative: the variant stores the reference itself =====
 #
 # Only the underlying type picks the alternative, so both a `ref i32` and an `i32` constraint
-# select the `ref i32` alternative - the first binds the stored reference, the second reads the
+# select the `ref mut i32` alternative - the first binds the stored reference, the second reads the
 # referenced value out of it.
 
-fun refAltByRef(v: ref (ref i32 | f32)) -> i64 = {
+fun refAltByRef(v: ref (ref mut i32 | f32)) -> i64 = {
 	return match (v) {
 		case x: ref i32 = x as i64;
 		case _ = -1i64;
 	};
 }
 
-fun refAltDirect(v: ref (ref i32 | f32)) -> i64 = {
+fun refAltDirect(v: ref (ref mut i32 | f32)) -> i64 = {
 	return match (v) {
 		case x: i32 = x as i64;
 		case _ = -1i64;

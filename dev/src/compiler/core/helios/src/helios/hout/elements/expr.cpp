@@ -785,6 +785,7 @@ namespace compiler::helios::code {
 		 * Mutability is left out on purpose: it is not enforced anywhere else either (see
 		 * @TODO: #1488 in the coercion rules), and a bound payload comes out `imm` while a
 		 * freshly computed value does not, so comparing it would reject reasonable matches.
+		 * @TODO: #4029 Coerce to a common type.
 		 */
 		bool sameResultType(const tsh::ValueType<>& a, const tsh::ValueType<>& b) {
 			return a.getType() == b.getType() && a.getRefKind() == b.getRefKind();

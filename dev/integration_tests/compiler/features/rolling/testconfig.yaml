@@ -17,6 +17,7 @@ SubDirs:
   - dynamic_arrays
   - optimisations
   - references
+  - mutability
   - boxes
   - variants
   - pointers
