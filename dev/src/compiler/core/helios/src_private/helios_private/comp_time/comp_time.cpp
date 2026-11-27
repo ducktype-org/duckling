@@ -767,19 +767,53 @@ namespace compiler::helios {
 					result = ctv;
 					return;
 				}
-				const auto& numeric = ctv.get<NumericValue>();
-				if (!numeric) {
+
+				// To avoid handling every source x target pair, a numeric, `char` or `bool` source
+				// is first turned into a `NumericValue`. `char` and `bool` are stored as `u8`.
+				auto numeric_equivalent = [&]() -> base::Optional<NumericValue> {
+					if (const auto maybe_numeric = ctv.get<NumericValue>()) return maybe_numeric;
+					if (const auto maybe_char = ctv.get<char>())
+						return NumericValue{ static_cast<std::uint8_t>(maybe_char.value()) };
+					if (const auto maybe_bool = ctv.get<bool>())
+						return NumericValue{ static_cast<std::uint8_t>(maybe_bool.value()) };
+					return std::nullopt;
+				}();
+
+				if (!numeric_equivalent
+				    or cast.target_type.getRefKind() != tsh::ReferenceKind::Direct) {
 					result = CouldNotShortPath{};
 					return;
 				}
 
-				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
-				if (!maybe_new_numeric.has_value()) {
-					result = CouldNotShortPath{};
-					return;
+				switch (cast.target_type.getType().getKind()) {
+				case tsh::Kind::Integral:
+				case tsh::Kind::Float: {
+					auto maybe_new_numeric = numeric_equivalent->castTo(cast.target_type.getType());
+					if (maybe_new_numeric.has_value())
+						result = CompileTimeValue{ maybe_new_numeric.value() };
+					else
+						result = CouldNotShortPath{};
+					break;
 				}
-
-				result = CompileTimeValue{ maybe_new_numeric.value() };
+				case tsh::Kind::Char: {
+					auto maybe_u8 = numeric_equivalent->coerceTo<std::uint8_t>();
+					if (maybe_u8.has_value())
+						result = CompileTimeValue{ static_cast<char>(maybe_u8.value()) };
+					else
+						result = CouldNotShortPath{};
+					break;
+				}
+				case tsh::Kind::Bool: {
+					auto maybe_bool = numeric_equivalent->coerceTo<bool>();
+					if (maybe_bool.has_value())
+						result = CompileTimeValue{ maybe_bool.value() };
+					else
+						result = CouldNotShortPath{};
+					break;
+				}
+				default:
+					result = CouldNotShortPath{};
+				}
 			}
 
 			void visitMoveExpr(const code::MoveExpr& expr) final {
