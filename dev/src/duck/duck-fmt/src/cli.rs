@@ -30,7 +30,7 @@ pub(super) fn cli() -> Command {
                 .trailing_var_arg(true)
                 .num_args(0..)
                 .value_parser(value_parser!(OsString))
-                .conflicts_with_all(["check", "print", "config"]),
+                .conflicts_with_all(["check", "print"]),
         )
         .styles(get_styles())
         .about("Formats all Duckling files inside the current package using `duckfmt`")
