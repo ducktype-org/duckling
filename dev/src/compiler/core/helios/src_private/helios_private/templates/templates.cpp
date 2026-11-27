@@ -201,7 +201,7 @@ namespace compiler::helios::templates {
 				);
 			auto prev = baked_root_data_pointer->postponed_data->exchange(
 				new TemplateBakePSTLinkedData::PostponedData{
-					.template_symbol            = key.template_sym_id,
+					.unbaked_template_symbol    = key.template_sym_id,
 					.template_arguments_symbols = std::move(args),
 				},
 				std::memory_order_release

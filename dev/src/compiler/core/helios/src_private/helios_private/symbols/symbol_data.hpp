@@ -115,7 +115,7 @@ namespace compiler::helios {
 		/**
 		 * The template the symbol was baked from.
 		 */
-		SymID template_symbol;
+		SymID unbaked_template_symbol;
 
 		/**
 		 * The constants holding the template arguments, matching the template parameters 1-1.
