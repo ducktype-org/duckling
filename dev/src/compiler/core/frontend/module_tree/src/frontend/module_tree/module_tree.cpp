@@ -118,7 +118,9 @@ namespace compiler::frontend {
 	}
 
 	usize ModuleTree::getSubmoduleCount() const {
-		// ADD: not in query assertions!
+		CORE_ASSERT(
+			!query::Context::areWeInsideQuery(), "getSubmoduleCount called from within query!"
+		);
 
 		const auto standard_node = tryAs<StandardModuleTreeNode>();
 		if (not standard_node.has_value()) return 0;

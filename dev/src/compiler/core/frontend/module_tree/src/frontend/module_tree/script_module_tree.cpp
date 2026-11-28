@@ -9,6 +9,10 @@
 namespace compiler::frontend {
 	std::vector<base::Ref<ModuleTree>> SyntheticReplChainModuleTreeNode::collectChildrenModules(
 	) const {
+		CORE_ASSERT(
+			!query::Context::areWeInsideQuery(), "collectChildrenModules called from within query!"
+		);
+
 		std::vector<base::Ref<ModuleTree>> children;
 		if (m_repl_module_child.has_value()) children.emplace_back(m_repl_module_child.value());
 		return children;
@@ -44,6 +48,10 @@ namespace compiler::frontend {
 	ScriptModuleTreeNode::ScriptModuleTreeNode(): ModuleTree() { kind = ModuleKind::Script; }
 
 	std::vector<base::Ref<ModuleTree>> ScriptModuleTreeNode::collectChildrenModules() const {
+		CORE_ASSERT(
+			!query::Context::areWeInsideQuery(), "collectChildrenModules called from within query!"
+		);
+
 		std::vector<base::Ref<ModuleTree>> children;
 		if (m_repl_module_child.has_value()) children.emplace_back(m_repl_module_child.value());
 		return children;

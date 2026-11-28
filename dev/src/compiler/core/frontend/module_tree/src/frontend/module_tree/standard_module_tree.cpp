@@ -13,6 +13,10 @@ namespace compiler::frontend {
 	}
 
 	std::vector<base::Ref<ModuleTree>> StandardModuleTreeNode::collectChildrenModules() const {
+		CORE_ASSERT(
+			!query::Context::areWeInsideQuery(), "collectChildrenModules called from within query!"
+		);
+
 		std::vector<base::Ref<ModuleTree>> children;
 		for (auto& [_, submodule]: m_submodules) children.push_back(submodule);
 		return children;
