@@ -365,4 +365,28 @@ namespace vm {
 		}
 		CORE_UNREACHABLE();
 	}
+
+	bool Type::needsBlock() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				return std::ranges::any_of(data.fields, [](const kind::FieldDesc& field) {
+					return field.type->needsBlock();
+				});
+			}
+			variant_case(kind::FixedSizeTable, table) { return table.inner_type->needsBlock(); }
+			variant_case_novalue(kind::Variant) { return true; }
+			variant_case_novalue(
+				kind::DynamicTable,
+				kind::Function,
+				kind::Pointer,
+				kind::CPointer,
+				kind::Opaque,
+				kind::Primitive
+			) {
+				return false;
+			}
+			variant_default { CORE_PANIC("This should never happen"); }
+		}
+		CORE_UNREACHABLE();
+	}
 }

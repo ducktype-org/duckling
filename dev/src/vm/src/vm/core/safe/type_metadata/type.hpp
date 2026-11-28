@@ -161,6 +161,12 @@ namespace vm {
 
 		bool isTriviallyCopyable() const;
 
+		/**
+		 * @brief Whether a value of this type has to live in a memory block, i.e. whether it holds
+		 * a variant. A variant's set alternative is kept in a child view block of its block.
+		 */
+		[[nodiscard]] bool needsBlock() const;
+
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;

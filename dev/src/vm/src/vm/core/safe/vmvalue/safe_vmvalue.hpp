@@ -7,6 +7,7 @@
 #pragma once
 
 #include <vm/api/data/process_info.hpp>
+#include <vm/core/safe/memory/frame.hpp>
 #include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
@@ -43,12 +44,6 @@ namespace vm {
 		 */
 		SafeVMValue(SafeVMProcess& process, TypeCRef type);
 
-		/**
-		 * @brief Creates a SafeVMValue of specified type and fills it with the bytes from the `src`
-		 * pointer.
-		 */
-		SafeVMValue(SafeVMProcess& process, TypeCRef type, Pointer src);
-
 		std::vector<byte>  data;        /// data.size() == type.getSize()
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
@@ -84,6 +79,15 @@ namespace vm {
 
 		/** @brief Fills the value's data with the bytes pointed to by `src`. */
 		void importData(Pointer src);
+
+		/**
+		 * @brief Copies the value into a local variable. The variable gets a block only when its
+		 * type needs one, see `Type::needsBlock`.
+		 */
+		void exportToSlot(LocalSlot& slot) const;
+
+		/** @brief Fills the value from a local variable, without giving the variable a block. */
+		void importFromSlot(const LocalSlot& slot);
 
 		/** @copydoc IVMValue::importDataFrom */
 		void importDataFrom(const IVMValue& source) override;
