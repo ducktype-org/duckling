@@ -170,11 +170,22 @@ ignored, missing keys keep their default:
 }
 ```
 
+### Where `duckfmt` finds its configuration
+
+1. `-c, --config <path>` given: that file is used.
+2. Otherwise `duckfmt` looks for a file named `duckfmt_config.json` in the current
+   directory, then in each parent directory up to the filesystem root. The nearest
+   one is used.
+3. No such file anywhere: the built-in defaults are used. This is not an error.
+
+A config file that exists but cannot be parsed is an error (exit code 2), whether
+it was given with `--config` or found by the lookup.
+
 ## The `duckfmt` CLI
 
 ```
 duckfmt <file> [file...] [options]
-  -c, --config <path>   JSON formatter config file
+  -c, --config <path>   JSON formatter config file (default: nearest duckfmt_config.json)
   -i, --in-place        write the result back to the files instead of stdout
   -k, --check           report on stderr; exit non-zero if a file is not formatted
 ```

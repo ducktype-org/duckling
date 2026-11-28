@@ -9,6 +9,8 @@
 #include <nlohmann/json.hpp>
 
 #include <string>
+#include <system_error>
+#include <utility>
 
 namespace formatter {
 
@@ -55,5 +57,23 @@ namespace formatter {
 
 	FormatConfig FormatConfig::fromJson(const nlohmann::json& json) {
 		return json.get<FormatConfig>();
+	}
+
+	base::Optional<std::filesystem::path> findConfigFile(const std::filesystem::path& start_dir) {
+		std::error_code error;
+		auto            dir = std::filesystem::absolute(start_dir, error).lexically_normal();
+		if (error) return {};
+		// "a/b/" has an empty file name, and its parent_path() is "a/b" again.
+		if (not dir.has_filename()) dir = dir.parent_path();
+
+		while (true) {
+			auto candidate = dir / CONFIG_FILE_NAME;
+			if (std::filesystem::is_regular_file(candidate, error)) return candidate;
+
+			auto parent = dir.parent_path();
+			// The root is its own parent.
+			if (parent == dir) return {};
+			dir = std::move(parent);
+		}
 	}
 }

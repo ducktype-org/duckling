@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <initializer_list>
 #include <string>
 #include <string_view>
@@ -95,6 +96,7 @@ public:
 		TESTER_ADD_TEST(testConfigAffectsOutput);
 		TESTER_ADD_TEST(testConfigFromJson);
 		TESTER_ADD_TEST(testInvalidIndentStyleRejected);
+		TESTER_ADD_TEST(testFindConfigFile);
 
 		// Property tests.
 		TESTER_ADD_TEST(testRoundTripTokens);
@@ -459,6 +461,46 @@ fun f() = {
 			[] { return FormatConfig::fromJson(nlohmann::json::parse(R"({"indentStyle": 7})")); },
 			"a non-string indentStyle must be rejected"
 		);
+	}
+
+	/** findConfigFile walks up from the start directory; the nearest config file wins. */
+	void testFindConfigFile() {
+		namespace stdfs = std::filesystem;
+		using formatter::CONFIG_FILE_NAME;
+		using formatter::findConfigFile;
+
+		const auto root   = fs::FileManager::createRandomTempDirectory().getFilePath().getPath();
+		const auto middle = root / "a";
+		const auto nested = middle / "b";
+		stdfs::create_directories(nested);
+		const auto found_at = [&](const stdfs::path& start, const stdfs::path& expected_dir) {
+			const auto found = findConfigFile(start);
+			ASSERT_HAS_VALUE(found, "no config file found from ", start.string());
+			assertTrue(
+				stdfs::equivalent(found.value(), expected_dir / CONFIG_FILE_NAME),
+				base::strConcat(
+					"want the config in ", expected_dir.string(), ", got ", found.value().string()
+				)
+			);
+		};
+
+		ASSERT_NO_VALUE(findConfigFile(nested), "no directory holds a config file yet");
+
+		std::ofstream(root / CONFIG_FILE_NAME) << "{}";
+		found_at(nested, root);
+		found_at(root, root);
+		// A trailing separator must not stop the walk early.
+		found_at(nested / "", root);
+
+		// A directory with the config's name is not a config file.
+		stdfs::create_directory(nested / CONFIG_FILE_NAME);
+		found_at(nested, root);
+
+		std::ofstream(middle / CONFIG_FILE_NAME) << "{}";
+		found_at(nested, middle);
+		found_at(root, root);
+
+		stdfs::remove_all(root);
 	}
 
 	/** Formatting must never change the significant token stream of a program, comments included. */

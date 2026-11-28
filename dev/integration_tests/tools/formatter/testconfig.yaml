@@ -50,3 +50,16 @@ Tests:
         # --check fails when only a later file is unformatted.
         run_args: "-k format_formatted.dk format_unformatted.dk"
         ExitCode: 1
+  format-config-lookup:
+    Cases:
+      found-config-used:
+        # Without --config, the nearest duckfmt_config.json from the current directory up is
+        # used: config_lookup/ holds one asking for 2-space indentation.
+        Run: "cd config_lookup/nested && @{duckfmt_path} ../../format_unformatted.dk"
+        Output:
+          File: config_lookup/nested/format_with_found_config.out
+      explicit-config-wins:
+        # --config replaces the lookup: the bad explicit file is an error, the found one is
+        # not even read.
+        Run: "cd config_lookup/nested && @{duckfmt_path} -c ../../bad_indent_style.json ../../format_unformatted.dk"
+        ExitCode: 2
