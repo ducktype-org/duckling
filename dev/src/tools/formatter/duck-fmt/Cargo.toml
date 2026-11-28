@@ -1,0 +1,9 @@
+[package]
+name = "duck-fmt"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.6.4" }
+duck_core = { path = "../../../duck/duck_core"}
+tracing = { version = "0.1.44" }
