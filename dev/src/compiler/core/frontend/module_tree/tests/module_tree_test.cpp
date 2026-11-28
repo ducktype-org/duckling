@@ -89,6 +89,7 @@ public:
 		TESTER_ADD_TEST(testFileResolverSubstitution);
 		TESTER_ADD_TEST(testReplChainParentStructure);
 		TESTER_ADD_TEST(testReplChainKindSpecificHash);
+		TESTER_ADD_TEST(testScriptAndReplChainFinalizeAsserts);
 	}
 
 protected:
@@ -846,6 +847,82 @@ private:
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
 							  [&]() { std::ignore = script_head->as<StandardModuleTreeNode>(); },
 							  "A script module is not a standard module"
+		);)
+	}
+
+	void testScriptAndReplChainFinalizeAsserts() {
+		const auto package_id = base::StrID("finalize_asserts_package_id");
+
+		// A script needs a name and a package ID.
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() {
+								  auto builder = ScriptModuleTreeBuilder::create();
+								  builder->setPackageID(package_id);
+								  std::ignore = builder->finalize();
+							  },
+							  "A script module without a name should not finalize"
+		);)
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() {
+								  auto builder = ScriptModuleTreeBuilder::create();
+								  builder->setName(base::StrID("script"));
+								  std::ignore = builder->finalize();
+							  },
+							  "A script module without a package ID should not finalize"
+		);)
+
+		// A REPL chain node needs a name, a package ID and its synthetic source file.
+		const auto make_chain_builder = [&]() {
+			auto builder = SyntheticReplChainModuleTreeBuilder::create();
+			builder->setName(base::StrID("stmt"));
+			builder->setPackageID(package_id);
+			builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile("1;"));
+			return builder;
+		};
+		IF_BUILD_TYPE_DEV(
+			assertThrows<base::Panic>(
+				[&]() {
+					auto builder = SyntheticReplChainModuleTreeBuilder::create();
+					builder->setPackageID(package_id);
+					builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile("1;"));
+					std::ignore = builder->finalize();
+				},
+				"A REPL chain module without a name should not finalize"
+			);
+		)
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() {
+								  auto builder = SyntheticReplChainModuleTreeBuilder::create();
+								  builder->setName(base::StrID("stmt"));
+								  builder->setPackageID(package_id);
+								  std::ignore = builder->finalize();
+							  },
+							  "A REPL chain module without a source file should not finalize"
+		);)
+
+		// The parent of a REPL chain node must be in the same package.
+		[[maybe_unused]] auto head = make_chain_builder()->finalize();
+		IF_BUILD_TYPE_DEV(
+			assertThrows<base::Panic>(
+				[&]() {
+					auto builder = SyntheticReplChainModuleTreeBuilder::create();
+					builder->setName(base::StrID("stmt"));
+					builder->setPackageID(base::StrID("other_package_id"));
+					builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile("1;"));
+					builder->setParent(head);
+					std::ignore = builder->finalize();
+				},
+				"A REPL chain module from another package should not finalize"
+			);
+		)
+
+		// A finalized builder cannot be finalized again.
+		auto builder = make_chain_builder();
+		auto node    = builder->finalize();
+		ASSERT_EQUAL(node->getKind(), ModuleKind::ReplChain);
+		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
+							  [&]() { std::ignore = builder->finalize(); },
+							  "A REPL chain builder should not finalize twice"
 		);)
 	}
 

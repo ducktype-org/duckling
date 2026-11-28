@@ -63,6 +63,12 @@ namespace compiler::frontend {
 		void assertNotFinalized() const;
 
 		/**
+		 * @brief Asserts that the module name is set.
+		 * @note Not part of finalizeCommon() yet: standard modules can still be unnamed (#4246).
+		 */
+		void assertNameSet() const;
+
+		/**
 		 * @brief Stores the parent, which is linked to the module in finalize().
 		 * @note The per-kind builders check the kind of the parent before calling this.
 		 */
@@ -70,6 +76,7 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Marks the builder as finalized, stores the node and fills in the common data.
+		 * Asserts that the builder is not finalized yet and that the package ID is set.
 		 * @param node Freshly created node of the builder's kind.
 		 * @return Reference to the stored node. The parent is NOT linked yet, the caller does it
 		 * with the matching modifier once the kind-specific data is in place.
@@ -224,7 +231,8 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Finalizes the construction and returns the built module.
-		 * After calling this, the builder becomes invalid.
+		 * After calling this, the builder becomes invalid. The name and the package ID must be set.
+		 * The parent, if set, is checked like a submodule of a standard module.
 		 */
 		base::Ref<ModuleTree> finalize();
 
@@ -263,7 +271,9 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Finalizes the construction and returns the built module.
-		 * After calling this, the builder becomes invalid.
+		 * After calling this, the builder becomes invalid. The name, the package ID and the
+		 * synthetic source file must be set. The parent, if set, must have the same package ID and
+		 * no REPL child yet.
 		 */
 		base::Ref<ModuleTree> finalize();
 

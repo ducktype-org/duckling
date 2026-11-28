@@ -186,6 +186,10 @@ namespace compiler::frontend {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 	}
 
+	void ModuleTreeBuilderCommon::assertNameSet() const {
+		CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
+	}
+
 	void ModuleTreeBuilderCommon::setName(base::StrID name) {
 		assertNotFinalized();
 		CORE_ASSERT(m_name.isBad(), "Module name is already set");
@@ -207,8 +211,8 @@ namespace compiler::frontend {
 	base::Ref<ModuleTree> ModuleTreeBuilderCommon::finalizeCommon(base::Box<ModuleTree> node) {
 		assertNotFinalized();
 
-		// @TODO: #4246 bring this assertion back
-		// CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
+		// @TODO: #4246 check the name here for every kind, once standard modules can no longer be
+		// unnamed. Until then only the script and REPL chain builders call assertNameSet().
 
 		CORE_ASSERT(
 			m_package_id.isGood(), "Package ID must be set before finalizing the module tree"
@@ -308,6 +312,9 @@ namespace compiler::frontend {
 	}
 
 	base::Ref<ModuleTree> ScriptModuleTreeBuilder::finalize() {
+		assertNotFinalized();
+		assertNameSet();
+
 		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<ScriptModuleTreeNode>());
 
 		if (m_parent.has_value()) ScriptModuleTreeModifier::setParent(module_ref, m_parent.value());
@@ -346,14 +353,20 @@ namespace compiler::frontend {
 	}
 
 	base::Ref<ModuleTree> SyntheticReplChainModuleTreeBuilder::finalize() {
+		assertNotFinalized();
+		assertNameSet();
+		CORE_ASSERT(
+			m_synthetic_source_file_path.has_value(),
+			"Synthetic source file must be set before finalizing a REPL chain module"
+		);
+
 		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<SyntheticReplChainModuleTreeNode>());
 
 		if (m_parent.has_value())
 			SyntheticReplChainModuleTreeModifier::setParent(module_ref, m_parent.value());
 
-		if (m_synthetic_source_file_path.has_value())
-			module_ref->as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file
-				= SourceFile::create(m_synthetic_source_file_path.value(), module_ref);
+		module_ref->as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file
+			= SourceFile::create(m_synthetic_source_file_path.value(), module_ref);
 
 		return module_ref;
 	}
