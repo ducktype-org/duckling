@@ -24,7 +24,7 @@
 
 namespace compiler::frontend {
 
-	class ModuleTreeModifier;
+	class ModuleTreeModifierCommon;
 	class ModuleTree;
 	struct GetFileID_Functor;
 
@@ -46,13 +46,23 @@ namespace compiler::frontend {
 		base::StrID                             lang_file_name;
 		MBox<pst::ParsedPST<>>                  parse_tree;
 		Ref<ModuleTree>                         linked_module;
-		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
-		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
+
+		/**
+		 * Key to support removal from static storage.
+		 */
+		base::Optional<usize> storage_handle;
+
+		/**
+		 * this is a self pointer, it is necessary to get the FileID from the const SourceFile
+		 */
 		base::Optional<Ref<SourceFile>> self;
-		mutable base::Optional<hashing::ComponentHash>
-			component_hash;  //< Logical path hash for this file (module path + file name)
-		//< Any functions that actually modifies it like invalidateComponentHash should not be
-		// marked const
+
+		/**
+		 * Logical path hash for this file (module path + file name)
+		 * @important Any functions that actually modifies it like invalidateComponentHash should
+		 * not be marked const
+		 */
+		mutable base::Optional<hashing::ComponentHash> component_hash;
 
 		/**
 		 * @brief Constructs a SourceFile and assigns a new FileID.
@@ -75,7 +85,7 @@ namespace compiler::frontend {
 		 */
 		void invalidateComponentHash();
 
-		friend class ModuleTreeModifier;
+		friend class ModuleTreeModifierCommon;
 		friend class ModuleTree;
 		friend struct GetFileID_Functor;
 		friend struct FileID;
@@ -173,7 +183,8 @@ namespace compiler::frontend {
 		/**
 		 * @brief Remove SourceFile.
 		 * @note This will invalidate all references!
-		 * In principle it should only be used in ModuleTreeModifier in pair with query invalidations.
+		 * In principle it should only be used in the module tree modifiers in pair with query
+		 * invalidations.
 		 */
 		static void removeSourceFileFromStorage(Ref<SourceFile> source_file);
 

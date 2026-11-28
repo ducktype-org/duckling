@@ -12,6 +12,7 @@
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <global_state/backend_options.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -77,6 +78,7 @@ private:
 		// graph in the second test Thanks to that we know that driver correctly marks non-existing
 		// submodules as green
 		auto sub_module_locked = frontend::getModuleRef(module)
+		                             ->as<frontend::StandardModuleTreeNode>()
 		                             ->getSubmoduleByName(base::StrID{ "submodule" })
 		                             .illegalAccess();
 

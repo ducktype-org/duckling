@@ -77,8 +77,9 @@ namespace compiler::repl {
 
 			while (true) {
 				modules.emplace_back(current);
-				auto parent = ctx.query<frontend::QueryReplModuleParent>(current);
-				if (!parent.has_value()) break;
+				auto parent = ctx.query<frontend::QueryParentModule>(current);
+				if (!parent.has_value() || !ctx.query<frontend::QueryIsReplModule>(parent.value()))
+					break;
 				current = parent.value();
 			}
 

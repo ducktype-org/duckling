@@ -47,7 +47,7 @@ private:
 		// Create a temporary file for testing
 		auto temp_file
 			= fs::FileManager::createRandomTempFile("fn main() { println(\"Hello World\"); }");
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		// Create SourceFile
 		auto source_file = SourceFile::create(temp_file, dummy_module);
@@ -66,7 +66,7 @@ private:
 		// Create test file with specific content
 		auto test_content = "struct Point { x: i32, y: i32 }";
 		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file = SourceFile::create(temp_file, dummy_module);
 
@@ -92,7 +92,7 @@ private:
 		// Create test file with valid syntax
 		auto test_content = "fn test() { return 42; }";
 		auto temp_file    = fs::FileManager::createRandomTempFile(test_content);
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file = SourceFile::create(temp_file, dummy_module);
 
@@ -111,7 +111,7 @@ private:
 		auto temp_file1 = fs::FileManager::createRandomTempFile(content1);
 		auto temp_file2 = fs::FileManager::createRandomTempFile(content2);
 
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		try {
 			// Test basic file content first
@@ -153,7 +153,7 @@ private:
 		// Create test files
 		auto temp_file1   = fs::FileManager::createRandomTempFile("content1");
 		auto temp_file2   = fs::FileManager::createRandomTempFile("content2");
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file1 = SourceFile::create(temp_file1, dummy_module);
 		auto source_file2 = SourceFile::create(temp_file2, dummy_module);
@@ -183,7 +183,7 @@ private:
 		// Test working with multiple source files
 		std::vector<fs::File>        temp_files;
 		std::vector<Ref<SourceFile>> source_files;
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		// Create multiple source files
 		for (int i = 0; i < 5; ++i) {
@@ -227,8 +227,8 @@ private:
 		// Test source files belonging to different modules
 		auto temp_file = fs::FileManager::createRandomTempFile("fn shared_function() {}");
 
-		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
-		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module1 = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module2 = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 
 		auto source_file1 = SourceFile::create(temp_file, dummy_module1);
 		auto source_file2 = SourceFile::create(temp_file, dummy_module2);
@@ -263,7 +263,7 @@ private:
 	void testFileModifiedUpdatesContent() {
 		// Create a temp file and SourceFile
 		auto temp_file    = fs::FileManager::createRandomVirtualFile("original content");
-		auto dummy_module = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		auto source_file  = SourceFile::create(temp_file, dummy_module);
 
 		// Check initial cached content
@@ -274,7 +274,7 @@ private:
 		// Modify file content
 		temp_file.writeToFile("new content");
 		// Call fileModified
-		ModuleTreeModifier::fileModified(temp_file);
+		StandardModuleTreeModifier::fileModified(temp_file);
 
 		std::cerr << "After modification, temp_file content: "
 				  << temp_file.getContent().view().stringView() << '\n';
@@ -290,8 +290,8 @@ private:
 
 	void testGetSourceFilesFromFile() {
 		auto temp_file     = fs::FileManager::createRandomTempFile("abc");
-		auto dummy_module1 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
-		auto dummy_module2 = ModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module1 = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
+		auto dummy_module2 = StandardModuleTreeBuilder::createWithRandomPackageID()->finalize();
 		// Create two SourceFiles for the same fs::File but different modules
 		auto source_file1 = SourceFile::create(temp_file, dummy_module1);
 		auto source_file2 = SourceFile::create(temp_file, dummy_module2);
@@ -310,7 +310,7 @@ private:
 
 	void testSourceFileRemovalClearsLookups() {
 		std::vector<fs::File> cleanup_files;
-		auto                  module_builder = ModuleTreeBuilder::create();
+		auto                  module_builder = StandardModuleTreeBuilder::create();
 		module_builder->setName(base::StrID("sf_removal_mod"));
 		module_builder->setPackageID(base::StrID("sf_removal_pkg"));
 		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
@@ -321,7 +321,7 @@ private:
 		auto before = SourceFile::getSourceFilesFromPath(main_file.getFilePath());
 		ASSERT_EQUAL(1, before.size());
 
-		ModuleTreeModifier::removeModuleRecursive(module);
+		StandardModuleTreeModifier::removeModuleRecursive(module);
 		auto after = SourceFile::getSourceFilesFromPath(main_file.getFilePath());
 		ASSERT_TRUE(after.empty());
 
@@ -330,7 +330,7 @@ private:
 
 	void testSourceFileDanglingReferenceDetection() {
 		std::vector<fs::File> cleanup_files;
-		auto                  module_builder = ModuleTreeBuilder::create();
+		auto                  module_builder = StandardModuleTreeBuilder::create();
 		module_builder->setName(base::StrID("sf_dangling_mod"));
 		module_builder->setPackageID(base::StrID("sf_dangling_pkg"));
 		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
@@ -341,7 +341,7 @@ private:
 
 		auto file_id = module->getMainSourceFile().illegalAccess();
 
-		ModuleTreeModifier::removeModuleRecursive(module);
+		StandardModuleTreeModifier::removeModuleRecursive(module);
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
 							  [&]() { std::ignore = GetFileID_Functor::get(file_id.getID()); },
@@ -358,14 +358,14 @@ private:
 		auto file_other = root.createSubFile("content", "other.duck");
 
 		// Build first module (named "modA")
-		auto mod_a_builder = ModuleTreeBuilder::createWithRandomPackageID();
+		auto mod_a_builder = StandardModuleTreeBuilder::createWithRandomPackageID();
 		mod_a_builder->setName(base::StrID("modA"));
 		auto mod_a_main = root.createSubFile("mainA", "modA.dk");
 		mod_a_builder->setMainSourceFile(mod_a_main);
 		auto mod_a = mod_a_builder->finalize();
 
 		// Build second module (named "modB")
-		auto mod_b_builder = ModuleTreeBuilder::createWithRandomPackageID();
+		auto mod_b_builder = StandardModuleTreeBuilder::createWithRandomPackageID();
 		mod_b_builder->setName(base::StrID("modB"));
 		auto mod_b_main = root.createSubFile("mainB", "modB.dk");
 		mod_b_builder->setMainSourceFile(mod_b_main);

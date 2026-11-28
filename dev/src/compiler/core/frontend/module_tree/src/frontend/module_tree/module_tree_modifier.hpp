@@ -14,70 +14,29 @@
 #include <filesystem/file.hpp>
 
 namespace compiler::frontend {
+	class SyntheticReplChainModuleTreeNode;
+
 	/**
-	 * @brief Modifier class for making changes to ModuleTree instances.
+	 * @brief Modifications that work the same for every module kind, and the helpers shared by the
+	 * per-kind modifiers (StandardModuleTreeModifier, ScriptModuleTreeModifier and
+	 * SyntheticReplChainModuleTreeModifier).
 	 *
-	 * ModuleTreeModifier provides static methods to add, remove, and update source files,
-	 * submodules, parent relationships, and other files within a ModuleTree.
-	 * All modifications are performed in-place and require a query context.
-	 * This class cannot be instantiated.
+	 * All modifications are performed in-place. This class cannot be instantiated.
 	 * If you are using this class you should know what you are doing.
+	 *
+	 * @note The split of the modifiers per module kind is not a settled design. Nobody is attached
+	 * to it, so reshape these classes freely when the code needs it.
 	 */
-	class ModuleTreeModifier final {
+	class ModuleTreeModifierCommon {
 	public:
 		/**
-		 * Sets the main source file for the given module.
-		 * @param module The module to modify.
-		 * @param file The file to set as main source file.
-		 */
-		static void setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Removes the main source file from the given module.
-		 * @param module The module to modify.
-		 */
-		static void removeMainSourceFile(base::Ref<ModuleTree> module);
-
-		/**
-		 * Adds a submodule to the given module.
-		 * @param module The module to modify.
-		 * @param submodule The submodule to add.
-		 */
-		static void addSubmodule(base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule);
-
-		/**
-		 * Adds an "other" file to the given module.
-		 * @param module The module to modify.
-		 * @param file The file to add.
-		 */
-		static void addOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Removes an "other" file from the given module.
-		 * @param module The module to modify.
-		 * @param file The file to remove.
-		 */
-		static void removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Sets the parent of the given module.
-		 * If parent is set, adds this module as a submodule to the parent.
-		 * If parent is not set, removes the current parent.
-		 * @param module The module to modify.
-		 * @param parent The new parent module (optional).
-		 */
-		static void setParent(
-			base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
-		);
-
-		/**
-		 * Removes the parent from the given module.
-		 * @param module The module to modify.
+		 * @brief Detaches the given module from its parent, whatever the kind of the parent is.
+		 * @param module The module to modify, it must have a parent.
 		 */
 		static void removeParent(base::Ref<ModuleTree> module);
 
 		/**
-		 * Changes the package ID of the given module and ALL its submodules recursively.
+		 * @brief Changes the package ID of the given module and ALL its child modules recursively.
 		 * All modules in the same module tree must have the same package ID.
 		 * @note This can only be done on root modules (modules without a parent).
 		 * @param module The module to modify.
@@ -86,31 +45,138 @@ namespace compiler::frontend {
 		static void changePackageID(base::Ref<ModuleTree> module, base::StrID new_package_id);
 
 		/**
-		 * Removes the module with the given ModuleID from the module map.
-		 * Also removes it from its parent's submodules and deletes associated source files.
-		 * @param module_id The ModuleID to remove.
-		 * This will set the parent of all submodules to the parent of the removed module.
-		 */
-		static void removeSingleModule(base::Ref<ModuleTree> module);
-
-		/**
-		 * Removes the given module and all of its submodules recursively.
-		 * Parent hashes are updated once after the entire subtree is removed.
-		 * @param module_id The ModuleID to remove.
+		 * @brief Removes the given module and all of its child modules recursively.
+		 * For a script or a REPL chain node, this removes the rest of its chain too.
+		 * @param module The module to remove.
 		 */
 		static void removeModuleRecursive(base::Ref<ModuleTree> module);
 
-
 		/**
-		 * Notifies that a file has been modified and updates its SourceFile.
+		 * @brief Notifies that a file has been modified and updates its SourceFile.
 		 * @param file The file that was modified.
 		 */
 		static void fileModified(const fs::File& file);
 
-	private:
+	protected:
+		ModuleTreeModifierCommon() = default;
+
 		/**
-		 * Private constructor to prevent instantiation.
+		 * @brief Panics if making `parent` the parent of `child` would create a cycle.
 		 */
-		ModuleTreeModifier() = default;
+		static void assertNoCycle(base::Ref<ModuleTree> parent, base::Ref<ModuleTree> child);
+
+		/**
+		 * @brief Access the slot holding the next REPL chain node of a script or a chain node.
+		 * @note Panics for standard modules.
+		 */
+		static Ref<base::Optional<base::Ref<SyntheticReplChainModuleTreeNode>>> replChildSlot(
+			base::Ref<ModuleTree> module
+		);
+
+		/**
+		 * @brief Removes `module` from the child list of its parent (submodules or REPL child),
+		 * without touching `module` itself.
+		 */
+		static void unlinkFromParent(base::Ref<ModuleTree> module);
+
+		/**
+		 * @brief Removes the source files owned by `module` from storage.
+		 * @note This invalidates the SourceFile instances!
+		 */
+		static void removeOwnedSourceFiles(base::Ref<ModuleTree> module);
+	};
+
+	/**
+	 * @brief Modifier for standard modules (StandardModuleTreeNode).
+	 *
+	 * @note The API operates on the standard/script module layer and does not go into synthetic
+	 * REPL chain modules unless explicitly stated.
+	 */
+	class StandardModuleTreeModifier final: public ModuleTreeModifierCommon {
+	public:
+		/**
+		 * @brief Sets the main source file for the given module.
+		 * @param module The module to modify.
+		 * @param file The file to set as main source file.
+		 */
+		static void setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * @brief Removes the main source file from the given module.
+		 * @param module The module to modify.
+		 */
+		static void removeMainSourceFile(base::Ref<ModuleTree> module);
+
+		/**
+		 * @brief Adds a submodule (a standard or a script module) to the given module.
+		 * @param module The module to modify.
+		 * @param submodule The submodule to add, it must not have a parent yet.
+		 */
+		static void addSubmodule(base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule);
+
+		/**
+		 * @brief Adds an "other" file to the given module.
+		 * @param module The module to modify.
+		 * @param file The file to add.
+		 */
+		static void addOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * @brief Removes an "other" file from the given module.
+		 * @param module The module to modify.
+		 * @param file The file to remove.
+		 */
+		static void removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file);
+
+		/**
+		 * @brief Sets the parent of the given module, adding it as a submodule of the parent.
+		 * @param module The module to modify, it must not have a parent yet.
+		 * @param parent The new parent module, must be a standard module.
+		 */
+		static void setParent(base::Ref<ModuleTree> module, base::Ref<ModuleTree> parent);
+
+		/**
+		 * @brief Removes the given module, and moves its submodules to its parent.
+		 * Also removes it from its parent's submodules and deletes its source files.
+		 * @param module The module to remove.
+		 */
+		static void removeSingleModule(base::Ref<ModuleTree> module);
+
+	private:
+		StandardModuleTreeModifier() = default;
+	};
+
+	/**
+	 * @brief Modifier for script modules (ScriptModuleTreeNode).
+	 */
+	class ScriptModuleTreeModifier final: public ModuleTreeModifierCommon {
+	public:
+		/**
+		 * @brief Sets the parent of the given script, adding it as a submodule of the parent.
+		 * @param script The script module to modify, it must not have a parent yet.
+		 * @param parent The new parent module, must be a standard module.
+		 */
+		static void setParent(base::Ref<ModuleTree> script, base::Ref<ModuleTree> parent);
+
+	private:
+		ScriptModuleTreeModifier() = default;
+	};
+
+	/**
+	 * @brief Modifier for synthetic REPL chain modules (SyntheticReplChainModuleTreeNode).
+	 */
+	class SyntheticReplChainModuleTreeModifier final: public ModuleTreeModifierCommon {
+	public:
+		/**
+		 * @brief Appends the given chain node to a chain.
+		 * Sets the parent of `node` and makes `node` the REPL child of the parent.
+		 * @param node The chain node to modify, it must not have a parent yet.
+		 * @param parent The last node of the chain, or the script module that starts it. It must
+		 * not have a REPL child yet.
+		 */
+		static void setParent(base::Ref<ModuleTree> node, base::Ref<ModuleTree> parent);
+
+	private:
+		SyntheticReplChainModuleTreeModifier() = default;
 	};
 }

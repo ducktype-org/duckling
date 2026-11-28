@@ -11,7 +11,9 @@
 #include "module_flags/module_flags.hpp"
 #include "module_tree_builder.hpp"
 #include "queries.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
+#include "standard_module_tree.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/worker/worker_manager.hpp>
@@ -25,12 +27,9 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
-#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#include <ranges>
-#include <regex>
 #include <sstream>
 #include <string_view>
 
@@ -38,8 +37,8 @@ namespace {
 	/**
 	 * HashMap that stores all ModuleTree instances.
 	 */
-	base::HashMap<usize, compiler::frontend::ModuleTree> modules;
-	usize                                                next_module_storage_key = 0;
+	base::HashMap<usize, Box<compiler::frontend::ModuleTree>> modules;
+	usize                                                     next_module_storage_key = 0;
 
 	concurrent::ConHashMap<base::Bit256, base::Ref<compiler::frontend::ModuleTree>> module_registry;
 }
@@ -71,41 +70,65 @@ namespace compiler::frontend {
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
 
+	ModuleTree::~ModuleTree() = default;
+
 	ModuleID ModuleTree::getModuleID() const { return { m_self.value() }; }
+
+	ModuleKind ModuleTree::getKind() const {
+		CORE_ASSERT(
+			kind != ModuleKind::Invalid, "Module kind should never be invalid at this point!"
+		);
+		return kind;
+	}
 
 	base::Optional<ModuleAccessLocked> ModuleTree::getParentModule() const {
 		if (m_parent.has_value()) return ModuleAccessLocked(m_parent.value()->getModuleID());
 		return {};
 	}
 
-	bool ModuleTree::hasMainSourceFile() const { return m_main_source_file.has_value(); }
-
-	FileAccessLocked ModuleTree::getMainSourceFile() const {
-		CORE_ASSERT(m_main_source_file.has_value(), "Main source file does not exist!");
-		return FileAccessLocked(m_main_source_file.value()->getFileID());
+	bool ModuleTree::hasMainSourceFile() const {
+		switch (getKind()) {
+		case ModuleKind::Module:
+			return as<StandardModuleTreeNode>()->m_main_source_file.has_value();
+		case ModuleKind::ReplChain:
+			return as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file.has_value();
+		case ModuleKind::Script:
+			// A script owns no source file, its synthetic REPL chain modules do.
+			return false;
+		default:
+			CORE_PANIC("hasMainSourceFile called on a module with an invalid kind!");
+		}
 	}
 
-	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
-		std::vector<ModuleAccessLocked> submodules;
-		submodules.reserve(m_submodules.size());
-		for (const auto& [name, submodule]: m_submodules)
-			submodules.emplace_back(submodule->getModuleID());
-		return { getModuleID(), std::move(submodules) };
+	FileAccessLocked ModuleTree::getMainSourceFile() const {
+		CORE_ASSERT(hasMainSourceFile(), "Main source file does not exist!");
+		const auto& main_source_file
+			= getKind() == ModuleKind::Module
+		        ? as<StandardModuleTreeNode>()->m_main_source_file
+		        : as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file;
+		return FileAccessLocked(main_source_file.value()->getFileID());
+	}
+
+	base::Optional<ModuleID> ModuleTree::findSubmodule(query::Context& ctx, base::StrID name) const {
+		const auto standard_node = tryAs<StandardModuleTreeNode>();
+		if (not standard_node.has_value()) return {};
+		auto maybe_child = standard_node.value()->getSubmoduleByName(name).unlock(ctx);
+		if (not maybe_child.has_value()) return {};
+		return maybe_child.value().unlock(ctx).getID();
+	}
+
+	usize ModuleTree::getSubmoduleCount() const {
+		CORE_ASSERT(
+			!query::Context::areWeInsideQuery(), "getSubmoduleCount called from within query!"
+		);
+
+		const auto standard_node = tryAs<StandardModuleTreeNode>();
+		if (not standard_node.has_value()) return 0;
+		return standard_node.value()->getSubmodules().illegalAccess().size();
 	}
 
 	packages::PackageAccessLocked ModuleTree::getPackage() const {
 		return packages::PackageAccessLocked(m_package_id);
-	}
-
-	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID name) const {
-		base::Optional<ModuleID> child;
-		if (auto maybe = m_submodules.atMaybe(name); maybe.has_value())
-			child = (*maybe.value())->getModuleID();
-		return ModuleChildAccessLocked(getModuleID(), name, child);
-	}
-
-	const base::HashMap<base::StrID, std::vector<fs::File>>& ModuleTree::getOtherFiles() const {
-		return m_other_files;
 	}
 
 	base::StrID ModuleTree::getName() const { return m_name; }
@@ -142,12 +165,12 @@ namespace compiler::frontend {
 			output << indent << "├> Missing main module file!\n";
 
 
-		for (const auto& [ext, files]: getOtherFiles())
-			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
+		if (const auto standard_node = tryAs<StandardModuleTreeNode>(); standard_node.has_value())
+			for (const auto& [ext, files]: standard_node.value()->getOtherFiles())
+				for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
 
-		for (const auto& submodule_ref: getSubmodules().illegalAccess())
-			output << getModuleRef(submodule_ref.illegalAccess().getID())
-						  ->prettyPrint(indentation + 3);
+		for (const auto& child: collectChildrenModules())
+			output << child->prettyPrint(indentation + 3);
 
 		return output.str();
 	}
@@ -161,21 +184,23 @@ namespace compiler::frontend {
 
 			// assert if children are invalid too
 
-			if (m_main_source_file.has_value())
+			for (const auto& source_file: collectOwnedSourceFiles())
 				CORE_ASSERT(
-					!m_main_source_file.value()->component_hash.has_value(),
-					"Child component hash have value!"
+					!source_file->component_hash.has_value(), "Child component hash have value!"
 				);
-			for (auto& [_, submodule]: m_submodules)
+			for (const auto& child: collectChildrenModules())
 				CORE_ASSERT(
-					!submodule->m_path_component_hash.has_value(), "Child component hash have value!"
+					!child->m_path_component_hash.has_value(), "Child component hash have value!"
 				);
 			return;
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
-		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
-		for (auto& [_, submodule]: m_submodules) submodule->invalidateHash();
+
+		for (const auto& source_file: collectOwnedSourceFiles())
+			source_file->invalidateComponentHash();
+
+		for (auto& child: collectChildrenModules()) child->invalidateHash();
 	}
 
 	void ModuleTree::updateModuleHash() {
@@ -211,17 +236,10 @@ namespace compiler::frontend {
 		// If a Module has a main source file
 		hashing::addToHash(partial, hasMainSourceFile());
 
-		// REPL metadata affects module semantics and therefore must affect module hash.
-		hashing::addToHash(partial, m_repl_data.has_value());
+		// Module kind affects module semantics and therefore must affect module hash.
+		hashing::addToHash(partial, std::to_underlying(getKind()));
 
-		if (m_repl_data.has_value()) {
-			hashing::addToHash(partial, m_repl_data->m_repl_module_parent.has_value());
-			if (m_repl_data->m_repl_module_parent.has_value()) {
-				auto repl_parent = m_repl_data->m_repl_module_parent.value();
-
-				hashing::addToHash(partial, ModuleTree::getModuleHash(repl_parent));
-			}
-		}
+		addKindSpecificDataToHash(partial);
 
 		// We do not need to add source files count or submodule count here,
 		// Because there is a separate SideInput for that
@@ -245,10 +263,10 @@ namespace compiler::frontend {
 		}
 	}
 
-	Ref<ModuleTree> ModuleTree::addModuleToStorage() {
+	Ref<ModuleTree> ModuleTree::addModuleToStorage(Box<ModuleTree> module) {
 		const auto      storage_key  = next_module_storage_key++;
-		auto            inserted     = modules.put(storage_key, ModuleTree());
-		Ref<ModuleTree> module_ref   = &inserted->value;
+		auto            inserted     = modules.put(storage_key, std::move(module));
+		Ref<ModuleTree> module_ref   = inserted->value.get();
 		module_ref->m_storage_handle = storage_key;
 		return module_ref;
 	}
@@ -277,7 +295,7 @@ namespace compiler::frontend {
 			const auto* candidate_ptr = candidate.get();
 			bool        is_tracked    = false;
 			for (const auto& entry: modules) {
-				if (&entry.value == candidate_ptr) {
+				if (entry.value.get() == candidate_ptr) {
 					is_tracked = true;
 					break;
 				}
@@ -295,7 +313,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTree(const fs::File& file, base::StrID package_id) {
-		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
+		return StandardModuleTreeBuilder::create(file, package_id)->getModuleID();
 	}
 
 	void parseAllFilesInModuleTree(ModuleID module_id) {
@@ -306,12 +324,14 @@ namespace compiler::frontend {
 
 		// First collect all files to be parsed.
 		std::vector<FileID> files_to_parse;
-		auto                collect_files = [&](this auto&& self, ModuleID mid) -> void {
-            auto module_tree = GetModuleID_Functor::get(mid);
-            if (module_tree->hasMainSourceFile())
-                files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
-            for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
-                self(submodule.illegalAccess().getID());
+
+		auto collect_files = [&](this auto&& self, ModuleID mid) -> void {
+			auto module_tree = GetModuleID_Functor::get(mid);
+			if (module_tree->hasMainSourceFile())
+				files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+
+			for (const auto& child: module_tree->collectChildrenModules())
+				self(child->getModuleID());
 		};
 		collect_files(module_id);
 
@@ -371,7 +391,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {
-		return ModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
+		return StandardModuleTreeBuilder::createWithRandomPackageID(file)->getModuleID();
 	}
 
 	ModuleID createModuleTreeFromContents(
@@ -399,28 +419,6 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIsReplModule);
-
-	/***************************
-	 * QueryReplModuleParent *
-	 ***************************/
-	struct IMPLEMENT_QUERY(QueryReplModuleParent, base::Optional<ModuleID>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: #1389 verify Functor correctness.
-			auto module_tree = GetModuleID_Functor::get(key);
-			if (!module_tree->isReplModule()) return {};
-			auto repl_parent = module_tree->getReplModuleParent();
-			if (repl_parent.has_value()) {
-				// Register dependency on the parent module contents so incremental rebuilds propagate
-				ctx.query<QueryModuleSideInput>(KeyOf_ModuleSideInput{
-					ModuleTree::getModuleHash(repl_parent.value()) });
-			}
-			return repl_parent;
-		}
-
-		QUERY_AUTO_CACHE_COPY
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReplModuleParent);
 
 	/*********************
 	 * QueryParentModule *
@@ -476,7 +474,10 @@ namespace compiler::frontend {
 			const auto& module_tree = GetModuleID_Functor::get(key);
 
 			PResult out{};
-			for (const auto& module: module_tree->getSubmodules().unlock(ctx)) {
+			// Only standard modules have submodules.
+			const auto module_node = module_tree->tryAs<StandardModuleTreeNode>();
+			if (not module_node.has_value()) return out;
+			for (const auto& module: module_node.value()->getSubmodules().unlock(ctx)) {
 				auto module_id  = module.unlock(ctx).getID();
 				auto module_ref = getModuleRef(module_id);
 				out.put(module_ref->getName(), module_id);

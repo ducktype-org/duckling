@@ -50,8 +50,8 @@ namespace compiler::frontend {
 		base::Bit256 hash;
 
 		friend class ModuleTree;
-		friend class ModuleTreeBuilder;
-		friend class ModuleTreeModifier;
+		friend class ModuleTreeBuilderCommon;
+		friend class ModuleTreeModifierCommon;
 		friend struct GetModuleID_Functor;
 	};
 }

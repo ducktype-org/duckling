@@ -12,6 +12,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/pst_parser/access/source_position_locked.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
@@ -634,13 +635,14 @@ private:
 		auto root_id = package_info.getRootModule().illegalAccess().getID();
 
 		// Find submodule ID
-		auto root_ref   = frontend::getModuleRef(root_id);
-		auto submodules = root_ref->getSubmodules().illegalAccess();
-		auto get_ref    = [](frontend::AccessLocked<frontend::ModuleID> access) {
-            return compiler::frontend::GetModuleID_Functor::
-                getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-                    access.illegalAccess().getID()
-                );
+		auto root_ref = frontend::getModuleRef(root_id);
+		auto submodules
+			= root_ref->as<frontend::StandardModuleTreeNode>()->getSubmodules().illegalAccess();
+		auto get_ref = [](frontend::AccessLocked<frontend::ModuleID> access) {
+			return compiler::frontend::GetModuleID_Functor::
+				getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					access.illegalAccess().getID()
+				);
 		};
 		auto get_submodule = [&](const std::vector<frontend::ModuleAccessLocked>& subs,
 		                         base::StrID name) -> frontend::ModuleAccessLocked {
@@ -828,21 +830,24 @@ private:
 		auto imports_complicated_id = root_id;
 
 		// Level 1: foo, bar
-		auto foo_subs = root_ref->getSubmodules().illegalAccess();
-		auto foo_id   = get_submodule(foo_subs, base::StrID("foo")).illegalAccess().getID();
-		auto bar_id   = get_submodule(foo_subs, base::StrID("bar")).illegalAccess().getID();
+		auto foo_subs
+			= root_ref->as<frontend::StandardModuleTreeNode>()->getSubmodules().illegalAccess();
+		auto foo_id = get_submodule(foo_subs, base::StrID("foo")).illegalAccess().getID();
+		auto bar_id = get_submodule(foo_subs, base::StrID("bar")).illegalAccess().getID();
 
 		// Level 2 under foo: A, B
-		auto foo_ref      = frontend::getModuleRef(foo_id);
-		auto foo_children = foo_ref->getSubmodules().illegalAccess();
-		auto a_id         = get_submodule(foo_children, base::StrID("A")).illegalAccess().getID();
-		auto b_id         = get_submodule(foo_children, base::StrID("B")).illegalAccess().getID();
+		auto foo_ref = frontend::getModuleRef(foo_id);
+		auto foo_children
+			= foo_ref->as<frontend::StandardModuleTreeNode>()->getSubmodules().illegalAccess();
+		auto a_id = get_submodule(foo_children, base::StrID("A")).illegalAccess().getID();
+		auto b_id = get_submodule(foo_children, base::StrID("B")).illegalAccess().getID();
 
 		// Level 2 under bar: C, D
-		auto bar_ref      = frontend::getModuleRef(bar_id);
-		auto bar_children = bar_ref->getSubmodules().illegalAccess();
-		auto c_id         = get_submodule(bar_children, base::StrID("C")).illegalAccess().getID();
-		auto d_id         = get_submodule(bar_children, base::StrID("D")).illegalAccess().getID();
+		auto bar_ref = frontend::getModuleRef(bar_id);
+		auto bar_children
+			= bar_ref->as<frontend::StandardModuleTreeNode>()->getSubmodules().illegalAccess();
+		auto c_id = get_submodule(bar_children, base::StrID("C")).illegalAccess().getID();
+		auto d_id = get_submodule(bar_children, base::StrID("D")).illegalAccess().getID();
 
 		// ================================================================================
 		// Get dependencies for each module

@@ -32,18 +32,19 @@ namespace compiler::repl {
 		std::string_view                          module_name_prefix,
 		ReplSessionID                             session_id
 	) {
-		auto builder = frontend::ModuleTreeBuilder::create();
+		// @TODO: #2762 the first statement of a chain should have a script module node as its
+		// parent, inside a package (a synthetic one if needed), instead of being a root module of
+		// a fake package.
+		auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID("repl_session"));
-		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
+		builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
 		auto module_name = base::strConcat(
 			module_name_prefix, std::to_string(session_id.asInt()), "_", std::to_string(line_counter)
 		);
 		builder->setName(base::StrID(module_name));
 
-		frontend::ReplData repl_data;
-		if (parent_module_id.has_value()) repl_data.m_repl_module_parent = parent_module_id.value();
-		builder->setReplModule(repl_data);
+		if_opt_some(parent_module_id, parent) { builder->setParent(parent); }
 
 		return builder->finalize();
 	}

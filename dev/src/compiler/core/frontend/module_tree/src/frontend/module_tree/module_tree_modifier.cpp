@@ -7,9 +7,15 @@
 #include "module_tree_modifier.hpp"
 
 #include "module_flags/module_flags.hpp"
+#include "module_tree.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
+#include "standard_module_tree.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <algorithm>
 #include <functional>
@@ -20,26 +26,198 @@
 namespace compiler::frontend {
 
 	/*********************
-	 * ModuleTreeModifier Implementation
+	 * ModuleTreeModifierCommon
 	 *********************/
 
+	void ModuleTreeModifierCommon::assertNoCycle(
+		base::Ref<ModuleTree> parent, base::Ref<ModuleTree> child
+	) {
+		// we need to detect cycles as someone could accidentally create one
+		// for example if module A is parent of B in original module tree
+		// and function addSubmodule(B, A) is called
+		// we would have a cycle A -> B -> A
+		// this is a programer error, because cycle is not possible in standard module tree from
+		// path creation
+		auto current = parent;
+		while (true) {
+			if (current == child) {
+				CORE_PANIC(
+					"Making '",
+					parent->getName().strView(),
+					"' the parent of '",
+					child->getName().strView(),
+					"' would create a cycle in the module tree!"
+				);
+			}
+			if (!current->m_parent.has_value()) break;
+			current = current->m_parent.value();
+		}
+	}
 
-	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
+	Ref<base::Optional<base::Ref<SyntheticReplChainModuleTreeNode>>> ModuleTreeModifierCommon::replChildSlot(
+		base::Ref<ModuleTree> module
+	) {
+		switch (module->getKind()) {
+		case ModuleKind::Script:
+			return &module->as<ScriptModuleTreeNode>()->m_repl_module_child;
+		case ModuleKind::ReplChain:
+			return &module->as<SyntheticReplChainModuleTreeNode>()->m_repl_module_child;
+		default:
+			CORE_PANIC("Only script and REPL chain modules have a REPL child");
+		}
+	}
+
+	void ModuleTreeModifierCommon::unlinkFromParent(base::Ref<ModuleTree> module) {
+		if (!module->m_parent.has_value()) return;
+		auto parent = module->m_parent.value();
+
+		if (parent->getKind() == ModuleKind::Module) {
+			auto& submodules = parent->as<StandardModuleTreeNode>()->m_submodules;
+			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
+                return pair.value == module;
+            });
+			CORE_ASSERT(
+				it != submodules.end(),
+				base::strConcat(
+					"Submodule with name ",
+					module->getName(),
+					" does not exist in parent module ",
+					parent->getName().strView()
+				)
+			);
+			submodules.erase(base::StrID(it->key));
+		} else {
+			auto repl_child = replChildSlot(parent);
+			CORE_ASSERT(
+				repl_child->has_value() and repl_child->value() == module,
+				base::strConcat(
+					"Module ",
+					module->getName(),
+					" is not the REPL child of its parent ",
+					parent->getName().strView()
+				)
+			);
+			*repl_child = {};
+		}
+	}
+
+	void ModuleTreeModifierCommon::removeOwnedSourceFiles(base::Ref<ModuleTree> module) {
+		for (const auto& source_file: module->collectOwnedSourceFiles())
+			SourceFile::removeSourceFileFromStorage(source_file);
+	}
+
+	void ModuleTreeModifierCommon::removeParent(base::Ref<ModuleTree> module) {
 		CORE_ASSERT(
-			!module->m_main_source_file.has_value(),
-			"Main source file is already set, remove it first"
+			module->m_parent.has_value(),
+			base::strConcat("Module ", module->getName().strView(), " does not have a parent")
 		);
-		module->m_main_source_file = SourceFile::create(file, module);
+
+		unlinkFromParent(module);
+		module->m_parent = {};
+
+		// Invalidate component hash for the module and its children as the parent changed
+		module->invalidateHash();
+	}
+
+	void ModuleTreeModifierCommon::changePackageID(
+		base::Ref<ModuleTree> module, base::StrID new_package_id
+	) {
+		CORE_ASSERT(
+			!module->m_parent.has_value(),
+			"Only root modules can have their package ID changed, the parent is: ",
+			module->m_parent.value()->getName().strView()
+		);
+
+		std::function<void(base::Ref<ModuleTree>, base::StrID)> change_package_id
+			= [&](base::Ref<ModuleTree> internal, base::StrID internal_new_package_id) {
+				  CORE_ASSERT(
+					  internal->m_package_id.isGood(), "Module does not have a valid package ID"
+				  );
+				  internal->m_package_id = internal_new_package_id;
+
+				  // Change the package ID for all child modules recursively
+				  for (auto& child: internal->collectChildrenModules())
+					  change_package_id(child, internal_new_package_id);
+
+				  // Invalidate component hash for the module and its children as the package ID changed
+				  internal->invalidateHash();
+			  };
+
+		change_package_id(module, new_package_id);
+	}
+
+	void ModuleTreeModifierCommon::removeModuleRecursive(base::Ref<ModuleTree> module) {
+		CORE_ASSERT(
+			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
+		);
+
+		unlinkFromParent(module);
+
+		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
+			for (auto& child: current->collectChildrenModules()) self(self, child);
+
+			// Remove the source files of the module. This will invalidate the SourceFile instances!
+			removeOwnedSourceFiles(current);
+
+			// Remove the module from storage. This will invalidate the ModuleTree instance!
+			ModuleTree::removeModuleFromStorage(current);
+		};
+
+		recursive_delete(recursive_delete, module);
+	}
+
+	void ModuleTreeModifierCommon::fileModified(const fs::File& file) {
+		std::vector<Ref<SourceFile>> source_files
+			= SourceFile::getSourceFilesFromPath(file.getFilePath());
+		for (auto& source_file: source_files) source_file->update();
+	}
+
+	/*********************
+	 * StandardModuleTreeModifier
+	 *********************/
+
+	void StandardModuleTreeModifier::setMainSourceFile(
+		base::Ref<ModuleTree> module, const fs::File& file
+	) {
+		auto& main_source_file = module->as<StandardModuleTreeNode>()->m_main_source_file;
+		CORE_ASSERT(
+			!main_source_file.has_value(), "Main source file is already set, remove it first"
+		);
+		main_source_file = SourceFile::create(file, module);
 		module->invalidateHash();
 		module->updateModuleHashFromRootToThis();
 	}
 
-	void ModuleTreeModifier::addSubmodule(
+	void StandardModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
+		CORE_ASSERT(
+			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
+		);
+		auto& main_source_file = module->as<StandardModuleTreeNode>()->m_main_source_file;
+		CORE_ASSERT(
+			main_source_file.has_value(),
+			base::strConcat(
+				"Module ", module->getName().strView(), " does not have a main source file"
+			)
+		);
+		// Remove SourceFile from storage. This invalidates the SourceFile instance!
+		SourceFile::removeSourceFileFromStorage(main_source_file.value());
+		main_source_file = {};
+		module->invalidateHash();
+		module->updateModuleHashFromRootToThis();
+	}
+
+	void StandardModuleTreeModifier::addSubmodule(
 		base::Ref<ModuleTree> module, base::Ref<ModuleTree> submodule
 	) {
-		base::StrID name = submodule->getName();
 		CORE_ASSERT(
-			!module->m_submodules.contains(name),
+			submodule->getKind() == ModuleKind::Module or submodule->getKind() == ModuleKind::Script,
+			"Only standard and script modules can be submodules"
+		);
+
+		base::StrID name       = submodule->getName();
+		auto&       submodules = module->as<StandardModuleTreeNode>()->m_submodules;
+		CORE_ASSERT(
+			!submodules.contains(name),
 			base::strConcat(
 				"Submodule with name '",
 				name.strView(),
@@ -48,55 +226,35 @@ namespace compiler::frontend {
 				" call remove first!"
 			)
 		);
-
-
-		module->m_submodules.put(name, submodule);
-
 		CORE_ASSERT(
 			!submodule->m_parent.has_value(),
 			base::strConcat("Submodule ", name.strView(), " already has a parent")
 		);
-		submodule->m_parent = module;
-
 		CORE_ASSERT(
 			submodule->m_package_id == module->m_package_id,
 			"Submodule package ID must match parent module package ID"
 		);
+		assertNoCycle(module, submodule);
 
-		// we need to detect cycles as someone could accidentally create one
-		// for example if module A is parent of B in original module tree
-		// and function addSubmodule(B, A) is called
-		// we would have a cycle A -> B -> A
-		// this is a programer error, because cycle is not possible in standard module tree from
-		// path creation
-		auto current = module;
-		while (current->m_parent.has_value()) {
-			if (current->m_parent.value() == submodule) {
-				CORE_PANIC(
-					"Adding submodule '",
-					submodule->getName().strView(),
-					"' to module '",
-					module->getName().strView(),
-					"' would create a cycle in the module tree!"
-				);
-			}
-			current = current->m_parent.value();
-		}
+		submodules.put(name, submodule);
+		submodule->m_parent = module;
 
 		// Invalidate component hash for the submodule and its children
 		submodule->invalidateHash();
 	}
 
-	void ModuleTreeModifier::addOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+	void StandardModuleTreeModifier::addOtherFile(
+		base::Ref<ModuleTree> module, const fs::File& file
+	) {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
-		if (!module->m_other_files.contains(ext_id))
-			module->m_other_files.put(ext_id, std::vector<fs::File>());
+		auto& other_files = module->as<StandardModuleTreeNode>()->m_other_files;
+		if (!other_files.contains(ext_id)) other_files.put(ext_id, std::vector<fs::File>());
 
 		CORE_ASSERT(
 			!std::ranges::any_of(
-				module->m_other_files.at(ext_id),
+				other_files.at(ext_id),
 				[&file](const fs::File& f) { return f.getFilePath() == file.getFilePath(); }
 			),
 			base::strConcat(
@@ -107,32 +265,18 @@ namespace compiler::frontend {
 			)
 		);
 
-		module->m_other_files.at(ext_id).push_back(file);
+		other_files.at(ext_id).push_back(file);
 	}
 
-	void ModuleTreeModifier::removeMainSourceFile(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(
-			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
-		);
-		CORE_ASSERT(
-			module->m_main_source_file.has_value(),
-			base::strConcat(
-				"Module ", module->getName().strView(), " does not have a main source file"
-			)
-		);
-		// Remove SourceFile from storage. This invalidates the SourceFile instance!
-		SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
-		module->m_main_source_file = {};
-		module->invalidateHash();
-		module->updateModuleHashFromRootToThis();
-	}
-
-	void ModuleTreeModifier::removeOtherFile(base::Ref<ModuleTree> module, const fs::File& file) {
+	void StandardModuleTreeModifier::removeOtherFile(
+		base::Ref<ModuleTree> module, const fs::File& file
+	) {
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
+		auto& other_files = module->as<StandardModuleTreeNode>()->m_other_files;
 		CORE_ASSERT(
-			module->m_other_files.contains(ext_id),
+			other_files.contains(ext_id),
 			base::strConcat(
 				"Other file with extension '",
 				ext_id.strView(),
@@ -141,7 +285,7 @@ namespace compiler::frontend {
 			)
 		);
 
-		auto& files = module->m_other_files.at(ext_id);
+		auto& files = other_files.at(ext_id);
 		auto  it    = std::ranges::find_if(files, [&file](const fs::File& f) {
             return f.getFilePath() == file.getFilePath();
         });
@@ -159,155 +303,85 @@ namespace compiler::frontend {
 		files.erase(it);
 	}
 
-	void ModuleTreeModifier::setParent(
-		base::Ref<ModuleTree> module, base::Optional<base::Ref<ModuleTree>> parent
+	void StandardModuleTreeModifier::setParent(
+		base::Ref<ModuleTree> module, base::Ref<ModuleTree> parent
 	) {
-		CORE_ASSERT(parent.has_value(), "Parent module must be specified");
-		addSubmodule(parent.value(), module);
+		CORE_ASSERT(module->getKind() == ModuleKind::Module, "Module must be a standard module");
+		addSubmodule(parent, module);
 	}
 
-	void ModuleTreeModifier::removeParent(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(
-			module->m_parent.has_value(),
-			base::strConcat("Module ", module->getName().strView(), " does not have a parent")
-		);
-
-		// remove this module from its parent's submodules
-		auto  parent     = module->m_parent.value();
-		auto& submodules = parent->m_submodules;
-		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-            return pair.value == module;
-        });
-		CORE_ASSERT(
-			it != submodules.end(),
-			base::strConcat(
-				"Submodule with name ",
-				module->getName(),
-				" does not exist in parent module ",
-				parent->getName().strView()
-			)
-		);
-		submodules.erase(base::StrID(it->key));
-
-		module->m_parent = {};
-
-		// Invalidate component hash for the module and its children as the parent changed
-		module->invalidateHash();
-	}
-
-	void ModuleTreeModifier::changePackageID(
-		base::Ref<ModuleTree> module, base::StrID new_package_id
-	) {
-		CORE_ASSERT(
-			!module->m_parent.has_value(),
-			"Only root modules can have their package ID changed, the parent is: ",
-			module->m_parent.value()->getName().strView()
-		);
-
-		std::function<void(base::Ref<ModuleTree>, base::StrID)> change_package_id
-			= [&](base::Ref<ModuleTree> internal, base::StrID internal_new_package_id) {
-				  CORE_ASSERT(
-					  internal->m_package_id.isGood(), "Module does not have a valid package ID"
-				  );
-				  internal->m_package_id = internal_new_package_id;
-
-				  // Change the package ID for all submodules recursively
-				  for (auto& [_, submodule]: internal->m_submodules)
-					  change_package_id(submodule, internal_new_package_id);
-
-				  // Invalidate component hash for the module and its children as the package ID changed
-				  internal->invalidateHash();
-			  };
-
-		change_package_id(module, new_package_id);
-	}
-
-	void ModuleTreeModifier::removeSingleModule(base::Ref<ModuleTree> module) {
+	void StandardModuleTreeModifier::removeSingleModule(base::Ref<ModuleTree> module) {
 		CORE_ASSERT(
 			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
 		);
+		CORE_ASSERT(
+			module->getKind() == ModuleKind::Module,
+			"Only standard modules can be removed via this function, use removeModuleRecursive"
+		);
+
 		auto parent = module->m_parent;
+		unlinkFromParent(module);
 
-		// Update parent module if it exists
-		if (parent.has_value()) {
-			// Remove the submodule from the parent's submodules
-			auto& submodules = parent.value()->m_submodules;
-			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.value == module;
-            });
-			CORE_ASSERT(
-				it != submodules.end(),
-				base::strConcat(
-					"Submodule with Name ",
-					module->getName(),
-					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
-					" does not exist in parent module ",
-					parent.value()->getName().strView()
-				)
-			);
-			submodules.erase(base::StrID(it->key));
+		// Change the parent of all child modules to the parent of the removed module
+		for (auto& submodule: module->collectChildrenModules()) {
+			submodule->m_parent = {};
+			if (parent.has_value())
+				addSubmodule(parent.value(), submodule);
+			else
+				submodule->invalidateHash();  // invalidate hash as parent changed
 		}
 
-		// Change the parent of all submodules to the parent of the removed module
-		for (auto& [_, submodule]: module->m_submodules) {
-			if (parent.has_value()) {
-				parent.value()->m_submodules.put(submodule->getName(), submodule);
-				submodule->m_parent = parent.value();
-			} else {
-				submodule->m_parent = {};
-			}
-			submodule->invalidateHash();  // invalidate hash as parent changed
-		}
-
-		// Remove main source file. This will invalidate the SourceFile instance!
-		if (module->m_main_source_file.has_value())
-			SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
+		// Remove the source files of the module. This will invalidate the SourceFile instances!
+		removeOwnedSourceFiles(module);
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
 		ModuleTree::removeModuleFromStorage(module);
 	}
 
-	void ModuleTreeModifier::removeModuleRecursive(base::Ref<ModuleTree> module) {
-		CORE_ASSERT(
-			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
-		);
-		auto parent = module->m_parent;
+	/*********************
+	 * ScriptModuleTreeModifier
+	 *********************/
 
-		if (parent.has_value()) {
-			auto& submodules = parent.value()->m_submodules;
-			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.value == module;
-            });
-			CORE_ASSERT(
-				it != submodules.end(),
-				base::strConcat(
-					"Submodule with Name ",
-					module->getName(),
-					" and hash ",
-					ModuleID(module).queryUnstablePerfectHash().toStringHex(),
-					" does not exist in parent module ",
-					parent.value()->getName().strView()
-				)
-			);
-			submodules.erase(base::StrID(it->key));
-		}
-
-		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
-			for (auto& [_, child]: current->m_submodules) self(self, child);
-
-			if (current->m_main_source_file.has_value())
-				SourceFile::removeSourceFileFromStorage(current->m_main_source_file.value());
-
-			ModuleTree::removeModuleFromStorage(current);
-		};
-
-		recursive_delete(recursive_delete, module);
+	void ScriptModuleTreeModifier::setParent(
+		base::Ref<ModuleTree> script, base::Ref<ModuleTree> parent
+	) {
+		CORE_ASSERT(script->getKind() == ModuleKind::Script, "Module must be a script module");
+		StandardModuleTreeModifier::addSubmodule(parent, script);
 	}
 
-	void ModuleTreeModifier::fileModified(const fs::File& file) {
-		std::vector<Ref<SourceFile>> source_files
-			= SourceFile::getSourceFilesFromPath(file.getFilePath());
-		for (auto& source_file: source_files) source_file->update();
+	/*********************
+	 * SyntheticReplChainModuleTreeModifier
+	 *********************/
+
+	void SyntheticReplChainModuleTreeModifier::setParent(
+		base::Ref<ModuleTree> node, base::Ref<ModuleTree> parent
+	) {
+		CORE_ASSERT(node->getKind() == ModuleKind::ReplChain, "Module must be a REPL chain module");
+		CORE_ASSERT(
+			!node->m_parent.has_value(),
+			base::strConcat("REPL chain module ", node->getName().strView(), " already has a parent")
+		);
+		CORE_ASSERT(
+			node->m_package_id == parent->m_package_id,
+			"REPL chain module package ID must match parent module package ID"
+		);
+
+		// Panics if the parent is neither a script nor a REPL chain module.
+		auto repl_child = replChildSlot(parent);
+		CORE_ASSERT(
+			!repl_child->has_value(),
+			base::strConcat(
+				"Module ",
+				parent->getName().strView(),
+				" already has a REPL child, chains are linear"
+			)
+		);
+		assertNoCycle(parent, node);
+
+		*repl_child    = node->as<SyntheticReplChainModuleTreeNode>();
+		node->m_parent = parent;
+
+		// Invalidate component hash for the node and the rest of its chain
+		node->invalidateHash();
 	}
 }

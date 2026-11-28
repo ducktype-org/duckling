@@ -5,13 +5,16 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/module_tree_builder.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/script_module_tree.hpp>
 #include <frontend/pst_parser/repl_utils/extractors.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -34,6 +37,7 @@ public:
 		TESTER_ADD_TEST(testWrapperReturnTypeAndSymbolMetadata);
 		TESTER_ADD_TEST(testWrapperAppendsVoidReturnForIfInstruction);
 		TESTER_ADD_TEST(testSameKeyProducesStableWrapper);
+		TESTER_ADD_TEST(testReplChainModulePathKeepsEnclosingModules);
 	}
 
 private:
@@ -54,7 +58,14 @@ private:
 	static pst::AccessLocked<pst::Stmt> extractSingleInstruction(
 		query::Context& ctx, std::string_view code
 	) {
-		auto module_id = frontend::createModuleTreeFromContents(code, "test_pkg");
+		return extractSingleInstruction(
+			ctx, frontend::createModuleTreeFromContents(code, "test_pkg")
+		);
+	}
+
+	static pst::AccessLocked<pst::Stmt> extractSingleInstruction(
+		query::Context& ctx, frontend::ModuleID module_id
+	) {
 		auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
 		auto pst       = frontend::getFilePST(ctx, main_file);
 		auto stmt_opt  = pst::extractSingleInstruction(ctx, pst->getRootElement());
@@ -200,6 +211,58 @@ private:
 			          .strView();
 
 			ASSERT_EQUAL(std::string(mangled_a), std::string(mangled_b));
+		});
+	}
+
+	void testReplChainModulePathKeepsEnclosingModules() {
+		const auto package_id = base::StrID("repl_chain_mangling_package_id");
+
+		auto root_builder = frontend::StandardModuleTreeBuilder::create();
+		root_builder->setName(base::StrID("root"));
+		root_builder->setPackageID(package_id);
+		root_builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile("", ".dk"));
+		auto root = root_builder->finalize();
+
+		auto script_builder = frontend::ScriptModuleTreeBuilder::create();
+		script_builder->setName(base::StrID("script"));
+		script_builder->setPackageID(package_id);
+		script_builder->setParent(root);
+		auto script = script_builder->finalize();
+
+		const auto make_node = [&](std::string_view                name,
+		                           std::string_view                code,
+		                           base::Ref<frontend::ModuleTree> parent) {
+			auto builder = frontend::SyntheticReplChainModuleTreeBuilder::create();
+			builder->setName(base::StrID(name));
+			builder->setPackageID(package_id);
+			builder->setSyntheticSourceFile(fs::FileManager::createRandomVirtualFile(code));
+			builder->setParent(parent);
+			return builder->finalize();
+		};
+
+		auto first  = make_node("first", "fun bar() = {}", script);
+		auto second = make_node("second", "fun foo() = {}", first);
+
+		const auto foo_scope = helios::test_utils::getModuleScope(second->getModuleID());
+		const auto foo       = helios::test_utils::getChain("foo", foo_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto mangled = std::string(helios::mangler::getSimpleMangledName(ctx, foo).strView());
+
+			// The modules enclosing the chain stay in the path, the earlier statements do not.
+			assertTrue(
+				mangled.find("4root6script6second") != std::string::npos,
+				base::strConcat(
+					"Mangled name should contain the enclosing modules and the statement module: ",
+					mangled
+				)
+			);
+			assertTrue(
+				mangled.find("5first") == std::string::npos,
+				base::strConcat(
+					"Mangled name should not contain the previous statement of the chain: ", mangled
+				)
+			);
 		});
 	}
 

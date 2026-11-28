@@ -35,10 +35,9 @@ namespace compiler::frontend {
 		// * check ancestors
 		// * check package dependencies
 
-		base::Optional<ModuleID> current_module;
+		auto from_module_ref = getModuleRef(from);
 
-		auto maybe_child = getModuleRef(from)->getSubmoduleByName(path.at(0)).unlock(ctx);
-		if (maybe_child.has_value()) current_module = maybe_child.value().unlock(ctx).getID();
+		base::Optional<ModuleID> current_module = from_module_ref->findSubmodule(ctx, path.at(0));
 
 		if (not current_module.has_value()) {
 			base::Optional<ModuleID> ancestor = ctx.query<QueryParentModule>(from);
@@ -55,7 +54,7 @@ namespace compiler::frontend {
 			// Look up the dependency by alias in the current module's package.
 			// Uses getPackageDependencyByAlias so we register a dependency only on this specific
 			// (package, alias) edge instead of on every dependency of the package.
-			auto owner_pkg_id  = getModuleRef(from)->getPackage().unlock(ctx).getID();
+			auto owner_pkg_id  = from_module_ref->getPackage().unlock(ctx).getID();
 			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
 			// The only situation where owner_pkg_opt would not have value is in the tests.
 			if (not owner_pkg_opt.has_value()) return {};
@@ -74,15 +73,9 @@ namespace compiler::frontend {
 			}
 		}
 
-		// second step: follow children
-		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
-			auto maybe_child2
-				= getModuleRef(current_module.value())->getSubmoduleByName(path.at(i)).unlock(ctx);
-			if (maybe_child2.has_value())
-				current_module = maybe_child2.value().unlock(ctx).getID();
-			else
-				current_module.reset();
-		}
+		// second step: follow submodules
+		for (usize i = 1; i < path.size() and current_module.has_value(); i++)
+			current_module = getModuleRef(current_module.value())->findSubmodule(ctx, path.at(i));
 
 		return current_module;
 	}
@@ -94,13 +87,11 @@ namespace compiler::frontend {
 			if (pkg.getPackageID() == package_name) {
 				auto current_module = pkg.getRootModule().unlock(ctx).getID();
 
+				// follow submodules
 				for (const auto& component: path) {
-					auto maybe_child
-						= getModuleRef(current_module)->getSubmoduleByName(component).unlock(ctx);
-					if (maybe_child.has_value())
-						current_module = maybe_child.value().unlock(ctx).getID();
-					else
-						return {};
+					auto maybe_child = getModuleRef(current_module)->findSubmodule(ctx, component);
+					if (not maybe_child.has_value()) return {};
+					current_module = maybe_child.value();
 				}
 
 				return current_module;

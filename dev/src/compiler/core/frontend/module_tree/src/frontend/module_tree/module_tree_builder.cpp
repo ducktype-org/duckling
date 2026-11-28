@@ -6,10 +6,15 @@
 
 #include "module_tree_builder.hpp"
 
+#include "functors.hpp"
+#include "module_tree.hpp"
 #include "module_tree_modifier.hpp"
+#include "script_module_tree.hpp"
 #include "source_file.hpp"
+#include "standard_module_tree.hpp"
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -42,14 +47,14 @@ namespace {
 
 namespace compiler::frontend {
 
-	Ref<ModuleTree> ModuleTreeBuilder::create(
+	Ref<ModuleTree> StandardModuleTreeBuilder::create(
 		const fs::File&     root,
 		base::StrID         package_id,
 		const FileResolver& file_resolver,
 		const std::regex&   file_reject,
 		const std::regex&   dir_reject
 	) {
-		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
+		base::Box<StandardModuleTreeBuilder> builder = StandardModuleTreeBuilder::create();
 
 		if (root.isDirectory())
 			builder->buildFromDirectory(root, package_id, file_resolver, file_reject, dir_reject);
@@ -59,7 +64,7 @@ namespace compiler::frontend {
 		return builder->finalize();
 	}
 
-	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
+	Ref<ModuleTree> StandardModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
 		return create(
@@ -71,7 +76,7 @@ namespace compiler::frontend {
 		);
 	}
 
-	void ModuleTreeBuilder::buildFromDirectory(
+	void StandardModuleTreeBuilder::buildFromDirectory(
 		const fs::File&     directory,
 		base::StrID         package_id,
 		const FileResolver& file_resolver,
@@ -98,7 +103,8 @@ namespace compiler::frontend {
 				if (!isDirectoryNameValid(base::StrID(file.name()), dir_reject)) continue;
 
 				// build sub-module from directory
-				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
+				base::Box<StandardModuleTreeBuilder> submodule_builder
+					= StandardModuleTreeBuilder::create();
 				submodule_builder->buildFromDirectory(
 					file, package_id, file_resolver, file_reject, dir_reject
 				);
@@ -124,7 +130,9 @@ namespace compiler::frontend {
 		}
 	}
 
-	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
+	void StandardModuleTreeBuilder::buildFromSingleFile(
+		const fs::File& file, base::StrID package_id
+	) {
 		base::StrID stem      = base::StrID(file.stem());
 		std::string extension = file.extension();
 		CORE_ASSERT(
@@ -136,7 +144,7 @@ namespace compiler::frontend {
 		setMainSourceFile(file);
 	}
 
-	void ModuleTreeBuilder::handleNewFile(const fs::File& file) {
+	void StandardModuleTreeBuilder::handleNewFile(const fs::File& file) {
 		CORE_ASSERT(
 			file.isFile(),
 			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
@@ -151,12 +159,17 @@ namespace compiler::frontend {
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
 			} else {
-				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
+				base::Box<StandardModuleTreeBuilder> submodule_builder
+					= StandardModuleTreeBuilder::create();
 				submodule_builder->buildFromSingleFile(file, this->m_package_id);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
 			}
+		} else if (extension == LANG_SCRIPT_FILE) {
+			// @TODO: #2762 handle script files
+			// mock for now:
+			addOtherFile(file);
 		} else {
 			// Other file
 			addOtherFile(file);
@@ -164,29 +177,79 @@ namespace compiler::frontend {
 	}
 
 	/*********************
-	 * ModuleTreeBuilder Implementation
+	 * ModuleTreeBuilderCommon
 	 *********************/
 
-	ModuleTreeBuilder::ModuleTreeBuilder(): m_finalized(false) {}
+	bool ModuleTreeBuilderCommon::isFinalized() const { return m_finalized; }
 
-	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::create() {
-		return base::makeBox<ModuleTreeBuilder>(ModuleTreeBuilder());
+	void ModuleTreeBuilderCommon::assertNotFinalized() const {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
 	}
 
-	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
-		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
+	void ModuleTreeBuilderCommon::setName(base::StrID name) {
+		assertNotFinalized();
+		CORE_ASSERT(m_name.isBad(), "Module name is already set");
+		m_name = name;
+	}
+
+	void ModuleTreeBuilderCommon::setPackageID(base::StrID package_id) {
+		assertNotFinalized();
+		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
+		m_package_id = package_id;
+	}
+
+	void ModuleTreeBuilderCommon::setParentCommon(base::Ref<ModuleTree> parent) {
+		assertNotFinalized();
+		CORE_ASSERT(!m_parent.has_value(), "Parent module is already set");
+		m_parent = parent;
+	}
+
+	base::Ref<ModuleTree> ModuleTreeBuilderCommon::finalizeCommon(base::Box<ModuleTree> node) {
+		assertNotFinalized();
+
+		// @TODO: #4246 CORE_ASSERT here the name is set for every kind, once standard modules can
+		// no longer be unnamed. REPL modules can have some dummy names if needed.
+		// CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
+
+		CORE_ASSERT(
+			m_package_id.isGood(), "Package ID must be set before finalizing the module tree"
+		);
+
+		m_finalized = true;
+
+		Ref<ModuleTree> module_ref = ModuleTree::addModuleToStorage(std::move(node));
+		module_ref->m_self         = module_ref;
+		module_ref->m_name         = m_name;
+		module_ref->m_package_id   = m_package_id;
+		return module_ref;
+	}
+
+	/*********************
+	 * StandardModuleTreeBuilder
+	 *********************/
+
+	base::Box<StandardModuleTreeBuilder> StandardModuleTreeBuilder::create() {
+		return base::makeBox<StandardModuleTreeBuilder>(StandardModuleTreeBuilder());
+	}
+
+	base::Box<StandardModuleTreeBuilder> StandardModuleTreeBuilder::createWithRandomPackageID() {
+		base::Box<StandardModuleTreeBuilder> builder = StandardModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 		return builder;
 	}
 
-	void ModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
+	void StandardModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
+		assertNotFinalized();
 		CORE_ASSERT(!m_main_source_file_path.has_value(), "Main source file already set");
 		m_main_source_file_path = file;
 	}
 
-	void ModuleTreeBuilder::addSubmodule(base::Ref<ModuleTree> submodule) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
+	void StandardModuleTreeBuilder::addSubmodule(base::Ref<ModuleTree> submodule) {
+		assertNotFinalized();
+		CORE_ASSERT(
+			submodule->getKind() == ModuleKind::Module or submodule->getKind() == ModuleKind::Script,
+			"Only standard and script modules can be submodules"
+		);
 		CORE_ASSERT(
 			!m_submodules.contains(submodule->getName()),
 			"Submodule with the same name already added"
@@ -194,8 +257,8 @@ namespace compiler::frontend {
 		m_submodules.put(submodule->getName(), submodule);
 	}
 
-	void ModuleTreeBuilder::addOtherFile(const fs::File& file) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
+	void StandardModuleTreeBuilder::addOtherFile(const fs::File& file) {
+		assertNotFinalized();
 		std::string extension = file.extension();
 		base::StrID ext_id(extension.c_str());
 
@@ -203,60 +266,102 @@ namespace compiler::frontend {
 		m_other_files.at(ext_id).push_back(file);
 	}
 
-	void ModuleTreeBuilder::setName(base::StrID name) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		CORE_ASSERT(m_name.isBad(), "Module name is already set");
-		m_name = name;
+	void StandardModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
+		CORE_ASSERT(
+			parent->getKind() == ModuleKind::Module, "Parent module must be a standard module"
+		);
+		setParentCommon(parent);
 	}
 
-	void ModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		m_parent = parent;
-	}
+	base::Ref<ModuleTree> StandardModuleTreeBuilder::finalize() {
+		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<StandardModuleTreeNode>());
+		auto            node       = module_ref->as<StandardModuleTreeNode>();
 
-	void ModuleTreeBuilder::setReplModule(const ReplData& repl_data) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		m_repl_data = repl_data;
-	}
+		node->m_other_files = std::move(m_other_files);
 
-	void ModuleTreeBuilder::setPackageID(base::StrID package_id) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
-		m_package_id = package_id;
-	}
-
-	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }
-
-	base::Ref<ModuleTree> ModuleTreeBuilder::finalize() {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-
-		m_finalized = true;
-
-		// Create new ModuleTree instance
-		Ref<ModuleTree> module_ref = ModuleTree::addModuleToStorage();
-
-		module_ref->m_self = module_ref;
-
-		// Set ID and name
-		module_ref->m_name        = m_name;
-		module_ref->m_other_files = std::move(m_other_files);
-
-		CORE_ASSERT(m_package_id.isGood(), "Package ID must be set for every module tree!");
-		module_ref->m_package_id = m_package_id;
-
-		// Set REPL-specific attributes
-		module_ref->m_repl_data = m_repl_data;
-
-		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
+		if (m_parent.has_value())
+			StandardModuleTreeModifier::setParent(module_ref, m_parent.value());
 
 		// Create SourceFiles from stored paths
-		if (m_main_source_file_path.has_value()) {
-			module_ref->m_main_source_file
+		if (m_main_source_file_path.has_value())
+			node->m_main_source_file
 				= SourceFile::create(m_main_source_file_path.value(), module_ref);
-		}
 
 		for (const auto& [name, submodule]: m_submodules)
-			ModuleTreeModifier::addSubmodule(module_ref, submodule);
+			StandardModuleTreeModifier::addSubmodule(module_ref, submodule);
+
+		return module_ref;
+	}
+
+	/*********************
+	 * ScriptModuleTreeBuilder
+	 *********************/
+
+	base::Box<ScriptModuleTreeBuilder> ScriptModuleTreeBuilder::create() {
+		return base::makeBox<ScriptModuleTreeBuilder>(ScriptModuleTreeBuilder());
+	}
+
+	void ScriptModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
+		CORE_ASSERT(
+			parent->getKind() == ModuleKind::Module, "Parent of a script must be a standard module"
+		);
+		setParentCommon(parent);
+	}
+
+	base::Ref<ModuleTree> ScriptModuleTreeBuilder::finalize() {
+		assertNotFinalized();
+
+		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<ScriptModuleTreeNode>());
+
+		if (m_parent.has_value()) ScriptModuleTreeModifier::setParent(module_ref, m_parent.value());
+
+		return module_ref;
+	}
+
+	/*********************
+	 * SyntheticReplChainModuleTreeBuilder
+	 *********************/
+
+	base::Box<SyntheticReplChainModuleTreeBuilder> SyntheticReplChainModuleTreeBuilder::create() {
+		return base::makeBox<SyntheticReplChainModuleTreeBuilder>(
+			SyntheticReplChainModuleTreeBuilder()
+		);
+	}
+
+	void SyntheticReplChainModuleTreeBuilder::setSyntheticSourceFile(const fs::File& file) {
+		assertNotFinalized();
+		CORE_ASSERT(!m_synthetic_source_file_path.has_value(), "Synthetic source file already set");
+		m_synthetic_source_file_path = file;
+	}
+
+	void SyntheticReplChainModuleTreeBuilder::setParent(base::Ref<ModuleTree> parent) {
+		CORE_ASSERT(
+			parent->getKind() == ModuleKind::ReplChain or parent->getKind() == ModuleKind::Script,
+			"Parent of a REPL chain module must be a REPL chain module or a script module"
+		);
+		setParentCommon(parent);
+	}
+
+	void SyntheticReplChainModuleTreeBuilder::setParent(ModuleID parent) {
+		setParent(GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+			parent
+		));
+	}
+
+	base::Ref<ModuleTree> SyntheticReplChainModuleTreeBuilder::finalize() {
+		assertNotFinalized();
+		CORE_ASSERT(
+			m_synthetic_source_file_path.has_value(),
+			"Synthetic source file must be set before finalizing a REPL chain module"
+		);
+
+		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<SyntheticReplChainModuleTreeNode>());
+
+		if (m_parent.has_value())
+			SyntheticReplChainModuleTreeModifier::setParent(module_ref, m_parent.value());
+
+		module_ref->as<SyntheticReplChainModuleTreeNode>()->m_synthetic_source_file
+			= SourceFile::create(m_synthetic_source_file_path.value(), module_ref);
 
 		return module_ref;
 	}

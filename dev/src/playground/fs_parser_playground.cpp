@@ -7,6 +7,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/module_tree_builder.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 
 #include <base/misc/int_conv.hpp>
 
@@ -21,8 +22,10 @@ namespace {
 	// Recursively count files and directories in a ModuleTree
 	void countFiles(const compiler::frontend::ModuleTree& tree) {
 		file_counter += tree.hasMainSourceFile() ? 1 : 0;
-		for (const auto& [_, files]: tree.getOtherFiles()) file_counter += (int) files.size();
-		for (const auto& submodule: tree.getSubmodules().illegalAccess()) {
+		const auto standard_node = tree.as<compiler::frontend::StandardModuleTreeNode>();
+		for (const auto& [_, files]: standard_node->getOtherFiles())
+			file_counter += (int) files.size();
+		for (const auto& submodule: standard_node->getSubmodules().illegalAccess()) {
 			countFiles(*compiler::frontend::getModuleRef(submodule.illegalAccess().getID()));
 			dir_counter++;
 		}
@@ -60,7 +63,7 @@ int main(int argc, const char* argv[]) {
 		std::cout << clah::HelpMessageGenerator::generate(clah, e.parsing_result) << '\n';
 	}
 
-	auto module_tree = compiler::frontend::ModuleTreeBuilder::createWithRandomPackageID(
+	auto module_tree = compiler::frontend::StandardModuleTreeBuilder::createWithRandomPackageID(
 		res.getValue<fs::File>('p').copyValueOr(fs::File(".")),
 		std::regex(res.getValue<std::string>("fileregex").copyValueOr("\\.*")),
 		std::regex(res.getValue<std::string>("dirregex").copyValueOr("\\..*"))

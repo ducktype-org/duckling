@@ -9,7 +9,7 @@
 namespace compiler::frontend {
 
 	/**
-	 * This flag indicates whether remove functions in ModuleTreeModifier are enabled.
+	 * This flag indicates whether remove functions of the module tree modifiers are enabled.
 	 * Use of module modifier only make sense in language server mode.
 	 * This flag enables additional checks for dangling references in dev mode.
 	 */

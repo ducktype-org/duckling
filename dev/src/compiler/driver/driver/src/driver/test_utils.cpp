@@ -10,6 +10,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/standard_module_tree.hpp>
 #include <frontend/packages/packages.hpp>
 #include <global_state/packages.hpp>
 
@@ -27,6 +28,7 @@ namespace compiler::driver::test_utils {
 			compiler::frontend::ModuleID current_module = start_module;
 			for (const auto& part: path) {
 				current_module = compiler::frontend::getModuleRef(current_module)
+				                     ->as<compiler::frontend::StandardModuleTreeNode>()
 				                     ->getSubmoduleByName(base::StrID(part))
 				                     .illegalAccess()
 				                     ->illegalAccess()

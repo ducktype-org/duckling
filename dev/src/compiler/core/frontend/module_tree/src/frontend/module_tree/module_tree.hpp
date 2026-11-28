@@ -25,6 +25,7 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace compiler::frontend::packages {
 	class PackageAccessLocked;
@@ -33,13 +34,13 @@ namespace compiler::frontend::packages {
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file module.
+	 * it is a module file.
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dk";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file script.
+	 * it is a script file.
 	 */
 	constexpr std::string_view LANG_SCRIPT_FILE = ".dks";
 
@@ -60,34 +61,69 @@ namespace compiler::frontend {
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
 	const std::regex DEFAULT_REJECT_DIRECTORY_REGEX = std::regex(R"((\$.*|\..*))");
 
-	class ModuleTreeBuilder;
-	class ModuleTreeModifier;
+	class ModuleTreeBuilderCommon;
+	class StandardModuleTreeBuilder;
+	class ScriptModuleTreeBuilder;
+	class SyntheticReplChainModuleTreeBuilder;
+	class ModuleTreeModifierCommon;
+	class StandardModuleTreeModifier;
+	class ScriptModuleTreeModifier;
+	class SyntheticReplChainModuleTreeModifier;
 	struct GetModuleID_Functor;
 
 	/**
-	 * @brief REPL-specific data structure.
-	 *
-	 * Only used for repl modules.
+	 * @brief Enumerates the different kinds of module tree nodes.
 	 */
-	struct ReplData final {
+	enum class ModuleKind {
 		/**
-		 * Parent REPL module in chronological order.
-		 * Optional - only empty for first REPL module.
+		 * Uninitialized state.
 		 */
-		base::Optional<ModuleID> m_repl_module_parent;
+		Invalid,
+
+		/**
+		 * Standard module.
+		 */
+		Module,
+
+		/**
+		 * Script module.
+		 */
+		Script,
+
+		/**
+		 * Synthetic REPL chain module.
+		 */
+		ReplChain
 	};
 
 	/**
-	 * @brief Represents a single module in the Duckling project tree.
+	 * @brief Represents a single module tree node in the Duckling project tree.
+	 *
+	 * @note Each module is a standard module, a script module (created from a script file), or a
+	 * synthetic REPL chain module (one statement of a REPL session or script).
+	 *
+	 * @note This is an abstract class, the instances include:
+	 * - StandardModuleTreeNode: Represents a standard module.
+	 * - ScriptModuleTreeNode / SyntheticReplChainModuleTreeNode: script and REPL nodes.
+	 *
+	 * @note Parent structure (m_parent):
+	 * - a standard module or a script module has a standard module as parent, or none (root);
+	 *   it is one of the parent's submodules.
+	 * - a synthetic REPL chain module has the previous chain module or the script module that
+	 *   starts the chain as parent, or none (first statement of a REPL session); it is the
+	 *   parent's REPL child.
+	 * Each node is built with the builder of its kind (StandardModuleTreeBuilder,
+	 * ScriptModuleTreeBuilder, SyntheticReplChainModuleTreeBuilder) and modified with the
+	 * matching modifier.
 	 *
 	 * ModuleTree provides a hierarchical, in-memory representation of a module,
-	 * including its source files, submodules, and other files.
+	 * including its main source file, submodules, and other files.
 	 * The ModuleTree is the first instance of module in duckling compiling process
 	 * the main use case is to build a module tree form existing folder, and then
 	 * extract the pst from source files
 	 * But module tree can be also created manually.
 	 *
-	 * - Tracks main source file, additional source files, submodules, and other files.
+	 * - Tracks main source file, submodules, and other files.
 	 * - Supports pretty-printing for debugging and inspection.
 	 * - Immutable after construction; use ModuleTreeModifier for changes.
 	 * - Submodules form a tree structure, each with a parent reference.
@@ -100,13 +136,21 @@ namespace compiler::frontend {
 	 * component hash. Lazy writes can race
 	 * under concurrency.
 	 */
-	class ModuleTree final {
-		friend class ModuleTreeBuilder;
-		friend class ModuleTreeModifier;
+	class ModuleTree {
+		friend class ModuleTreeBuilderCommon;
+		friend class StandardModuleTreeBuilder;
+		friend class ScriptModuleTreeBuilder;
+		friend class SyntheticReplChainModuleTreeBuilder;
+		friend class ModuleTreeModifierCommon;
+		friend class StandardModuleTreeModifier;
+		friend class ScriptModuleTreeModifier;
+		friend class SyntheticReplChainModuleTreeModifier;
 		friend struct GetModuleID_Functor;
 		friend struct ModuleID;
 
 	public:
+		virtual ~ModuleTree();
+
 		ModuleID getModuleID() const;
 
 		/**
@@ -119,6 +163,9 @@ namespace compiler::frontend {
 
 		/**
 		 * Checks if a module contains main source file.
+		 * For a standard module this is StandardModuleTreeNode::m_main_source_file, for a synthetic
+		 * REPL chain module it is SyntheticReplChainModuleTreeNode::m_synthetic_source_file.
+		 * A script module never has one.
 		 * @return True if the main source file exists, false otherwise.
 		 */
 		[[nodiscard]]
@@ -133,32 +180,20 @@ namespace compiler::frontend {
 		FileAccessLocked getMainSourceFile() const;
 
 		/**
-		 * Accesses the submodules located in this module.
-		 * @note Use this only if you need all submodules. For single submodule access, use
-		 * getSubmoduleByName().
-		 * @return A lazy view that can be unlocked within a query context or accessed illegally
-		 * (outside queries).
+		 * @brief Looks up the submodule `name` of this module.
+		 * Registers the same dependency as StandardModuleTreeNode::getSubmoduleByName().
+		 * @return Empty if there is no such submodule, or if this module cannot have submodules
+		 * (script and REPL chain modules).
 		 */
 		[[nodiscard]]
-		SubmodulesAccessLocked getSubmodules() const;
+		base::Optional<ModuleID> findSubmodule(query::Context& ctx, base::StrID name) const;
 
 		/**
-		 * Access a single submodule edge by name.
-		 * Registers dependency via QueryModuleChildSideInput when unlocked.
-		 * Use this function in lookups when you need only a submodule with some name.
-		 * @param name Name of the submodule to access.
-		 * @return AccessLocked wrapper that may contain the submodule if it exists.
+		 * @brief The number of submodules of this module, 0 for a script or REPL chain module.
+		 * @note This registers no query dependency. Use it outside queries only.
 		 */
 		[[nodiscard]]
-		ModuleChildAccessLocked getSubmoduleByName(base::StrID name) const;
-
-		/**
-		 * Accesses all the other files that are located inside the module.
-		 * @return A base::HashMap that maps a file extension to a vector
-		 * with files with this extension.
-		 */
-		[[nodiscard]]
-		const base::HashMap<base::StrID, std::vector<fs::File>>& getOtherFiles() const;
+		usize getSubmoduleCount() const;
 
 		/**
 		 * Parses the name of the module.
@@ -175,27 +210,18 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]] packages::PackageAccessLocked getPackage() const;
 
+		[[nodiscard]]
+		ModuleKind getKind() const;
+
 		/**
 		 * Check if this module is a REPL-generated module.
 		 * REPL modules have special cross-module lookup behavior.
+		 * @TODO: #2762 remove this if possible
 		 * @return true if this is a REPL module, false otherwise
 		 */
 		[[nodiscard]]
 		bool isReplModule() const {
-			return m_repl_data.has_value();
-		}
-
-		/**
-		 * Get the parent REPL module.
-		 * Only valid for REPL modules.
-		 * @return ModuleID of the parent REPL module, or empty if this is the first REPL module
-		 */
-		[[nodiscard]]
-		base::Optional<ModuleID> getReplModuleParent() const {
-			CORE_ASSERT(
-				m_repl_data.has_value(), "repl data of a node with parent should have value!"
-			);
-			return m_repl_data->m_repl_module_parent;
+			return getKind() == ModuleKind::ReplChain;
 		}
 
 		/**
@@ -242,13 +268,99 @@ namespace compiler::frontend {
 		 */
 		std::string prettyPrint(u32 indentation = 0) const;
 
-		ModuleTree(const ModuleTree&)            = delete;
-		ModuleTree& operator=(const ModuleTree&) = delete;
-		ModuleTree(ModuleTree&&) noexcept        = default;
+		/**
+		 * @brief Downcasts this module to the node class of its kind.
+		 * @note Panics if the module is not a T. Check the module kind before calling this.
+		 */
+		template<class T>
+		Ref<T> as() {
+			auto* node = dynamic_cast<T*>(this);
+			CORE_ASSERT(node != nullptr, "ModuleTree::as<T>() called on a module of another kind");
+			return node;
+		}
 
-	private:
+		/**
+		 * @brief Downcasts this module to the node class of its kind.
+		 * @note Panics if the module is not a T. Check the module kind before calling this.
+		 */
+		template<class T>
+		CRef<T> as() const {
+			const auto* node = dynamic_cast<const T*>(this);
+			CORE_ASSERT(node != nullptr, "ModuleTree::as<T>() called on a module of another kind");
+			return node;
+		}
+
+		/**
+		 * @brief Downcasts this module to the node class T, if it is one.
+		 * @return The node as a T, or an empty optional when the module is of another kind.
+		 */
+		template<class T>
+		base::Optional<Ref<T>> tryAs() {
+			if (auto* node = dynamic_cast<T*>(this)) return Ref<T>(node);
+			return {};
+		}
+
+		/**
+		 * @brief Downcasts this module to the node class T, if it is one.
+		 * @return The node as a T, or an empty optional when the module is of another kind.
+		 */
+		template<class T>
+		base::Optional<CRef<T>> tryAs() const {
+			if (const auto* node = dynamic_cast<const T*>(this)) return CRef<T>(node);
+			return {};
+		}
+
+		/**
+		 * @brief Collects all child modules of this module.
+		 * @return A vector containing references to all child modules.
+		 *
+		 * @important Submodules and child modules are not the same thing.
+		 * Submodules reflect the high-level Duckling module structure,
+		 * whereas child modules include all modules that are direct children in the module tree
+		 * structure (i.e. whose parent is this module): the submodules of a standard module, and
+		 * the REPL child of a script or a REPL chain module.
+		 *
+		 * @TODO: #4253 This registers no query dependency, but probably should.
+		 * It is used inside module tree creation, so we want to be able to call it from inside a
+		 * query (currenlty only script/repl pipeline does it, but we can refactor them so they
+		 * don't), so we can generate module treies lazily as needed. There are two ways to go about
+		 * it:
+		 * 1. Refactor the repl/script pipeline and assume this will only be called outside queries.
+		 * 2. Extend related sideinputs and modify this function to register query dependencies
+		 * properly, allowing it to be called from within queries.
+		 */
+		[[nodiscard]]
+		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const
+			= 0;
+
+		ModuleTree(const ModuleTree&)                = delete;
+		ModuleTree& operator=(const ModuleTree&)     = delete;
+		ModuleTree(ModuleTree&&) noexcept            = delete;
+		ModuleTree& operator=(ModuleTree&&) noexcept = delete;
+
+	protected:
 		ModuleTree();
 
+		/**
+		 * @brief Collects all source files owned by this module.
+		 * @return A vector containing references to the owned source files.
+		 *
+		 * @note as of now, its always 0 or 1 owned source file per module,
+		 * but the interface returns a vector for ease of use and future extensibility.
+		 */
+		virtual std::vector<base::Ref<SourceFile>> collectOwnedSourceFiles() const = 0;
+
+		/**
+		 * @brief Adds the data of this module kind to the module hash.
+		 *
+		 * The module hash is computed from the root down (a parent's hash is always ready
+		 * before its children's) and invalidateHash() only goes down to the children. So only
+		 * data of this module or of its ancestors may be hashed here, never data of a child.
+		 * Data that can change after finalize() must call invalidateHash() when it changes.
+		 * Source file contents and submodules must not be hashed, they have their own side
+		 * inputs.
+		 */
+		virtual void addKindSpecificDataToHash(hashing::ComponentHash::HashAlg& partial) const = 0;
 
 		/**
 		 * Invalidate current module hash and component hash, used when module structure changes
@@ -274,11 +386,11 @@ namespace compiler::frontend {
 		void updateModuleHashFromRootToThis();
 
 		/**
-		 * @brief Create a new, empty ModuleTree in static storage.
+		 * @brief Add ModuleTree to static storage.
 		 * @note In principle it should only be used in ModuleTreeBuilder::finalize.
-		 * @return Reference to the stored ModuleTree, with its storage handle already set.
+		 * @return Reference to the stored ModuleTree, with its storage handle set.
 		 */
-		static base::Ref<ModuleTree> addModuleToStorage();
+		static base::Ref<ModuleTree> addModuleToStorage(base::Box<ModuleTree> module);
 
 		/**
 		 * @brief Remove ModuleTree from static storage.
@@ -300,33 +412,16 @@ namespace compiler::frontend {
 		 */
 		static base::Ref<ModuleTree> getRegisteredModule(const base::Bit256& hash);
 
-		// this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
-		base::Optional<base::Ref<ModuleTree>> m_self;
+		/* * * * * * * * * * * * * * *\
+		|  Universal data members:   *|
+		\* * * * * * * * * * * * * * */
 
-		base::StrID m_name;
+		ModuleKind kind = ModuleKind::Invalid;
 
-		base::Optional<base::Ref<ModuleTree>> m_parent;
-
-		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
-		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
-		base::HashMap<base::StrID, std::vector<fs::File>>
-			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
-		                    // happening with them. Do not use this in query unless AccessLocked is
-		                    // implemented for this
-
-		base::Optional<usize> m_storage_handle;  //< Key to support removal from static storage
-
-		base::Optional<hashing::ComponentHash>
-			m_path_component_hash;  //< ComponentHash of the module's logical path: eg
-		                            // package_name/root/submodule1/sub2
-		base::Optional<hashing::ComponentHash::HashType>
-			m_hash;                 //< This is the actual hash for the Module used in SideInput
 		/**
-		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
-		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
-		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
+		 * this is a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		 */
-		mutable base::Box<std::mutex> m_hash_recompute_mutex;
+		base::Optional<base::Ref<ModuleTree>> m_self;
 
 		/**
 		 * Package ID associated with this module tree.
@@ -335,11 +430,40 @@ namespace compiler::frontend {
 		base::StrID m_package_id;
 
 		/**
-		 * REPL-specific data.
-		 * Optional - only set for modules created in REPL sessions.
-		 * Presence of this optional indicates the module is a REPL module.
+		 * Name of the module.
 		 */
-		base::Optional<ReplData> m_repl_data;
+		base::StrID m_name;
+
+		/**
+		 * Parent module, if any.
+		 * @note empty if this is a root module. See the class doc for which kinds can be parents.
+		 */
+		base::Optional<base::Ref<ModuleTree>> m_parent;
+
+
+		/**
+		 * Key to support removal from static storage
+		 */
+		base::Optional<usize> m_storage_handle;
+
+		/**
+		 * ComponentHash of the module's logical path: eg
+		 * package_name/root/submodule1/sub2
+		 */
+		base::Optional<hashing::ComponentHash> m_path_component_hash;
+
+		/**
+		 * This is the actual hash for the Module used in SideInput
+		 */
+		base::Optional<hashing::ComponentHash::HashType> m_hash;
+
+
+		/**
+		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
+		 * @note Hold this lock while reading/writing m_path_component_hash or m_hash during lazy
+		 * recomputation flow (updateModuleHashFromRootToThis/updateModuleHash).
+		 */
+		mutable base::Box<std::mutex> m_hash_recompute_mutex;
 	};
 
 	/*
