@@ -111,6 +111,7 @@ public:
 		TESTER_ADD_TEST(testCommentWrapping);
 		TESTER_ADD_TEST(testCommentsInGroups);
 		TESTER_ADD_TEST(testMultiLineBlockComment);
+		TESTER_ADD_TEST(testNamedBlockComments);
 
 		// Empty lines.
 		TESTER_ADD_TEST(testEmptyLines);
@@ -734,6 +735,21 @@ fun f() = {
 		// An `and`/`or` on the next line continues the expression the literal is part of.
 		check("let ok = c == {1, 2}\n\tand other;", "let ok = c == {1, 2} and other;\n");
 		check("let ok = c == {1, 2}\n\tor other;", "let ok = c == {1, 2} or other;\n");
+	}
+
+	void testNamedBlockComments() {
+		check("x= #tag{#} still comment #tag} 1;", "x = #tag{#} still comment #tag} 1;\n");
+		check("foo(a,#tag{#other} #tag}b);", "foo(a, #tag{#other} #tag} b);\n");
+		check(
+			"#tag{\n    #} still comment\n#tag}\nfun f()={}",
+			"#tag{\n    #} still comment\n#tag}\nfun f() = {}\n"
+		);
+		check("x=#zażółć{#} comment #zażółć}1;", "x = #zażółć{#} comment #zażółć} 1;\n");
+		check(
+			"x=#tag{long comment stays intact #tag}1;",
+			"x\n\t= #tag{long comment stays intact #tag} 1;\n",
+			narrowConfig(20)
+		);
 	}
 
 	/** An over-long line comment re-flows at word boundaries, repeating its prefix. */

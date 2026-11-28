@@ -70,6 +70,8 @@ namespace lexer {
 			Angle  = 0x30'08,
 		};
 
+		enum class CommentKind { Line, Block };
+
 		/**
 		 * @name Functions that construct a Token
 		 * @{
@@ -90,7 +92,7 @@ namespace lexer {
 		static Token makeFormatStringSubString(base::RawView string, const dia::SourcePosition);
 		static Token
 			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
-		static Token makeComment(base::RawView comment, const dia::SourcePosition&);
+		static Token makeComment(base::RawView comment, const dia::SourcePosition&, CommentKind);
 		static Token makeOperator(base::RawView oper, const dia::SourcePosition&);
 		static Token makeIdentifier(base::RawView identifier, const dia::SourcePosition&);
 		static Token makeSpecial(base::RawView identifier, const dia::SourcePosition&);
@@ -140,6 +142,8 @@ namespace lexer {
 		Type getType() const;
 		[[nodiscard]]
 		BracketType getBracketType() const;
+		[[nodiscard]]
+		CommentKind getCommentKind() const;
 		[[nodiscard]]
 		base::StrID getValue() const;
 		[[nodiscard]]
@@ -265,6 +269,7 @@ namespace lexer {
 		std::shared_ptr<const Token> sentinel_end;
 		dia::SourcePosition          source_position;
 		BracketType                  bracket_type{ BracketType::None };
+		CommentKind                  comment_kind{ CommentKind::Line };
 	};
 
 	/**

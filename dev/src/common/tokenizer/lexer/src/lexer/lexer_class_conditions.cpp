@@ -18,9 +18,22 @@ namespace lexer {
 
 	bool Lexer::isCommentBegin() const { return tryRawValue('#'); }
 
-	bool Lexer::isBlockCommentBegin() const { return tryRawValue('#') && tryRawValue('{', 1); }
+	usize Lexer::blockCommentOpeningLength() const {
+		if (!isCommentBegin()) return 0;
 
-	bool Lexer::isBlockCommentEnd() const { return tryRawValue('#') && tryRawValue('}', 1); }
+		usize length = 1;
+		if (peek(length).is(Class::name_start)) {
+			do { ++length; } while (peek(length).is(Class::name_continue));
+		}
+		return tryRawValue('{', length) ? length + 1 : 0;
+	}
+
+	bool Lexer::isBlockCommentEnd(usize begin, usize delimiter_length) const {
+		if (!tryRawValue('#') || !tryRawValue('}', delimiter_length - 1)) return false;
+		for (usize offset = 1; offset + 1 < delimiter_length; ++offset)
+			if (!peek(offset).is(char_array.at(begin + offset).value)) return false;
+		return true;
+	}
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 

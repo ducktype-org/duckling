@@ -69,7 +69,7 @@ namespace lexer {
 		 */
 		void bracketHandler(Tokens& output);
 		void commentHandler(Tokens& output);
-		void blockCommentHandler(Tokens& output);
+		void blockCommentHandler(Tokens& output, usize delimiter_length);
 		void operatorHandler(Tokens& output);
 		void nameHandler(Tokens& output);
 		void stringHandler(Tokens& output);
@@ -105,9 +105,9 @@ namespace lexer {
 		[[nodiscard]]
 		bool isCommentBegin() const;
 		[[nodiscard]]
-		bool isBlockCommentBegin() const;
+		usize blockCommentOpeningLength() const;
 		[[nodiscard]]
-		bool isBlockCommentEnd() const;
+		bool isBlockCommentEnd(usize begin, usize delimiter_length) const;
 		[[nodiscard]]
 		bool isStringBegin() const;
 		[[nodiscard]]

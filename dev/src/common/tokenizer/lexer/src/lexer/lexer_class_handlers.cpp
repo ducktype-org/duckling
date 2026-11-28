@@ -35,7 +35,11 @@ namespace lexer {
 		}
 
 	public:
-		UnclosedCommentError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {}
+		UnclosedCommentError(dia::SourcePosition pos): dia::MessageWithCodeFragmentAndCause(pos) {
+			auto closing_delimiter   = pos.content();
+			closing_delimiter.back() = '}';
+			addArgument<dia::TextArgument>("closing_delimiter", std::move(closing_delimiter));
+		}
 	};
 
 	class UnclosedStringEolError final: public dia::MessageWithCodeFragmentAndCause {
@@ -181,8 +185,8 @@ namespace lexer {
 			else
 				decLiteralHandler(output);
 
-		} else if (isBlockCommentBegin()) {
-			blockCommentHandler(output);
+		} else if (const usize delimiter_length = blockCommentOpeningLength()) {
+			blockCommentHandler(output, delimiter_length);
 		} else if (isCommentBegin()) {
 			commentHandler(output);
 		} else if (isFormatStringBegin()) {
@@ -229,24 +233,25 @@ namespace lexer {
 
 		addTokenMsg(begin, end, "line comment");
 		if (options.keep_comments)
-			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
-			);
+			output.push_back(Token::makeComment(
+				file->getCharRange(begin, end + 1), source_position, Token::CommentKind::Line
+			));
 	}
 
-	void Lexer::blockCommentHandler(Tokens& output) {
+	void Lexer::blockCommentHandler(Tokens& output, usize delimiter_length) {
 		usize               begin = where;
 		usize               end{};
 		auto                source_start = currentPosition();
-		dia::SourcePosition opening(source_start, begin + 1);
+		dia::SourcePosition opening(source_start, begin + delimiter_length - 1);
 
-		skip(2);  // "#{"
+		skip(delimiter_length);
 		while (true) {
 			if (isEOF()) {
 				logger->log(makeBox<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
-			} else if (isBlockCommentEnd()) {
-				skip(2);
+			} else if (isBlockCommentEnd(begin, delimiter_length)) {
+				skip(delimiter_length);
 				end = where - 1;
 				break;
 			} else {
@@ -257,8 +262,9 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "block comment");
 		if (options.keep_comments)
-			output.push_back(Token::makeComment(file->getCharRange(begin, end + 1), source_position)
-			);
+			output.push_back(Token::makeComment(
+				file->getCharRange(begin, end + 1), source_position, Token::CommentKind::Block
+			));
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {

@@ -140,8 +140,12 @@ namespace lexer {
 		return { Type::Sentinel, base::RawView("BOF"), pos };
 	}
 
-	Token Token::makeComment(const base::RawView comment, const dia::SourcePosition& position) {
-		return { Type::Comment, comment, position };
+	Token Token::makeComment(
+		const base::RawView comment, const dia::SourcePosition& position, CommentKind kind
+	) {
+		Token token{ Type::Comment, comment, position };
+		token.comment_kind = kind;
+		return token;
 	}
 
 	Token Token::makeOperator(
@@ -241,6 +245,7 @@ namespace lexer {
 		swap(first.sentinel_begin, second.sentinel_begin);
 		swap(first.sentinel_end, second.sentinel_end);
 		swap(first.bracket_type, second.bracket_type);
+		swap(first.comment_kind, second.comment_kind);
 	}
 
 	Token& Token::operator=(Token&& other) noexcept {
@@ -255,6 +260,8 @@ namespace lexer {
 	Token::Type Token::getType() const { return type; }
 
 	Token::BracketType Token::getBracketType() const { return bracket_type; }
+
+	Token::CommentKind Token::getCommentKind() const { return comment_kind; }
 
 	base::StrID Token::getValue() const { return str_id; }
 
