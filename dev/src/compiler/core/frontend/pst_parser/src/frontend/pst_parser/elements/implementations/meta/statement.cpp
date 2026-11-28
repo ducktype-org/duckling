@@ -30,6 +30,16 @@ namespace pst {
 			if (state[fwd].is(Keyword::Const) && state[fwd - 1].is(Keyword::If)) return false;
 			// @TODO: #4062 Remove this once we have explicit self.
 			if (state[fwd].is(Keyword::Mut) && state[fwd + 1].is(Keyword::Fun)) return true;
+			// A statement-start keyword used as an expression operand (after `=` or a general
+			// binary operator, e.g. `let a = fun;`, `let a = fun + 1`, or `let a = 1 + fun`) is
+			// a misused value, not the start of the next statement. A keyword followed by an
+			// identifier is a genuine declaration (`fun f()`).
+			const bool preceded_by_value_op
+				= state[fwd - 1].is(NamedOperator::Assign)
+			   || (state[fwd - 1].isOperatorSymbol()
+			       && state[fwd - 1].asBinaryOperator().map([](auto op) { return op.isGenBinOp(); }
+			       ).copyValueOr(false));
+			if (preceded_by_value_op && !state[fwd + 1].isIdentifier()) return false;
 			return keywordFlags(state[fwd].asKeyword())
 			    .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
 		}
@@ -162,6 +172,46 @@ namespace pst {
 		};
 
 		template<class T>
+		concept NamedDecl = std::same_as<T, Variable> || std::same_as<T, Const>
+		                 || std::same_as<T, Class> || std::same_as<T, Namespace>;
+
+		template<class T>
+		requires NamedDecl<T> struct StmtFinder<T> {
+		private:
+			/**
+			 * @brief Whether the token `fwd` tokens ahead can follow this declaration's name.
+			 */
+			static bool isNameContinuation(const TokenStream& state, i64 fwd) {
+				if constexpr (std::same_as<T, Class>) {
+					return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly)
+					    || state[fwd].is(Keyword::Extends) || state[fwd].is(Keyword::Implements)
+					    || state[fwd].is(NamedOperator::Colon);
+				} else if constexpr (std::same_as<T, Namespace>) {
+					return state[fwd].isBracketGroup(lexer::Token::BracketType::Curly);
+				} else {
+					// Variable, Const
+					return state[fwd].is(NamedOperator::Assign)
+					    || state[fwd].is(NamedOperator::Colon);
+				}
+			}
+
+		public:
+			static u64 findStatementLength(LangParserState& state, i64 base = 0) {
+				u64 length
+					= 1 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(base + 1);
+				// A keyword in the name slot is only a misused name when a declaration
+				// continuation follows it. Widen to the real end of the statement then, so the
+				// whole statement is skipped as one and the parser reports the keyword instead
+				// of a truncated-window sentinel.
+				if (length == 1 && state[base + 1].isKeyword()
+				    && isNameContinuation(state.ctokens(), base + 2))
+					length
+						= 2 + state.ctokens().countUntil<StmtClassifiers<T>::isStmtEnd>(base + 2);
+				return length;
+			}
+		};
+
+		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 
 		template<class T>
@@ -184,6 +234,12 @@ namespace pst {
 				const i64 head           = 1 + tokensBeforeFun(state, base);
 				u64       initial_length = base::safeIntConv<u64>(head)
 				                   + state.ctokens().countUntil<isAssignOrEnd>(base + head);
+				// A keyword in the name slot (e.g. `fun fun() = ...`) is a misused name, not the
+				// start of the next statement. Skip it so the window reaches the real `=`/body.
+				if (initial_length == base::safeIntConv<u64>(head) && state[base + head].isKeyword()
+				    && state[base + head + 1].isBracketGroup(lexer::Token::BracketType::Round))
+					initial_length = base::safeIntConv<u64>(head + 1)
+					               + state.ctokens().countUntil<isAssignOrEnd>(base + head + 1);
 				if (!state[base + base::safeIntConv<i64>(initial_length)].is(NamedOperator::Assign))
 					return initial_length;
 				initial_length++;

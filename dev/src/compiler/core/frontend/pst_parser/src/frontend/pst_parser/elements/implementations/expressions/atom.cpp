@@ -20,6 +20,21 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	namespace {
+		/**
+		 * @brief Whether @p key is a statement/specifier keyword that cannot be an expression
+		 * value (e.g. `fun`, `class`). `const` is a type modifier, so it is allowed. Other
+		 * non-literal keywords (`sizeof`, `assert`, ...) are left to `KeywordLiteral::parse`
+		 * and reported as not-yet-implemented by HELIOS.
+		 */
+		bool isMisusedStatementKeyword(lang_def::Keyword key) {
+			if (key == lang_def::Keyword::Const) return false;
+			const auto flags = lang_def::keywordFlags(key);
+			return flags.contains(lang_def::KeywordFlagsOptions::IsStmtStart)
+			    || flags.contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+		}
+	}
+
 	MBox<ExprElement> Atom::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
@@ -28,6 +43,12 @@ namespace pst::expr {
 		} else if (state[0].isIdentifierLike()) {
 			return IdentifierLiteral::parse(state);
 		} else if (state[0].isKeyword()) {
+			if (isMisusedStatementKeyword(state[0].asKeyword())) {
+				state.logInt(
+					makeBox<NoAtomError>(state.getPosition(), state.ctokens().peek().describe())
+				);
+				return nullptr;
+			}
 			return KeywordLiteral::parse(state);
 		} else if (state[0].isNumLiteralGroup()) {
 			return ExprNumericValue::parse(state);
@@ -47,7 +68,8 @@ namespace pst::expr {
 			i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 			state.logInt(makeBox<NoAtomError>(
-				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
+				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd()),
+				state.ctokens().peek().describe()
 			));
 			return nullptr;
 		}

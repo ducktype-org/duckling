@@ -89,6 +89,9 @@ public:
 		TESTER_ADD_TEST(testOperatorFun);
 		TESTER_ADD_TEST(testMutMethod);
 		TESTER_ADD_TEST(testSimpleExpand);
+		TESTER_ADD_TEST(testKeywordAsIdentifierName);
+		TESTER_ADD_TEST(testNonStatementKeywordIsLiteral);
+		TESTER_ADD_TEST(testKeywordNameDoesNotSwallowNextStatement);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -328,6 +331,100 @@ private:
 	void testMissingSemiErr() {
 		auto pst = prepare(path("snippets/missing_semicolon_err.duck"));
 		assertTrue(pst->getLogger()->errorCount() == 3, "Expected 3 errors");
+	}
+
+	void testKeywordAsIdentifierName() {
+		struct Case {
+			std::string_view code;
+			std::string_view needle;
+		};
+
+		constexpr std::array CASES = {
+			Case{ .code = "let fun = 10;", .needle = "Keyword 'fun'" },
+			Case{ .code = "let if = 10;", .needle = "Keyword 'if'" },
+			Case{ .code = "fun fun() = 1;", .needle = "Keyword 'fun'" },
+			Case{ .code = "class fun {}", .needle = "Keyword 'fun'" },
+			Case{ .code = "namespace fun {}", .needle = "Keyword 'fun'" },
+			Case{ .code = "let a = fun + 1;", .needle = "Keyword 'fun'" },
+			Case{ .code = "let a = fun;", .needle = "Keyword 'fun'" },
+			Case{ .code = "let a = 1 + fun;", .needle = "Keyword 'fun'" },
+		};
+		for (const Case& c: CASES) {
+			auto              pst = pst::ParsedPST<>::fromContents(c.code, pst::PSTType::Script);
+			std::stringstream ss;
+			pst->getLogger()->terminalPrint(ss);
+			const std::string rendered = ss.str();
+
+			assertTrue(
+				pst->getLogger()->errorCount() == 1,
+				"expected exactly one error for `" + std::string(c.code) + "`"
+			);
+			assertTrue(
+				rendered.find(c.needle) != std::string::npos,
+				"expected `" + std::string(c.needle) + "` diagnostic for `" + std::string(c.code)
+					+ "`"
+			);
+			assertTrue(
+				rendered.find("Sentinel") == std::string::npos,
+				"sentinel leaked into diagnostics for `" + std::string(c.code) + "`"
+			);
+			assertTrue(
+				rendered.find("the end of the statement") == std::string::npos,
+				"expected the offending keyword, not the fallback sentinel, for `"
+					+ std::string(c.code) + "`"
+			);
+		}
+	}
+
+	void testNonStatementKeywordIsLiteral() {
+		// `sizeof` is a keyword but not a statement start/specifier, so it must keep
+		// parsing as a keyword literal rather than being rejected as a misused keyword.
+		auto pst = pst::ParsedPST<>::fromContents("let a = sizeof(i64);", pst::PSTType::Script);
+		assertTrue(pst->getLogger()->errorCount() == 0, "`sizeof` must parse without a parse error");
+		std::stringstream ss;
+		pst->getLogger()->terminalPrint(ss);
+		assertTrue(
+			ss.str().find("Keyword 'sizeof'") == std::string::npos,
+			"`sizeof` must not be reported as a misused statement keyword"
+		);
+	}
+
+	void testKeywordNameDoesNotSwallowNextStatement() {
+		// A nameless `let`/`var` must not swallow the declaration or loop on the next
+		// line into its own (empty) statement.
+		{
+			auto pst = pst::ParsedPST<>::fromContents(
+				"fun f() = {\n    let\n    fun g() = 1;\n}\n", pst::PSTType::Script
+			);
+			std::stringstream ss;
+			pst->getLogger()->terminalPrint(ss);
+			const std::string rendered = ss.str();
+			assertTrue(
+				rendered.find("Keyword 'fun'") == std::string::npos,
+				"the following function was swallowed into the nameless `let`"
+			);
+			assertTrue(
+				rendered.find("the end of the statement") != std::string::npos,
+				"expected the nameless-`let` error"
+			);
+		}
+		{
+			auto pst = pst::ParsedPST<>::fromContents(
+				"fun f() = {\n    let\n    while (true) {\n        let x = ;\n    }\n}\n",
+				pst::PSTType::Script
+			);
+			std::stringstream ss;
+			pst->getLogger()->terminalPrint(ss);
+			const std::string rendered = ss.str();
+			assertTrue(
+				rendered.find("Keyword 'while'") == std::string::npos,
+				"the following loop was swallowed into the nameless `let`"
+			);
+			assertTrue(
+				rendered.find("Empty expression where non-empty expected.") != std::string::npos,
+				"the mistake inside the loop body was lost"
+			);
+		}
 	}
 
 	void testFunctionParameterVisitors() {
