@@ -212,6 +212,33 @@ namespace compiler::mir {
 			output({ expr_result.begin });
 		}
 
+		/**
+		 * @brief Returns the value a `Branch` on @p condition reads, and fills @p hole.
+		 *
+		 * A non-local value (constant, global) is used as it is. Any other result is stored in a
+		 * condition temporary, so the branch can still read it after the locals and temporaries
+		 * of the condition are destroyed.
+		 */
+		MIRValue lowerConditionValue(
+			ExprLowerRes& condition, BlockBuilder::InstructionHole& hole, ScopeRef condition_scope
+		) {
+			auto stored_value = condition.getResultIfStored();
+			if (stored_value.has_value() && !stored_value->isLocal()) {
+				hole.fillNop(condition_scope);
+				return std::move(stored_value.value());
+			}
+
+			const MIRPlace condition_tmp(MIRLocalRef(function.addConditionTmp(condition_scope)));
+			condition.storeResultInGivenPlace(
+				condition_tmp,
+				hole,
+				{ flagConstruct(condition_tmp.getBase<MIRLocalRef>()) },
+				condition_scope,
+				{}
+			);
+			return condition_tmp;
+		}
+
 		void visitIfStmt(const hc::IfStmt& stmt) override {
 			auto condition_scope      = function.newScope(parent_scope);
 			auto condition_block      = function.newBlock("if.cond");
@@ -247,34 +274,14 @@ namespace compiler::mir {
 				= lowerCodeBlock(stmt.then_body, then_block, function, then_scope, branch_targets)
 			          .begin;
 
-			auto possible_condition_res = lowered_condition.getResultIfStored();
-
-			if (possible_condition_res.has_value() && !possible_condition_res->isLocal()) {
-				get_condition_return.fillNop(condition_scope);
-
-			} else {
-				// Condition result must be stored in special temporary value, so we can use it
-				// after the actual condition result is destroyed. Create extra temporary and assign
-				// to it in-place or with extra move.
-				possible_condition_res = function.addConditionTmp(condition_scope);
-
-				lowered_condition.storeResultInGivenPlace(
-					possible_condition_res->get<MIRPlace>(),
-					get_condition_return,
-					{
-						flagConstruct(possible_condition_res->get<MIRPlace>().getBase<MIRLocalRef>()
-				        ),
-					},
-					condition_scope,
-					{}
-				);
-			}
+			auto condition_value
+				= lowerConditionValue(lowered_condition, get_condition_return, condition_scope);
 
 			condition_block->setTerminator(Instruction{
 				Operation::Branch,
 				{},
 				{
-					*possible_condition_res,
+					std::move(condition_value),
 					then_body->getID(),
 					else_body->getID(),
 				},
@@ -345,28 +352,14 @@ namespace compiler::mir {
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
 			);
 
-			auto possible_result = expr_result.getResultIfStored();
-
-			if (possible_result.has_value() and !possible_result->isLocal()) {
-				get_condition_return.fillNop(condition_scope);
-
-			} else {
-				possible_result = function.addConditionTmp(condition_scope);
-
-				expr_result.storeResultInGivenPlace(
-					possible_result->get<MIRPlace>(),
-					get_condition_return,
-					{ flagConstruct(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()) },
-					condition_scope,
-					{}
-				);
-			}
+			auto condition_value
+				= lowerConditionValue(expr_result, get_condition_return, condition_scope);
 
 			condition_continuation_block->setTerminator({
 				Operation::Branch,
 				{},
 				{
-					possible_result.value(),
+					std::move(condition_value),
 					loop_body.begin->getID(),
 					continuation->getID(),
 				},
