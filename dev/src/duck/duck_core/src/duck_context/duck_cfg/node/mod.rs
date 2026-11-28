@@ -5,6 +5,8 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! A single config node.
+//!
+//! For nuances about deserialization, see [`de`].
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -100,43 +102,44 @@ impl Node {
     /// Create a [`Node`] from a YAML [`Value`].
     ///
     /// [`Value`]: serde_yaml_ng::Value
+    #[track_caller]
     fn from_yaml(value: serde_yaml_ng::Value, source: Source) -> QuackResult<Option<Self>> {
         match value {
             serde_yaml_ng::Value::Null => Ok(None),
-            serde_yaml_ng::Value::Bool(b) => Ok(Some(Self::Boolean(b, source))),
+            serde_yaml_ng::Value::Bool(bool) => Ok(Some(Self::Boolean(bool, source))),
             serde_yaml_ng::Value::Number(number) => {
-                if let Some(signed) = number.as_i64() {
-                    return Ok(Some(Self::Integer(signed, source)));
+                if let Some(i64) = number.as_i64() {
+                    return Ok(Some(Self::Integer(i64, source)));
                 }
-                if let Some(unsigned) = number.as_u64()
-                    && let Ok(signed) = i64::try_from(unsigned)
+                if let Some(u64) = number.as_u64()
+                    && let Ok(i64) = i64::try_from(u64)
                 {
-                    return Ok(Some(Self::Integer(signed, source)));
+                    return Ok(Some(Self::Integer(i64, source)));
                 }
                 let ty = if number.is_u64() {
                     "an unsigned integer"
                 } else if number.is_f64() {
                     "a float"
                 } else {
-                    unreachable!("unknown YAML number type `{number:?}` at `{source}`")
+                    unreachable!("unknown YAML number type `{number:?}` from the {source}")
                 };
-                qp_bail!("unsupported YAML number type {ty} at {source}")
+                qp_bail!("unsupported YAML number type {ty} from the {source}")
             }
-            serde_yaml_ng::Value::String(s) => Ok(Some(Self::String(s, source))),
-            serde_yaml_ng::Value::Sequence(values) => {
-                let list = values
+            serde_yaml_ng::Value::String(str) => Ok(Some(Self::String(str, source))),
+            serde_yaml_ng::Value::Sequence(seq) => {
+                let list = seq
                     .into_iter()
                     .flat_map(|value| Self::from_yaml(value, source.clone()).transpose())
                     .collect::<QuackResult<Vec<_>>>()?;
                 Ok(Some(Self::Seq(list, source)))
             }
-            serde_yaml_ng::Value::Mapping(mapping) => {
-                let mapping = mapping
+            serde_yaml_ng::Value::Mapping(map) => {
+                let map = map
                     .into_iter()
                     .map(|(key, value)| {
                         let serde_yaml_ng::Value::String(key) = key else {
                             qp_bail!(
-                                "unsupported key `{}` in a YAML mapping at {source}",
+                                "unsupported key `{}` in a YAML mapping from the {source}",
                                 describe_yaml(&key)
                             )
                         };
@@ -152,9 +155,9 @@ impl Node {
                         Some(Ok((key, value)))
                     })
                     .collect::<QuackResult<HashMap<_, _>>>()?;
-                Ok(Some(Self::Map(mapping, source)))
+                Ok(Some(Self::Map(map, source)))
             }
-            serde_yaml_ng::Value::Tagged(..) => qp_bail!("unsupported YAML tag at {source}"),
+            serde_yaml_ng::Value::Tagged(..) => qp_bail!("unsupported YAML tag from the {source}"),
         }
     }
 
@@ -252,24 +255,24 @@ impl Node {
 
     /// Try to cast this [`Node`] to an [`i64`].
     pub fn as_i64(&self) -> QuackResult<i64> {
-        let Self::Integer(value, _) = self else {
+        let Self::Integer(i64, _) = self else {
             qp_bail!(
                 "expected an integer not {}",
                 describe_node_with_article(self)
             );
         };
-        Ok(*value)
+        Ok(*i64)
     }
 
     /// Try to cast this [`Node`] to a [`bool`].
     pub fn as_bool(&self) -> QuackResult<bool> {
-        let Self::Boolean(value, _) = self else {
+        let Self::Boolean(bool, _) = self else {
             qp_bail!(
                 "expected a boolean not {}",
                 describe_node_with_article(self)
             );
         };
-        Ok(*value)
+        Ok(*bool)
     }
 
     /// Try to cast this [`Node`] to a [`str`].
@@ -282,13 +285,13 @@ impl Node {
 
     /// Try to cast this [`Node`] to a slice.
     pub fn as_seq(&self) -> QuackResult<&[Node]> {
-        let Self::Seq(slice, _) = self else {
+        let Self::Seq(seq, _) = self else {
             qp_bail!(
                 "expected a sequence not {}",
                 describe_node_with_article(self)
             );
         };
-        Ok(slice)
+        Ok(seq)
     }
 
     /// Try to cast this [`Node`] to a [`HashMap`].
@@ -312,13 +315,13 @@ impl Node {
 
     /// Try to cast this [`Node`] to a slice.
     pub fn as_seq_mut(&mut self) -> QuackResult<&mut Vec<Node>> {
-        let Self::Seq(slice, _) = self else {
+        let Self::Seq(seq, _) = self else {
             qp_bail!(
                 "expected a sequence not {}",
                 describe_node_with_article(self)
             );
         };
-        Ok(slice)
+        Ok(seq)
     }
 
     /// Try to cast this [`Node`] to a [`HashMap`].
@@ -345,13 +348,13 @@ impl Node {
 
     /// Try to cast this [`Node`] to a slice.
     pub fn to_seq(self) -> QuackResult<Vec<Node>> {
-        let Self::Seq(slice, _) = self else {
+        let Self::Seq(seq, _) = self else {
             qp_bail!(
                 "expected a sequence not {}",
                 describe_node_with_article(&self)
             );
         };
-        Ok(slice)
+        Ok(seq)
     }
 
     /// Try to cast this [`Node`] to a [`HashMap`].
