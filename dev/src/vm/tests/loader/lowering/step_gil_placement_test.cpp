@@ -51,7 +51,8 @@ private:
 		case vm::low::MicroOpcode::jmpIfNot_label:
 		case vm::low::MicroOpcode::call_func_off:
 		case vm::low::MicroOpcode::call_builtinfunc:
-		case vm::low::MicroOpcode::call_cfunc:
+		case vm::low::MicroOpcode::rawCall_cfunc:
+		case vm::low::MicroOpcode::valueCall_cfunc:
 		case vm::low::MicroOpcode::call_ffifunc:
 		case vm::low::MicroOpcode::virtualCall_pptr_method:
 			return true;

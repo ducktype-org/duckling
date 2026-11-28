@@ -489,13 +489,13 @@ DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
  * @brief Calls an external C function using the raw convention.
  * @note Unoptimizable by JIT.
  */
-DEF_MICRO_INSTR(call_cfunc_raw, vm::low::opargs::ExtCFunction)
+DEF_MICRO_INSTR(rawCall_cfunc, vm::low::opargs::ExtCFunction)
 
 /**
  * @brief Calls an external C function using the value convention.
  * @note Unoptimizable by JIT.
  */
-DEF_MICRO_INSTR(call_cfunc_value, vm::low::opargs::ExtCFunction)
+DEF_MICRO_INSTR(valueCall_cfunc, vm::low::opargs::ExtCFunction)
 
 /**
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jittable_interface.py.

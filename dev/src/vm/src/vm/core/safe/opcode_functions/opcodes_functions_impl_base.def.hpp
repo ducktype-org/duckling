@@ -605,7 +605,7 @@ namespace vm {
 
 	// Local slot stack of both: [..., result0, ..., resultM, arg0, ..., argN]. The function
 	// consumes its arguments, but not its results.
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc_raw)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(rawCall_cfunc)(FUNCTION_ARGS) {
 		{
 			const auto& ext_func
 				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
@@ -617,7 +617,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc_value)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(valueCall_cfunc)(FUNCTION_ARGS) {
 		{
 			const auto& ext_func
 				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);

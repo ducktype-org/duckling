@@ -691,9 +691,9 @@ namespace vm::loader::compiler::safe::detail {
 				const auto ext_func
 					= compiler.low_program.getExternCFunctions().at(i.function.function_name);
 				if (std::holds_alternative<ExtCRawFunctionPtr>(ext_func->function))
-					addLow<Op_call_cfunc_raw>(i.function);
+					addLow<Op_rawCall_cfunc>(i.function);
 				else
-					addLow<Op_call_cfunc_value>(i.function);
+					addLow<Op_valueCall_cfunc>(i.function);
 			}
 			instr_case(high::Op_call_ffifunc, i) { addLow<Op_call_ffifunc>(i.function); }
 			instr_case(high::Op_mov_pfun_func, i) {
