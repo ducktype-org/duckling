@@ -265,7 +265,7 @@ impl Node {
         let Self::Integer(i64, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected an integer not {}",
+                    "expected an integer, not {}",
                     describe_node_with_article(self)
                 ),
                 self.source(),
@@ -279,7 +279,7 @@ impl Node {
         let Self::Boolean(bool, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a boolean not {}",
+                    "expected a boolean, not {}",
                     describe_node_with_article(self)
                 ),
                 self.source(),
@@ -292,7 +292,10 @@ impl Node {
     pub fn as_str(&self) -> QuackResult<&str> {
         let Self::String(string, _) = self else {
             return Err(add_note_about_source(
-                qp_err!("expected a string not {}", describe_node_with_article(self)),
+                qp_err!(
+                    "expected a string, not {}",
+                    describe_node_with_article(self)
+                ),
                 self.source(),
             ));
         };
@@ -304,7 +307,7 @@ impl Node {
         let Self::Seq(seq, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a mapping not {}",
+                    "expected a sequnce, not {}",
                     describe_node_with_article(self)
                 ),
                 self.source(),
@@ -318,7 +321,7 @@ impl Node {
         let Self::Map(map, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a mapping not {}",
+                    "expected a mapping, not {}",
                     describe_node_with_article(self)
                 ),
                 self.source(),
@@ -327,23 +330,26 @@ impl Node {
         Ok(map)
     }
 
-    /// Try to cast this [`Node`] to a [`str`].
+    /// Try to cast this [`Node`] to a [`String`].
     pub fn as_str_mut(&mut self) -> QuackResult<&mut String> {
         let Self::String(string, _) = self else {
             return Err(add_note_about_source(
-                qp_err!("expected a string not {}", describe_node_with_article(self)),
+                qp_err!(
+                    "expected a string, not {}",
+                    describe_node_with_article(self)
+                ),
                 self.source(),
             ));
         };
         Ok(string)
     }
 
-    /// Try to cast this [`Node`] to a slice.
+    /// Try to cast this [`Node`] to a [`Vec`].
     pub fn as_seq_mut(&mut self) -> QuackResult<&mut Vec<Node>> {
         let Self::Seq(seq, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a sequence not {}",
+                    "expected a sequence, not {}",
                     describe_node_with_article(self)
                 ),
                 self.source(),
@@ -357,7 +363,7 @@ impl Node {
         let Self::Map(map, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a mapping not {}",
+                    "expected a mapping, not {}",
                     describe_node_with_article(self)
                 ),
                 self.source(),
@@ -366,12 +372,12 @@ impl Node {
         Ok(map)
     }
 
-    /// Try to cast this [`Node`] to a [`str`].
+    /// Try to cast this [`Node`] to a [`String`].
     pub fn to_string(self) -> QuackResult<String> {
         let Self::String(string, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a string not {}",
+                    "expected a string, not {}",
                     describe_node_with_article(&self)
                 ),
                 self.source(),
@@ -380,12 +386,12 @@ impl Node {
         Ok(string)
     }
 
-    /// Try to cast this [`Node`] to a slice.
+    /// Try to cast this [`Node`] to a [`Vec`].
     pub fn to_seq(self) -> QuackResult<Vec<Node>> {
         let Self::Seq(seq, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a sequence not {}",
+                    "expected a sequence, not {}",
                     describe_node_with_article(&self)
                 ),
                 self.source(),
@@ -399,7 +405,7 @@ impl Node {
         let Self::Map(map, _) = self else {
             return Err(add_note_about_source(
                 qp_err!(
-                    "expected a mapping not {}",
+                    "expected a mapping, not {}",
                     describe_node_with_article(&self)
                 ),
                 self.source(),

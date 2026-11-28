@@ -6,9 +6,9 @@
 
 //! # Deserialization of [`Node`].
 //!
-//! Most functions are taken from [`IntoDeserializer`] impls, are we're just pushing everything
+//! Most functions are taken from [`IntoDeserializer`] impls, as we're just pushing everything
 //! through [`serde`]'s machinery.
-//! However, there are some special casing.
+//! However, there is some special casing.
 //!
 //! ## Deserializing a [`Sourced`].
 //!
