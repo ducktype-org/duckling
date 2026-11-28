@@ -5,10 +5,9 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 //! Loading packages from the disk.
-use std::fmt::Display;
 use std::io;
 use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::core::PackageContext;
 use crate::core::script::{PackageScript, Script};
@@ -16,7 +15,7 @@ use crate::core::storage::paths::Storage;
 use crate::core::storage::venv::Venv;
 use crate::core::storage::venv_id::VenvId;
 use crate::duck_context::DuckHome;
-use crate::package_root::find_package_root;
+use crate::package_root::{PackageNotFound, find_package_root};
 use crate::util::filesystem::resolve;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
@@ -45,25 +44,6 @@ impl AllowGlobalPackage {
 // Disallow creating PackageLoader instances.
 /// A loader of packages from the disk.
 pub struct PackageLoader(PhantomData<()>);
-
-#[derive(Debug)]
-/// Error signifying that PackageLoader did not find a package.
-pub struct PackageNotFound {
-    start_path: PathBuf,
-    end_path: PathBuf,
-}
-
-impl PackageNotFound {
-    /// Create a new [`PackageNotFound`], describing failure to find a package between `start` and `end`.
-    fn new(start: &Path, end: &Path) -> Self {
-        Self {
-            start_path: start.to_path_buf(),
-            end_path: end.to_path_buf(),
-        }
-    }
-}
-
-impl std::error::Error for PackageNotFound {}
 
 impl PackageLoader {
     pub const MANIFEST_NAME: &str = crate::package_root::MANIFEST_NAME;
@@ -100,15 +80,15 @@ impl PackageLoader {
             )
             .into());
         }
-        if let Some(root) = find_package_root(&start) {
-            return PackageContext::new_not_global(root, ctx);
-        }
-        if allow_global_package.allows() {
-            PackageLoader::global_package(ctx)
-        } else {
-            // The search went up to the last ancestor of `start`.
-            let searched_up_to = start.ancestors().last().unwrap_or(start.as_path());
-            qp_bail!(PackageNotFound::new(&start, searched_up_to))
+        match find_package_root(&start) {
+            Ok(root) => PackageContext::new_not_global(root, ctx),
+            Err(e) => {
+                if allow_global_package.allows() {
+                    PackageLoader::global_package(ctx)
+                } else {
+                    Err(e.into())
+                }
+            }
         }
     }
 
@@ -210,17 +190,6 @@ impl PackageLoader {
             // Script under a package.
             (false, Ok(pcx), false) => associated_script(pcx),
         }
-    }
-}
-
-impl Display for PackageNotFound {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "no manifest has been found from the `{}` to the `{}`",
-            self.start_path.display(),
-            self.end_path.display()
-        )
     }
 }
 

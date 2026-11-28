@@ -86,6 +86,8 @@ jobs:
         project:
           - name: duck & quackpack
             path: dev/src/duck/
+          - name: duck-fmt
+            path: dev/src/tools/formatter/duck-fmt
       fail-fast: false
 
     timeout-minutes: 10
