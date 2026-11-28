@@ -20,14 +20,11 @@
 #include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::repl {
-	std::vector<std::string> extractStatementSources(const pst::TopLevel& root) {
+	std::vector<std::string> extractStatementSources(query::Context& ctx, const pst::TopLevel& root) {
 		std::vector<std::string> sources;
-
-		CORE_ASSERT(!query::Context::areWeInsideQuery(), "extractStatementSources must not be called inside a query");
-
 		for (auto stmt_locked: root.getStatements()) {
-			auto stmt = stmt_locked.illegalAccess().value();
-			auto pos  = stmt->getSourcePosition().illegalAccess();
+			auto stmt = stmt_locked.unlock(ctx);
+			auto pos  = stmt->getSourcePosition().unlock(ctx);
 			sources.emplace_back(
 				pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString()
 			);
@@ -36,6 +33,14 @@ namespace compiler::repl {
 		return sources;
 	}
 
+	std::vector<std::string> extractStatementSources(
+		query::Context& ctx, frontend::ModuleID module_id
+	) {
+		auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
+		auto pst       = getFilePST(ctx, main_file);
+		auto root      = pst->getRootElement().unlock(ctx);
+		return extractStatementSources(ctx, *root);
+	}
 
 	namespace {
 		/**
@@ -61,31 +66,37 @@ namespace compiler::repl {
 		}
 	}
 
-	// PR: this should not take its ctx, but call conetxt do inside
 	std::expected<std::vector<std::string>, std::string> splitInputIntoStatements(
-		 std::string_view input
+		query::Context& ctx, std::string_view input
 	) {
 		auto probe_ref       = createProbeReplModule(input);
 		auto probe_module_id = probe_ref->getModuleID();
 
-		base::Optional<CRef<pst::ParsedPST<>>> pst;
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto main_file = ctx.query<frontend::QueryMainSourceFile>(probe_module_id);
-			pst = getFilePST(ctx, main_file);
-		});
+		auto main_file = ctx.query<frontend::QueryMainSourceFile>(probe_module_id);
+		auto pst       = getFilePST(ctx, main_file);
 
 		CORE_DEV_LOG(REPL, "PST:\n");
 		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
-			pst.value()->dprint(std::cout);
+			pst->dprint(std::cout);
 			std::cout << "\n\n";
 		}
 
-		if (pst.value()->getLogger()->bad()) return std::unexpected(std::string("Parse error"));
+		if (pst->getLogger()->bad()) return std::unexpected(std::string("Parse error"));
 
-		auto root = pst.value()->getRootElement().illegalAccess().value();
-		return extractStatementSources(*root);
+		auto root = pst->getRootElement().unlock(ctx);
+		return extractStatementSources(ctx, *root);
 	}
 
+	std::expected<std::vector<std::string>, std::string> splitInputIntoStatements(
+		std::string_view input
+	) {
+		std::expected<std::vector<std::string>, std::string> result;
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			result = splitInputIntoStatements(ctx, input);
+		});
+
+		return result;
+	}
 
 }  // namespace compiler::repl

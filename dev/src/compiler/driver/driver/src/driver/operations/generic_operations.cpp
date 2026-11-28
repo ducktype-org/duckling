@@ -445,18 +445,17 @@ namespace compiler::driver {
 			return position;
 		}
 
-
 		/**
-		 * @brief Creates a module tree for stanalone script from script context.
-		 * 
-		 * @TODO: #2762 this is a temporary helper, delete or refactor it. 
-		 * @note This is used to identify the script module within the module tree.
+		 * @brief Compiles the script of the global script context to one LIR unit, one statement
+		 * at a time.
+		 * @param statement_starts When given, receives where each statement starts in the script.
 		 */
-		std::expected<frontend::ModuleID, std::string> createModuleOfGlobalScript() {
+		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
+			query::Context& ctx, ScriptStatementStarts* statement_starts = nullptr
+		) {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
-			auto  split_result   = repl::splitInputIntoStatements(script_source);
-
+			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);
 			if (!split_result.has_value())
 				return std::unexpected(
 					base::strConcat("Script parsing failed: ", split_result.error())
@@ -466,30 +465,6 @@ namespace compiler::driver {
 				REPL, "compile_script: split into ", split_result->size(), " statement(s)\n"
 			);
 
-			base::Optional<frontend::ModuleID> parent_module_id;
-			u64                                statement_counter = 0;
-			auto                               session_id        = repl::ReplSessionID::next();
-
-			if (split_result->empty()) {
-				// Empty input should still produce a valid synthetic script main wrapper with
-				// no statement calls.
-				auto empty_script_module
-					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_", session_id);
-				parent_module_id = empty_script_module->getModuleID();
-			}
-		}
-
-		/**
-		 * @brief Compiles the script from provided ModuleID to one LIR unit, one statement
-		 * at a time.
-		 * @param statement_starts When given, receives where each statement starts in the script.
-		 */
-		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
-			query::Context& ctx, frontend::ModuleID module_id, ScriptStatementStarts* statement_starts = nullptr
-		) {
-			auto& script_context = global_state::getScriptContext();
-
-			
 			LIRUnitWithBackendName merged{
 				.module_id       = repl::getScriptModuleID(script_context.script_file),
 				.module_id_human = repl::getScriptModuleID(script_context.script_file),
@@ -528,9 +503,19 @@ namespace compiler::driver {
 				flush_dumps();
 				return std::unexpected(std::move(message));
 			};
-			
+			base::Optional<frontend::ModuleID> parent_module_id;
+			u64                                statement_counter = 0;
+			auto                               session_id        = repl::ReplSessionID::next();
 
-			
+			if (split_result->empty()) {
+				// Empty input should still produce a valid synthetic script main wrapper with
+				// no statement calls.
+				auto empty_script_module
+					= repl::createSyntheticChainedStatementModule("", {}, 0, "script_", session_id);
+				parent_module_id = empty_script_module->getModuleID();
+			}
+
+			usize search_from = 0;
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createSyntheticChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_", session_id

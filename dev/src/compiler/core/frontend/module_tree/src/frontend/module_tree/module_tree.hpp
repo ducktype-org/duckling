@@ -319,8 +319,8 @@ namespace compiler::frontend {
 		 * whereas child modules include all modules that are direct children in the module tree
 		 * structure (i.e. whose parent is this module): the submodules of a standard module, and
 		 * the REPL child of a script or a REPL chain module.
-		 *
-		 * @note This registers no query dependency. Use it outside queries only. This can change in the future if needed.
+		 * @note This registers no query dependency. Use it outside queries only.
+		 // ADD no query assertions?
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const
