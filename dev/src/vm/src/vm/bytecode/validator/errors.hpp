@@ -288,16 +288,12 @@ namespace vm::code {
 			  )) {}
 	};
 
-	/**
-	 * @note A type may be trivially copyable if its bits can be just copied and its
-	 * value remains correct.
-	 */
-	class ExtCArgumentTypeNotTriviallyCopyable: public ValidationError {
+	class ExtCSignatureError: public ValidationError {
 	public:
-		constexpr static std::string_view ERR_MSG = "Given VM type is not trivially copyable: ";
+		constexpr static std::string_view ERR_MSG = "Invalid external C function signature: ";
 
-		ExtCArgumentTypeNotTriviallyCopyable(const valid_type::ValidType& type):
-			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+		ExtCSignatureError(base::StrID function_name, const std::string& reason):
+			  ValidationError(base::strConcat(ERR_MSG, function_name, ": ", reason)) {}
 	};
 
 	class InvalidMainReturnType: public ValidationError {

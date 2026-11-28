@@ -38,6 +38,7 @@ namespace vm {
 		friend class SafeVMProcess;
 		// @note: This is because we call freeData() in `call_builtinfunc` opcode implementation.
 		friend class OpFuns;
+		friend class SafeExtCContext;
 
 		/**
 		 * @brief Creates an empty SafeVMValue of the specified type.

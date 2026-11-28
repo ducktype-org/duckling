@@ -218,7 +218,7 @@ namespace {
 
 	private:
 		bool initializeCompTimeOps() {
-			auto code = comptime_ops::getComptimeTypeOperations(*pid);
+			auto code = comptime_ops::getComptimeTypeOperations();
 			code_builder.insertRawBytecodeDefinitions(code);
 			if (vm::api::loadCode(*pid, code)) return true;
 			return false;

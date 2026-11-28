@@ -34,8 +34,8 @@
 
 #include <query_framework/context/context.hpp>
 
-#include <vm/bytecode/extern_c_function.hpp>
 #include <vm/bytecode/instructions.hpp>
+#include <vm/core/extc/extc_function.hpp>
 
 namespace compiler::helios::comptime_ops {
 	namespace {
@@ -72,241 +72,138 @@ namespace compiler::helios::comptime_ops {
 		};
 	}
 
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_box,
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = type_ptr->toBox();
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_ref,
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = type_ptr->toRef();
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_mut,
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = type_ptr->withMutability(tsh::Mutability::Mutable);
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_imm,
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_ptr,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type
-			= tsh::ValueType<>::withDefaultsMut(ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr })
-		    );
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_optional,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = tsh::ValueType<>::withDefaultsMut(getOptionalType(*ctx_ptr, *type_ptr));
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_many_ptr,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type = tsh::ValueType<>::withDefaultsMut(
-			ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr })
-		);
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_cptr,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type
-			= tsh::ValueType<>::withDefaultsMut(ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr }
-		    ));
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_create_slice,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		auto new_type
-			= tsh::ValueType<>::withDefaultsMut(ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr }));
-		return MetaTypeMemoryManager::instance().allocateType(new_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(TupleTypeBuilder*, "opaque_ptr", comptime_tuple_builder_new) {
-		auto* builder = new TupleTypeBuilder();
-		return builder;
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		void,
-		"void",
-		comptime_tuple_builder_push,
-		(TupleTypeBuilder*, "opaque_ptr", builder_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		builder_ptr->subtypes.push_back(*type_ptr);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_tuple_builder_finalize,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(TupleTypeBuilder*, "opaque_ptr", builder_ptr)
-	) {
-		auto tuple_type = builder_ptr->finalize(*ctx_ptr);
-		delete builder_ptr;
-		return MetaTypeMemoryManager::instance().allocateType(tuple_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(VariantTypeBuilder*, "opaque_ptr", comptime_variant_builder_new) {
-		auto* builder = new VariantTypeBuilder();
-		return builder;
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		void,
-		"void",
-		comptime_variant_builder_push,
-		(VariantTypeBuilder*, "opaque_ptr", builder_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		builder_ptr->subtypes.push_back(*type_ptr);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		tsh::ValueType<>*,
-		"opaque_ptr",
-		comptime_variant_builder_finalize,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(VariantTypeBuilder*, "opaque_ptr", builder_ptr)
-	) {
-		auto variant_type = builder_ptr->finalize(*ctx_ptr);
-		delete builder_ptr;
-		return MetaTypeMemoryManager::instance().allocateType(variant_type);
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		i64,
-		"i64",
-		comptime_size_of,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		const auto& layout = ctx_ptr->query<tsl::QueryValueTypeLayout>(*type_ptr)->valueOrThrow();
-		return base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt());
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		i64,
-		"i64",
-		comptime_align_of,
-		(query::Context*, "opaque_ptr", ctx_ptr),
-		(tsh::ValueType<>*, "opaque_ptr", type_ptr)
-	) {
-		const auto& layout = ctx_ptr->query<tsl::QueryValueTypeLayout>(*type_ptr)->valueOrThrow();
-		return base::safeIntConv<i64>(layout.getAlignment().asInt());
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		bool,
-		"i8",
-		comptime_types_equal,
-		(tsh::ValueType<>*, "opaque_ptr", left),
-		(tsh::ValueType<>*, "opaque_ptr", right)
-	) {
-		return *left == *right;
-	}
-
-	DEF_VM_EXT_C_FUNC(
-		bool,
-		"i8",
-		comptime_types_not_equal,
-		(tsh::ValueType<>*, "opaque_ptr", left),
-		(tsh::ValueType<>*, "opaque_ptr", right)
-	) {
-		return *left != *right;
-	}
-
 	namespace {
-		std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations(vm::PID pid) {
+		tsh::ValueType<>* createBox(tsh::ValueType<>* type_ptr) {
+			auto new_type = type_ptr->toBox();
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createRef(tsh::ValueType<>* type_ptr) {
+			auto new_type = type_ptr->toRef();
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createMut(tsh::ValueType<>* type_ptr) {
+			auto new_type = type_ptr->withMutability(tsh::Mutability::Mutable);
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createImm(tsh::ValueType<>* type_ptr) {
+			auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createPtr(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
+				ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr })
+			);
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createOptional(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(getOptionalType(*ctx_ptr, *type_ptr));
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createManyPtr(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
+				ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr })
+			);
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createCptr(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
+				ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr })
+			);
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		tsh::ValueType<>* createSlice(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
+				ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr })
+			);
+			return MetaTypeMemoryManager::instance().allocateType(new_type);
+		}
+
+		TupleTypeBuilder* tupleBuilderNew() {
+			auto* builder = new TupleTypeBuilder();
+			return builder;
+		}
+
+		void tupleBuilderPush(TupleTypeBuilder* builder_ptr, tsh::ValueType<>* type_ptr) {
+			builder_ptr->subtypes.push_back(*type_ptr);
+		}
+
+		tsh::ValueType<>* tupleBuilderFinalize(
+			query::Context* ctx_ptr, TupleTypeBuilder* builder_ptr
+		) {
+			auto tuple_type = builder_ptr->finalize(*ctx_ptr);
+			delete builder_ptr;
+			return MetaTypeMemoryManager::instance().allocateType(tuple_type);
+		}
+
+		VariantTypeBuilder* variantBuilderNew() {
+			auto* builder = new VariantTypeBuilder();
+			return builder;
+		}
+
+		void variantBuilderPush(VariantTypeBuilder* builder_ptr, tsh::ValueType<>* type_ptr) {
+			builder_ptr->subtypes.push_back(*type_ptr);
+		}
+
+		tsh::ValueType<>* variantBuilderFinalize(
+			query::Context* ctx_ptr, VariantTypeBuilder* builder_ptr
+		) {
+			auto variant_type = builder_ptr->finalize(*ctx_ptr);
+			delete builder_ptr;
+			return MetaTypeMemoryManager::instance().allocateType(variant_type);
+		}
+
+		i64 sizeOf(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			const auto& layout
+				= ctx_ptr->query<tsl::QueryValueTypeLayout>(*type_ptr)->valueOrThrow();
+			return base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt());
+		}
+
+		i64 alignOf(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			const auto& layout
+				= ctx_ptr->query<tsl::QueryValueTypeLayout>(*type_ptr)->valueOrThrow();
+			return base::safeIntConv<i64>(layout.getAlignment().asInt());
+		}
+
+		bool typesEqual(tsh::ValueType<>* left, tsh::ValueType<>* right) { return *left == *right; }
+
+		bool typesNotEqual(tsh::ValueType<>* left, tsh::ValueType<>* right) {
+			return *left != *right;
+		}
+
+		std::vector<vm::code::ExternalCFunction> getComptimeTypeExternOperations() {
 			return {
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_box, comptime_create_box, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_ref, comptime_create_ref, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_mut, comptime_create_mut, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_imm, comptime_create_imm, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_ptr, comptime_create_ptr, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_slice, comptime_create_slice, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_create_optional, comptime_create_optional, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_size_of, comptime_size_of, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_align_of, comptime_align_of, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_new, comptime_tuple_builder_new, pid),
-				VM_INSTANCE_EXT_C_FUNC(
-					comptime_tuple_builder_push, comptime_tuple_builder_push, pid
-				),
-				VM_INSTANCE_EXT_C_FUNC(
-					comptime_tuple_builder_finalize, comptime_tuple_builder_finalize, pid
-				),
-				VM_INSTANCE_EXT_C_FUNC(
-					comptime_variant_builder_new, comptime_variant_builder_new, pid
-				),
-				VM_INSTANCE_EXT_C_FUNC(
-					comptime_variant_builder_push, comptime_variant_builder_push, pid
-				),
-				VM_INSTANCE_EXT_C_FUNC(
-					comptime_variant_builder_finalize, comptime_variant_builder_finalize, pid
-				),
-				VM_INSTANCE_EXT_C_FUNC(comptime_types_equal, comptime_types_equal, pid),
-				VM_INSTANCE_EXT_C_FUNC(comptime_types_not_equal, comptime_types_not_equal, pid),
+				VM_EXT_C_FUNC_AS("comptime_create_box", createBox),
+				VM_EXT_C_FUNC_AS("comptime_create_ref", createRef),
+				VM_EXT_C_FUNC_AS("comptime_create_mut", createMut),
+				VM_EXT_C_FUNC_AS("comptime_create_imm", createImm),
+				VM_EXT_C_FUNC_AS("comptime_create_ptr", createPtr),
+				VM_EXT_C_FUNC_AS("comptime_create_optional", createOptional),
+				VM_EXT_C_FUNC_AS("comptime_create_many_ptr", createManyPtr),
+				VM_EXT_C_FUNC_AS("comptime_create_cptr", createCptr),
+				VM_EXT_C_FUNC_AS("comptime_create_slice", createSlice),
+				VM_EXT_C_FUNC_AS("comptime_tuple_builder_new", tupleBuilderNew),
+				VM_EXT_C_FUNC_AS("comptime_tuple_builder_push", tupleBuilderPush),
+				VM_EXT_C_FUNC_AS("comptime_tuple_builder_finalize", tupleBuilderFinalize),
+				VM_EXT_C_FUNC_AS("comptime_variant_builder_new", variantBuilderNew),
+				VM_EXT_C_FUNC_AS("comptime_variant_builder_push", variantBuilderPush),
+				VM_EXT_C_FUNC_AS("comptime_variant_builder_finalize", variantBuilderFinalize),
+				VM_EXT_C_FUNC_AS("comptime_size_of", sizeOf),
+				VM_EXT_C_FUNC_AS("comptime_align_of", alignOf),
+				VM_EXT_C_FUNC_AS("comptime_types_equal", typesEqual),
+				VM_EXT_C_FUNC_AS("comptime_types_not_equal", typesNotEqual),
 			};
 		}
 	}
 
-	vm::code::CodeCollection getComptimeTypeOperations(vm::PID pid) {
+	vm::code::CodeCollection getComptimeTypeOperations() {
 		// A global storing an opaque pointer to `query::Context` needed for performing type
 		// system calls during DVM evaluation.
 		vm::code::GlobalData context_global;
@@ -337,7 +234,7 @@ namespace compiler::helios::comptime_ops {
 			.functions            = { init_global_context },
 			.types                = {},
 			.global_data          = { context_global },
-			.external_c_functions = getComptimeTypeExternOperations(pid),
+			.external_c_functions = getComptimeTypeExternOperations(),
 			.ffi_functions        = {},
 			.object_files         = {},
 		};

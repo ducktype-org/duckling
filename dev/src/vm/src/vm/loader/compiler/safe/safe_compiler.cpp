@@ -348,14 +348,6 @@ namespace vm::loader::compiler::safe {
 											   return low_program.types->at(param_name);
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
-			auto param_size_sum = std::ranges::fold_left(
-				params | std::views::transform([](const auto& param) {
-					return param->getSize().asInt();
-				}),
-				0,
-				std::plus()
-			);
-
 			std::vector<TypeCRef> rets = new_func.signature.result_types
 			                           | std::views::transform([this](const auto& param_name) {
 											 return low_program.types->at(param_name);
@@ -364,11 +356,11 @@ namespace vm::loader::compiler::safe {
 
 			low_program.extern_c_functions.insert(
 				low::LowExternCFunction{
-					.name               = new_func.name,
-					.function_pointer   = new_func.function_pointer,
-					.parameter_size_sum = param_size_sum,
-					.parameters         = std::move(params),
-					.result_types       = std::move(rets),
+					.name         = new_func.name,
+					.function     = new_func.function,
+					.user_data    = new_func.user_data,
+					.parameters   = std::move(params),
+					.result_types = std::move(rets),
 				},
 				new_func.name
 			);

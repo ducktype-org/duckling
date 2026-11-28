@@ -87,4 +87,6 @@ namespace vm::exceptions {
 
 	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMResourceDoesNotExist, "Resource does not exist", std::string);
 	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMFFIError, "FFI error", std::string);
+	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMValueMismatchException, "Invalid VMValue", std::string);
+	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMExtCFunctionPanic, "External C function failed", std::string);
 }

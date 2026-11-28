@@ -15,7 +15,10 @@
 #include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/extc/extc_types.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
+
+#include <variant>
 
 namespace vm::code {
 	/**
@@ -91,16 +94,18 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents C/C++ function, that can be called from bytecode by its name.
-	 * It's required that function accepts two parameters:
-	 * - byte* destination - a place to store the call result
-	 * - byte* arguments - arguments passed directly from the VM
-	 * It's also required, that the VM types are trivially copyable.
+	 * @brief A C++ function that bytecode calls by its name, see `vm/core/extc/extc.hpp`.
 	 */
 	struct ExternalCFunction final {
-		Identifier name;
-		void (*function_pointer)(byte*, byte*) = nullptr;
+		Identifier   name;
+		ExtCFunction function{};
+		/// Passed to the function through `ExtCContext::userData`.
+		void*         user_data = nullptr;
 		FuncSignature signature;
+		/// C++ sizes of the parameters and results, checked against their VM types when loading.
+		/// Empty, or a 0 entry, skips the check.
+		std::vector<usize> parameter_sizes;
+		std::vector<usize> result_sizes;
 	};
 
 	/**

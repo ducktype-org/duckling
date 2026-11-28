@@ -9,14 +9,14 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/vm.hpp>
-#include <vm/bytecode/extern_c_function.hpp>
+#include <vm/core/extc/extc_function.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
 namespace jit_extc {
-	DEF_VM_EXT_C_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
+	i64 add(i64 a, i64 b) { return a + b; }
 
-	DEF_VM_EXT_C_FUNC(i64, "i64", panicAtZero, (i64, "i64", a)) {
+	i64 panicAtZero(i64 a) {
 		if (a == 0) throw vm::exceptions::VMPanicException();
 		return a;
 	}
@@ -113,8 +113,7 @@ private:
 		          .types       = {},
 		          .global_data = {},
 		          .external_c_functions
-		          = { VM_INSTANCE_EXT_C_FUNC(add, jit_extc::add, pid),
-		              VM_INSTANCE_EXT_C_FUNC(panicAtZero, jit_extc::panicAtZero, pid) },
+		          = { VM_EXT_C_FUNC(jit_extc::add), VM_EXT_C_FUNC(jit_extc::panicAtZero) },
 		          .ffi_functions = {},
 		          .object_files  = {} }
 			),

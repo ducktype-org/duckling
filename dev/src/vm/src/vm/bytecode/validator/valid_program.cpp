@@ -17,6 +17,8 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 
 #include <algorithm>
+#include <ranges>
+#include <variant>
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program = ValidProgram();
@@ -161,26 +163,57 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 		if (ext_c_function_map.contains(new_func.name))
 			throw DuplicatedExtCFunctionError(new_func, *ext_c_function_map.at(new_func.name));
 
-		// Validate arguments exist and are trivially copyable
+		const bool is_raw = std::holds_alternative<ExtCRawFunctionPtr>(new_func.function);
+		if (std::visit([](auto function) { return function == nullptr; }, new_func.function))
+			throw ExtCSignatureError(new_func.name, "no function pointer");
 
-		if (new_func.signature.result_types.size()) {
-			CORE_ASSERT(
-				new_func.signature.result_types.size() == 1, "C functions return only one type"
-			);
-			if (auto tp
-			    = type_context.getCurrentTypes().atMaybe(new_func.signature.result_types[0])) {
-				if (!tp.value()->isTriviallyCopyable())
-					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
-			} else
-				throw UnknownTypeError(opargs::Type(new_func.signature.result_types[0]));
-		}
+		const auto check_types = [&](const std::vector<Identifier>& type_names,
+		                             const std::vector<usize>&      cpp_sizes,
+		                             std::string_view               what) {
+			if (!cpp_sizes.empty() && cpp_sizes.size() != type_names.size())
+				throw ExtCSignatureError(
+					new_func.name,
+					base::strConcat(
+						cpp_sizes.size(), " C++ ", what, " sizes for ", type_names.size(), " ", what
+					)
+				);
+			for (const auto& [i, type_name]: std::views::enumerate(type_names)) {
+				auto tp = type_context.getCurrentTypes().atMaybe(type_name);
+				if (!tp) throw UnknownTypeError(opargs::Type(type_name));
 
-		for (const auto& type: new_func.signature.parameters)
-			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
-				if (!tp.value()->isTriviallyCopyable())
-					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
-			} else
-				throw UnknownTypeError(opargs::Type(type));
+				const usize cpp_size = cpp_sizes.empty() ? 0 : cpp_sizes[static_cast<usize>(i)];
+				if (cpp_size != 0
+				    && tp.value()->getSize() != valid_type::TypeSize(Bytes(cpp_size), 0))
+					throw ExtCSignatureError(
+						new_func.name,
+						base::strConcat(
+							"the C++ type of size ",
+							cpp_size,
+							" does not match the VM type '",
+							type_name.str,
+							"'"
+						)
+					);
+
+				if (is_raw && !tp.value()->isTriviallyCopyable())
+					throw ExtCSignatureError(
+						new_func.name,
+						base::strConcat(
+							what,
+							" ",
+							i,
+							" has the type '",
+							type_name.str,
+							"', which is not trivially copyable, so the function must use the "
+							"value convention (e.g. a `vm::extc::Value<\"",
+							type_name.str,
+							"\">` parameter)"
+						)
+					);
+			}
+		};
+		check_types(new_func.signature.parameters, new_func.parameter_sizes, "parameter");
+		check_types(new_func.signature.result_types, new_func.result_sizes, "result");
 
 		ext_c_function_map.insert(new_func, new_func.name);
 	}
