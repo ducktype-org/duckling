@@ -87,14 +87,16 @@ pub struct NodeDeserializer<'a> {
 
 /// Forward a simple deserialize method to a cast on the [`Node`].
 macro_rules! forward_to_node {
-    ($($serde:ident $visit:ident $cast:ident)*) => {
+    ($($serde:ident $visit:ident $cast:ident $expected:literal)*) => {
         $(
             fn $serde<V>(self, visitor: V) -> Result<V::Value, Self::Error>
             where
                 V: Visitor<'de>,
             {
                 // @TODO: #4243 Add source.
-                let value = self.node.$cast().map_err(de::Error::custom)?;
+                let value = self.node
+                            .$cast()
+                            .ok_or_else(|| de::Error::invalid_type(self.node.unexpected(), &$expected))?;
                 visitor.$visit(value)
             }
         )*
@@ -142,16 +144,16 @@ impl<'de> Deserializer<'de> for NodeDeserializer<'de> {
     }
 
     forward_to_node! {
-        deserialize_bool visit_bool as_bool
-        deserialize_i8 visit_i64 as_i64
-        deserialize_i16 visit_i64 as_i64
-        deserialize_i32 visit_i64 as_i64
-        deserialize_i64 visit_i64 as_i64
-        deserialize_u8 visit_i64 as_i64
-        deserialize_u16 visit_i64 as_i64
-        deserialize_u32 visit_i64 as_i64
-        deserialize_u64 visit_i64 as_i64
-        deserialize_str visit_borrowed_str as_str
+        deserialize_bool visit_bool as_bool "a boolean"
+        deserialize_i8 visit_i64 as_i64 "an integer"
+        deserialize_i16 visit_i64 as_i64 "an integer"
+        deserialize_i32 visit_i64 as_i64 "an integer"
+        deserialize_i64 visit_i64 as_i64 "an integer"
+        deserialize_u8 visit_i64 as_i64 "an integer"
+        deserialize_u16 visit_i64 as_i64 "an integer"
+        deserialize_u32 visit_i64 as_i64 "an integer"
+        deserialize_u64 visit_i64 as_i64 "an integer"
+        deserialize_str visit_borrowed_str as_str "a string"
     }
 
     fn deserialize_newtype_struct<V>(

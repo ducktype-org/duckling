@@ -261,157 +261,91 @@ impl Node {
     }
 
     /// Try to cast this [`Node`] to an [`i64`].
-    pub fn as_i64(&self) -> QuackResult<i64> {
-        let Self::Integer(i64, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected an integer, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(*i64)
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Self::Integer(i64, _) => Some(*i64),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`bool`].
-    pub fn as_bool(&self) -> QuackResult<bool> {
-        let Self::Boolean(bool, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a boolean, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(*bool)
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Self::Boolean(bool, _) => Some(*bool),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`str`].
-    pub fn as_str(&self) -> QuackResult<&str> {
-        let Self::String(string, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a string, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(string)
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::String(string, _) => Some(string),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a slice.
-    pub fn as_seq(&self) -> QuackResult<&[Node]> {
-        let Self::Seq(seq, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a sequnce, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(seq)
+    pub fn as_seq(&self) -> Option<&[Node]> {
+        match self {
+            Self::Seq(seq, _) => Some(seq),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`HashMap`].
-    pub fn as_map(&self) -> QuackResult<&HashMap<String, Node>> {
-        let Self::Map(map, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a mapping, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(map)
+    pub fn as_map(&self) -> Option<&HashMap<String, Node>> {
+        match self {
+            Self::Map(map, _) => Some(map),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`String`].
-    pub fn as_str_mut(&mut self) -> QuackResult<&mut String> {
-        let Self::String(string, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a string, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(string)
+    pub fn as_str_mut(&mut self) -> Option<&mut String> {
+        match self {
+            Self::String(string, _) => Some(string),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`Vec`].
-    pub fn as_seq_mut(&mut self) -> QuackResult<&mut Vec<Node>> {
-        let Self::Seq(seq, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a sequence, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(seq)
+    pub fn as_seq_mut(&mut self) -> Option<&mut Vec<Node>> {
+        match self {
+            Self::Seq(seq, _) => Some(seq),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`HashMap`].
-    pub fn as_map_mut(&mut self) -> QuackResult<&mut HashMap<String, Node>> {
-        let Self::Map(map, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a mapping, not {}",
-                    describe_node_with_article(self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(map)
+    pub fn as_map_mut(&mut self) -> Option<&mut HashMap<String, Node>> {
+        match self {
+            Self::Map(map, _) => Some(map),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`String`].
-    pub fn to_string(self) -> QuackResult<String> {
-        let Self::String(string, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a string, not {}",
-                    describe_node_with_article(&self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(string)
+    pub fn to_string(self) -> Option<String> {
+        match self {
+            Self::String(string, _) => Some(string),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`Vec`].
-    pub fn to_seq(self) -> QuackResult<Vec<Node>> {
-        let Self::Seq(seq, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a sequence, not {}",
-                    describe_node_with_article(&self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(seq)
+    pub fn to_seq(self) -> Option<Vec<Node>> {
+        match self {
+            Self::Seq(seq, _) => Some(seq),
+            _ => None,
+        }
     }
 
     /// Try to cast this [`Node`] to a [`HashMap`].
-    pub fn to_map(self) -> QuackResult<HashMap<String, Node>> {
-        let Self::Map(map, _) = self else {
-            return Err(add_note_about_source(
-                qp_err!(
-                    "expected a mapping, not {}",
-                    describe_node_with_article(&self)
-                ),
-                self.source(),
-            ));
-        };
-        Ok(map)
+    pub fn to_map(self) -> Option<HashMap<String, Node>> {
+        match self {
+            Self::Map(map, _) => Some(map),
+            _ => None,
+        }
     }
 }
 
