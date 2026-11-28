@@ -320,11 +320,14 @@ namespace compiler::frontend {
 		 * structure (i.e. whose parent is this module): the submodules of a standard module, and
 		 * the REPL child of a script or a REPL chain module.
 		 *
-		 * @TODO: #4253 This registers no query dependency, but probably should. 
-		 * It is used inside module tree creation, so we want to be able to call it from inside a query (currenlty only script/repl pipeline does it, but we can refactor them so they don't), so we can generate module treies lazily as needed.
-		 * There are two ways to go about it:
+		 * @TODO: #4253 This registers no query dependency, but probably should.
+		 * It is used inside module tree creation, so we want to be able to call it from inside a
+		 * query (currenlty only script/repl pipeline does it, but we can refactor them so they
+		 * don't), so we can generate module treies lazily as needed. There are two ways to go about
+		 * it:
 		 * 1. Refactor the repl/script pipeline and assume this will only be called outside queries.
-		 * 2. Extend related sideinputs and modify this function to register query dependencies properly, allowing it to be called from within queries.
+		 * 2. Extend related sideinputs and modify this function to register query dependencies
+		 * properly, allowing it to be called from within queries.
 		 */
 		[[nodiscard]]
 		virtual std::vector<base::Ref<ModuleTree>> collectChildrenModules() const

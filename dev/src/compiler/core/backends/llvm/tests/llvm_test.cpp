@@ -128,8 +128,7 @@ entry:
 
 		base::Optional<backend_llvm::Module> llvm_module_opt;
 
-		auto module
-				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
+		auto module = frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
