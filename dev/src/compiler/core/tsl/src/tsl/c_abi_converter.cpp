@@ -184,6 +184,7 @@ namespace compiler::tsl {
 			case Kind::Module:
 			case Kind::Import:
 			case Kind::TypeTemplate:
+			case Kind::TemplateDeductionPlaceholder:
 				return fail("non-runtime type cannot appear as a field type");
 			case tsh::Kind::Slice:
 				return fail("`slice` is not C-compatible");

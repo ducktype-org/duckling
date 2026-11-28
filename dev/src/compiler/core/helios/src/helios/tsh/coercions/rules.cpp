@@ -465,6 +465,7 @@ namespace compiler::tsh::coercions {
 			case Kind::StaticArray:
 			case Kind::Class:
 			case Kind::TypeTemplate:
+			case Kind::TemplateDeductionPlaceholder:
 			case Kind::Namespace:
 			case Kind::Module:
 			case Kind::Import:

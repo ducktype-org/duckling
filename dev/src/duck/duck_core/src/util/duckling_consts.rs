@@ -94,6 +94,7 @@ pub const DUCKLING_KEYWORDS: &[&str] = &[
     "try",
     "true",
     "type",
+    "typeoperator",
     "u128",
     "u16",
     "u32",

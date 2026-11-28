@@ -119,6 +119,7 @@ namespace lang_def {
 		Bool,
 		Str,
 		Type,  // ...
+		TypeOperator,
 		Void,
 
 		// @TODO: do we need all of them?
@@ -154,7 +155,7 @@ namespace lang_def {
 		Copyof,
 		Move,
 		Ptrof,
-		FRef,
+		RefKind,
 
 		Destroy,
 

@@ -7,6 +7,8 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios/tsh/value_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
@@ -90,6 +92,29 @@ namespace compiler::ctv {
 			std::vector<Element> elements;
 		};
 
+		/**
+		 * @brief A value of the `typeoperator` type: an operator building a type from another one,
+		 * like the `refkind` template parameter in `fun f(x: refkind T)`.
+		 */
+		struct TypeOperator {
+			struct Direct {};
+
+			struct Ref {};
+
+			struct Box {};
+
+			struct Placeholder {
+				helios::SymID template_decl;
+				usize         parameter_index{};
+			};
+
+			std::variant<Direct, Ref, Box, Placeholder> kind;
+
+			template<typename T>
+			requires std::constructible_from<std::variant<Direct, Ref, Box, Placeholder>, T>
+			TypeOperator(T&& value): kind(std::forward<T>(value)) {}
+		};
+
 	private:
 		using Storage = std::variant<
 			bool,
@@ -100,7 +125,8 @@ namespace compiler::ctv {
 			UnitCTV,
 			TypeTuple,
 			tsh::ValueType<>,
-			VMValue>;
+			VMValue,
+			TypeOperator>;
 		Storage value;
 
 	public:

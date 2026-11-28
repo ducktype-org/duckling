@@ -694,6 +694,12 @@ namespace compiler::tsl {
 		const tsh::FunctionAbstractType function_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::ValueType<>::withDefaultsMut(function_type), ctx) {
+		if (function_type.getFunctionKind() == tsh::FunctionKind::TypeOperator) {
+			ctx.log<dia::PlaceholderError>(
+				"A `typeoperator` value exists only at compile time and cannot be used at runtime."
+			);
+			query::throwFailed();
+		}
 		if (function_type.getFunctionKind() == tsh::FunctionKind::Closure) {
 			ctx.log<dia::NotYetImplementedCodeError>(
 				base::strConcat(

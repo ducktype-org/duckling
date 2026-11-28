@@ -35,8 +35,8 @@ namespace compiler::repl {
 			"fundecl", "global", "hides", "if", "imm", "implements", "import", "in", "lambda", "let", "loop",
 			"match", "move", "mut", "namespace", "not", "or", "pattern", "private",
 			"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
-			"ptrof", "fref", "restart", "return", "set", "sizeof", "str", "switch",
-			"then", "this", "throw", "true", "try", "type", "using", "var",
+			"ptrof", "refkind", "restart", "return", "set", "sizeof", "str", "switch",
+			"then", "this", "throw", "true", "try", "type", "typeoperator", "using", "var",
 			"vec", "while", "with", "xor"
 		};
 
@@ -44,7 +44,7 @@ namespace compiler::repl {
 			"i8", "i16", "i32", "i64", "i128",
 			"u8", "u16", "u32", "u64", "u128",
 			"f16", "f32", "f64", "f80", "f128",
-			"char", "bool", "str", "type",
+			"char", "bool", "str", "type", "typeoperator",
 			"vec", "set", "dict", "array"
 		};
 	}

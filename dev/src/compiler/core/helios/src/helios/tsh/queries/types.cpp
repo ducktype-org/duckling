@@ -133,6 +133,15 @@ namespace compiler::tsh {
 		return ImportAbstractType{ &import_impl };
 	}
 
+	FunctionAbstractType getTypeOperatorType(query::Context& ctx) {
+		const auto meta_type = ValueType<>::withDefaultsMut(getMetaType());
+		return ctx.query<QueryFunctionType>({
+			.parameter_types = { meta_type },
+			.result_type     = meta_type,
+			.kind            = FunctionKind::TypeOperator,
+		});
+	}
+
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			return PointerAbstractTypeImpl(key);
@@ -239,4 +248,16 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeTemplateType)
+
+	struct IMPLEMENT_QUERY(
+		QueryTemplateDeductionPlaceholderType, TemplateDeductionPlaceholderAbstractType::Impl
+	) {
+		static auto provide(Context&, const QKey& key) -> PResult {
+			return { key.template_symbol, key.parameter_index, key.operand };
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTemplateDeductionPlaceholderType)
 }

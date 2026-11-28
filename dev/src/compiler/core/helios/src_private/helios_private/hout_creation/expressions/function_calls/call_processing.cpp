@@ -30,6 +30,8 @@
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/templates/template_deduction.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -796,6 +798,116 @@ namespace compiler::helios::code {
 			}
 			return arguments_origin;
 		}
+
+		/**
+		 * @brief Logs why the template arguments of @p template_sym_id could not be deduced for
+		 * the call.
+		 */
+		void logTemplateDeductionFailure(
+			query::Context&                            ctx,
+			SymID                                      template_sym_id,
+			const templates::TemplateDeductionFailure& failure,
+			const ElementOrigin&                       whole_call_origin
+		) {
+			const auto position = whole_call_origin.getStablePosition().value();
+			const auto hint     = base::strConcat(
+                "Pass the template arguments explicitly, like `",
+                name(template_sym_id).strView(),
+                "[...](...)`."
+            );
+
+			switch (failure.reason) {
+			case templates::TemplateDeductionFailure::Reason::NonTypeParameter:
+				ctx.log<dia::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Template argument deduction of the non-type template parameter `",
+						failure.parameter_name.strView(),
+						"` of `",
+						name(template_sym_id).strView(),
+						"`."
+					),
+					position,
+					hint
+				);
+				return;
+			case templates::TemplateDeductionFailure::Reason::Undeduced:
+				ctx.log<dia::PlaceholderError>(
+					base::strConcat(
+						"Cannot deduce the template parameter `",
+						failure.parameter_name.strView(),
+						"` of `",
+						name(template_sym_id).strView(),
+						"` from the arguments of the call."
+					),
+					position,
+					hint
+				);
+				return;
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Replaces each function template among @p candidates by the template baked with
+		 * the arguments deduced from @p call_arguments.
+		 *
+		 * A template whose arguments cannot be deduced is not a candidate. The reason is reported
+		 * only if no candidate is left.
+		 */
+		query::QResult<std::vector<SymID>> resolveFunctionTemplates(
+			query::Context&           ctx,
+			const std::vector<SymID>& candidates,
+			const CallArguments&      call_arguments,
+			const ElementOrigin&      whole_call_origin
+		) {
+			std::vector<SymID>                                                    resolved;
+			base::Optional<std::pair<SymID, templates::TemplateDeductionFailure>> failure;
+
+			for (const auto candidate: candidates) {
+				if (kind(candidate) != SymbolKind::Template) {
+					resolved.push_back(candidate);
+					continue;
+				}
+
+				templates::TemplateDeductionKey key{
+					.template_sym_id           = candidate,
+					.positional_argument_types = {},
+					.named_argument_types      = {},
+				};
+				for (const auto& arg: call_arguments.positional_arguments)
+					key.positional_argument_types.push_back(arg->expression_type.getValueType());
+				for (const auto& [arg_name, arg]: call_arguments.named_arguments)
+					key.named_argument_types.emplace_back(
+						arg_name, arg->expression_type.getValueType()
+					);
+
+				const auto deduction = ctx.query<templates::QueryTemplateArgumentDeduction>(key);
+				if (deduction->hasFailed()) return query::Failed();
+
+				variant_match(deduction->valueOrPanic()) {
+					variant_case(std::vector<ctv::CompileTimeValue>, arguments) {
+						const auto baked = ctx.query<templates::QueryBakeTemplateSymID>({
+							.template_sym_id    = candidate,
+							.template_arguments = arguments,
+						});
+						if (baked.hasFailed()) return query::Failed();
+						resolved.push_back(baked.valueOrPanic());
+					}
+					variant_case(templates::TemplateDeductionFailure, data) {
+						if (not failure.has_value()) failure = std::pair{ candidate, data };
+					}
+				}
+			}
+
+			if (resolved.empty() and failure.has_value()) {
+				logTemplateDeductionFailure(
+					ctx, failure.value().first, failure.value().second, whole_call_origin
+				);
+				return query::Failed();
+			}
+
+			return resolved;
+		}
 	}
 
 	query::QResult<Box<Expr>> processFunctionCall(
@@ -824,9 +936,14 @@ namespace compiler::helios::code {
 			.arguments_origin  = std::move(arguments_origin),
 		};
 
+		UNPACK_QRESULT(
+			const auto resolved_candidates =,
+			resolveFunctionTemplates(ctx, candidates, call_arguments, whole_call_origin)
+		);
+
 		// Resolve overloads and construct call expression
 		auto overload_resolution_qresult
-			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
+			= doOverloadResolution(ctx, resolved_candidates, call_arguments, pst_origin);
 		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
 		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
 
@@ -869,7 +986,9 @@ namespace compiler::helios::code {
 		ElementOrigin                whole_call_origin,
 		pst::Access<pst::expr::Call> call_expr
 	) {
-		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
+		if (callee->expression_type.getType().getKind() != tsh::Kind::Function
+		    or tsh::FunctionAbstractType(callee->expression_type.getType()).getFunctionKind()
+		           == tsh::FunctionKind::TypeOperator) {
 			ctx.log<CallNotCallableError>(
 				call_expr->getStablePosition(),
 				makeBox<InteractiveType>(ctx, callee->expression_type.getValueType())

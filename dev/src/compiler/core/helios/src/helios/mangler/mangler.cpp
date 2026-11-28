@@ -900,6 +900,18 @@ namespace compiler::helios::mangler {
 					internal::mangleString(bytes)
 				);
 			}
+			variant_case(compiler::ctv::CompileTimeValue::TypeOperator, type_operator) {
+				using TypeOperator = compiler::ctv::CompileTimeValue::TypeOperator;
+				variant_match(type_operator.kind) {
+					variant_case_novalue(TypeOperator::Direct) { return "oi"; }
+					variant_case_novalue(TypeOperator::Ref) { return "or"; }
+					variant_case_novalue(TypeOperator::Box) { return "ob"; }
+					variant_case_novalue(TypeOperator::Placeholder) {
+						CORE_PANIC("A template deduction placeholder is never mangled");
+					}
+				}
+				CORE_UNREACHABLE();
+			}
 			variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
 		}
 	}

@@ -84,6 +84,21 @@ namespace compiler::helios::templates {
 		return output;
 	}
 
+	bool isFunctionTemplate(query::Context& ctx, SymID template_sym_id) {
+		CORE_ASSERT(kind(template_sym_id) == SymbolKind::Template, "SymID is not a Template");
+
+		const auto template_statement
+			= stmt(ctx, template_sym_id).value().dynamicCast<pst::TemplateStmt>().value();
+		switch (template_statement->getInnerStatement().unlock(ctx)->getElementKind()) {
+		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
+		case pst::ElementKind::ClassMethod:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	struct TemplateBakeStorage final {
 		SymID baked_template_sym_id;
 

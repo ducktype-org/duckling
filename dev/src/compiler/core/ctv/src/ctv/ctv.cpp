@@ -87,6 +87,16 @@ namespace compiler::ctv {
 			variant_case(tsh::ValueType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
+			variant_case(TypeOperator, type_operator) {
+				hashing::addToHash(hasher, type_operator.kind.index());
+				if (const auto* placeholder
+				    = std::get_if<TypeOperator::Placeholder>(&type_operator.kind)) {
+					hashing::addToHash(
+						hasher, placeholder->template_decl.queryUnstablePerfectHash()
+					);
+					hashing::addToHash(hasher, placeholder->parameter_index);
+				}
+			}
 			variant_case(VMValue, vm_value) {
 				hashing::addToHash(hasher, vm_value.type.queryUnstablePerfectHash());
 				hashing::addToHash(
@@ -126,6 +136,21 @@ namespace compiler::ctv {
 				return ss.str();
 			}
 			variant_case(tsh::ValueType<>, val) { return val.toString(); }
+			variant_case(TypeOperator, type_operator) {
+				variant_match(type_operator.kind) {
+					variant_case_novalue(TypeOperator::Direct) { return "typeoperator(ident)"; }
+					variant_case_novalue(TypeOperator::Ref) { return "typeoperator(ref)"; }
+					variant_case_novalue(TypeOperator::Box) { return "typeoperator(box)"; }
+					variant_case(TypeOperator::Placeholder, placeholder) {
+						return base::strConcat(
+							"typeoperator(placeholder ",
+							std::to_string(placeholder.parameter_index),
+							")"
+						);
+					}
+				}
+				CORE_UNREACHABLE();
+			}
 			variant_case(VMValue, vm_value) {
 				// @TODO: #3774 Pretty print the VMValue instead of dumping it.
 				std::stringstream ss;
@@ -179,6 +204,9 @@ namespace compiler::ctv {
 				return tsh::ValueType<>::withDefaultsMut(tsh::getMetaType());
 			}
 			variant_case(VMValue, vm_value) { return vm_value.type; }
+			variant_case_novalue(TypeOperator) {
+				return tsh::ValueType<>::withDefaultsMut(tsh::getTypeOperatorType(ctx));
+			}
 		}
 		CORE_UNREACHABLE();
 	}

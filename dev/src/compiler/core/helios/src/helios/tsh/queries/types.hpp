@@ -322,6 +322,12 @@ namespace compiler::tsh {
 	)
 
 	/**
+	 * @brief Get the `typeoperator` type, the compile-time only function type `(type) -> type`
+	 * of FunctionKind::TypeOperator.
+	 */
+	FunctionAbstractType getTypeOperatorType(query::Context& ctx);
+
+	/**
 	 * @brief Query to get the Class type.
 	 *
 	 * \query_thread_safe_if_cache
@@ -360,6 +366,54 @@ namespace compiler::tsh {
 		QueryTypeTemplateType,
 		KeyFor_QueryTypeTemplateType,
 		TypeTemplateAbstractType,
+		({ .uses_qresult = false })
+	)
+
+	/**
+	 * @brief Key for QueryTemplateDeductionPlaceholderType.
+	 */
+	struct KeyFor_QueryTemplateDeductionPlaceholderType final {
+		/**
+		 * @brief The template whose type parameter is replaced by the placeholder.
+		 */
+		helios::SymID template_symbol;
+
+		/**
+		 * @brief The index of the replaced template parameter.
+		 */
+		usize parameter_index;
+
+		/**
+		 * @brief The type the placeholder of a `typeoperator` parameter is applied to. Empty for
+		 * the placeholder of a `type` parameter.
+		 */
+		base::Optional<ValueType<>> operand = {};
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryTemplateDeductionPlaceholderType&) const
+			= default;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher{};
+			addToHash(hasher, template_symbol);
+			addToHash(hasher, parameter_index);
+			addToHash(hasher, operand.has_value());
+			if (operand.has_value()) addToHash(hasher, operand.value());
+			return hasher.finalize();
+		}
+	};
+
+	/**
+	 * @brief Query to get the placeholder of a template type parameter used in template argument
+	 * deduction.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryTemplateDeductionPlaceholderType,
+		KeyFor_QueryTemplateDeductionPlaceholderType,
+		TemplateDeductionPlaceholderAbstractType,
 		({ .uses_qresult = false })
 	)
 }

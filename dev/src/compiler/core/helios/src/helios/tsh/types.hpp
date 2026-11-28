@@ -46,6 +46,7 @@ namespace compiler::tsh {
 	class MetaAbstractTypeImpl;
 	class ImportAbstractTypeImpl;
 	class TypeTemplateAbstractTypeImpl;
+	class TemplateDeductionPlaceholderAbstractTypeImpl;
 
 	/******************\
 	|    BASIC TYPES   |
@@ -610,5 +611,43 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(TypeTemplateAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(TypeTemplateAbstractType)
+	};
+
+	/**
+	 * @brief The type substituted for a type parameter of a template while its arguments are
+	 * deduced. This type serves two different purpose, first be used where the `T` template
+	 * parameter and second one to replace the type where the `refkind <inner type>` is used.
+	 *
+	 * For example:
+	 * ```
+	 * template(T: type, refkind: typeoperator)
+	 * fun foo(a: T | str, b: refkind i64) = {...}
+	 * ```
+	 * First function param create a variant of `str` and this type and the second parameter
+	 * returns this type with the `i64` kept inside in `getOperand()`.
+	 */
+	class TemplateDeductionPlaceholderAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(TemplateDeductionPlaceholderAbstractType, AbstractType)
+
+		/**
+		 * @brief The template whose parameter this placeholder stands for.
+		 */
+		[[nodiscard]] helios::SymID getTemplate() const;
+
+		/**
+		 * @brief The index of the template parameter this placeholder stands for.
+		 */
+		[[nodiscard]] usize getParameterIndex() const;
+
+		/**
+		 * @brief The type a `typeoperator` placeholder is applied to, like `T` in `refkind T`.
+		 * Empty for the placeholder of a `type` parameter.
+		 */
+		[[nodiscard]] const base::Optional<ValueType<>>& getOperand() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(TemplateDeductionPlaceholderAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(TemplateDeductionPlaceholderAbstractType)
 	};
 }

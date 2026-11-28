@@ -132,6 +132,12 @@ namespace compiler::backend_vm::internal {
 				global_data.ctor_name = ctor.ctor.name;
 				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 			}
+			variant_case_novalue(ctv::CompileTimeValue::TypeOperator) {
+				pctx.query_ctx.value()->log<dia::PlaceholderError>(
+					"Invalid const used in runtime.", position
+				);
+				query::throwFailed();
+			}
 			variant_case(ctv::CompileTimeValue::VMValue, vm_value) {
 				if (pctx.isCompTimeLowering()) {
 					auto ctor = lowerVMValue(pctx, global_name, inserted_global_place, vm_value);

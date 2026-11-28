@@ -61,6 +61,7 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
+		TESTER_ADD_TEST(testTemplateArgumentDeductionErrors);
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testPtrOfErrors);
 		TESTER_ADD_TEST(testMoveOperandErrors);
@@ -2476,6 +2477,122 @@ private:
 
 			)",
 			{ "Feature not implemented" },
+			1
+		);
+	}
+
+	/// @brief Template arguments of a called function template that cannot be deduced, and
+	/// `refkind` applied to something other than a `typeoperator`.
+	void testTemplateArgumentDeductionErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type)
+				fun make() -> i64 = 0;
+
+				fun main() -> i64 = make();
+			)",
+			{ "Cannot deduce the template parameter `T` of `make` from the arguments of the "
+		      "call." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(A: type, B: type)
+				fun second(a: A) -> A = a;
+
+				fun main() -> i64 = second(1i64);
+			)",
+			{ "Cannot deduce the template parameter `B` of `second` from the arguments of the "
+		      "call." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(n: i64)
+				fun times(x: i64) -> i64 = x * n;
+
+				fun main() -> i64 = times(2i64);
+			)",
+			{ "Feature not implemented" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type)
+				fun ident(x: T) -> T = x;
+
+				fun main() -> i64 = ident(undefined_thing);
+			)",
+			{ "Symbol 'undefined_thing' not found in lookup" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(refkind: type)
+				fun f(x: refkind i64) -> i64 = 0;
+
+				fun main() -> i64 = f[i64](1);
+			)",
+			{ "`refkind` must be a `typeoperator`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun f(refkind: i64) -> i64 = {
+					var x: refkind i64 = 0;
+					return x;
+				}
+
+				fun main() -> i64 = f(1);
+			)",
+			{ "`refkind` must be a constant." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun f(x: refkind i64) -> i64 = 0;
+
+				fun main() -> i64 = f(1);
+			)",
+			{ "Symbol 'refkind' not found in lookup" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(refkind: typeoperator)
+				fun f(v: str | refkind i64) -> i64 = 0;
+
+				fun main() -> i64 = f("lit");
+			)",
+			{ "Cannot deduce the template parameter `refkind` of `f` from the arguments of the "
+		      "call." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(T: type)
+				class A { v: T; }
+
+				template(T: type)
+				class B { v: T; }
+
+				template(T: type)
+				fun f(x: A[T]) -> i64 = 0;
+
+				fun main() -> i64 = {
+					var b: B[i64];
+					return f(b);
+				}
+			)",
+			{ "Cannot deduce the template parameter `T` of `f` from the arguments of the call." },
 			1
 		);
 	}

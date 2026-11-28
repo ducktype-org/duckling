@@ -135,6 +135,12 @@ namespace compiler::helios::templates {
 		query::Context& ctx, SymID template_sym_id
 	);
 
+	/**
+	 * @brief Whether the template declares a function, a function declaration or a method, like
+	 * `template(T: type) fun f(x: T)`.
+	 */
+	bool isFunctionTemplate(query::Context& ctx, SymID template_sym_id);
+
 
 	// @NOTE: if we will have to bake templates to hout unit, it should probably first call
 	// QueryBakeTemplateSymID and then gather the content of the HOUTUnit based on the baked

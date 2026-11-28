@@ -1042,4 +1042,54 @@ namespace compiler::tsh {
 
 		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
 	};
+
+	class TemplateDeductionPlaceholderAbstractTypeImpl final: public AbstractTypeImpl {
+		compiler::helios::SymID     template_symbol;
+		usize                       parameter_index;
+		base::Optional<ValueType<>> operand;
+
+	public:
+		static constexpr Kind STATIC_KIND = Kind::TemplateDeductionPlaceholder;
+
+		[[nodiscard]] Kind getKind() const override { return STATIC_KIND; }
+
+		TemplateDeductionPlaceholderAbstractTypeImpl(
+			compiler::helios::SymID     template_symbol,
+			usize                       parameter_index,
+			base::Optional<ValueType<>> operand
+		):
+			  template_symbol(template_symbol),
+			  parameter_index(parameter_index),
+			  operand(operand) {
+			representation = base::strConcat(
+				"<template_deduction_placeholder ",
+				name(template_symbol).str(),
+				"#",
+				std::to_string(parameter_index),
+				this->operand.has_value() ? " " + this->operand.value().toString() : "",
+				">"
+			);
+		}
+
+		[[nodiscard]] compiler::helios::SymID getTemplate() const { return template_symbol; }
+
+		[[nodiscard]] usize getParameterIndex() const { return parameter_index; }
+
+		[[nodiscard]] const base::Optional<ValueType<>>& getOperand() const { return operand; }
+
+		[[nodiscard]] bool isTriviallyDestructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
 }

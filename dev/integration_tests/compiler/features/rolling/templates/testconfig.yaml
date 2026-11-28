@@ -29,6 +29,20 @@ Tests:
           String: "2\n2\nabc\n"
         ExitCode: 0
 
+  function_template_deduction:
+    Cases:
+      all:
+        Output:
+          String: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n21\n23\n24\n"
+        ExitCode: 0
+
+  class_template_deduction:
+    Cases:
+      all:
+        Output:
+          String: "1\n2\n3\n4\n5\n6\n7\n"
+        ExitCode: 0
+
 
   simple_constants_templates:
     Cases:
