@@ -192,6 +192,11 @@ namespace compiler::helios {
 		CRef<code::Expr> initial_value_expr
 			= v_get(global_data->value, HOUTGlobalVariable).initial_value.ref();
 
+		// A global that carries no information has no storage, so it has no address to move the
+		// value into. Only the initial value is evaluated, for its side effects.
+		if (not global_data->type.getType().carriesInformation(ctx))
+			return initial_value_expr->clone();
+
 		auto move_in_symbol = moveInSymForType(ctx, global_data->type);
 		return s.call(
 			s.ident(move_in_symbol),
