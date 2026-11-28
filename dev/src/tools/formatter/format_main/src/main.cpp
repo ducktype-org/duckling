@@ -10,8 +10,10 @@
  *
  * Reads one or more Duckling source files, re-renders each through the
  * token-based formatter and prints the result to stdout (or writes it back with
- * -i, or verifies it with -k). Unlike `duckc`, this binary does not initialize the
- * compiler driver: tokenization and formatting need no query state.
+ * -i, or verifies it with -k). Without --config, the nearest `duckfmt_config.json`
+ * from the current directory up is used, and the defaults when there is none.
+ * Unlike `duckc`, this binary does not initialize the compiler driver:
+ * tokenization and formatting need no query state.
  */
 
 #include <formatter/config.hpp>
@@ -30,9 +32,11 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace {
@@ -125,7 +129,9 @@ namespace {
 	/**
 	 * @brief Handler of `duckfmt`: formats every file given on the command line.
 	 *
-	 * All files are processed even when one of them fails.
+	 * All files are processed even when one of them fails. The configuration comes from
+	 * `--config`, else from the nearest `formatter::CONFIG_FILE_NAME` found by
+	 * `formatter::findConfigFile` from the current directory up, else the defaults.
 	 *
 	 * @return The highest exit code of any file (see `EXIT_OK`, `EXIT_NOT_FORMATTED`,
 	 *         `EXIT_ERROR`).
@@ -133,7 +139,16 @@ namespace {
 	int formatFiles(const clah::ParsingResult& options) {
 		formatter::FormatConfig format_config = formatter::FormatConfig::defaults();
 
-		const auto config_path = options.getValue<std::string>("config").copyValueOr("");
+		auto config_path = options.getValue<std::string>("config").copyValueOr("");
+		if (config_path.empty()) {
+			// No --config: use the nearest config file from the current directory up, if any.
+			std::error_code cwd_error;
+			const auto      cwd = std::filesystem::current_path(cwd_error);
+			if (not cwd_error) {
+				const auto found = formatter::findConfigFile(cwd);
+				if (found.has_value()) config_path = found.value().string();
+			}
+		}
 		if (not config_path.empty()) {
 			const auto loaded = loadConfig(config_path);
 			if (not loaded.has_value()) return EXIT_ERROR;
@@ -166,12 +181,17 @@ namespace {
 		return clah::Clah("duckfmt", std::string(DESCRIPTION))
 		    .addPositional(clah::FileParser::make("file"))
 		    .setDefaultValueParser(clah::FileParser::make("file"))
-		    .add(clah::ParamBuilder::ofValue(clah::StringParser::make("config"))
-		             .addShortName('c')
-		             .addLongName("config")
-		             .addShortDesc("Path to a JSON formatter configuration file.")
-		             .optional()
-		             .build())
+		    .add(
+				clah::ParamBuilder::ofValue(clah::StringParser::make("config"))
+					.addShortName('c')
+					.addLongName("config")
+					.addShortDesc(
+						"Path to a JSON formatter configuration file. Default: the nearest "
+						"duckfmt_config.json from the current directory up, else built-in defaults."
+					)
+					.optional()
+					.build()
+			)
 		    .add(clah::ParamBuilder::ofFlag()
 		             .addShortName('i')
 		             .addLongName("in-place")

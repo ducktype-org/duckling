@@ -10,9 +10,13 @@
  */
 #pragma once
 
+#include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
 #include <nlohmann/json_fwd.hpp>
+
+#include <filesystem>
+#include <string_view>
 
 namespace formatter {
 
@@ -82,4 +86,19 @@ namespace formatter {
 		[[nodiscard]]
 		static FormatConfig fromJson(const nlohmann::json& json);
 	};
+
+	/** Name of the configuration file `duckfmt` looks for when none is given with `--config`. */
+	inline constexpr std::string_view CONFIG_FILE_NAME = "duckfmt_config.json";
+
+	/**
+	 * @brief Finds the configuration file that applies to @p start_dir.
+	 *
+	 * Looks for a regular file named `CONFIG_FILE_NAME` in @p start_dir, then in each parent
+	 * directory up to the filesystem root. The nearest file wins. A directory that cannot be
+	 * inspected is skipped. A relative @p start_dir is resolved against the current directory.
+	 *
+	 * @return The path of the file found, or an empty optional when no directory holds one.
+	 */
+	[[nodiscard]]
+	base::Optional<std::filesystem::path> findConfigFile(const std::filesystem::path& start_dir);
 }
