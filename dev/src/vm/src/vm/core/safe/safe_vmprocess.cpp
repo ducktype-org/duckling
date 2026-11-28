@@ -279,19 +279,20 @@ namespace vm {
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
-		auto value              = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
-		value->owned_by_process = true;
-		owned_vm_values.emplace_back(std::move(value));
-		return owned_vm_values.back().refMut();
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(const LocalSlot& slot) {
+		auto value = createVMValue(TypeCRef(slot.type));
+		value->importFromSlot(slot);
+		return value;
 	}
 
 	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type) {
 		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 	}
 
-	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type, Pointer src) {
-		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(const LocalSlot& slot) {
+		auto value = createOwnedVMValue(TypeCRef(slot.type));
+		value->importFromSlot(slot);
+		return value;
 	}
 
 	SafeVMProcess::SafeVMProcess(
@@ -586,13 +587,12 @@ namespace vm {
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (u64 slot_index = 0; slot_index < slot_count; slot_index++) {
-					const LocalSlot& slot = frame.local_slot_stack_base[slot_index];
+					LocalSlot& slot = frame.local_slot_stack_base[slot_index];
 
 					// Variables are initialized without a block, and a value can only be read
 					// through one, so it is created here exactly as the executor does.
-					Ref<Block> block = slot.block != nullptr
-					                     ? Ref(slot.block)
-					                     : createLocalSlotBlock(frame, memory, slot_index);
+					Ref<Block> block = slot.block != nullptr ? Ref(slot.block)
+					                                         : createLocalSlotBlock(slot, memory);
 
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = base::safeIntConv<u64>(slot.data - frame.local_stack),
