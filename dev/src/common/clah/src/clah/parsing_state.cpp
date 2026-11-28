@@ -42,25 +42,29 @@ namespace {
 	std::vector<std::string> fromDirectString(const std::string& args) {
 		std::vector<std::string> result;
 		std::string              current_arg;
-		bool                     in_quotes = false;
+		bool                     in_quotes        = false;
+		bool                     argument_started = false;
 		for (char c: args) {
 			if (c == '"') {
-				in_quotes = !in_quotes;
+				argument_started = argument_started || in_quotes;
+				in_quotes        = !in_quotes;
 			} else if (std::isspace(static_cast<unsigned char>(c)) && not in_quotes) {
-				if (!current_arg.empty()) {
+				if (argument_started) {
 					result.push_back(current_arg);
 					current_arg.clear();
+					argument_started = false;
 				}
 			} else {
 				current_arg += c;
+				argument_started = true;
 			}
 		}
-		if (!current_arg.empty()) result.push_back(current_arg);
+		if (argument_started) result.push_back(current_arg);
 		return result;
 	}
 
 	std::string withQuotes(std::string str) {
-		if (str.find(' ') != std::string::npos)
+		if (str.empty() || str.find(' ') != std::string::npos)
 			return "\"" + str + "\"";
 		else
 			return str;
@@ -87,7 +91,7 @@ namespace {
 		for (usize i = 0; i < word_index; ++i)
 			position += withQuotes(words[i]).size() + 1;  // +1 for the space between arguments
 		// If the last word has quotes, we add 1 for the opening quote
-		position += withQuotes(words[word_index]).size() - (words[word_index].size()) / 2;
+		position += (withQuotes(words[word_index]).size() - words[word_index].size()) / 2;
 		position += inside_word_position;
 
 		return position;
@@ -124,7 +128,7 @@ namespace clah {
 	void ParsingState::parseParameter(const std::vector<clah::Parameter>& params) {
 		CORE_ASSERT(frontChar() == '-', "parseParameter expected '-'");
 		usize hyphen_count = advanceUntilInWord([](char c) { return c != '-'; });
-		if (isEnd()) {
+		if (not hasFrontChar()) {
 			// We reached the end of arguments while parsing the name, which means that there is no
 			// name after dashes, which is invalid.
 			throw clah::exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
@@ -141,7 +145,7 @@ namespace clah {
 		usize       name_count = advanceUntilInWord([](char c) { return c == '='; });
 		name                   = name.substr(0, name_count);
 
-		if (not isEnd() && frontChar() == '=') advanceChar();
+		if (hasFrontChar() && frontChar() == '=') advanceChar();
 
 		if (name.empty())
 			throw clah::exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
@@ -153,7 +157,7 @@ namespace clah {
 
 	void ParsingState::parseShortParameters(const std::vector<clah::Parameter>& params) {
 		const usize group_word = current_word;
-		while (not isEnd() && current_word == group_word) {
+		while (hasFrontChar() && current_word == group_word) {
 			const std::string name(1, frontChar());
 			if (name == "=")
 				throw exceptions::ExpectedParameterIdentifier(position_in_merged, merged_view);
@@ -170,16 +174,16 @@ namespace clah {
 
 			// A value parameter ends the group: its value is the rest of the word (`-O3`, `-O=3`)
 			// or, when the word ends right after the name, the next word (`-O 3`).
-			if (not isEnd() && frontChar() == '=') advanceChar();
+			if (hasFrontChar() && frontChar() == '=') advanceChar();
 			parseWithParameter(*parameter, name);
 			return;
 		}
 	}
 
-	bool ParsingState::isEnd() const {
-		bool is_inside
-			= current_word < words.size() && inside_word_position < words[current_word].size();
-		return not is_inside;
+	bool ParsingState::isEnd() const { return current_word >= words.size(); }
+
+	bool ParsingState::hasFrontChar() const {
+		return not isEnd() && inside_word_position < words[current_word].size();
 	}
 
 	base::Optional<CRef<clah::Parameter>> ParsingState::findParameter(
@@ -244,9 +248,9 @@ namespace clah {
 	}
 
 	char ParsingState::frontChar() const {
-		if (isEnd()) {
+		if (not hasFrontChar()) {
 			throw exceptions::ClahException(
-				"Parser error: frontChar() called with no more arguments"
+				"Parser error: frontChar() called with no character available"
 			);
 		}
 		return words[current_word][inside_word_position];

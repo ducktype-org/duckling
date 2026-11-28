@@ -4,10 +4,13 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+#include <base/str/str_utils.hpp>
+
 #include <clah/clah.hpp>
 #include <tester/tester.hpp>
 
 #include <array>
+#include <string_view>
 
 class ClahTester: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -18,6 +21,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(positionalTest);
+		TESTER_ADD_TEST(emptyArgumentsTest);
 		TESTER_ADD_TEST(namedTest);
 		TESTER_ADD_TEST(flagTest);
 		TESTER_ADD_TEST(multipleFlagsTest);
@@ -82,6 +86,26 @@ private:
 
 		ASSERT_EQUAL("test", res.getPositional<std::string>(0));
 		ASSERT_EQUAL(2, res.getPositional<i64>(1));
+	}
+
+	void emptyArgumentsTest() {
+		auto clah = clah::Clah("prog").add(clah::ParamBuilder::ofValue(clah::StringParser::make())
+		                                       .addLongName("value")
+		                                       .addShortDesc("A string value.")
+		                                       .build());
+		const std::string        args  = R"("" "" --value "" tail "" "")";
+		const auto               words = base::strSplit(args);
+		std::vector<const char*> argv{ "./prog" };
+		for (const auto& word: words) argv.push_back(word == "\"\"" ? "" : word.c_str());
+
+		const std::array results{ clah.parse(argv.size(), argv.data()), clah.parseArgs(args) };
+		const std::array expected_extras{ "", "", "tail", "", "" };
+		for (const auto& result: results) {
+			ASSERT_EQUAL("", result.getValue<std::string>("value").value());
+			ASSERT_EQUAL(expected_extras.size(), result.getExtraParameterCount());
+			for (usize i = 0; i < expected_extras.size(); ++i)
+				ASSERT_EQUAL(expected_extras.at(i), result.getExtra<std::string>(i).value());
+		}
 	}
 
 	void namedTest() {
@@ -184,11 +208,13 @@ private:
 		ASSERT_EQUAL(1, res.getPositionalParameterCount());
 		ASSERT_EQUAL(-123, res.getPositional<i64>(0));
 
-		std::array argv2{ "./prog", "-123", "1231", "test" };
-		assertThrows<clah::exceptions::NoDefaultValueParser>(
-			[&]() { clah.parse(argv2.size(), argv2.begin()); },
-			"Should throw NoDefaultValueParser exception."
-		);
+		try {
+			clah.parseArgs(R"(-123 "" tail)");
+		} catch (const clah::exceptions::NoDefaultValueParser& e) {
+			ASSERT_TRUE(std::string_view(e.what()).ends_with(R"(Extra values: "..."" tail")"));
+			return;
+		}
+		fail("Should throw NoDefaultValueParser for a quoted extra argument.");
 	}
 
 	void escapingTest() {
