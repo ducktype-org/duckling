@@ -213,11 +213,18 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief Returns the value a `Branch` on @p condition reads, and fills @p hole.
+		 * @brief Returns the operand for the `Branch` of an `if`/`while` condition.
 		 *
-		 * A non-local value (constant, global) is used as it is. Any other result is stored in a
-		 * condition temporary, so the branch can still read it after the locals and temporaries
-		 * of the condition are destroyed.
+		 * Fills @p hole with the instruction that stores the condition result, or with a `Nop`.
+		 * - A constant or a global is returned as it is, and @p hole gets a `Nop`.
+		 * - Anything else is stored in a new condition temporary, and the temporary is returned.
+		 *
+		 * Example (`%N` is `Local(N)`):
+		 * @code
+		 * if (true)  ->  Branch true, ...
+		 * if (b)     ->  %7 := Assign b [Construct %7];  Branch %7, ...
+		 * if (x < 3) ->  %5 := IntegerLt x, %3 [Construct %5];  Branch %5, ...
+		 * @endcode
 		 */
 		MIRValue lowerConditionValue(
 			ExprLowerRes& condition, BlockBuilder::InstructionHole& hole, ScopeRef condition_scope
@@ -228,6 +235,9 @@ namespace compiler::mir {
 				return std::move(stored_value.value());
 			}
 
+			// Condition result must be stored in special temporary value, so we can use it
+			// after the actual condition result is destroyed. Create extra temporary and assign
+			// to it in-place or with extra move.
 			const MIRPlace condition_tmp(MIRLocalRef(function.addConditionTmp(condition_scope)));
 			condition.storeResultInGivenPlace(
 				condition_tmp,
