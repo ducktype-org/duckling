@@ -609,9 +609,10 @@ namespace vm {
 		{
 			const auto& ext_func
 				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
+			const usize arg_count = ext_func.parameters.size();
 			SafeExtCContext::callRaw(thread.safe_process, frame, ext_func);
 			// Raw arguments are trivially copyable, so there is nothing to destruct.
-			for (usize i = 0; i < ext_func.parameters.size(); i++) performDeinit(frame, thread);
+			for (usize i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
@@ -621,8 +622,9 @@ namespace vm {
 		{
 			const auto& ext_func
 				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
+			const usize arg_count = ext_func.parameters.size();
 			SafeExtCContext::callValue(thread.safe_process, frame, ext_func);
-			for (usize i = 0; i < ext_func.parameters.size(); i++) performDeinitDtor(frame, thread);
+			for (usize i = 0; i < arg_count; i++) performDeinitDtor(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
