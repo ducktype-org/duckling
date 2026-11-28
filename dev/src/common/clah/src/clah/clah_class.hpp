@@ -73,6 +73,8 @@ namespace clah {
 
 		/**
 		 * @brief Adds a named parameter to the command.
+		 * Short and long aliases must be unique along each command path, except for
+		 * the built-in help flag present on each command.
 		 * @param parameter A parameter constructed with clah::ParamBuilder.
 		 * @return A reference to self.
 		 */
@@ -270,6 +272,9 @@ namespace clah {
 		 * @return A reference to self.
 		 */
 		Clah&& addHelpFlag();
+
+		/** @brief Checks a parameter's aliases against this command and its descendants. */
+		void checkParameterAliases(const Parameter& parameter, const std::string& command_name) const;
 
 		/**
 		 * @brief Internal and recursive parsing function for parsing subcommands.
