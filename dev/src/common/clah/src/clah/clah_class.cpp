@@ -57,6 +57,17 @@ namespace {
 		}
 		return true;
 	}
+
+	bool isDecimalInteger(std::string_view token) {
+		if (token.starts_with('-')) token.remove_prefix(1);
+		return !token.empty() && token.find_first_not_of("0123456789") == std::string_view::npos;
+	}
+
+	bool isIntegerRange(std::string_view token) {
+		const auto separator = token.find("..");
+		return separator != std::string_view::npos && isDecimalInteger(token.substr(0, separator))
+		    && isDecimalInteger(token.substr(separator + 2));
+	}
 }
 
 namespace clah {
@@ -205,11 +216,10 @@ namespace clah {
 		st.result.addToCommandList(this);
 
 		while (not st.isEnd()) {
-			std::string token              = st.frontWord();
-			bool        is_negative_number = isNegativeNumber(token);
+			std::string token = st.frontWord();
 
 			// Parameter
-			if (token.starts_with('-') && !is_negative_number) {
+			if (token.starts_with('-') && !isNegativeNumber(token) && !isIntegerRange(token)) {
 				st.parseParameter(parameters);
 				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
 			} else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
