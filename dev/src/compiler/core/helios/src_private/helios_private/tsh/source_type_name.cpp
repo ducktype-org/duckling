@@ -5,19 +5,19 @@
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
 #include <ctv/numeric_value.hpp>
-#include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/tsh/value_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/templates/templates.hpp>
 #include <helios_private/tsh/source_type_name.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/misc/anycast.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -49,76 +49,57 @@ namespace compiler::tsh {
 			return value.toString();
 		}
 
-		std::string templateArgumentsSuffix(
-			query::Context& ctx, const helios::templates::TemplateBakePSTLinkedData& bake_data
-		) {
-			const auto postponed = bake_data.postponed_data->load(std::memory_order_acquire);
-			CORE_ASSERT(postponed != nullptr, "Baked template data must be initialized");
-
-			std::string result = "[";
-			for (usize i = 0; i < postponed->template_arguments_symbols.size(); i++) {
-				if (i != 0) result += ", ";
-				const auto value
-					= ctx.query<helios::QueryConstValueOf>(postponed->template_arguments_symbols[i])
-				          .valueOrThrow();
-				result += renderCompileTimeValue(ctx, value);
+		std::string sourceSymbolName(query::Context& ctx, const helios::SymID symbol) {
+			auto        result   = helios::name(symbol).str();
+			const auto& instance = helios::getSymRef(symbol)->maybe_template_instance_data;
+			const auto* data     = instance.has_value()
+			                         ? std::get_if<helios::TemplateInstanceData::Root>(&instance->data)
+			                         : nullptr;
+			if (data != nullptr) {
+				result
+					+= "["
+				     + base::strJoin(
+						   data->template_arguments_symbols
+							   | std::views::transform([&](const helios::SymID argument) {
+									 return renderCompileTimeValue(
+										 ctx,
+										 helios::getSymRef(argument)
+											 ->getGeneratedData<helios::defgen::GeneratedConstant>()
+											 ->value
+									 );
+								 }),
+						   ", "
+					 )
+				     + "]";
 			}
-			return result + "]";
+			return result;
 		}
 
 		std::string sourceDeclarationName(query::Context& ctx, const helios::SymID symbol) {
-			std::vector<std::string> path;
-			auto                     element = helios::maybeSymbolPst(symbol);
-			if (element.has_value()) {
-				auto unlocked = element.value().unlock(ctx);
-				if (unlocked->getElementKind() == pst::ElementKind::TemplateStmt) {
-					element
-						= unlocked.dynamicCast<pst::TemplateStmt>().value()->getInnerStatement();
-					const auto inner_kind = element.value().unlock(ctx)->getElementKind();
-					if (inner_kind != pst::ElementKind::Class
-					    && inner_kind != pst::ElementKind::Namespace)
-						path.emplace_back(helios::name(symbol).str());
-				}
-			}
+			std::vector<std::string> path{ sourceSymbolName(ctx, symbol) };
+
+			auto element = helios::maybeSymbolPst(symbol);
 			while (element.has_value()) {
-				auto unlocked = element.value().unlock(ctx);
-				if (unlocked->getElementKind() == pst::ElementKind::Namespace
-				    || unlocked->getElementKind() == pst::ElementKind::Class) {
-					if (auto statement = unlocked.dynamicCast<pst::Stmt>(); statement.has_value()) {
-						if (auto identifier = statement.value()->getDeclSymbolIdentifier();
-						    identifier.has_value())
-							path.emplace_back(identifier.value().unlock(ctx)->unwrap().str());
-					}
-				}
-
-				if (unlocked->getElementKind() == pst::ElementKind::TemplateStmt
-				    && unlocked->hasAdditionalRootData()
-				    && std::holds_alternative<pst::AdditionalRootData::BakedTemplateParent>(
-						unlocked->getAdditionalRootData().pst_parent
-					)) {
-					const auto& baked_parent
-						= std::get<pst::AdditionalRootData::BakedTemplateParent>(
-							unlocked->getAdditionalRootData().pst_parent
-						);
-					const auto bake_data
-						= base::anyCast<helios::templates::TemplateBakePSTLinkedData>(
-							baked_parent.template_bake_data
-						);
-					CORE_ASSERT(!path.empty(), "A baked class template must have a class name");
-					path.back() += templateArgumentsSuffix(ctx, bake_data);
-					element = bake_data.pst_parent_element;
-					continue;
-				}
-
-				auto parent = helios::getPSTElementParent(ctx, unlocked);
+				auto parent = helios::getPSTElementParent(ctx, element.value().unlock(ctx));
 				element     = parent.isLangElement()
 				                ? base::Optional(parent.getAsLangElement())
 				                : base::Optional<pst::AccessLocked<pst::LangElement>>{};
+				if (not element.has_value()) break;
+
+				auto unlocked = element.value().unlock(ctx);
+				if (unlocked->getElementKind() != pst::ElementKind::Namespace
+				    && unlocked->getElementKind() != pst::ElementKind::Class)
+					continue;
+
+				const auto declaration = ctx.query<helios::QuerySymbolOfSTMT>(
+												{ unlocked.dynamicCast<pst::Stmt>().value() }
+				)
+				                             .valueOrThrow();
+				path.emplace_back(sourceSymbolName(ctx, declaration));
 			}
 
 			std::ranges::reverse(path);
-			const auto result = base::strJoin(path, ".");
-			return result.empty() ? helios::name(symbol).str() : result;
+			return base::strJoin(path, ".");
 		}
 
 		std::string joinSourceTypeNames(
@@ -220,16 +201,22 @@ namespace compiler::tsh {
 				.precedence = TypeNamePrecedence::Atomic,
 			};
 		}
-		case Kind::Variant:
+		case Kind::Variant: {
+			const auto variant = type.as<VariantAbstractType>();
+			if (variant.representsOptionalType())
+				return {
+					.text = "?"
+					      + renderValueTypeName(ctx, variant.getOptionalValueType())
+					            .nestedIn(TypeNamePrecedence::Prefix),
+					.precedence = TypeNamePrecedence::Prefix,
+				};
 			return {
 				.text = joinSourceTypeNames(
-					ctx,
-					type.as<VariantAbstractType>().getUnderlyingTypes(),
-					" | ",
-					TypeNamePrecedence::Prefix
+					ctx, variant.getUnderlyingTypes(), " | ", TypeNamePrecedence::Prefix
 				),
 				.precedence = TypeNamePrecedence::Variant,
 			};
+		}
 		case Kind::Class:
 			return {
 				.text       = sourceDeclarationName(ctx, type.as<ClassAbstractType>().getSymbol()),

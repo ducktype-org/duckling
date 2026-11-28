@@ -20,11 +20,16 @@
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <ranges>
 #include <sstream>
 #include <unordered_set>
 #include <utility>
@@ -358,7 +363,27 @@ namespace compiler::tsh {
 	}
 
 	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol): symbol(symbol) {
-		representation = "Class " + name(symbol).str();
+		representation       = "Class " + name(symbol).str();
+		const auto& instance = compiler::helios::getSymRef(symbol)->maybe_template_instance_data;
+		const auto* data
+			= instance.has_value()
+		        ? std::get_if<compiler::helios::TemplateInstanceData::Root>(&instance->data)
+		        : nullptr;
+		if (data != nullptr) {
+			representation
+				+= "["
+			     + base::strJoin(
+					   data->template_arguments_symbols
+						   | std::views::transform([](const compiler::helios::SymID arg) {
+								 return compiler::helios::getSymRef(arg)
+				                     ->getGeneratedData<compiler::helios::defgen::GeneratedConstant>(
+									 )
+				                     ->value.toString();
+							 }),
+					   ", "
+				 )
+			     + "]";
+		}
 	}
 
 	CRef<compiler::helios::ClassSymbolData> ClassAbstractTypeImpl::classSymbolData(query::Context& ctx

@@ -267,10 +267,10 @@ private:
 				// function: a default ctor of `WithInit`.
 				ASSERT_EQUAL_PRINT(1, deps.size());
 
-				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
-				ASSERT_TRUE(dep_ctor != nullptr);
-				ASSERT_EQUAL(dep_ctor->kind, Constructor::Kind::Default);
-				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
+				const auto dep_ctor = getSymRef(deps[0])->getGeneratedDataOpt<Constructor>();
+				ASSERT_TRUE(dep_ctor.has_value());
+				ASSERT_EQUAL(dep_ctor.value()->kind, Constructor::Kind::Default);
+				ASSERT_EQUAL(dep_ctor.value()->type.getKind(), compiler::tsh::Kind::Class);
 			}
 
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
@@ -289,9 +289,9 @@ private:
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
-					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
-					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
-					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
+					const auto ctor = getSymRef(d)->getGeneratedDataOpt<Constructor>();
+					if (ctor.has_value() && ctor.value()->kind == Constructor::Kind::Default
+					    && ctor.value()->type.getKind() == compiler::tsh::Kind::StaticArray)
 						found_array_ctor = true;
 				}
 				ASSERT_TRUE(found_array_ctor);
@@ -315,9 +315,9 @@ private:
 
 				bool found_tup_ctor = false;
 				for (auto d: deps) {
-					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
-					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
-					    && ctor->type.getKind() == compiler::tsh::Kind::Tuple)
+					const auto ctor = getSymRef(d)->getGeneratedDataOpt<Constructor>();
+					if (ctor.has_value() && ctor.value()->kind == Constructor::Kind::Default
+					    && ctor.value()->type.getKind() == compiler::tsh::Kind::Tuple)
 						found_tup_ctor = true;
 				}
 				ASSERT_TRUE(found_tup_ctor);
@@ -1052,9 +1052,9 @@ private:
 			};
 
 			auto assert_generated_copy = [&](const Expr* expr) {
-				const auto* ctor = std::get_if<Constructor>(&getSymRef(callee_of(expr))->other);
-				ASSERT_TRUE(ctor != nullptr);
-				ASSERT_EQUAL(ctor->kind, Constructor::Kind::Copy);
+				const auto ctor = getSymRef(callee_of(expr))->getGeneratedDataOpt<Constructor>();
+				ASSERT_TRUE(ctor.has_value());
+				ASSERT_EQUAL(ctor.value()->kind, Constructor::Kind::Copy);
 			};
 
 			// For a trivially-copyable class, the copy constructor copies each field with byte
@@ -1172,13 +1172,17 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_MATCHES(getSymRef(callee_of(rhs_of("nested_user")))->other, ClassMemberSemantics);
+			ASSERT_TRUE(getSymRef(callee_of(rhs_of("nested_user")))->isPstImplemented());
+			ASSERT_TRUE(
+				getSymRef(callee_of(rhs_of("nested_user")))->maybe_type_member_data.has_value()
+			);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto boxed = boxAllocArg(rhs_of("deep"));
 				ASSERT_TRUE(boxed != nullptr);
-				ASSERT_MATCHES(getSymRef(callee_of(boxed))->other, ClassMemberSemantics);
+				ASSERT_TRUE(getSymRef(callee_of(boxed))->isPstImplemented());
+				ASSERT_TRUE(getSymRef(callee_of(boxed))->maybe_type_member_data.has_value());
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -1345,8 +1349,8 @@ private:
 				if (call == nullptr) return false;
 				auto callee = getIdentifierExprSymID(call->callee.ref());
 				if (!callee.has_value()) return false;
-				const auto* method = std::get_if<Method>(&getSymRef(callee.value())->other);
-				return method != nullptr && method->kind == kind;
+				const auto method = getSymRef(callee.value())->getGeneratedDataOpt<Method>();
+				return method.has_value() && method.value()->kind == kind;
 			};
 
 			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
