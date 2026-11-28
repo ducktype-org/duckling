@@ -61,7 +61,7 @@ namespace compiler::frontend {
 		 * @brief Asserts that the builder can still be modified.
 		 */
 		void assertNotFinalized() const;
-		
+
 		/**
 		 * @brief Stores the parent, which is linked to the module in finalize().
 		 * @note The per-kind builders check the kind of the parent before calling this.

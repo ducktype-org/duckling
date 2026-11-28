@@ -207,8 +207,8 @@ namespace compiler::frontend {
 	base::Ref<ModuleTree> ModuleTreeBuilderCommon::finalizeCommon(base::Box<ModuleTree> node) {
 		assertNotFinalized();
 
-		// @TODO: #4246 CORE_ASSERT here the name is set for every kind, once standard modules can no longer be
-		// unnamed. REPL modules can have some dummy names if needed.
+		// @TODO: #4246 CORE_ASSERT here the name is set for every kind, once standard modules can
+		// no longer be unnamed. REPL modules can have some dummy names if needed.
 		// CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
 
 		CORE_ASSERT(
