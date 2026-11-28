@@ -213,18 +213,11 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief Returns the operand for the `Branch` of an `if`/`while` condition.
+		 * @brief Local helper function. Given lowered condition expression (e.g. if statement condition), return the value, a MIR branch operation should check.
 		 *
 		 * Fills @p hole with the instruction that stores the condition result, or with a `Nop`.
 		 * - A constant or a global is returned as it is, and @p hole gets a `Nop`.
-		 * - Anything else is stored in a new condition temporary, and the temporary is returned.
-		 *
-		 * Example (`%N` is `Local(N)`):
-		 * @code
-		 * if (true)  ->  Branch true, ...
-		 * if (b)     ->  %7 := Assign b [Construct %7];  Branch %7, ...
-		 * if (x < 3) ->  %5 := IntegerLt x, %3 [Construct %5];  Branch %5, ...
-		 * @endcode
+		 * - Anything else is stored in a new condition temporary, and the temporary is returned (condition result must be stored in special temporary value so we can use it after the actual condition result is destroyed).
 		 */
 		MIRValue lowerConditionValue(
 			ExprLowerRes& condition, BlockBuilder::InstructionHole& hole, ScopeRef condition_scope
