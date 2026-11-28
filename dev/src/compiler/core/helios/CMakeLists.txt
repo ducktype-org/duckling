@@ -84,7 +84,7 @@ add_library(HELIOS STATIC
 	src/helios/tsh/coercions/reference_coercion.cpp
 	src/helios/tsh/coercions/rules.cpp
 	src/helios/tsh/coercions/value_source.cpp
-	src/helios/tsh/symbol_type.cpp
+	src/helios/tsh/value_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
 	src/helios/tsh/value_category.cpp

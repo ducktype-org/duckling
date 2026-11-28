@@ -28,4 +28,12 @@ class Foo {
 	fun suffix ++() -> i64 = {
 		return x;
 	}
+
+	fun ()(a: i64) -> i64 = {
+		return a;
+	}
+
+	fun [](a: i64) -> i64 = {
+		return a;
+	}
 }

@@ -121,7 +121,7 @@ namespace compiler::helios::coercions {
 	);
 
 	/**
-	 * @brief Logs the failure of coercing `source_symbol_type` to any of the `expected_types`.
+	 * @brief Logs the failure of coercing the source ValueType to any of the `expected_types`.
 	 * The error of every attempted coercion is attached to the logged message.
 	 * @param failure_reasons Reason of the failure for every type of `expected_types`, in the same
 	 * order. Must have the same size as `expected_types`.

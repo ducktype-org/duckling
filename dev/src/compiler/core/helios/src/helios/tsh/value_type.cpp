@@ -4,7 +4,7 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
-#include "symbol_type.hpp"
+#include "value_type.hpp"
 
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/types.hpp>
@@ -13,7 +13,7 @@
 namespace compiler::tsh {
 
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
-	SymbolType<ABSTRACT_TYPE> SymbolType<ABSTRACT_TYPE>::getPointeeSymbolType() const {
+	ValueType<ABSTRACT_TYPE> ValueType<ABSTRACT_TYPE>::getPointeeValueType() const {
 		// If this is Ref or Box we want to get the underlying direct type.
 		if (reference_kind == ReferenceKind::Ref || reference_kind == ReferenceKind::Box)
 			return toDirect();
@@ -30,13 +30,12 @@ namespace compiler::tsh {
 		}
 	}
 
-	template auto SymbolType<AbstractType>::getPointeeSymbolType() const
-		-> SymbolType<AbstractType>;
+	template auto ValueType<AbstractType>::getPointeeValueType() const -> ValueType<AbstractType>;
 
 	template<std::derived_from<AbstractType> ABSTRACT_TYPE>
-	std::string SymbolType<ABSTRACT_TYPE>::sourceTypeName(query::Context& ctx) const {
-		return renderSymbolTypeName(ctx, SymbolType<AbstractType>(*this)).text;
+	std::string ValueType<ABSTRACT_TYPE>::sourceTypeName(query::Context& ctx) const {
+		return renderValueTypeName(ctx, ValueType<AbstractType>(*this)).text;
 	}
 
-	template std::string SymbolType<AbstractType>::sourceTypeName(query::Context&) const;
+	template std::string ValueType<AbstractType>::sourceTypeName(query::Context&) const;
 }
