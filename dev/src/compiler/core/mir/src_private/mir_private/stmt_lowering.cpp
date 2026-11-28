@@ -213,11 +213,14 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief Local helper function. Given lowered condition expression (e.g. if statement condition), return the value, a MIR branch operation should check.
+		 * @brief Local helper function. Given lowered condition expression (e.g. if statement
+		 * condition), return the value, a MIR branch operation should check.
 		 *
 		 * Fills @p hole with the instruction that stores the condition result, or with a `Nop`.
 		 * - A constant or a global is returned as it is, and @p hole gets a `Nop`.
-		 * - Anything else is stored in a new condition temporary, and the temporary is returned (condition result must be stored in special temporary value so we can use it after the actual condition result is destroyed).
+		 * - Anything else is stored in a new condition temporary, and the temporary is returned
+		 * (condition result must be stored in special temporary value so we can use it after the
+		 * actual condition result is destroyed).
 		 */
 		MIRValue lowerConditionValue(
 			ExprLowerRes& condition, BlockBuilder::InstructionHole& hole, ScopeRef condition_scope
