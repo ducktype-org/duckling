@@ -540,7 +540,10 @@ namespace compiler::helios {
 
 						for (const auto& param: postponed_data->template_arguments_symbols)
 							out.emplace_back(param);
-						out.emplace_back(postponed_data->baked_symbol);
+						out.emplace_back(
+							ctx.query<QuerySymbolOfSTMT>(template_stmt->getInnerStatement())
+								.valueOrThrow()
+						);
 					}
 					variant_default {
 						CORE_PANIC(

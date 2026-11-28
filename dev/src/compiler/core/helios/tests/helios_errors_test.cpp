@@ -237,10 +237,10 @@ private:
 				R"(fun a() = 'c' + 1i64;)",
 				{
 					"Call failed due to ambiguous overload resolution",
-					"type imm Function (imm u8, imm char) -> (imm char).",
+					"type imm (funptr(imm u8, imm char) -> imm char).",
 					"given argument type `char` cannot be converted to the expected type `imm "
 					"u8`.",
-					"type imm Function (imm char, imm u8) -> (imm char).",
+					"type imm (funptr(imm char, imm u8) -> imm char).",
 					"given argument type `i64` cannot be converted to the expected type `imm "
 					"u8`.",
 				},
@@ -652,7 +652,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `imm i64`." },
+				{ "Type `str` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -784,7 +784,7 @@ private:
 					let v = if (a == 0) then A(1i64) else B(2i64);
 				}
 			)",
-				{ "the `then` branch is `Class A` and the `else` branch is `Class B`." },
+				{ "the `then` branch is `A` and the `else` branch is `B`." },
 				1
 			);
 		}
@@ -887,7 +887,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Type `Class Outer` cannot be default initialized" },
+				{ "Type `Outer` cannot be default initialized" },
 				1
 			);
 
@@ -900,7 +900,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Type `Class Inner[2]` cannot be default initialized" },
+				{ "Type `Inner[2]` cannot be default initialized" },
 				1
 			);
 
@@ -927,7 +927,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Type `Tuple(Class Inner, i64)` cannot be default initialized" },
+				{ "Type `(Inner, i64)` cannot be default initialized" },
 				1
 			);
 		}
@@ -1081,7 +1081,7 @@ private:
 					"fun main(v: box (Holder | f32)) -> i64 = "
 					"{ var r: i64 = match (v) { case _ = 0i64; }; return r; }"
 				),
-				{ "`match` cannot look through a box. Got `box Variant (Class Holder, f32)`." },
+				{ "`match` cannot look through a box. Got `box (Holder | f32)`." },
 				1
 			);
 
@@ -1108,23 +1108,22 @@ private:
 			// The subject is only borrowed, so an owning payload cannot be bound by value.
 			check_ref_match_error(
 				"match (v) { case x : Holder = 1i64; case _ = 0i64; };",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class Holder` "
-			      "out of `ref Class Holder`" }
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Holder` "
+			      "out of `ref Holder`" }
 			);
 
 			// Matching by value takes the variant's ownership, so it has to be given up
 			// explicitly.
 			check_owning_match_error(
 				"match (v) { case x : Holder = 1i64; case y : f32 = 0i64; };",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Variant (Class "
-			      "Holder, f32)`" }
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Holder | f32`" }
 			);
 
 			// The payload is moved out of the variant and into the case, so a case of an owning
 			// match cannot borrow it.
 			check_owning_match_error(
 				"match (move v) { case x : ref Holder = 1i64; case y : f32 = 0i64; };",
-				{ "Failed to find the alternative of the variant for `ref Class Holder`",
+				{ "Failed to find the alternative of the variant for `ref Holder`",
 			      "The type has to match exactly the variant alternative." }
 			);
 
@@ -1133,7 +1132,7 @@ private:
 				"match (move v) { case _ = 0i64; };",
 				{ "A bare `case _` binds nothing, so the payload it covers would never be "
 			      "destroyed, "
-			      "and the alternative `Class Holder` it covers has a destructor." }
+			      "and the alternative `Holder` it covers has a destructor." }
 			);
 
 			// Every case yields the match's value, so they all have to agree on its type, and
@@ -1221,7 +1220,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `slice char` cannot be converted to type `imm i64`." },
+				{ "Type `str` cannot be converted to type `imm i64`." },
 				1
 			);
 
@@ -1238,7 +1237,7 @@ private:
 				R"(
 				const ARR = [42, "is the answer"];
 			)",
-				{ "Invalid array element type. Expected `i32`, but got `slice char`. "
+				{ "Invalid array element type. Expected `i32`, but got `str`. "
 			      "All array elements must be of the same type." },
 				1
 			);
@@ -1309,7 +1308,7 @@ private:
 					return 0;
 				};
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `L`" },
 				1
 			);
 
@@ -1325,7 +1324,7 @@ private:
 					return 0;
 				};
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class T`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `T`" },
 				1
 			);
 
@@ -1341,7 +1340,7 @@ private:
 				    return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `L`" },
 				1
 			);
 
@@ -1358,7 +1357,7 @@ private:
 				    return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `L`" },
 				1
 			);
 
@@ -1373,7 +1372,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `L`" },
 				1
 			);
 
@@ -1388,7 +1387,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `L`" },
 				1
 			);
 
@@ -1774,9 +1773,7 @@ private:
 			R"(fun main() = { return; })", { "return` without a value", "i64" }, 1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun main() = { return "bad"; })",
-			{ "slice char", "cannot be converted to type `i64`" },
-			1
+			R"(fun main() = { return "bad"; })", { "str", "cannot be converted to type `i64`" }, 1
 		);
 	}
 
@@ -1784,8 +1781,8 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun add(a: i64, b: i64) -> i64 = a + b;
 			fun main() -> i64 = { let f: funptr(i64) -> i64 = add; return 0; } )",
-			{ "Type `Function (i64, i64) -> (i64)` cannot be converted to type `imm Function "
-		      "(i64) -> (i64)`." },
+			{ "Type `funptr(i64, i64) -> i64` cannot be converted to type `imm (funptr(i64) -> "
+		      "i64)`." },
 			1
 		);
 
@@ -1833,8 +1830,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun inc(x: i64) -> i64 = x + 1;
 			fun main() -> i64 = { let f: (i64) -> i64 = inc; return 0; } )",
-			{ "Type `Function (i64) -> (i64)` cannot be converted to type `imm (i64) -> "
-		      "(i64)`." },
+			{ "Type `funptr(i64) -> i64` cannot be converted to type `imm ((i64) -> i64)`." },
 			1
 		);
 
@@ -1862,7 +1858,7 @@ private:
 
 	void testCopyabilityErrors() {
 		const std::string_view msg
-			= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`";
+			= "Cannot implicitly copy a value of non-trivially-copyable type `L`";
 
 		checkForErrorOnCompileModule(
 			R"( class L { v: i32; L.copy(o: ref L) = { return L(o.v); } }
@@ -1960,7 +1956,7 @@ private:
 				return 0;
 			} )",
 			{ "Cannot implicitly copy a value of non-trivially-copyable type "
-		      "`Tuple(i32, Class L)`" },
+		      "`(i32, L)`" },
 			1
 		);
 	}
@@ -1972,15 +1968,15 @@ private:
 		// ============================ Explicit copy or move ============================
 		{
 			constexpr std::string_view BY_VALUE
-				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L`. Use "
+				= "Cannot implicitly copy a value of non-trivially-copyable type `L`. Use "
 				  "`copy` to copy it or `move` to move it.";
 			constexpr std::string_view OUT_OF_REF
-				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
-				  "`ref Class L`. Use `copy` to copy it out, `move` cannot move a value out of a "
+				= "Cannot implicitly copy a value of non-trivially-copyable type `L` out of "
+				  "`ref L`. Use `copy` to copy it out, `move` cannot move a value out of a "
 				  "reference.";
 			constexpr std::string_view OUT_OF_BOX
-				= "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
-				  "`box Class L`. Use `copy` to copy it out, `move` cannot move a value out of a "
+				= "Cannot implicitly copy a value of non-trivially-copyable type `L` out of "
+				  "`box L`. Use `copy` to copy it out, `move` cannot move a value out of a "
 				  "reference.";
 
 			checkForErrorOnCompileModule(
@@ -2070,8 +2066,8 @@ private:
 		// ============================ Ambiguous variant packing ============================
 		{
 			constexpr std::string_view AMBIGUOUS
-				= "A value of type `u8` fits equally well into many alternatives of `Variant (u16, "
-				  "u32)`: `u16`, `u32`.";
+				= "A value of type `u8` fits equally well into many alternatives of `u16 | u32`: "
+				  "`u16`, `u32`.";
 
 			checkForErrorOnCompileModule(
 				R"( fun main() -> i64 = {
@@ -2127,8 +2123,8 @@ private:
 				var b: L = o.value();
 				return 0;
 			} )",
-			{ "Cannot implicitly copy a value of non-trivially-copyable type `Class L` out of "
-		      "`ref Class L`" },
+			{ "Cannot implicitly copy a value of non-trivially-copyable type `L` out of "
+		      "`ref L`" },
 			1
 		);
 
@@ -2140,9 +2136,8 @@ private:
 				return 0;
 			} )",
 			{ "Call failed due to ambiguous overload resolution",
-		      "Cannot implicitly copy a value of non-trivially-copyable type `?Class L`",
-		      "The given argument type `Class L` cannot be converted to the expected type `ref "
-		      "Class L`" },
+		      "Cannot implicitly copy a value of non-trivially-copyable type `?L`",
+		      "The given argument type `L` cannot be converted to the expected type `ref L`" },
 			1
 		);
 	}
@@ -2212,7 +2207,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "cannot be converted to any of the accepted types", "slice char", "String" },
+			{ "i32", "cannot be converted to any of the accepted types", "str", "String" },
 			1
 		);
 

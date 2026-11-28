@@ -361,7 +361,7 @@ namespace {
 					VmEvaluationError::Kind::ArgConversionFailed,
 					base::strConcat(
 						"Conversion from ctv to VMValue for this type is not implemented yet: ",
-						ctv.getTypeOfStoredValue(ctx).toString(),
+						ctv.getTypeOfStoredValue(ctx).sourceTypeName(ctx),
 						" ",
 						ctv.toString()
 					)

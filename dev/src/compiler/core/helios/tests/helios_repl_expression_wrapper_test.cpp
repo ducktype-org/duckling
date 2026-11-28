@@ -92,11 +92,11 @@ private:
 
 			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
 
-			auto repl_data = std::get_if<helios::defgen::ReplInputWrapper>(&sym_ref->other);
-			assertTrue(repl_data != nullptr, "Expected ReplInputWrapper generated symbol");
-			ASSERT_EQUAL(repl_data->counter.copyValueOr(0), 13u);
-			ASSERT_EQUAL(repl_data->getReturnType(), wrapper.declaration->return_type);
-			ASSERT_MATCHES(repl_data->element, helios::defgen::ReplInputWrapper::Expression);
+			auto repl_data = sym_ref->getGeneratedDataOpt<helios::defgen::ReplInputWrapper>();
+			assertTrue(repl_data.has_value(), "Expected ReplInputWrapper generated symbol");
+			ASSERT_EQUAL(repl_data.value()->counter.copyValueOr(0), 13u);
+			ASSERT_EQUAL(repl_data.value()->getReturnType(), wrapper.declaration->return_type);
+			ASSERT_MATCHES(repl_data.value()->element, helios::defgen::ReplInputWrapper::Expression);
 			ASSERT_EQUAL(
 				helios::kind(wrapper.declaration->original_symbol), helios::SymbolKind::Function
 			);
@@ -148,13 +148,14 @@ private:
 			auto sym_i32 = helios::getSymRef(wrapper_i32.declaration->original_symbol);
 			auto sym_f64 = helios::getSymRef(wrapper_f64.declaration->original_symbol);
 
-			auto repl_i32 = std::get_if<helios::defgen::ReplInputWrapper>(&sym_i32->other);
-			auto repl_f64 = std::get_if<helios::defgen::ReplInputWrapper>(&sym_f64->other);
+			auto repl_i32 = sym_i32->getGeneratedDataOpt<helios::defgen::ReplInputWrapper>();
+			auto repl_f64 = sym_f64->getGeneratedDataOpt<helios::defgen::ReplInputWrapper>();
 
-			assertTrue(repl_i32 != nullptr && repl_f64 != nullptr, "Expected ReplInputWrapper");
+			assertTrue(repl_i32.has_value() && repl_f64.has_value(), "Expected ReplInputWrapper");
 
 			assertTrue(
-				repl_i32->queryUnstablePerfectHash() != repl_f64->queryUnstablePerfectHash(),
+				repl_i32.value()->queryUnstablePerfectHash()
+					!= repl_f64.value()->queryUnstablePerfectHash(),
 				"Different return types should produce different hashes"
 			);
 			auto mangled_i32 = helios::mangler::getSimpleMangledName(

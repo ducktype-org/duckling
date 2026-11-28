@@ -77,7 +77,7 @@ namespace compiler::helios::desugaring {
 			if (kind != tsh::Kind::StaticArray) {
 				ctx.log<dia::NotYetImplementedCodeError>(
 					base::strConcat(
-						"`for` statements for non-array type: ", iterable_type.toString()
+						"`for` statements for non-array type: ", iterable_type.sourceTypeName(ctx)
 					),
 					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
 				);
@@ -190,9 +190,9 @@ namespace compiler::helios::desugaring {
                         return makeBox<dia::PlaceholderError>(
                             base::strConcat(
                                 "Cannot coerce collection element type '",
-                                element_sym_type.toString(),
+                                element_sym_type.sourceTypeName(ctx.ctx),
                                 "' to iterator type '",
-                                iter_type.toString(),
+                                iter_type.sourceTypeName(ctx.ctx),
                                 "'."
                             ),
                             iter_pst_pos

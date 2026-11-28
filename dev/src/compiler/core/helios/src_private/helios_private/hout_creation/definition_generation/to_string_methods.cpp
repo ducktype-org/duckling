@@ -448,7 +448,7 @@ namespace compiler::helios::defgen {
 			default: {
 				const Shorthand s{ ctx };
 				std::string     msg
-					= "Stringification not yet implemented for " + owner_type.toString();
+					= "Stringification not yet implemented for " + owner_type.sourceTypeName(ctx);
 				body.emplace_back(s.ret(s.litStrObj(base::StrID(msg))));
 				break;
 			}

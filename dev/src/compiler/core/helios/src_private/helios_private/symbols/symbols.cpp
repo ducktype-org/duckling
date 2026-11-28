@@ -34,8 +34,8 @@
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/templates/templates.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/collections/optional.hpp>
@@ -54,63 +54,31 @@ namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
 		if (not isFunctionLike(kind(id))) return false;
 
-		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
-				return kind(id) != SymbolKind::FunctionDeclaration;
-			}
-			variant_case(BuiltinSemantics, data) {
-				// Only if implemented in HOUT, then it can be called with code of fun.
-				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
-			}
-			variant_case_novalue(GENERATED_SYMBOL_SEMANTICS_LIST) {
-				return kind(id) != SymbolKind::FunctionDeclaration;
-			}
-			variant_default { CORE_PANIC("Not implemented."); }
+		// Only if implemented in HOUT, then it can be called with code of fun.
+		if_opt_some(getSymRef(id)->maybe_builtin_data, builtin_data) {
+			return getBuiltinOrigins(builtin_data.builtin).contains(BuiltinOrigin::HOUT);
 		}
-		CORE_UNREACHABLE();
+		return kind(id) != SymbolKind::FunctionDeclaration;
 	}
 
-	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
-		// This is a very simple, and very suboptimal heuristic for now, we can improve it
-		// later if needed.
-		// @TODO: #2996 change it to a better implementation.
-		// Symbol should just know this!
-		auto pst_emission_policy = [&ctx](pst::AccessLocked<pst::LangElement> pst_element) {
-			auto pst_element_ancestor = getPSTElementParent(ctx, pst_element.unlock(ctx));
-			while (pst_element_ancestor.isLangElement()) {
-				auto element = pst_element_ancestor.getAsLangElement().unlock(ctx);
-				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// Symbols from within templates, are (probably) replicated
-					return EmissionPolicy::Replicated;
-				}
-				pst_element_ancestor = getPSTElementParent(ctx, element);
-			}
+	EmissionPolicy emissionPolicy(SymID id) {
+		const auto& sym_ref = getSymRef(id);
+		if_opt_some(sym_ref->maybe_builtin_data, builtin_data) {
+			// Only if HOUT implements the builtin we want to replicate it.
+			return getBuiltinOrigins(builtin_data.builtin).contains(BuiltinOrigin::HOUT)
+			         ? EmissionPolicy::Replicated
+			         : EmissionPolicy::OwnerOnly;
+		}
+		if (sym_ref->maybe_pst_data.has_value()) {
+			return sym_ref->maybe_template_instance_data.has_value() ? EmissionPolicy::Replicated
+			                                                         : EmissionPolicy::OwnerOnly;
+		}
 
-			return EmissionPolicy::OwnerOnly;
-		};
-
-		variant_match(getSymRef(id)->other) {
-			variant_case(PstImplementedSemantics, pst_data) {
-				return pst_emission_policy(pst_data.getElement());
-			}
-			variant_case(ClassMemberSemantics, member_data) {
-				return pst_emission_policy(member_data.getElement());
-			}
-			variant_case(BuiltinSemantics, data) {
-				// Only if HOUT implements the builtin we want to replicate it.
-				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT)
-				         ? EmissionPolicy::Replicated
-				         : EmissionPolicy::OwnerOnly;
-			}
+		variant_match(sym_ref->maybe_generated_data.value()) {
 			variant_case_novalue(
 				defgen::BuiltinOperator, defgen::ScriptMainWrapper, defgen::ReplEmptyVariable
 			) {
 				return EmissionPolicy::OwnerOnly;
-			}
-			variant_case(defgen::BuiltinTemplatedSymbol, data) {
-				return getBuiltinOrigins(data.getBuiltinKind()).contains(BuiltinOrigin::HOUT)
-				         ? EmissionPolicy::Replicated
-				         : EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
 				defgen::Constructor,
@@ -125,19 +93,19 @@ namespace compiler::helios {
 			) {
 				return EmissionPolicy::Replicated;
 			}
-			variant_default { CORE_PANIC("Unhandled symbol semantics"); }
+			variant_default { CORE_PANIC("Unhandled generated symbol data"); }
 		}
 		CORE_UNREACHABLE();
 	}
 
-	bool isIgnoredByLookup(SymID id) { return getSymRef(id)->common.is_ignored_by_lookup; }
+	bool isIgnoredByLookup(SymID id) { return getSymRef(id)->common_data.is_ignored_by_lookup; }
 
-	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
+	base::StrID name(SymID id) { return getSymRef(id)->common_data.name; }
 
 	bool isGlobalFun(SymID id) {
 		CORE_ASSERT(
-			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
-				|| getSymRef(id)->common.kind == SymbolKind::Function,
+			getSymRef(id)->common_data.kind == SymbolKind::FunctionDeclaration
+				|| getSymRef(id)->common_data.kind == SymbolKind::Function,
 			"Not a function."
 		);
 
@@ -155,7 +123,7 @@ namespace compiler::helios {
 	}
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
-		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+		CORE_ASSERT(getSymRef(id)->common_data.kind == SymbolKind::Variable, "Not a variable.");
 
 		// For now if the symbol doesn't have a PST element it is not global,
 		// Maybe be not true if we have generated globals in the future.
@@ -233,15 +201,12 @@ namespace compiler::helios {
 	}
 
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
-		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
-			return builtin.value()->builtin;
-
-		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>())
-			return templated.value()->getBuiltinKind();
-		return {};
+		return getSymRef(id)->maybe_builtin_data.map([](const BuiltinData& data) {
+			return data.builtin;
+		});
 	}
 
-	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
+	SymbolKind kind(SymID id) { return getSymRef(id)->common_data.kind; }
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getScope().value(); }
 
@@ -257,7 +222,7 @@ namespace compiler::helios {
 
 	template<typename Attribute>
 	bool hasAttribute(SymID id) {
-		return std::ranges::any_of(getSymRef(id)->common.attributes, [](auto a) {
+		return std::ranges::any_of(getSymRef(id)->common_data.attributes, [](auto a) {
 			return base::holds<Attribute>(a);
 		});
 	}
@@ -267,7 +232,7 @@ namespace compiler::helios {
 
 	template<typename Attribute>
 	base::Optional<CRef<Attribute>> getAttribute(SymID id) {
-		return getAttrInVector<Attribute>(getSymRef(id)->common.attributes);
+		return getAttrInVector<Attribute>(getSymRef(id)->common_data.attributes);
 	}
 
 #define MAKE_GET_ATTR_INSTANCE(attr) \
@@ -402,6 +367,63 @@ namespace compiler::helios {
 				},
 				stmt
 			);
+		}
+
+		/**
+		 * @brief The nearest template instance enclosing @p element, found through the nearest
+		 * ancestor of @p element that declares a symbol. The walk stops at unbaked templates.
+		 */
+		base::Optional<SymID> enclosingTemplateInstance(
+			query::Context& ctx, const pst::Access<pst::LangElement>& element
+		) {
+			return std::invoke(
+				[&ctx](
+					this auto self, const pst::Access<pst::LangElement>& current
+				) -> base::Optional<SymID> {
+					auto parent = getPSTElementParent(ctx, current);
+					if (!parent.isLangElement()) return {};
+
+					auto parent_element = parent.getAsLangElement().unlock(ctx);
+					switch (parent_element->getElementKind()) {
+					case pst::ElementKind::Fun:
+					case pst::ElementKind::Class:
+					case pst::ElementKind::Namespace:
+					case pst::ElementKind::ClassMethod:
+					case pst::ElementKind::ClassSpecial: {
+						const auto parent_symbol
+							= ctx.query<QuerySymbolOfSTMT>(parent.getAsLangElement());
+						if (parent_symbol.hasFailed()) return {};
+
+						const auto  parent_sym = parent_symbol.valueOrPanic();
+						const auto& parent_data
+							= getSymRef(parent_sym)->maybe_template_instance_data;
+						if (not parent_data.has_value()) return {};
+						if (parent_data->maybe_unbaked_template_symbol.has_value())
+							return parent_sym;
+						return parent_data->maybe_enclosing_instance;
+					}
+
+					case pst::ElementKind::TemplateStmt:
+						return {};
+
+					default:
+						return self(parent_element);
+					}
+				},
+				element
+			);
+		}
+
+		/**
+		 * @brief The template instance data of the symbols declared in @p element that are not
+		 * template instances themselves.
+		 */
+		base::Optional<TemplateInstanceData> inheritedTemplateInstanceData(
+			query::Context& ctx, const pst::Access<pst::LangElement>& element
+		) {
+			auto enclosing = enclosingTemplateInstance(ctx, element);
+			if (not enclosing.has_value()) return {};
+			return TemplateInstanceData{ .maybe_enclosing_instance = enclosing };
 		}
 
 		/**
@@ -643,56 +665,47 @@ namespace compiler::helios {
 		query::QResult<SymbolData> makeSymbolFromStatement(
 			query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
 		) {
-			// Attribute handling
-			auto attributes           = attributesFromPSTStatement(ctx, stmt);
-			bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
-
-			// Check if it is a builtin.
-			if_opt_some(getAttrInVector<attributes::Builtin>(attributes), builtin_data) {
-				auto function = stmt.dynamicCast<pst::FunDecl>().value();
-				return SymbolData::makeBuiltinSymbolData(
-					{
-						.name                 = function->getName().unlock(ctx)->unwrap(),
-						.kind                 = SymbolKind::FunctionDeclaration,
-						.is_ignored_by_lookup = is_ignored_by_lookup,
-						.attributes           = std::move(attributes),
-
-					},
-					BuiltinSemantics{
-						scope,
-						stmt->getHash(),
-						builtin_data->builtin,
-					}
-				);
-			}
-
 			UNPACK_QRESULT_MOVE(CommonSymbolData common =, commonSymbolDataFromStatement(ctx, stmt));
-			common.is_ignored_by_lookup = is_ignored_by_lookup;
-			common.attributes           = std::move(attributes);
+			common.attributes           = attributesFromPSTStatement(ctx, stmt);
+			common.is_ignored_by_lookup = std::ranges::any_of(common.attributes, &disablesLookup);
 
-			if (not isClassMember(common.kind))
-				return SymbolData::makePSTSymbolData(
-					std::move(common), PstImplementedSemantics(scope, stmt->getHash())
-				);
+			SymbolData data{
+				.common_data = std::move(common),
+				.maybe_pst_data
+				= PstSymbolData{ .scope = scope, .pst_element_hash = stmt->getHash() },
+			};
 
-			auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
-			if_opt_none(owner_class_element) {
-				ctx.log<dia::PlaceholderError>(
-					"Class member declared outside of a class.", stmt->getStablePosition()
-				);
-				return query::Failed();
+			if_opt_some(getAttrInVector<attributes::Builtin>(data.common_data.attributes), builtin) {
+				data.maybe_builtin_data = BuiltinData{ builtin->builtin };
 			}
 
-			return SymbolData::makeClassMemberSymbolData(
-				std::move(common),
-				ClassMemberSemantics(
-					scope,
-					stmt->getHash(),
-					ctx.query<tsh::QueryClassType>(
-						ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
-					)
-				)
-			);
+			if (isClassMember(data.common_data.kind)) {
+				auto owner_class_element = maybeOwnerClassElement(ctx, stmt);
+				if_opt_none(owner_class_element) {
+					ctx.log<dia::PlaceholderError>(
+						"Class member declared outside of a class.", stmt->getStablePosition()
+					);
+					return query::Failed();
+				}
+
+				data.maybe_type_member_data = TypeMemberData{ ctx.query<tsh::QueryClassType>(
+					ctx.query<QuerySymbolOfSTMT>(owner_class_element.value()).valueOrThrow()
+				) };
+			}
+
+			const auto instance = templates::getTemplateInstanceData(ctx, stmt);
+			if (instance.has_value()) {
+				data.maybe_template_instance_data = TemplateInstanceData{
+					.maybe_unbaked_template_symbol = instance->unbaked_template_symbol,
+					.template_arguments_symbols    = instance->template_arguments_symbols,
+					.maybe_enclosing_instance      = enclosingTemplateInstance(
+                        ctx, getPSTElementParent(ctx, stmt).getAsLangElement().unlock(ctx)
+                    ),
+				};
+			} else {
+				data.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, stmt);
+			}
+			return data;
 		}
 
 		/**
@@ -706,13 +719,14 @@ namespace compiler::helios {
 		) {
 			if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 				auto parameter = parameter_opt.value();
-				return SymbolData::makePSTSymbolData(
-					{
+				return {
+					.common_data = {
 						.name = parameter->getName().unlock(ctx)->unwrap(),
 						.kind = SymbolKind::Parameter,
 					},
-					PstImplementedSemantics(scope, element->getHash())
-				);
+					.maybe_pst_data = PstSymbolData{ .scope = scope, .pst_element_hash = element->getHash() },
+					.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, element),
+				};
 			}
 
 			if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
@@ -723,13 +737,14 @@ namespace compiler::helios {
 				auto parent_elem = parent_opt.value().unlock(ctx);
 				if (parent_elem.dynamicCast<pst::For>().has_value()
 				    || parent_elem.dynamicCast<pst::BindingPattern>().has_value()) {
-					return SymbolData::makePSTSymbolData(
-						{
+					return {
+						.common_data = {
 							.name = ident_wrapper->unwrap(),
 							.kind = SymbolKind::Variable,
 						},
-						PstImplementedSemantics(scope, element->getHash())
-					);
+						.maybe_pst_data = PstSymbolData{ .scope = scope, .pst_element_hash = element->getHash() },
+						.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, element),
+					};
 				} else {
 					CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
 				}
@@ -812,45 +827,38 @@ namespace compiler::helios {
 
 			// Get the const's data
 
-			variant_match(getSymRef(key)->other) {
-				variant_case(defgen::GeneratedConstant, const_data) { return const_data.value; }
-
-				variant_case(PstImplementedSemantics, pst_data) {
-					const auto pst
-						= pst_data.getElement().unlock(ctx).dynamicCast<pst::Const>().value();
-					// The parser accepts `const x: T;`, but a const needs a value.
-					const auto value_holder = pst->getValue();
-					if (!value_holder.has_value()) {
-						ctx.log<ConstWithoutValueError>(pst->getStablePosition());
-						return query::Failed();
-					}
-
-					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
-
-					// Get the coerced HOUT expression
-					const auto hout_qresult = getHoutOfExprWithExpectedType(
-						ctx,
-						value_holder.value().unlock(ctx)->getExpr(),
-						type,
-						pst->getName().unlock(ctx)->getStablePosition()
-					);
-					if (hout_qresult.hasFailed()) return query::Failed();
-					refuseBlockExpr(ctx, *hout_qresult.valueOrThrow(), "a const initializer");
-
-					// Evaluate the HOUT expression at compile-time
-					auto ctv = ctx.query<QueryEvaluateHOUTExpression>(
-						{ hout_qresult.valueOrThrow().ref() }
-					);
-					if (ctv.hasFailed()) return query::Failed();
-					return ctv.valueOrThrow();
-				}
-
-				variant_default {
-					CORE_PANIC("Unexpected SymbolData::other type in QueryConstValueOf");
-				}
+			if (const auto const_data
+			    = getSymRef(key)->getGeneratedDataOpt<defgen::GeneratedConstant>()) {
+				return const_data.value()->value;
 			}
 
-			CORE_UNREACHABLE();
+			CORE_ASSERT(getSymRef(key)->isPstImplemented(), "Unexpected const symbol data.");
+			const auto pst
+				= maybeSymbolPst(key).value().unlock(ctx).dynamicCast<pst::Const>().value();
+			// The parser accepts `const x: T;`, but a const needs a value.
+			const auto value_holder = pst->getValue();
+			if (!value_holder.has_value()) {
+				ctx.log<ConstWithoutValueError>(pst->getStablePosition());
+				return query::Failed();
+			}
+
+			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
+
+			// Get the coerced HOUT expression
+			const auto hout_qresult = getHoutOfExprWithExpectedType(
+				ctx,
+				value_holder.value().unlock(ctx)->getExpr(),
+				type,
+				pst->getName().unlock(ctx)->getStablePosition()
+			);
+			if (hout_qresult.hasFailed()) return query::Failed();
+			refuseBlockExpr(ctx, *hout_qresult.valueOrThrow(), "a const initializer");
+
+			// Evaluate the HOUT expression at compile-time
+			auto ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+			if (ctv.hasFailed()) return query::Failed();
+			return ctv.valueOrThrow();
 		}
 
 		QUERY_AUTO_CACHE_COPY

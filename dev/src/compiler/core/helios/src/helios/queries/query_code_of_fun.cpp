@@ -36,7 +36,6 @@
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -223,25 +222,26 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey sym_id) -> PResult {
 			const auto& sym_ref = getSymRef(sym_id);
 
-			// Generated symbol data.
-			variant_match(sym_ref->other) {
-				variant_case_novalue(PstImplementedSemantics, ClassMemberSemantics) {
-					CORE_ASSERT(
-						isFunctionLike(kind(sym_id)),
-						"Function creation called on non-function, non-method and non-constructor "
-						"symbol"
-					);
-					HOUTFunctionMaker func_maker(ctx, sym_id);
-					stmt(ctx, sym_id).value()->acceptVisitor(func_maker);
+			if_opt_some(sym_ref->maybe_builtin_data, builtin_data) {
+				return getBuiltinImpl(ctx, sym_id, builtin_data.builtin);
+			}
 
-					// A visitor that could not build the function has reported why.
-					if_opt_none(func_maker.out) return query::Failed();
+			if (sym_ref->maybe_pst_data.has_value()) {
+				CORE_ASSERT(
+					isFunctionLike(kind(sym_id)),
+					"Function creation called on non-function, non-method and non-constructor "
+					"symbol"
+				);
+				HOUTFunctionMaker func_maker(ctx, sym_id);
+				stmt(ctx, sym_id).value()->acceptVisitor(func_maker);
 
-					return func_maker.out.value();
-				}
-				variant_case(BuiltinSemantics, data) {
-					return getBuiltinImpl(ctx, sym_id, data.builtin);
-				}
+				// A visitor that could not build the function has reported why.
+				if_opt_none(func_maker.out) return query::Failed();
+
+				return func_maker.out.value();
+			}
+
+			variant_match(sym_ref->maybe_generated_data.value()) {
 				variant_case(defgen::Constructor, ctor) {
 					switch (ctor.kind) {
 					case defgen::Constructor::Kind::Implicit:
@@ -311,9 +311,6 @@ namespace compiler::helios {
 						    ->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
-				}
-				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
-					return getBuiltinImpl(ctx, sym_id, symbol_data.getBuiltinKind());
 				}
 				variant_case(defgen::ReplInputWrapper, input) {
 					return repl::getReplInputFunction(ctx, sym_id, input);

@@ -82,7 +82,7 @@ namespace compiler::helios {
 
 			for (auto used_fun: used_symbols.used_functions) {
 				if (added_symbols.contains(used_fun)) continue;
-				if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
+				if (emissionPolicy(used_fun) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_fun);
 				if (implementsQueryCodeOfFun(used_fun)) {
@@ -97,7 +97,7 @@ namespace compiler::helios {
 			}
 			for (auto used_global: used_symbols.used_globals) {
 				if (added_symbols.contains(used_global)) continue;
-				if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
+				if (emissionPolicy(used_global) != EmissionPolicy::Replicated) continue;
 
 				added_symbols.insert(used_global);
 				const auto& global_data = ctx.query<QueryHOUTGlobalData>(used_global);
@@ -529,7 +529,7 @@ namespace compiler::helios {
 			for (const auto& method: interface->getAnyMethodsView()) {
 				auto method_sym = method.getSymbol();
 				// We only here add the methods that are owner only.
-				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
+				if (emissionPolicy(method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
