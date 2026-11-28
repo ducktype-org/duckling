@@ -24,22 +24,7 @@
 #include <string>
 
 namespace {
-	/**
-	 * @brief A compiler wired to a collecting session, with the endpoint it never talks to.
-	 *
-	 * Everything is held together so that a test can name one object and get a working compiler.
-	 */
-	struct CompilerUnderTest final {
-		explicit CompilerUnderTest(base::Optional<base::Ref<fs::VFS>> source_vfs = {}):
-			  files(source_vfs),
-			  compiler{ &session, &files } {}
-
-		duck_ls_test::StringStream      stream{ "" };
-		lsp::ServerEndpoint             endpoint{ stream };
-		duck_ls_test::CollectingSession session{ base::Ref<lsp::ServerEndpoint>(&endpoint) };
-		duck_ls::FilesCache             files;
-		duck_ls::Compiler               compiler;
-	};
+	using duck_ls_test::CompilerUnderTest;
 
 	std::string content(const fs::File& file) {
 		return std::string(file.getContent().view().stringView());
@@ -58,11 +43,7 @@ public:
 	}
 
 protected:
-	void beforeAll() override {
-		global_state::setters::setGlobalLogger(makeBox<dia::Logger>());
-		query::setTrackReverseGraph(true);
-		compiler::frontend::use_module_modifier_remove = true;
-	}
+	void beforeAll() override { duck_ls_test::setUpCompilerGlobals(); }
 
 private:
 	/**

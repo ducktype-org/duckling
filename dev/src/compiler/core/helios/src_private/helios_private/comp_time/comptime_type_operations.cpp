@@ -17,7 +17,7 @@
  * 2. Builder Patterns: Due to the VM's limitations or supporting variadic type arguments, composite
  * 	  types are constructed using stateful "Builder" objects via a sequence of calls (New -> Push ->
  *    ... -> Finalize).
- * 3. Opaque Pointers: Manages the passing of raw C++ pointers (`tsh::SymbolType*`, builders)
+ * 3. Opaque Pointers: Manages the passing of raw C++ pointers (`tsh::ValueType*`, builders)
  *    through the VM as `opaque_ptr` types.
  */
 #include "comptime_type_operations.hpp"
@@ -26,7 +26,7 @@
 
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 
@@ -53,76 +53,74 @@ namespace compiler::helios::comptime_ops {
 		 *	```
 		 */
 		struct VariantTypeBuilder {
-			std::vector<tsh::SymbolType<>> subtypes;
+			std::vector<tsh::ValueType<>> subtypes;
 
-			tsh::SymbolType<> finalize(query::Context& ctx) {
-				return tsh::SymbolType<>::withDefaultsMut(
+			tsh::ValueType<> finalize(query::Context& ctx) {
+				return tsh::ValueType<>::withDefaultsMut(
 					ctx.query<tsh::QueryVariantType>({ subtypes })
 				);
 			}
 		};
 
 		struct TupleTypeBuilder {
-			std::vector<tsh::SymbolType<>> subtypes;
+			std::vector<tsh::ValueType<>> subtypes;
 
-			tsh::SymbolType<> finalize(query::Context& ctx) {
-				return tsh::SymbolType<>::withDefaultsMut(
-					ctx.query<tsh::QueryTupleType>({ subtypes })
-				);
+			tsh::ValueType<> finalize(query::Context& ctx) {
+				return tsh::ValueType<>::withDefaultsMut(ctx.query<tsh::QueryTupleType>({ subtypes }
+				));
 			}
 		};
 	}
 
 	namespace {
-		tsh::SymbolType<>* createBox(tsh::SymbolType<>* type_ptr) {
+		tsh::ValueType<>* createBox(tsh::ValueType<>* type_ptr) {
 			auto new_type = type_ptr->toBox();
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createRef(tsh::SymbolType<>* type_ptr) {
+		tsh::ValueType<>* createRef(tsh::ValueType<>* type_ptr) {
 			auto new_type = type_ptr->toRef();
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createMut(tsh::SymbolType<>* type_ptr) {
+		tsh::ValueType<>* createMut(tsh::ValueType<>* type_ptr) {
 			auto new_type = type_ptr->withMutability(tsh::Mutability::Mutable);
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createImm(tsh::SymbolType<>* type_ptr) {
+		tsh::ValueType<>* createImm(tsh::ValueType<>* type_ptr) {
 			auto new_type = type_ptr->withMutability(tsh::Mutability::Immutable);
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createPtr(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
-			auto new_type = tsh::SymbolType<>::withDefaultsMut(
+		tsh::ValueType<>* createPtr(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
 				ctx_ptr->query<tsh::QueryPointerType>({ *type_ptr })
 			);
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createOptional(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
-			auto new_type
-				= tsh::SymbolType<>::withDefaultsMut(getOptionalType(*ctx_ptr, *type_ptr));
+		tsh::ValueType<>* createOptional(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(getOptionalType(*ctx_ptr, *type_ptr));
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createManyPtr(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
-			auto new_type = tsh::SymbolType<>::withDefaultsMut(
+		tsh::ValueType<>* createManyPtr(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
 				ctx_ptr->query<tsh::QueryManyPointerType>({ *type_ptr })
 			);
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createCptr(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
-			auto new_type = tsh::SymbolType<>::withDefaultsMut(
+		tsh::ValueType<>* createCptr(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
 				ctx_ptr->query<tsh::QueryCPointerType>({ *type_ptr })
 			);
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
 		}
 
-		tsh::SymbolType<>* createSlice(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
-			auto new_type = tsh::SymbolType<>::withDefaultsMut(
+		tsh::ValueType<>* createSlice(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
+			auto new_type = tsh::ValueType<>::withDefaultsMut(
 				ctx_ptr->query<tsh::QuerySliceType>({ *type_ptr })
 			);
 			return MetaTypeMemoryManager::instance().allocateType(new_type);
@@ -133,11 +131,11 @@ namespace compiler::helios::comptime_ops {
 			return builder;
 		}
 
-		void tupleBuilderPush(TupleTypeBuilder* builder_ptr, tsh::SymbolType<>* type_ptr) {
+		void tupleBuilderPush(TupleTypeBuilder* builder_ptr, tsh::ValueType<>* type_ptr) {
 			builder_ptr->subtypes.push_back(*type_ptr);
 		}
 
-		tsh::SymbolType<>* tupleBuilderFinalize(
+		tsh::ValueType<>* tupleBuilderFinalize(
 			query::Context* ctx_ptr, TupleTypeBuilder* builder_ptr
 		) {
 			auto tuple_type = builder_ptr->finalize(*ctx_ptr);
@@ -150,11 +148,11 @@ namespace compiler::helios::comptime_ops {
 			return builder;
 		}
 
-		void variantBuilderPush(VariantTypeBuilder* builder_ptr, tsh::SymbolType<>* type_ptr) {
+		void variantBuilderPush(VariantTypeBuilder* builder_ptr, tsh::ValueType<>* type_ptr) {
 			builder_ptr->subtypes.push_back(*type_ptr);
 		}
 
-		tsh::SymbolType<>* variantBuilderFinalize(
+		tsh::ValueType<>* variantBuilderFinalize(
 			query::Context* ctx_ptr, VariantTypeBuilder* builder_ptr
 		) {
 			auto variant_type = builder_ptr->finalize(*ctx_ptr);
@@ -162,23 +160,21 @@ namespace compiler::helios::comptime_ops {
 			return MetaTypeMemoryManager::instance().allocateType(variant_type);
 		}
 
-		i64 sizeOf(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
+		i64 sizeOf(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
 			const auto& layout
-				= ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr)->valueOrThrow();
+				= ctx_ptr->query<tsl::QueryValueTypeLayout>(*type_ptr)->valueOrThrow();
 			return base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt());
 		}
 
-		i64 alignOf(query::Context* ctx_ptr, tsh::SymbolType<>* type_ptr) {
+		i64 alignOf(query::Context* ctx_ptr, tsh::ValueType<>* type_ptr) {
 			const auto& layout
-				= ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr)->valueOrThrow();
+				= ctx_ptr->query<tsl::QueryValueTypeLayout>(*type_ptr)->valueOrThrow();
 			return base::safeIntConv<i64>(layout.getAlignment().asInt());
 		}
 
-		bool typesEqual(tsh::SymbolType<>* left, tsh::SymbolType<>* right) {
-			return *left == *right;
-		}
+		bool typesEqual(tsh::ValueType<>* left, tsh::ValueType<>* right) { return *left == *right; }
 
-		bool typesNotEqual(tsh::SymbolType<>* left, tsh::SymbolType<>* right) {
+		bool typesNotEqual(tsh::ValueType<>* left, tsh::ValueType<>* right) {
 			return *left != *right;
 		}
 

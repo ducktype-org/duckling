@@ -198,7 +198,7 @@ jobs:
       - name: Install the build dependencies
         uses: ./.github/actions/apt-get/
         with:
-          packages: libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} pkg-config libffi-dev xxd ninja-build
+          packages: libgraphviz-dev llvm-19 llvm-19-dev ${{ env.CLANG_PACKAGE }} clang-tools-${{ env.TIDY_VERSION }} pkg-config libffi-dev xxd ninja-build
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}

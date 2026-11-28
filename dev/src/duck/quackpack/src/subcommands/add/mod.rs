@@ -87,15 +87,12 @@ fn add_dep(
         DependencyAdded::AlreadyExists(other_kind) => {
             // If no alias, add hint to use them.
             if has_alias {
-                let err: Result<(), QuackError> = Err(QuackError::hint(
-                    "use aliases to have multiple dependencies with the same name",
+                let mut err = QuackError::message(format!(
+                    "there already is a {other_kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
+                    pkg_root.display()
                 ));
-                err.with_context(|| {
-                    format!(
-                        "there already is a {other_kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",
-                        pkg_root.display()
-                    )
-                })
+                err.add_hint("use aliases to have multiple dependencies with the same name");
+                Err(err)
             } else {
                 qp_bail!(
                     "there already is a {other_kind}dependency `{ename}` in the project `{pkg_name}` at `{}`",

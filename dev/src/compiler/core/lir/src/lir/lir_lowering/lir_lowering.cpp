@@ -463,7 +463,7 @@ namespace compiler::lir {
 							CORE_PANIC("Cannot get location of MIR unit.");
 
 						auto layout = CRef<tsl::TypeLayout>(
-							&ctx.query<tsl::QuerySymbolTypeLayout>(
+							&ctx.query<tsl::QueryValueTypeLayout>(
 									value.value.getTypeOfStoredValue(ctx)
 							)
 								 ->valueOrPanicMsg("layout query failed at LIR stage")
@@ -1025,10 +1025,10 @@ namespace compiler::lir {
 							.source_type = cast_parameters->source_type,
 							.target_type = cast_parameters->target_type,
 							.source_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type)
+							= &ctx.query<tsl::QueryValueTypeLayout>(cast_parameters->source_type)
 					               ->valueOrPanicMsg("layout query failed at LIR stage"),
 							.target_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type)
+							= &ctx.query<tsl::QueryValueTypeLayout>(cast_parameters->target_type)
 					               ->valueOrPanicMsg("layout query failed at LIR stage"),
 						}
 					);
@@ -1048,7 +1048,7 @@ namespace compiler::lir {
 					        ? mir_instruction.output.value().type
 					        : mir_instruction.arguments.at(0)
 					              .get<mir::MIRPlace>()
-					              .type.getPointeeSymbolType();
+					              .type.getPointeeValueType();
 
 					auto args   = getLocations(mir_instruction.arguments);
 					auto output = getOutput(mir_instruction.output);
@@ -1061,12 +1061,12 @@ namespace compiler::lir {
 							.alternative_index = variant_parameters->alternative_index,
 							.alternative_type  = variant_parameters->alternative_type,
 							.alternative_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(
+							= &ctx.query<tsl::QueryValueTypeLayout>(
 									  variant_parameters->alternative_type
 							)
 					               ->valueOrPanicMsg("layout query failed at LIR stage"),
 							.variant_layout
-							= &ctx.query<tsl::QuerySymbolTypeLayout>(variant_type)
+							= &ctx.query<tsl::QueryValueTypeLayout>(variant_type)
 					               ->valueOrPanicMsg("layout query failed at LIR stage"),
 						}
 					);
@@ -1297,7 +1297,7 @@ namespace compiler::lir {
 	) {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
 			.parameter_types = {},
-			.result_type     = tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+			.result_type     = tsh::ValueType<>::withDefaults(tsh::getUnitType()),
 		});
 
 		auto layouts = getFunctionLayouts(ctx, function_type);

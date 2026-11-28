@@ -251,15 +251,8 @@ if (JIT_ENABLED)
     )
     set(common_sc_bc ${CMAKE_CURRENT_BINARY_DIR}/common_sc.bc)
 
-    # ccache 4.9.1's direct mode does not hash files used by #embed, so it could return an
-    # object containing stale bytes. OBJECT_DEPENDS is a safety net for compilers whose depfile
-    # does not list the embedded bitcode.
+    # For compilers whose depfile does not list the #embed-ed bitcode.
     set_property(SOURCE ${opcodes_bitcode_source} APPEND PROPERTY OBJECT_DEPENDS ${common_sc_bc})
-    if (USE_CCACHE)
-        set_property(TARGET JitDep APPEND PROPERTY CXX_COMPILER_LAUNCHER
-            "extra_files_to_hash=${common_sc_bc}"
-        )
-    endif()
 endif()
 
 # Default alias to "sc"

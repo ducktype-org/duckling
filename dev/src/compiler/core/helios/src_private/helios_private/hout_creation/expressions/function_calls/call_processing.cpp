@@ -15,8 +15,8 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/coercions/coercion.hpp>
 #include <helios/tsh/coercions/coercion_rank.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios/tsh/value_type.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
@@ -24,7 +24,11 @@
 #include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/operators.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/lookup/errors.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/unlock_or_fail.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
@@ -224,8 +228,8 @@ namespace compiler::helios::code {
 
 			// Go over positional arguments.
 			for (usize i{ 0 }; i < positional_arguments.size(); i++) {
-				const tsh::SymbolType expected_type = decl.parameters[i].type;
-				Coercion              coercion      = coercions::coercionOf(
+				const tsh::ValueType expected_type = decl.parameters[i].type;
+				Coercion             coercion      = coercions::coercionOf(
                     ctx,
                     positional_arguments[i].ref(),
                     expected_type,
@@ -276,9 +280,9 @@ namespace compiler::helios::code {
 										  .argument_index = positional_arguments.size() + i,
 										  .function       = fun } };
 
-				const usize           param_idx     = param_idx_with_matching_name.value();
-				const tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-				Coercion              coercion      = coercions::coercionOf(
+				const usize          param_idx     = param_idx_with_matching_name.value();
+				const tsh::ValueType expected_type = decl.parameters[param_idx].type;
+				Coercion             coercion      = coercions::coercionOf(
                     ctx, std::get<1>(named_arguments[i]).ref(), expected_type
                 );
 
@@ -523,7 +527,7 @@ namespace compiler::helios::code {
 
 							auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
 								coercion.getTarget().toString(),
-								coercion.getSource().getSymbolType().toString()
+								coercion.getSource().getValueType().toString()
 							);
 							auto pm_message_id = dia::MessageBase::getUniqueID();
 							result->addLinkedMessage(pm_message_id, std::move(pm));
@@ -865,7 +869,7 @@ namespace compiler::helios::code {
 		if (callee->expression_type.getType().getKind() != tsh::Kind::Function) {
 			ctx.log<CallNotCallableError>(
 				call_expr->getStablePosition(),
-				makeBox<InteractiveType>(ctx, callee->expression_type.getSymbolType())
+				makeBox<InteractiveType>(ctx, callee->expression_type.getValueType())
 			);
 			return query::Failed();
 		}
@@ -873,11 +877,11 @@ namespace compiler::helios::code {
 		const tsh::FunctionAbstractType function_type   = callee->expression_type.getType();
 		const auto&                     parameter_types = function_type.getParameterTypes();
 
-		if (callee->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct) {
+		if (callee->expression_type.getValueType().getRefKind() != tsh::ReferenceKind::Direct) {
 			auto direct_callee = coercions::coerceFromBox(
 				ctx,
 				std::move(callee),
-				tsh::SymbolType<>::withDefaultsMut(function_type),
+				tsh::ValueType<>::withDefaultsMut(function_type),
 				call_expr->getStablePosition()
 			);
 			UNPACK_QRESULT_MOVE(callee =, direct_callee);
@@ -915,6 +919,59 @@ namespace compiler::helios::code {
 		);
 	}
 
+	namespace {
+		/**
+		 * @brief Common part of @p processMethodCall and @p processBracketOperatorCall, which only
+		 * differ in what the callee of the call is.
+		 *
+		 * @param whole_call_origin The origin of the whole call, including `self`.
+		 * @param callee_origin The origin of the called method, like the `foo` of `object.foo(10)`
+		 * or the `[10]` of `object[10]`.
+		 */
+		query::QResult<Box<Expr>> processMethodCallWithOrigins(
+			query::Context&              ctx,
+			const std::vector<SymID>&    candidates,
+			ElementOrigin                whole_call_origin,
+			ElementOrigin                callee_origin,
+			pst::Access<pst::expr::Call> call_expr,
+			Box<Expr>                    self_arg
+		) {
+			// Unwrap and validate call arguments.
+			std::vector<Box<Expr>>                          positional_arguments;
+			std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
+			UNPACK_QRESULT(
+				auto arguments_origin =,
+				fillCallArgs(
+					ctx, call_expr, whole_call_origin, positional_arguments, named_arguments
+				)
+			);
+			arguments_origin.insert(arguments_origin.begin(), self_arg->origin);
+			positional_arguments.insert(positional_arguments.begin(), std::move(self_arg));
+
+			CallArguments call_arguments{
+				.positional_arguments = std::move(positional_arguments),
+				.named_arguments      = std::move(named_arguments),
+			};
+			CallPstOrigin pst_origin{
+				.whole_call_origin = whole_call_origin,
+				.callee_origin     = callee_origin,
+				.arguments_origin  = std::move(arguments_origin),
+			};
+
+			// Resolve overloads and construct call expression. Every candidate is a method, so
+			// `self` may be implicitly taken by `ref`.
+			auto overload_resolution_qresult
+				= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, candidates);
+			UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+			const auto [callee_sym, argument_origin, coercions]
+				= std::move(overload_resolution_result);
+
+			return constructCallExpr(
+				ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+			);
+		}
+	}
+
 	query::QResult<Box<Expr>> processMethodCall(
 		query::Context&               ctx,
 		const std::vector<SymID>&     candidates,
@@ -924,36 +981,55 @@ namespace compiler::helios::code {
 	) {
 		auto whole_call_origin
 			= pstOriginOrdered(pstOriginOrdered(self_arg->origin, callee_element), call_expr);
-
-		// Unwrap and validate call arguments.
-		std::vector<Box<Expr>>                          positional_arguments;
-		std::vector<std::tuple<base::StrID, Box<Expr>>> named_arguments;
-		UNPACK_QRESULT(
-			auto arguments_origin =,
-			fillCallArgs(ctx, call_expr, whole_call_origin, positional_arguments, named_arguments)
+		return processMethodCallWithOrigins(
+			ctx,
+			candidates,
+			whole_call_origin,
+			pstOrigin(callee_element),
+			call_expr,
+			std::move(self_arg)
 		);
-		arguments_origin.insert(arguments_origin.begin(), self_arg->origin);
-		positional_arguments.insert(positional_arguments.begin(), std::move(self_arg));
+	}
 
-		CallArguments call_arguments{
-			.positional_arguments = std::move(positional_arguments),
-			.named_arguments      = std::move(named_arguments),
-		};
-		CallPstOrigin pst_origin{
-			.whole_call_origin = whole_call_origin,
-			.callee_origin     = pstOrigin(callee_element),
-			.arguments_origin  = std::move(arguments_origin),
-		};
+	auto findBracketOperatorCandidates(
+		query::Context&              ctx,
+		const CRef<Expr>             self_arg,
+		const base::StrID            name,
+		pst::Access<pst::expr::Call> call_expr
+	) -> query::QResult<std::vector<SymID>> {
+		const auto self_type = self_arg->expression_type.getType();
+		if (self_type.getKind() != tsh::Kind::Class) return std::vector<SymID>{};
 
-		// Resolve overloads and construct call expression. Every candidate is a method, so `self`
-		// may be implicitly taken by `ref`.
-		auto overload_resolution_qresult
-			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin, candidates);
-		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
-		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+		const auto lookup_qresult = HInterface::ofTypeInstance(self_type).lookup(
+			ctx, name, { .accessing_scope = ctx.query<QueryPrimaryCodeScopeFor>({ call_expr }) }
+		);
+		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-		return constructCallExpr(
-			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+		// The operators exist, but none of them can be used here.
+		if (lookup_result->leaves.empty() && lookup_result->hasInaccessible()) {
+			auto msg = makeBox<InaccessibleSymbolLookupError>(call_expr->getStablePosition());
+			for (const auto hidden: lookup_result->inaccessible) {
+				if_opt_some(getSymRef(hidden)->maybePstElement(), pst_elem) {
+					auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
+					msg->addAttachedMessage(makeBox<InaccessibleDeclarationNote>(decl_pos));
+				}
+			}
+			ctx.log(std::move(msg));
+			return query::Failed();
+		}
+
+		return lookup_result->leaves;
+	}
+
+	query::QResult<Box<Expr>> processBracketOperatorCall(
+		query::Context&              ctx,
+		const std::vector<SymID>&    candidates,
+		pst::Access<pst::expr::Call> call_expr,
+		Box<Expr>                    self_arg
+	) {
+		auto whole_call_origin = pstOriginOrdered(self_arg->origin, call_expr);
+		return processMethodCallWithOrigins(
+			ctx, candidates, whole_call_origin, pstOrigin(call_expr), call_expr, std::move(self_arg)
 		);
 	}
 

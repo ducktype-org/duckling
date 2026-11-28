@@ -4,11 +4,12 @@
 // Compiler License, Version 1.0. See the LICENSE or LICENSE.md file in the root
 // of this repository or https://ducktype.org/licenses/DTCL-1.0
 
+use duck_core::QuackError;
+
 use crate::core::PackageContext;
 use crate::core::storage::venv_id::ToVenvId;
 use crate::core::storage::{display_venv_info, venv_info};
-use crate::error::{HintMessage, MessageError};
-use crate::{QuackResult, QuackResultContext, qp_err};
+use crate::{QuackResult, QuackResultContext};
 
 /// Logic for executing the `info` subcommand.
 pub fn info(pcx: PackageContext) -> QuackResult<()> {
@@ -18,13 +19,11 @@ pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let Some((mut venv, previous_access)) = venv_info(storage_localization, venv_id, ctx)
         .context("failed to get information about the venv")?
     else {
-        let mut err = qp_err!(HintMessage::new(
-            "make sure that the package is synchronized"
-        ));
-        err.context(MessageError::new(format!(
+        let mut err = QuackError::message(format!(
             "did not find a venv for the package at `{}`",
             pcx.package().root().display()
-        )));
+        ));
+        err.add_hint("make sure that the package is synchronized");
         return Err(err);
     };
     // This info operation counts as access to the venv, modyfying the last_access to now.

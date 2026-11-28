@@ -108,6 +108,19 @@ namespace duck_ls {
 		 */
 		virtual void publishDiagnostics(const base::Optional<lsp::Uri>& queried_file_opt);
 
+		/**
+		 * @brief The hover for `position` in the document at `uri`: the type of what is under it.
+		 *
+		 * Reads the editor's buffer when the document is open and the file on disk otherwise.
+		 *
+		 * @return Null when there is nothing to show, including for a URI the server cannot name a
+		 * file with and for a file that belongs to no loaded package.
+		 * Also returns Null when the file is not open.
+		 */
+		virtual lsp::TextDocumentHoverResult hover(
+			const lsp::Uri& uri, const lsp::Position& position
+		);
+
 	private:
 		friend class ::LspCompilerTest;
 

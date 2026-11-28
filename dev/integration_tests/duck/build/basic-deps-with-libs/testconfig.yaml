@@ -1,0 +1,19 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "  external-libs: [found]
+    external-lib-paths: [empty, libs]" >> foo/quackconfig.yaml
+  mkdir -p foo/empty foo/libs && touch foo/libs/libfound.a
+  echo "  external-libs: [duck-not-installed-1, duck-not-installed-2]" >> bar/quackconfig.yaml
+  @{duck-exe} -C foo add --local ../bar bar
+
+Tests:
+  basic-deps:
+    Description: can build a project with dependencies that have external libraries
+    Cases:
+      build:
+        test-cmd: duck -C foo build
+        ExitCode: 1

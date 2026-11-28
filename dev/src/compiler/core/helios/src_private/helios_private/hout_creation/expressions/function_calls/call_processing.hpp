@@ -73,6 +73,39 @@ namespace compiler::helios::code {
 	);
 
 	/**
+	 * @brief Looks up the bracket operator methods named @p name (`()` or `[]`) in the type of
+	 * @p self_arg. Only classes declare bracket operators, so for other types the result is empty.
+	 *
+	 * Logs an error if the operators exist, but none of them is visible from the call.
+	 *
+	 * @param self_arg The value the brackets are applied to, like `object` in `object[10]`.
+	 * @param call_expr The PST call expression, whose scope decides the visibility of the
+	 * operators.
+	 */
+	query::QResult<std::vector<SymID>> findBracketOperatorCandidates(
+		query::Context&              ctx,
+		CRef<Expr>                   self_arg,
+		base::StrID                  name,
+		pst::Access<pst::expr::Call> call_expr
+	);
+
+	/**
+	 * @brief Same as @p processMethodCall, but for a bracket operator method, like `object(10)` or
+	 * `object[10]`. The brackets themselves are the callee, and @p self_arg is the value they are
+	 * applied to.
+	 *
+	 * @param candidates The bracket operator methods, see @p findBracketOperatorCandidates.
+	 * @param call_expr The PST call expression, whose arguments are the arguments of the operator.
+	 * @param self_arg The processed value the brackets are applied to.
+	 */
+	query::QResult<Box<Expr>> processBracketOperatorCall(
+		query::Context&              ctx,
+		const std::vector<SymID>&    candidates,
+		pst::Access<pst::expr::Call> call_expr,
+		Box<Expr>                    self_arg
+	);
+
+	/**
 	 * @brief Determines the correct function to call (i.e. performs the overload resolution) from
 	 * the given argument expressions and creates a callexpr from it. The function is selected based
 	 * on argument types only, not the name, so all provided candidates must have the expected name.

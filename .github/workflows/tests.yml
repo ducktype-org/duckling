@@ -1,7 +1,7 @@
 name: tests
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
@@ -314,7 +314,8 @@ jobs:
 
       - name: Show ccache statistics
         run: |
-          ccache_bin=$(command -v ccache || echo '${{ env.WORKSPACE }}/scripts/downloads/ccache')
+          ccache_bin='${{ env.WORKSPACE }}/scripts/downloads/ccache'
+          [ -x "$ccache_bin" ] || ccache_bin=$(command -v ccache)
           "$ccache_bin" --show-stats --verbose | head -30
 
       # Uploaded in the BACKGROUND (GitHub shipped this 2026-06-25): the tests below start
