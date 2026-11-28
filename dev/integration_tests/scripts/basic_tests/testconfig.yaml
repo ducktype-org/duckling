@@ -75,6 +75,22 @@ Tests:
         Output:
           String: "2\n1\n3\n"
 
+  zero_sized_globals:
+    folder: "zero_sized_globals"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "1\n2\n()3\n"
+      vm:
+        mode: vm
+        Output:
+          String: "1\n2\n()3\n"
+      exe:
+        mode: exe
+        Output:
+          String: "1\n2\n()3\n"
+
   const_if:
     folder: "const_if"
     Cases:

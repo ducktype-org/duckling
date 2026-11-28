@@ -1,0 +1,18 @@
+# Script globals of types that carry no information: they have no storage, but their
+# initializers still run, in source order.
+fun noisy() -> () = {
+	builtin_output_i64(2);
+	return ();
+}
+
+class Empty {}
+
+builtin_output_i64(1);
+let unit: () = ();
+var from_call: () = noisy();
+let copied: () = unit;
+let units: ((), ()) = ((), ());
+var empty: Empty = Empty();
+let mixed: ((), Empty) = ((), Empty());
+print(copied);
+builtin_output_i64(3);

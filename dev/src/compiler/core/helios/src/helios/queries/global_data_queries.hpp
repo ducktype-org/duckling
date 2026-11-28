@@ -30,7 +30,8 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Returns the expression that should be used by the MIR global variable
-	 * constructor - it in-place initializes the global.
+	 * constructor - it in-place initializes the global. For a global that carries no
+	 * information, it is just the initial value, evaluated for its side effects.
 	 */
 	Box<code::Expr> getGlobalConstructorExpr(query::Context& ctx, CRef<HOUTGlobalData> global_data);
 
