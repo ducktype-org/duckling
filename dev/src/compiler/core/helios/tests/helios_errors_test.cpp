@@ -3146,6 +3146,42 @@ private:
 			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
 			2
 		);
+
+		// Duplicated destructor.
+		checkForErrorOnCompileModule(
+			R"(
+                class D {
+                    v: i64 = 1;
+                    D.destroy() = { }
+                    D.destroy() = { }
+                }
+                fun main() -> i64 = {
+                    var d = D();
+                    return 0;
+                }
+            )",
+			{ "Symbol 'destroy' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Every duplicated special member is reported, not only the first one.
+		checkForErrorOnCompileModule(
+			R"(
+                class D {
+                    v: i64 = 1;
+                    D.copy(other: ref D) = { }
+                    D.copy(other: ref D) = { }
+                    fun toString() -> String = "a";
+                    fun toString() -> String = "b";
+                }
+                fun main() -> i64 = {
+                    var d = D();
+                    return 0;
+                }
+            )",
+			{ "Symbol 'copy' is already defined.", "Symbol 'toString' is already defined." },
+			2
+		);
 	}
 
 	/**
