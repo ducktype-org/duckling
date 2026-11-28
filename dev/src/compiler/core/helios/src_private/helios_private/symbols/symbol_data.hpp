@@ -109,25 +109,28 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Symbol data of the symbols in a baked template, relative to the nearest instance.
+	 * @brief Symbol data of template instances and of the symbols declared inside them.
+	 *
+	 * Both parts can be set at once and then refer to different templates, e.g. a template instance
+	 * declared inside a class template instance is an instance of the inner template and a member
+	 * of the outer instance. At least one part is set.
 	 */
 	struct TemplateInstanceData final {
 		/**
-		 * The instance itself, i.e. the inner statement of the baked template.
+		 * Unbaked template this symbol is an instance of. Set only for the instance itself, i.e.
+		 * the inner statement of the baked template.
 		 */
-		struct Root final {
-			SymID              unbaked_template_symbol;
-			std::vector<SymID> template_arguments_symbols;
-		};
+		base::Optional<SymID> maybe_unbaked_template_symbol = {};
 
 		/**
-		 * A symbol declared inside the instance.
+		 * Template arguments of the instance, meaningful only with `maybe_unbaked_template_symbol`.
 		 */
-		struct Member final {
-			SymID instance_root;
-		};
+		std::vector<SymID> template_arguments_symbols = {};
 
-		std::variant<Root, Member> data;
+		/**
+		 * Nearest enclosing template instance this symbol is declared in.
+		 */
+		base::Optional<SymID> maybe_enclosing_instance = {};
 	};
 
 	/**

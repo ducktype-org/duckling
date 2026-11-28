@@ -52,9 +52,10 @@ namespace compiler::tsh {
 		std::string sourceSymbolName(query::Context& ctx, const helios::SymID symbol) {
 			auto        result   = helios::name(symbol).str();
 			const auto& instance = helios::getSymRef(symbol)->maybe_template_instance_data;
-			const auto* data     = instance.has_value()
-			                         ? std::get_if<helios::TemplateInstanceData::Root>(&instance->data)
-			                         : nullptr;
+			const auto* data
+				= instance.has_value() and instance->maybe_unbaked_template_symbol.has_value()
+			        ? &*instance
+			        : nullptr;
 			if (data != nullptr) {
 				result
 					+= "["

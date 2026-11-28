@@ -366,8 +366,8 @@ namespace compiler::tsh {
 		representation       = "Class " + name(symbol).str();
 		const auto& instance = compiler::helios::getSymRef(symbol)->maybe_template_instance_data;
 		const auto* data
-			= instance.has_value()
-		        ? std::get_if<compiler::helios::TemplateInstanceData::Root>(&instance->data)
+			= instance.has_value() and instance->maybe_unbaked_template_symbol.has_value()
+		        ? &*instance
 		        : nullptr;
 		if (data != nullptr) {
 			representation

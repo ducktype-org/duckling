@@ -370,16 +370,16 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The template instance data of the symbols declared in @p element, inherited from
-		 * the nearest ancestor of @p element that declares a symbol.
+		 * @brief The nearest template instance enclosing @p element, found through the nearest
+		 * ancestor of @p element that declares a symbol. The walk stops at unbaked templates.
 		 */
-		base::Optional<TemplateInstanceData> inheritedTemplateInstanceData(
+		base::Optional<SymID> enclosingTemplateInstance(
 			query::Context& ctx, const pst::Access<pst::LangElement>& element
 		) {
 			return std::invoke(
 				[&ctx](
 					this auto self, const pst::Access<pst::LangElement>& current
-				) -> base::Optional<TemplateInstanceData> {
+				) -> base::Optional<SymID> {
 					auto parent = getPSTElementParent(ctx, current);
 					if (!parent.isLangElement()) return {};
 
@@ -398,11 +398,9 @@ namespace compiler::helios {
 						const auto& parent_data
 							= getSymRef(parent_sym)->maybe_template_instance_data;
 						if (not parent_data.has_value()) return {};
-
-						if (const auto* member
-					        = std::get_if<TemplateInstanceData::Member>(&parent_data->data))
-							return TemplateInstanceData{ *member };
-						return TemplateInstanceData{ TemplateInstanceData::Member{ parent_sym } };
+						if (parent_data->maybe_unbaked_template_symbol.has_value())
+							return parent_sym;
+						return parent_data->maybe_enclosing_instance;
 					}
 
 					case pst::ElementKind::TemplateStmt:
@@ -414,6 +412,18 @@ namespace compiler::helios {
 				},
 				element
 			);
+		}
+
+		/**
+		 * @brief The template instance data of the symbols declared in @p element that are not
+		 * template instances themselves.
+		 */
+		base::Optional<TemplateInstanceData> inheritedTemplateInstanceData(
+			query::Context& ctx, const pst::Access<pst::LangElement>& element
+		) {
+			auto enclosing = enclosingTemplateInstance(ctx, element);
+			if (not enclosing.has_value()) return {};
+			return TemplateInstanceData{ .maybe_enclosing_instance = enclosing };
 		}
 
 		/**
@@ -685,11 +695,13 @@ namespace compiler::helios {
 
 			const auto instance = templates::getTemplateInstanceData(ctx, stmt);
 			if (instance.has_value()) {
-				data.maybe_template_instance_data
-					= TemplateInstanceData{ TemplateInstanceData::Root{
-						.unbaked_template_symbol    = instance->unbaked_template_symbol,
-						.template_arguments_symbols = instance->template_arguments_symbols,
-					} };
+				data.maybe_template_instance_data = TemplateInstanceData{
+					.maybe_unbaked_template_symbol = instance->unbaked_template_symbol,
+					.template_arguments_symbols    = instance->template_arguments_symbols,
+					.maybe_enclosing_instance      = enclosingTemplateInstance(
+                        ctx, getPSTElementParent(ctx, stmt).getAsLangElement().unlock(ctx)
+                    ),
+				};
 			} else {
 				data.maybe_template_instance_data = inheritedTemplateInstanceData(ctx, stmt);
 			}
