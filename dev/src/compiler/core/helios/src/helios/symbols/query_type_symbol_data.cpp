@@ -15,6 +15,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/comparison_methods.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -236,6 +237,43 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Reports a member whose special kind was already taken by an earlier member of the
+		 * class, e.g. a second `T.destroy()`, and registers the kind otherwise.
+		 * @param seen_special_members The special kinds seen so far, mapped to their first member.
+		 * @return `true` if an earlier member already has the special kind of @p member_sym.
+		 */
+		static bool reportIfSpecialKindTaken(
+			query::Context&                               ctx,
+			base::HashMap<tsh::MemberSpecialKind, SymID>& seen_special_members,
+			SymID                                         member_sym,
+			tsh::MemberSpecialKind                        special_kind
+		) {
+			if (special_kind == tsh::MemberSpecialKind::None) return false;
+
+			auto entry = seen_special_members.find(special_kind);
+			if (entry == seen_special_members.end()) {
+				seen_special_members.put(special_kind, member_sym);
+				return false;
+			}
+
+			auto member_pst   = maybeSymbolPst(member_sym);
+			auto previous_pst = maybeSymbolPst(entry->value);
+			CORE_ASSERT(
+				member_pst.has_value() and previous_pst.has_value(),
+				"Special members of a class are declared in the source code"
+			);
+
+			auto error = makeBox<dia::DuplicatedDefinitionError>(
+				name(member_sym).str(), member_pst.value().unlock(ctx)->getStablePosition()
+			);
+			error->addAttachedMessage(makeBox<dia::PlaceholderNote>(
+				"Previous declaration here.", previous_pst.value().unlock(ctx)->getStablePosition()
+			));
+			ctx.log(std::move(error));
+			return true;
+		}
+
+		/**
 		 * @brief Whether the field is declared with an initializing value, as in `x: i32 = 2;`.
 		 */
 		static bool hasInitializer(query::Context& ctx, const tsh::InterfaceElement& field) {
@@ -393,8 +431,10 @@ namespace compiler::helios {
 			auto default_visiblity
 				= getDefaultMemberVisibility(ctx, class_stmt, members_specifiers);
 
-			ClassSymbolData    class_info;
-			UserDefinedMembers user_members;
+			ClassSymbolData                              class_info;
+			UserDefinedMembers                           user_members;
+			base::HashMap<tsh::MemberSpecialKind, SymID> seen_special_members;
+			bool                                         has_duplicated_special_member = false;
 			for (usize i{ 0 }; i < (*class_symbols).size(); i++) {
 				auto member_sym          = (*class_symbols)[i];
 				auto specifiers          = members_specifiers[i];
@@ -405,11 +445,20 @@ namespace compiler::helios {
 				auto member_special_kind = specialKind(ctx, member_sym);
 
 				collectUserDefinedMember(member_special_kind, user_members);
+				if (reportIfSpecialKindTaken(
+						ctx, seen_special_members, member_sym, member_special_kind
+					)) {
+					has_duplicated_special_member = true;
+					continue;
+				}
 
 				interface_builder.push(
 					member_sym, interface_elem_kind, member_visibility, member_special_kind
 				);
 			}
+
+			// The interface holds at most one member of each special kind.
+			if (has_duplicated_special_member) query::throwFailed();
 
 			auto tmp_interface = interface_builder.build();
 
