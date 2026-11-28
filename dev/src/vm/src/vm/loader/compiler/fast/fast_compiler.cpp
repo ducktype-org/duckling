@@ -92,31 +92,19 @@ void fast::FastCompiler::compileNewFunctions(
 void fast::FastCompiler::compileNewExtCFunctions(
 	const std::vector<code::ExternalCFunction>& new_functions
 ) {
+	const auto to_types = [this](const std::vector<code::Identifier>& names) {
+		return names
+		     | std::views::transform([this](const auto& name) { return program.types.at(name); })
+		     | std::ranges::to<std::vector<vm::fast::TypeCRef>>();
+	};
 	for (const ExternalCFunction& func: new_functions) {
-		base::Optional<vm::fast::TypeCRef> result_type = std::nullopt;
-		if (func.signature.result_types.size() == 1)
-			result_type = program.types.at(func.signature.result_types[0]);
-		else if (func.signature.result_types.size() > 1)
-			CORE_PANIC("External C function cannot have more than 1 return type");
-
 		program.extern_c_functions.insert(
 			vm::fast::ExternCFunction{
-				.name               = func.name,
-				.function_pointer   = func.function_pointer,
-				.parameter_size_sum = std::ranges::fold_left(
-					func.signature.parameters | std::views::transform([this](const auto& param_name) {
-						return program.types.at(param_name)->getSize();
-					}),
-					Bytes(0),
-					std::plus()
-				),
-				.parameter_types = func.signature.parameters
-		                         | std::views::transform([this](const auto& param_name) {
-									   return program.types.at(param_name);
-								   })
-		                         | std::ranges::to<std::vector<vm::fast::TypeCRef>>(),
-				.result_type = result_type
-
+				.name            = func.name,
+				.function        = func.function,
+				.user_data       = func.user_data,
+				.parameter_types = to_types(func.signature.parameters),
+				.result_types    = to_types(func.signature.result_types),
 			},
 			func.name
 		);

@@ -9,16 +9,17 @@
 #include "ids.hpp"
 #include "type.hpp"
 
+#include <vm/core/extc/extc_types.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::fast {
 
 	struct ExternCFunction final {
-		base::StrID name;
-		void (*function_pointer)(byte*, byte*) = nullptr;
-		Bytes                    parameter_size_sum;
-		std::vector<TypeCRef>    parameter_types;
-		base::Optional<TypeCRef> result_type;
+		base::StrID           name;
+		ExtCFunction          function{};
+		void*                 user_data = nullptr;
+		std::vector<TypeCRef> parameter_types;
+		std::vector<TypeCRef> result_types;
 	};
 
 	struct FunctionInfo final {

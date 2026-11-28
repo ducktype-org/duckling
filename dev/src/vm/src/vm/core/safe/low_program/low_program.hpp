@@ -170,9 +170,9 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of an extern C function.
 	 */
 	struct LowExternCFunction final {
-		base::StrID name;
-		void (*function_pointer)(byte*, byte*) = nullptr;
-		usize                 parameter_size_sum;
+		base::StrID           name;
+		ExtCFunction          function{};
+		void*                 user_data = nullptr;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 	};

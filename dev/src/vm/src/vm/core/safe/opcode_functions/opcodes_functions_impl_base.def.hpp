@@ -49,6 +49,7 @@
 
 #include <vm/core/builtin_functions.hpp>
 #include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/extc/safe_extc_context.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
@@ -604,41 +605,18 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
 		{
-			auto ext_func = READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
-
-			auto arg_count = ext_func->parameters.size();
-			bool is_void   = ext_func->result_types.size() == 0;
-			CORE_ASSERT(
-				ext_func->result_types.size() <= 1, "C function cannot return more than 1 type"
-			);
-
-			if (arg_count == 0 && is_void) {
-				// Special case: void function with no arguments.
-				ext_func->function_pointer(nullptr, nullptr);
+			const auto& ext_func
+				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
+			const usize arg_count = ext_func.parameters.size();
+			// Local slot stack: [..., result0, ..., resultM, arg0, ..., argN]. The function
+			// consumes its arguments, but not its results.
+			if (std::holds_alternative<ExtCRawFunctionPtr>(ext_func.function)) {
+				SafeExtCContext::callRaw(thread.safe_process, frame, ext_func);
+				// Raw arguments are trivially copyable, so there is nothing to destruct.
+				for (usize i = 0; i < arg_count; i++) performDeinit(frame, thread);
 			} else {
-				// Calculate the index of the result value on the block stack.
-				// If the function is void, there is no result value, so we don't
-				// need to account for it.
-				// Local stack layout:
-				// 		CURRENT_FUNC_RESULT_VALUE (this is where the stack begins)
-				// 		...
-				// 		result_value,
-				// 		arg0,
-				// 		arg1
-				// 		...
-				// 		argN
-				u64 slot_stack_count
-					= u64(frame->local_slot_stack_end - frame->local_slot_stack_base);
-				u64        result_value_idx = slot_stack_count - arg_count - (is_void ? 0 : 1);
-				const auto result_pointer   = frame->local_slot_stack_base[result_value_idx].data;
-
-				byte* args_pointer
-					= result_pointer
-				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
-
-				ext_func->function_pointer(result_pointer, args_pointer);
-
-				for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+				SafeExtCContext::callValue(thread.safe_process, frame, ext_func);
+				for (usize i = 0; i < arg_count; i++) performDeinitDtor(frame, thread);
 			}
 		}
 

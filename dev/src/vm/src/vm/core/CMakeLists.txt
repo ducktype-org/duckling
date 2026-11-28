@@ -34,6 +34,8 @@ set_files(
 	safe/low_program/cfg/cf_graph.cpp
 	safe/low_program/cfg/cf_analysis.cpp
 	safe/safe_vmthread.cpp
+	extc/extc_invoke.cpp
+	safe/extc/safe_extc_context.cpp
 	safe/vmvalue/safe_vmvalue.cpp
 	safe/vmvalue/safe_vmvalueref.cpp
 	fast/eval/instruction_functions.cpp
