@@ -8,7 +8,9 @@
 mod dir_iterator;
 mod file_locks;
 mod path_ops;
+mod source_file_visitor;
 
 pub use dir_iterator::{DirContents, create_dir_iterator};
 pub use file_locks::{FileLockManager, LockedFile};
 pub use path_ops::*;
+pub use source_file_visitor::*;
