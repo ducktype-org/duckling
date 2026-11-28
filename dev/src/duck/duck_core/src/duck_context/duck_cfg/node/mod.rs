@@ -111,11 +111,6 @@ impl Node {
                 if let Some(i64) = number.as_i64() {
                     return Ok(Some(Self::Integer(i64, source)));
                 }
-                if let Some(u64) = number.as_u64()
-                    && let Ok(i64) = i64::try_from(u64)
-                {
-                    return Ok(Some(Self::Integer(i64, source)));
-                }
                 let ty = if number.is_u64() {
                     "an unsigned integer"
                 } else if number.is_f64() {
@@ -123,7 +118,11 @@ impl Node {
                 } else {
                     unreachable!("unknown YAML number type `{number:?}` from the {source}")
                 };
-                qp_bail!("unsupported YAML number type {ty} from the {source}")
+
+                Err(add_note_about_source(
+                    qp_err!("{ty} is an unsupported YAML number"),
+                    &source,
+                ))
             }
             serde_yaml_ng::Value::String(str) => Ok(Some(Self::String(str, source))),
             serde_yaml_ng::Value::Sequence(seq) => {
@@ -138,10 +137,13 @@ impl Node {
                     .into_iter()
                     .map(|(key, value)| {
                         let serde_yaml_ng::Value::String(key) = key else {
-                            qp_bail!(
-                                "unsupported key `{}` in a YAML mapping from the {source}",
-                                describe_yaml(&key)
-                            )
+                            return Err(add_note_about_source(
+                                qp_err!(
+                                    "{} as a key in a YAML mapping is unsupported",
+                                    describe_yaml(&key)
+                                ),
+                                &source,
+                            ));
                         };
                         let value = Self::from_yaml(value, source.clone())?;
                         Ok((key, value))
@@ -157,7 +159,10 @@ impl Node {
                     .collect::<QuackResult<HashMap<_, _>>>()?;
                 Ok(Some(Self::Map(map, source)))
             }
-            serde_yaml_ng::Value::Tagged(..) => qp_bail!("unsupported YAML tag from the {source}"),
+            serde_yaml_ng::Value::Tagged(..) => Err(add_note_about_source(
+                qp_err!("YAML tags are unsupported"),
+                &source,
+            )),
         }
     }
 
@@ -241,12 +246,14 @@ impl Node {
                 return Ok(None);
             };
             let Node::Map(next, _) = next else {
-                qp_bail!(
-                    "in the chain `{}` expected a table, not {} at {}",
-                    parts[0..=i].join("."),
-                    describe_node_with_article(next),
-                    next.source()
-                )
+                return Err(add_note_about_source(
+                    qp_err!(
+                        "in the chain `{}` expected a table, not {}",
+                        parts[0..=i].join("."),
+                        describe_node_with_article(next)
+                    ),
+                    next.source(),
+                ));
             };
             current = next;
         }
@@ -256,10 +263,13 @@ impl Node {
     /// Try to cast this [`Node`] to an [`i64`].
     pub fn as_i64(&self) -> QuackResult<i64> {
         let Self::Integer(i64, _) = self else {
-            qp_bail!(
-                "expected an integer not {}",
-                describe_node_with_article(self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected an integer not {}",
+                    describe_node_with_article(self)
+                ),
+                self.source(),
+            ));
         };
         Ok(*i64)
     }
@@ -267,10 +277,13 @@ impl Node {
     /// Try to cast this [`Node`] to a [`bool`].
     pub fn as_bool(&self) -> QuackResult<bool> {
         let Self::Boolean(bool, _) = self else {
-            qp_bail!(
-                "expected a boolean not {}",
-                describe_node_with_article(self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a boolean not {}",
+                    describe_node_with_article(self)
+                ),
+                self.source(),
+            ));
         };
         Ok(*bool)
     }
@@ -278,7 +291,10 @@ impl Node {
     /// Try to cast this [`Node`] to a [`str`].
     pub fn as_str(&self) -> QuackResult<&str> {
         let Self::String(string, _) = self else {
-            qp_bail!("expected a string not {}", describe_node_with_article(self));
+            return Err(add_note_about_source(
+                qp_err!("expected a string not {}", describe_node_with_article(self)),
+                self.source(),
+            ));
         };
         Ok(string)
     }
@@ -286,10 +302,13 @@ impl Node {
     /// Try to cast this [`Node`] to a slice.
     pub fn as_seq(&self) -> QuackResult<&[Node]> {
         let Self::Seq(seq, _) = self else {
-            qp_bail!(
-                "expected a sequence not {}",
-                describe_node_with_article(self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a mapping not {}",
+                    describe_node_with_article(self)
+                ),
+                self.source(),
+            ));
         };
         Ok(seq)
     }
@@ -297,10 +316,13 @@ impl Node {
     /// Try to cast this [`Node`] to a [`HashMap`].
     pub fn as_map(&self) -> QuackResult<&HashMap<String, Node>> {
         let Self::Map(map, _) = self else {
-            qp_bail!(
-                "expected a mapping not {}",
-                describe_node_with_article(self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a mapping not {}",
+                    describe_node_with_article(self)
+                ),
+                self.source(),
+            ));
         };
         Ok(map)
     }
@@ -308,7 +330,10 @@ impl Node {
     /// Try to cast this [`Node`] to a [`str`].
     pub fn as_str_mut(&mut self) -> QuackResult<&mut String> {
         let Self::String(string, _) = self else {
-            qp_bail!("expected a string not {}", describe_node_with_article(self));
+            return Err(add_note_about_source(
+                qp_err!("expected a string not {}", describe_node_with_article(self)),
+                self.source(),
+            ));
         };
         Ok(string)
     }
@@ -316,10 +341,13 @@ impl Node {
     /// Try to cast this [`Node`] to a slice.
     pub fn as_seq_mut(&mut self) -> QuackResult<&mut Vec<Node>> {
         let Self::Seq(seq, _) = self else {
-            qp_bail!(
-                "expected a sequence not {}",
-                describe_node_with_article(self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a sequence not {}",
+                    describe_node_with_article(self)
+                ),
+                self.source(),
+            ));
         };
         Ok(seq)
     }
@@ -327,10 +355,13 @@ impl Node {
     /// Try to cast this [`Node`] to a [`HashMap`].
     pub fn as_map_mut(&mut self) -> QuackResult<&mut HashMap<String, Node>> {
         let Self::Map(map, _) = self else {
-            qp_bail!(
-                "expected a mapping not {}",
-                describe_node_with_article(self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a mapping not {}",
+                    describe_node_with_article(self)
+                ),
+                self.source(),
+            ));
         };
         Ok(map)
     }
@@ -338,10 +369,13 @@ impl Node {
     /// Try to cast this [`Node`] to a [`str`].
     pub fn to_string(self) -> QuackResult<String> {
         let Self::String(string, _) = self else {
-            qp_bail!(
-                "expected a string not {}",
-                describe_node_with_article(&self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a string not {}",
+                    describe_node_with_article(&self)
+                ),
+                self.source(),
+            ));
         };
         Ok(string)
     }
@@ -349,10 +383,13 @@ impl Node {
     /// Try to cast this [`Node`] to a slice.
     pub fn to_seq(self) -> QuackResult<Vec<Node>> {
         let Self::Seq(seq, _) = self else {
-            qp_bail!(
-                "expected a sequence not {}",
-                describe_node_with_article(&self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a sequence not {}",
+                    describe_node_with_article(&self)
+                ),
+                self.source(),
+            ));
         };
         Ok(seq)
     }
@@ -360,10 +397,13 @@ impl Node {
     /// Try to cast this [`Node`] to a [`HashMap`].
     pub fn to_map(self) -> QuackResult<HashMap<String, Node>> {
         let Self::Map(map, _) = self else {
-            qp_bail!(
-                "expected a mapping not {}",
-                describe_node_with_article(&self)
-            );
+            return Err(add_note_about_source(
+                qp_err!(
+                    "expected a mapping not {}",
+                    describe_node_with_article(&self)
+                ),
+                self.source(),
+            ));
         };
         Ok(map)
     }
@@ -416,6 +456,12 @@ fn make_empty_key_fragment_error(mut i: usize, key: &str) -> QuackError {
         _ => "th",
     };
     qp_err!("{i}{suffix} part of the key `{key}` is empty")
+}
+
+/// Add a note about source to the [`QuackError`].
+fn add_note_about_source(mut err: QuackError, source: &Source) -> QuackError {
+    err.add_note(format!("encountered in the {source}"));
+    err
 }
 
 #[cfg(test)]
