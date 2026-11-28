@@ -25,9 +25,9 @@ namespace vm {
 
 	public:
 		/**
-		 * @brief Calls a raw-convention `function` with the arguments in the topmost slots of
-		 * `frame`, letting it write its results into the slots right below them. The argument
-		 * slots are left to the caller.
+		 * @brief Calls a raw-convention `function` (checked by the lowering) with the arguments in
+		 * the topmost slots of `frame`, letting it write its results into the slots right below
+		 * them. The argument slots are left to the caller.
 		 * @throws exceptions::VMExtCFunctionPanic when the function fails.
 		 */
 		[[gnu::noinline]] static void callRaw(

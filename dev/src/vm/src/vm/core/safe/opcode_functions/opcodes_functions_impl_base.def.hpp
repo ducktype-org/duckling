@@ -603,21 +603,26 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
+	// Local slot stack of both: [..., result0, ..., resultM, arg0, ..., argN]. The function
+	// consumes its arguments, but not its results.
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc_raw)(FUNCTION_ARGS) {
 		{
 			const auto& ext_func
 				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
-			const usize arg_count = ext_func.parameters.size();
-			// Local slot stack: [..., result0, ..., resultM, arg0, ..., argN]. The function
-			// consumes its arguments, but not its results.
-			if (std::holds_alternative<ExtCRawFunctionPtr>(ext_func.function)) {
-				SafeExtCContext::callRaw(thread.safe_process, frame, ext_func);
-				// Raw arguments are trivially copyable, so there is nothing to destruct.
-				for (usize i = 0; i < arg_count; i++) performDeinit(frame, thread);
-			} else {
-				SafeExtCContext::callValue(thread.safe_process, frame, ext_func);
-				for (usize i = 0; i < arg_count; i++) performDeinitDtor(frame, thread);
-			}
+			SafeExtCContext::callRaw(thread.safe_process, frame, ext_func);
+			// Raw arguments are trivially copyable, so there is nothing to destruct.
+			for (usize i = 0; i < ext_func.parameters.size(); i++) performDeinit(frame, thread);
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc_value)(FUNCTION_ARGS) {
+		{
+			const auto& ext_func
+				= *READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
+			SafeExtCContext::callValue(thread.safe_process, frame, ext_func);
+			for (usize i = 0; i < ext_func.parameters.size(); i++) performDeinitDtor(frame, thread);
 		}
 
 		FUNCTION_CONT(1);

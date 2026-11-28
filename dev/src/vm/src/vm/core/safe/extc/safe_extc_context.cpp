@@ -67,8 +67,9 @@ void vm::SafeExtCContext::callRaw(
 	const auto results = slotPointers(first_result, result_count, inline_results, heap_results);
 
 	SafeExtCContext ctx(process, function, true);
-	auto            returned
-		= invokeExtCFunction(std::get<ExtCRawFunctionPtr>(function.function), ctx, args, results);
+	auto            returned = invokeExtCFunction(
+        *std::get_if<ExtCRawFunctionPtr>(&function.function), ctx, args, results
+    );
 	if (!returned.has_value()) panic(function, returned.error().message);
 }
 
@@ -93,7 +94,7 @@ void vm::SafeExtCContext::callValue(
 	}
 
 	auto returned
-		= invokeExtCFunction(std::get<ExtCValueFunctionPtr>(function.function), ctx, arg_refs);
+		= invokeExtCFunction(*std::get_if<ExtCValueFunctionPtr>(&function.function), ctx, arg_refs);
 	if (!returned.has_value()) panic(function, returned.error().message);
 
 	auto& results = returned.value();
