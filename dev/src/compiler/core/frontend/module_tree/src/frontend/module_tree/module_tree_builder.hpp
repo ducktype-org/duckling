@@ -61,13 +61,7 @@ namespace compiler::frontend {
 		 * @brief Asserts that the builder can still be modified.
 		 */
 		void assertNotFinalized() const;
-
-		/**
-		 * @brief Asserts that the module name is set.
-		 * @note Not part of finalizeCommon() yet: standard modules can still be unnamed (#4246).
-		 */
-		void assertNameSet() const;
-
+		
 		/**
 		 * @brief Stores the parent, which is linked to the module in finalize().
 		 * @note The per-kind builders check the kind of the parent before calling this.

@@ -186,10 +186,6 @@ namespace compiler::frontend {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 	}
 
-	void ModuleTreeBuilderCommon::assertNameSet() const {
-		CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
-	}
-
 	void ModuleTreeBuilderCommon::setName(base::StrID name) {
 		assertNotFinalized();
 		CORE_ASSERT(m_name.isBad(), "Module name is already set");
@@ -211,8 +207,9 @@ namespace compiler::frontend {
 	base::Ref<ModuleTree> ModuleTreeBuilderCommon::finalizeCommon(base::Box<ModuleTree> node) {
 		assertNotFinalized();
 
-		// @TODO: #4246 check the name here for every kind, once standard modules can no longer be
-		// unnamed. Until then only the script and REPL chain builders call assertNameSet().
+		// @TODO: #4246 CORE_ASSERT here the name is set for every kind, once standard modules can no longer be
+		// unnamed. REPL modules can have some dummy names if needed.
+		// CORE_ASSERT(m_name.isGood(), "Module name must be set before finalizing the module tree");
 
 		CORE_ASSERT(
 			m_package_id.isGood(), "Package ID must be set before finalizing the module tree"
@@ -313,7 +310,6 @@ namespace compiler::frontend {
 
 	base::Ref<ModuleTree> ScriptModuleTreeBuilder::finalize() {
 		assertNotFinalized();
-		assertNameSet();
 
 		Ref<ModuleTree> module_ref = finalizeCommon(makeBox<ScriptModuleTreeNode>());
 
@@ -354,7 +350,6 @@ namespace compiler::frontend {
 
 	base::Ref<ModuleTree> SyntheticReplChainModuleTreeBuilder::finalize() {
 		assertNotFinalized();
-		assertNameSet();
 		CORE_ASSERT(
 			m_synthetic_source_file_path.has_value(),
 			"Synthetic source file must be set before finalizing a REPL chain module"
