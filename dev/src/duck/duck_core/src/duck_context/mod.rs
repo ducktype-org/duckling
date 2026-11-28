@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 pub use aliases::Alias;
+pub use duck_cfg::node::*;
 pub use duck_cfg::{DEFAULT_REGISTRY_URL, DuckCfg};
 pub use duck_home::DuckHome;
 pub use env::Env;

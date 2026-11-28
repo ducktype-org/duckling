@@ -27,7 +27,7 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: failed to parse the configuration at \`$DUCK_HOME/config.yaml\`
+            echo "error: failed to parse the configuration from the file at \`$DUCK_HOME/config.yaml\`
             
               Caused by:
-                invalid type: string \"ala\", expected u64"
+                invalid type: string \"ala\", expected an integer"
